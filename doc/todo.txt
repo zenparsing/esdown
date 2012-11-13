@@ -1,0 +1,57 @@
+== Issues ==
+
+- Better (unique) names for module import variables.  Ultimately we need
+  a convenient way to get all of the in-scope bindings.
+- String method polyfills are hacky right now - they need to match the spec.
+- Class inheritance needs to match spec.
+- Do we really need "use strict" for every arrow function?  We could probably
+  find out if the outer scope is strict and thus eliminate it.
+
+
+== New Features ==
+
+- Let and const declarations:
+
+  If a binding is already defined in the current var-scope, then create
+  a new name.  Find all occurances of the old name and replace with the
+  new name.
+
+- Rest parameters:
+
+  function f(a, b, ...rest) { }
+  function f(a, b) { var rest = es6now.rest(arguments, 2); }
+  
+- Spread:
+
+  // In argument lists:
+  x.f(a, b, ...array);
+  f.apply(x, es6now.spread(a, b, array));
+  
+  // In array literals:
+  [ a, b, ...array, c, d ];
+  ([ a, b ]).concat(array).concat([ c, d ]);
+
+- Parameter defaults (waiting on scope issue consensus):
+
+- Destructuring everything:
+
+- Map, Set polyfills.
+
+- Array comprehensions:
+
+
+== Maybe, Maybe Not ==
+
+- Change the module-to-require transformation:  Replace all occurances
+  of imported declarations with member expressions (MODULE.exportedName), in
+  order to support cyclical dependencies.  Maybe?
+- Generators, yield (transformation to CPS is complex.  Can it be done
+  without breaking line-numbers?)
+- WeakMap, WeakSet
+- Symbols
+- import *
+
+
+== Nope ==
+
+- Proxies
