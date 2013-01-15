@@ -36,3 +36,5 @@ ident => this;
 };
 
 ident => this.method();
+
+var identity = obj => obj;

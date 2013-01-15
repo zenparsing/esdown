@@ -1,6 +1,4 @@
-"use strict";
-
-function parse(argv, params) {
+export function parse(argv, params) {
 
     var pos = Object.keys(params),
         values = {},
@@ -13,7 +11,7 @@ function parse(argv, params) {
         a;
     
     // Create short-to-long mapping
-    pos.forEach(function(name) {
+    pos.forEach(name => {
     
         var p = params[name];
         
@@ -75,7 +73,7 @@ function parse(argv, params) {
             values[name] = value;
     }
     
-    required.forEach(function(name) {
+    required.forEach(name => {
     
         if (values[name] === undefined)
             throw new Error("Missing required option: --" + name);
@@ -90,7 +88,7 @@ function fail(msg) {
     process.exit(1);
 }
 
-function runCommand(command, options) {
+export function runCommand(command, options) {
     
     options || (options = {});
     
@@ -109,7 +107,7 @@ function runCommand(command, options) {
     }
 }
 
-function run(config) {
+export function run(config) {
 
     var error = config.error || fail,
         argv = process.argv.slice(2),
@@ -140,10 +138,6 @@ function run(config) {
         error: config.error 
     });
 }
-
-exports.parse = parse;
-exports.run = run;
-exports.runCommand = runCommand;
 
 /*
 

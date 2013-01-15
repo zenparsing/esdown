@@ -1,13 +1,13 @@
-"use strict";
+module FS = "fs";
+module Path = "path";
+module CommandLine = "CommandLine.js";
 
-var FS = require("fs"),
-    Path = require("path");
+import NodePromise from "NodePromise.js";
+import bundle from "Bundler.js";
+import Server from "Server.js";
+import translate from "Translator.js";
 
-var CommandLine = require("./CommandLine.js"),
-    Translator = require("./Translator.js"),
-    Combiner = require("./Combiner.js"),
-    Server = require("./Server.js"),
-    Runtime = require("./Runtime.js");
+var AFS = NodePromise.FS;
 
 function absPath(path) {
 
@@ -23,18 +23,15 @@ function writeFile(path, text) {
 function overrideCompilation() {
 
     // Compile ES6 js files
-    require.extensions[".js"] = function(module, filename) {
+    require.extensions[".js"] = (module, filename) => {
     
-        var text = Combiner.readFile(filename);
-    
-        if (/(\n|^)\s*(export|import)\s/.test(text))
-            text = Translator.translate(text);
-        
+        // TODO: better error reporting!
+        var text = translate(FS.readFileSync(filename, "utf8"));
         return module._compile(text, filename);
     };
 }
 
-function run() {
+export function run() {
 
     CommandLine.run({
     
@@ -49,13 +46,10 @@ function run() {
                 }
             },
             
-            execute: function(params) {
+            execute(params) {
             
                 params.debug = true;
-                
                 overrideCompilation();
-                Runtime.initialize();
-                
                 require(absPath(params.target));
             }
         
@@ -79,68 +73,46 @@ function run() {
                     required: false
                 },
                 
-                "global": { short: "g" },
-                
-                "debug": { flag: true }
-            },
-            
-            execute: function(params) {
-            
-                var options = { 
-                
-                    global: params.global,
-                    
-                    log: function(filename) { 
-                    
-                        console.log("[Reading] " + absPath(filename));
-                    }
-                };
-                
-                var text = Combiner.readFile(params.input, options.log);
-                text = Translator.translate(text, options);
-                
-                if (params.output) writeFile(params.output, text);
-                else console.log(text);
-            }
-        },
-        
-        combine: {
-        
-            params: {
-        
-                "input": {
-        
-                    short: "i",
-                    positional: true,
-                    required: true
-                },
-                
-                "output": {
-                    
-                    short: "o",
-                    positional: true,
-                    required: true
-                },
+                "bundle": { flag: true, short: "b" },
                 
                 "global": { short: "g" },
                 
                 "debug": { flag: true }
             },
             
-            execute: function(params) {
+            execute(params) {
             
                 var options = { 
                 
                     global: params.global,
                     
-                    log: function(filename) { 
+                    log(filename) { 
                     
                         console.log("[Reading] " + absPath(filename));
                     }
                 };
                 
-                var text = Combiner.combine(params.input, options);
-                writeFile(params.output, text);
+                var future;
+                
+                if (params.bundle) {
+                
+                    future = bundle(params.input, options);
+                    
+                } else {
+                
+                    options.log(params.input);
+                    future = AFS.readFile(params.input, "utf8").then(text => translate(text, options));
+                }
+                
+                future.then(text => {
+                
+                    if (params.output) writeFile(params.output, text);
+                    else console.log(text);
+                    
+                }, err => {
+                
+                    throw err;
+                });           
             }
         },
         
@@ -152,9 +124,10 @@ function run() {
                 "port": { short: "p", positional: true }
             },
             
-            execute: function(params) {
+            execute(params) {
             
-                var server = Server.listen(params);
+                var server = new Server(params);
+                server.start();
                 
                 console.log("Listening on port " + server.port + ".  Press Enter to exit.");
                 
@@ -162,11 +135,15 @@ function run() {
                 
                 stdin.resume();
                 stdin.setEncoding('utf8');
-                stdin.on("data", function() { process.exit(); });
+                
+                stdin.on("data", () => { 
+                
+                    server.stop().then(val => { process.exit(0); });
+                });
             }
         },
         
-        error: function(err, params) {
+        error(err, params) {
         
             if (params.debug) {
             
@@ -181,5 +158,3 @@ function run() {
         }
     });
 }
-
-exports.run = run;

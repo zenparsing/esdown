@@ -1,21 +1,13 @@
-"use strict";
+import initialize from "Runtime.js";
 
-var Translator = require("./Translator.js"),
-    Combiner = require("./Combiner.js"),
-    Program = require("./Program.js"),
-    translate = Translator.translate;
+// Initialize the runtime support library
+initialize();
+
+module Program = "Program.js";
+
+if (typeof require === "function" && 
+    typeof module !== "undefined" && 
+    module === require.main) {
     
-function translateFile(filename, options) {
-
-    options || (options = {});
-    
-    return options.combine ?
-        Combiner.combine(filename, options) :
-        translate(Combiner.readFile(filename), options);
-};
-
-exports.translate = translate;
-exports.translateFile = translateFile;
-
-if (module === require.main)
     Program.run();
+}

@@ -2,7 +2,7 @@ var A = es6now.Class(B, function(__super) { return {
 
     constructor: function() {
     
-        __super.call(this);
+        __super.constructor.call(this);
     },
     
     set a(value) {},
@@ -11,8 +11,8 @@ var A = es6now.Class(B, function(__super) { return {
     
     bar: function(x, y) {
     
-        __super.prototype.bar.call(this, x, y);
-        __super.prototype["bar"].call(this, x, y);
-        __super.prototype.foo.foo();
+        __super.bar.call(this, x, y);
+        __super["bar"].call(this, x, y);
+        __super.foo.foo();
     }
 }});

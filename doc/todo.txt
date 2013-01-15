@@ -19,13 +19,13 @@
 - Rest parameters:
 
   function f(a, b, ...rest) { }
-  function f(a, b) { var rest = es6now.rest(arguments, 2); }
+  function f(a, b) { var rest = Array.prototype.slice.call(arguments, 2); }
   
 - Spread:
 
   // In argument lists:
   x.f(a, b, ...array);
-  f.apply(x, es6now.spread(a, b, array));
+  f.apply(x, [a, b].concat(array)));
   
   // In array literals:
   [ a, b, ...array, c, d ];
@@ -48,8 +48,7 @@
 - Generators, yield (transformation to CPS is complex.  Can it be done
   without breaking line-numbers?)
 - WeakMap, WeakSet
-- Symbols
-- import *
+- Symbols & at-names
 
 
 == Nope ==

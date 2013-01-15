@@ -1,4 +1,4 @@
-var mimeTypes = {
+export var mimeTypes = {
 
     "aiff": "audio/x-aiff",
     "arj": "application/x-arj-compressed",
@@ -140,5 +140,3 @@ var mimeTypes = {
     "zip": "application/zip",
     "*": "application/octect-stream"
 };
-
-exports.mimeTypes = mimeTypes;

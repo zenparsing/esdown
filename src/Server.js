@@ -1,134 +1,187 @@
-var HTTP = require("http"),
-    FS = require("fs"),
-    Path = require("path"),
-    URL = require("url");
-    
-var Translator = require("./Translator.js"),
-    mimeTypes = require("./ServerMime.js").mimeTypes;
+module FS = "fs";
+module HTTP = "http";
+module Path = "path";
+module URL = "url";
 
-var DEFAULT_PORT = 8080,
+import NodePromise from "NodePromise.js";
+import { translate, isWrapped } from "Translator.js";
+import mimeTypes from "ServerMime.js";
+
+var AFS = NodePromise.FS;
+
+const 
+    DEFAULT_PORT = 8080,
     DEFAULT_ROOT = ".",
     JS_FILE = /\.js$/i;
-    
-function listen(options) {
 
-    options || (options = {});
+export class Server {
+
+    constructor(options) {
     
-    var root = Path.resolve(options.root || DEFAULT_ROOT),
-        port = options.port || DEFAULT_PORT,
-        server = HTTP.createServer(respond);
+        options || (options = {});
     
-    server.listen(port);
+        this.root = Path.resolve(options.root || DEFAULT_ROOT);
+        this.port = options.port || DEFAULT_PORT;
+        this.hostname = options.hostname || null;
+        this.server = HTTP.createServer((request, response) => this.onRequest(request, respond));
+        this.active = false;
+    }
     
-    return { port: port, root: root };
+    start(port, hostname) {
     
-    function respond(request, response) {
+        if (this.active)
+            throw new Error("Server already listening");
+        
+        if (port)
+            this.port = port;
+        
+        if (hostname)
+            this.hostname = hostname;
+        
+        var promise = new NodePromise;
+        this.server.listen(this.port, this.hostname, promise.callback);
+        
+        this.active = true;
+        
+        return promise.future;
+    }
+    
+    stop() {
+    
+        var promise = new NodePromise;
+        
+        if (this.active) {
+        
+            this.active = false;
+            this.server.close(promise.callback);
+        
+        } else {
+        
+            promise.resolve(null);
+        }
+        
+        return promise.future;
+    }
+    
+    onRequest(request, response) {
     
         if (request.method !== "GET" && request.method !== "HEAD")
-            return error(405, request, response);
+            return this.error(405, response);
         
         var path = URL.parse(request.url).pathname;
         
-        path = Path.join(root, path);
+        path = Path.join(this.root, path);
         
-        if (path.indexOf(root) !== 0)
-            return error(403);
+        if (path.indexOf(this.root) !== 0)
+            return this.error(403, response);
         
-        FS.stat(path, function(err, stat) {
+        AFS.stat(path).then(stat => {
         
-            if (stat && stat.isDirectory() && path.slice(-1) === "/")
-                return streamDefault();
+            if (stat.isDirectory())
+                return this.streamDefault(path, response);
             
-            if (stat && stat.isFile())
-                return JS_FILE.test(path) ? streamJS() : streamFile(stat);
+            if (stat.isFile()) {
             
-            return error(404);
-        });
-        
-        function error(code) {
-        
-            response.writeHead(code, { "Content-Type": "text/plain" });
-            response.write(HTTP.STATUS_CODES[code] + "\n")
-            response.end();
-        }
-        
-        function streamDefault() {
-        
-            var files = [ "index.html", "index.htm", "default.html", "default.htm" ];
-            
-            function next() {
-            
-                if (files.length === 0)
-                    return error(404);
-                
-                var file = files.shift(),
-                    search = Path.join(path, file);
-                
-                FS.stat(search, function(err, stat) {
-                
-                    if (!stat || !stat.isFile())
-                        return next();
-                    
-                    path = search;
-                    streamFile(stat);
-                });
+                return JS_FILE.test(path) ? 
+                    this.streamJS(path, response) : 
+                    this.streamFile(path, stat.size, repsonse);
             }
             
-            next();
-        }
-        
-        function streamJS() {
-        
-            FS.readFile(path, "utf8", function(err, source) {
+            return this.error(404, response);
             
-                if (err)
-                    return error(500, err);
+        }, err => {
+        
+            return this.error(404, response);
+            
+        });
+    }
+    
+    error(code, response) {
+    
+        response.writeHead(code, { "Content-Type": "text/plain" });
+        response.write(HTTP.STATUS_CODES[code] + "\n")
+        response.end();
+    }
+    
+    streamDefault(path, response) {
+    
+        var files = [ "index.html", "index.htm", "default.html", "default.htm" ];
+        
+        function next() {
+        
+            if (files.length === 0)
+                return this.error(404, response);
+            
+            var file = files.shift(),
+                search = Path.join(path, file);
+            
+            AFS.stat(search).then(stat => {
+            
+                if (!stat.isFile())
+                    return next();
                 
-                if (!Translator.isWrapped(source)) {
-                    
-                    try { source = Translator.translate(source); } 
-                    catch (x) { source += "\n\n// " + x.message; }
-                }
+                path = search;
+                this.streamFile(path, stat.size, response);
                 
-                response.writeHead(200, { "Content-Type": "text/javascript; charset=UTF-8" });
-                response.end(source, "utf8");
+            }, err => {
+            
+                return next();
             });
         }
         
-        function streamFile(stat) {
-            
-            var ext = Path.extname(path).slice(1).toLowerCase();
-                
-            var headers = { 
+        next();
+    }
+    
+    streamJS(path, response) {
         
-                // TODO: we should only append charset to certain types
-                "Content-Type": (mimeTypes[ext] || mimeTypes["*"]) + "; charset=UTF-8",
-                "Content-Length": stat.size
-            };
-                
-            var stream = FS.createReadStream(path, { 
+        AFS.readFile(path, "utf8").then(source => {
+        
+            if (!isWrapped(source)) {
             
-                flags: "r", 
-                mode: 438
-            });
+                try { source = translate(source); } 
+                catch (x) { source += "\n\n// " + x.message; }
+            }
             
-            stream.on("error", function(err) {
+            response.writeHead(200, { "Content-Type": "text/javascript; charset=UTF-8" });
+            response.end(source, "utf8");
+        
+        }, err => {
+        
+            this.error(500, err);
+        });
+    }
+    
+    streamFile(path, size, response) {
             
-                error(500, err);
-            });
+        var ext = Path.extname(path).slice(1).toLowerCase();
             
-            stream.on("data", function(data) {
+        var headers = { 
+    
+            // TODO: we should only append charset to certain types
+            "Content-Type": (mimeTypes[ext] || mimeTypes["*"]) + "; charset=UTF-8",
+            "Content-Length": stat.size
+        };
             
-                if (headers) {
-                
-                    response.writeHead(200, headers);
-                    headers = null;
-                }
-            });
+        var stream = FS.createReadStream(path, { 
+        
+            flags: "r", 
+            mode: 438
+        });
+        
+        stream.on("error", err => {
+        
+            this.error(500, response);
+        });
+        
+        stream.on("data", data => {
+        
+            if (headers) {
             
-            stream.pipe(response);
-        }
+                response.writeHead(200, headers);
+                headers = null;
+            }
+        });
+        
+        stream.pipe(response);
     }
 }
-
-exports.listen = listen;

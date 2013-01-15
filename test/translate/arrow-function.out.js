@@ -1,38 +1,40 @@
-var __this = this; (function(ident) { "use strict"; return "abc"; });
+var __this = this; (function(ident) { return "abc"; });
 
-(function() { "use strict"; return "abc"; });
+(function() { return "abc"; });
 
-(function() { "use strict"; return +new Date(); });
+(function() { return +new Date(); });
 
-(function(a, b, c) { "use strict"; return 123 + 456; });
+(function(a, b, c) { return 123 + 456; });
 
-(function(ident) { "use strict";
+(function(ident) {
 
     console.log("hello");
 });
 
-(function(a, b, c) { "use strict";
+(function(a, b, c) {
 
     console.log("world");
 });
 
-(function() { "use strict"; (function() { "use strict";}) });
+(function() { (function() {}) });
 
-(function(ident) { "use strict"; return __this; });
+(function(ident) { return __this; });
 
-(function() { "use strict";
+(function() {
 
     var x = function() { return this; };
 });
 
-(function() { "use strict";
+(function() {
 
     function x() { return this; };
 });
 
-(function() { "use strict";
+(function() {
 
-    (function() { "use strict"; return __this; });
+    (function() { return __this; });
 });
 
-(function(ident) { "use strict"; return __this.method(); });
+(function(ident) { return __this.method(); });
+
+var identity = (function(obj) { return obj; });
