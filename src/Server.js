@@ -9,8 +9,7 @@ import mimeTypes from "ServerMime.js";
 
 var AFS = NodePromise.FS;
 
-const 
-    DEFAULT_PORT = 8080,
+var DEFAULT_PORT = 8080,
     DEFAULT_ROOT = ".",
     JS_FILE = /\.js$/i;
 
@@ -23,7 +22,7 @@ export class Server {
         this.root = Path.resolve(options.root || DEFAULT_ROOT);
         this.port = options.port || DEFAULT_PORT;
         this.hostname = options.hostname || null;
-        this.server = HTTP.createServer((request, response) => this.onRequest(request, respond));
+        this.server = HTTP.createServer((request, response) => this.onRequest(request, response));
         this.active = false;
     }
     
@@ -107,7 +106,7 @@ export class Server {
     
         var files = [ "index.html", "index.htm", "default.html", "default.htm" ];
         
-        function next() {
+        var next = () => {
         
             if (files.length === 0)
                 return this.error(404, response);
@@ -127,7 +126,7 @@ export class Server {
             
                 return next();
             });
-        }
+        };
         
         next();
     }
@@ -159,7 +158,7 @@ export class Server {
     
             // TODO: we should only append charset to certain types
             "Content-Type": (mimeTypes[ext] || mimeTypes["*"]) + "; charset=UTF-8",
-            "Content-Length": stat.size
+            "Content-Length": size
         };
             
         var stream = FS.createReadStream(path, { 

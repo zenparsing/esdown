@@ -14,5 +14,9 @@ var A = es6now.Class(B, function(__super) { return {
         __super.bar.call(this, x, y);
         __super["bar"].call(this, x, y);
         __super.foo.foo();
-    }
+    },
+    
+    __static_S: function() {},
+    
+    get __static_T() {}
 }});

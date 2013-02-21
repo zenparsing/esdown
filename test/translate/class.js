@@ -15,4 +15,8 @@ class A extends B {
         super["bar"](x, y);
         super.foo.foo();
     }
+    
+    static S() {}
+    
+    static get T() {}
 }

@@ -5,9 +5,9 @@ import { translate, wrap } from "Translator.js";
 
 var AFS = NodePromise.FS;
 
-const EXTERNAL = /^[a-z]+:|^[^\.]+$/i;
+var EXTERNAL = /^[a-z]+:|^[^\.]+$/i;
 
-const OUTPUT_BEGIN = "var __modules = [], __exports = [], __global = this; \n\
+var OUTPUT_BEGIN = "var __modules = [], __exports = [], __global = this; \n\
 \n\
 function __require(i, obj) { \n\
     var e = __exports; \n\
@@ -92,6 +92,10 @@ export function bundle(filename, options) {
                     }
                     
                     return "__require(" + createNode(url, dir).toString() + ")";
+                },
+                
+                mapURL: function() {
+                
                 }
             });
             

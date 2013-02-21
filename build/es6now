@@ -1,0 +1,3 @@
+#!/bin/sh
+basedir=`dirname "$0"`
+node "$basedir/es6now.js" "$@"

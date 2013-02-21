@@ -1,8 +1,8 @@
 import Replacer from "Replacer.js";
 
-const SIGNATURE = "/*=es6now=*/";
+var SIGNATURE = "/*=es6now=*/";
 
-const WRAP_CALLEE = "(function(fn, deps) { " +
+var WRAP_CALLEE = "(function(fn, deps) { " +
 
     // Node.js, Rewrapped:
     "if (typeof exports !== 'undefined') " +
@@ -50,7 +50,7 @@ export function translate(input, options) {
     
     input = sanitize(input);
     output = replacer.replace(input);
-        
+    
     Object.keys(replacer.exports).forEach(k => {
     
         output += "\nexports." + k + " = " + replacer.exports[k] + ";";

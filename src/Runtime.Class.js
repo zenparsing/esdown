@@ -1,8 +1,10 @@
-var HOP = {}.hasOwnProperty;
+var HOP = {}.hasOwnProperty,
+    STATIC = /^__static_/;
 
-function copyMethods(to, from) {
+function copyMethods(to, from, classMethods) {
 
     var keys = Object.keys(from),
+        isStatic,
         desc,
         k,
         i;
@@ -12,7 +14,8 @@ function copyMethods(to, from) {
         k = keys[i];
         desc = Object.getOwnPropertyDescriptor(from, k);
         
-        Object.defineProperty(to, k, desc);
+        if (STATIC.test(k) === classMethods)
+            Object.defineProperty(to, classMethods ? k.replace(STATIC, "") : k, desc);
     }
     
     return to;
@@ -47,7 +50,7 @@ export function Class(base, def) {
 	props = def(parent);
 	
 	// Create prototype object
-	proto = copyMethods(Object.create(parent), props);
+	proto = copyMethods(Object.create(parent), props, false);
 	
 	// Get constructor method
 	if (HOP.call(props, "constructor")) constructor = props.constructor;
@@ -56,7 +59,11 @@ export function Class(base, def) {
 	// Set constructor's prototype
 	constructor.prototype = proto;
 	
-	// TODO:  Class-side inheritance?
+	// "Inherit" class methods
+	if (base) copyMethods(constructor, base, false);
+	
+	// Set class "static" methods
+	copyMethods(constructor, props, true);
 	
 	return constructor;
 }

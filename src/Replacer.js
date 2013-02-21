@@ -10,7 +10,7 @@
 
 module Parser = "Parser.js";
 
-const FILENAME = /^[^\.\/\\][\s\S]*?\.[^\s\.]+$/;
+var FILENAME = /^[^\.\/\\][\s\S]*?\.[^\s\.]+$/;
 
 function requireCall(url) {
 
@@ -100,23 +100,19 @@ export class Replacer {
     
     VariableDeclaration(node) {
     
-        // TODO: if node.keyword == "let" or "const" then look for another
-        // variable in scope with the same name.  If there is, then
-        // generate a new name and substitute all occurances in this block
-        // and child scopes.
-        
-        // We're going to have to implement this in two passes.  The first
-        // pass will note any variable names that must change.
-        
-        if (node.keyword !== "var")
-            return node.text.replace(/^(const|let)/, "var");
+        // TODO?  Per-iteration bindings mean that we'll need to use
+        // the try { throw void 0; } catch (x) {} trick.  Worth it?
     }
     
     MethodDefinition(node) {
     
         // TODO: Generator methods
         
-        if (!node.modifier)
+        // TODO: will fail if name is a string:  static "name"() {}
+        if (node.static)
+            node.name.text = "__static_" + node.name.text;
+        
+        if (!node.accessor)
             return node.name.text + ": function(" + this.joinList(node.params) + ") " + node.body.text;
     }
     
@@ -372,10 +368,20 @@ export class Replacer {
     
     ClassBody(node) {
     
-        var elems = node.elements, i;
+        var elems = node.elements, 
+            e,
+            i;
         
-        for (i = elems.length - 1; i--;)
-            elems[i].text += ",";
+        for (i = elems.length; i--;) {
+        
+            e = elems[i];
+            
+            if (e.static)
+                e.text = e.text.replace(/^static\s+/, "");
+            
+            if (i < elems.length - 1)
+                e.text += ",";
+        }
     }
     
     TemplateExpression(node) {
@@ -446,9 +452,12 @@ export class Replacer {
     
     requirePath(url) {
     
+        // If this is a simple local filename, then add "./" prefix
+        // so that Node will not treat it as a package
         if (FILENAME.test(url))
             url = "./" + url;
         
+        // Add to dependency list
         if (this.imports[url] !== true) {
         
             this.imports[url] = true;
