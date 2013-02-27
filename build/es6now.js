@@ -857,7 +857,7 @@ var Server = es6now.Class(null, function(__super) { return {
             
                 return JS_FILE.test(path) ? 
                     __this.streamJS(path, response) : 
-                    __this.streamFile(path, stat.size, repsonse);
+                    __this.streamFile(path, stat.size, response);
             }
             
             return __this.error(404, response);
@@ -1797,6 +1797,7 @@ function whenAll(list) {
     var count = list.length,
         promise = new Promise(),
         out = [],
+        value = out,
         i;
     
     for (i = 0; i < list.length; ++i)
@@ -1814,28 +1815,53 @@ function whenAll(list) {
             out[index] = val;
             
             if (--count === 0)
-                promise.resolve(out);
+                promise.resolve(value);
         
         }), (function(err) {
         
-            promise.reject(err);
+            value = failure(err);
+            
+            if (--count === 0)
+                promise.resolve(value);
         }));
     }
 }
 
 // Returns a future for the first completed future in an array
-function whenAny(list, onSuccess, onFail) {
+function whenAny(list) {
 
     if (list.length === 0)
         throw new Error(EMPTY_LIST_MSG);
     
-    var promise = new Promise(),
-        i;
+    var promise = new Promise(), i;
     
     for (i = 0; i < list.length; ++i)
         when(list[i]).then((function(val) { return promise.resolve(val); }), (function(err) { return promise.reject(err); }));
     
     return promise.future;
+}
+
+// Returns a future for the values produced by a callback for every
+// element in an array, executed sequentially
+function forEach(list, fn) {
+
+    var out = [];
+    
+    function next() {
+    
+        var i = out.length;
+        
+        if (i === list.length)
+            return out;
+        
+        return when(fn(list[i], i, list)).then((function(val) {
+        
+            out.push(val);
+            return next();
+        }));
+    }
+    
+    return when(next());
 }
 
 // === Event Loop API ===
@@ -1917,6 +1943,7 @@ asap = (function(global) {
 Promise.when = when;
 Promise.whenAny = whenAny;
 Promise.whenAll = whenAll;
+Promise.forEach = forEach;
 Promise.reject = failure;
 
 

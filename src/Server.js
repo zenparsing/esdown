@@ -83,7 +83,7 @@ export class Server {
             
                 return JS_FILE.test(path) ? 
                     this.streamJS(path, response) : 
-                    this.streamFile(path, stat.size, repsonse);
+                    this.streamFile(path, stat.size, response);
             }
             
             return this.error(404, response);
