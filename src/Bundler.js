@@ -1,9 +1,8 @@
 module Path = "path";
+module FFS = "FutureFS.js";
 
-import NodePromise from "NodePromise.js";
+import Promise from "Promise.js";
 import { translate, wrap } from "Translator.js";
-
-var AFS = NodePromise.FS;
 
 var EXTERNAL = /^[a-z]+:|^[^\.]+$/i;
 
@@ -65,7 +64,7 @@ export function bundle(filename, options) {
     function next() {
     
         if (current >= nodes.length)
-            return NodePromise.when(end());
+            return Promise.when(end());
         
         var node = nodes[current],
             path = node.path,
@@ -77,13 +76,13 @@ export function bundle(filename, options) {
             options.log(path);
         
         // Read file
-        return AFS.readFile(path, "utf8").then(text => {
+        return FFS.readFile(path, "utf8").then(text => {
         
             node.factory = translate(text, {
             
                 wrap: false,
                 
-                requireCall: function(url) {
+                requireCall(url) {
                 
                     if (isExternal(url)) {
                 
@@ -94,7 +93,7 @@ export function bundle(filename, options) {
                     return "__require(" + createNode(url, dir).toString() + ")";
                 },
                 
-                mapURL: function() {
+                mapURL() {
                 
                 }
             });

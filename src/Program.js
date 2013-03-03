@@ -1,13 +1,12 @@
 module FS = "fs";
 module Path = "path";
 module CommandLine = "CommandLine.js";
+module FFS = "FutureFS.js";
 
-import NodePromise from "NodePromise.js";
+import Promise from "Promise.js";
 import bundle from "Bundler.js";
 import Server from "Server.js";
 import translate from "Translator.js";
-
-var AFS = NodePromise.FS;
 
 function absPath(path) {
 
@@ -73,7 +72,57 @@ export function run() {
                     required: false
                 },
                 
-                "bundle": { flag: true, short: "b" },
+                "global": { short: "g" },
+                
+                "debug": { flag: true }
+            },
+            
+            execute(params) {
+            
+                var options = { 
+                
+                    global: params.global,
+                    
+                    log(filename) { 
+                    
+                        console.log("[Reading] " + absPath(filename));
+                    }
+                };
+                
+                options.log(params.input);
+                
+                FFS
+                .readFile(params.input, "utf8")
+                .then(text => translate(text, options))
+                .then(text => {
+                
+                    if (params.output) writeFile(params.output, text);
+                    else console.log(text);
+                    
+                }, err => {
+                
+                    throw err;
+                });           
+            }
+        },
+        
+        bundle: {
+        
+            params: {
+        
+                "input": {
+        
+                    short: "i",
+                    positional: true,
+                    required: true
+                },
+                
+                "output": {
+                    
+                    short: "o",
+                    positional: true,
+                    required: false
+                },
                 
                 "global": { short: "g" },
                 
@@ -92,19 +141,7 @@ export function run() {
                     }
                 };
                 
-                var future;
-                
-                if (params.bundle) {
-                
-                    future = bundle(params.input, options);
-                    
-                } else {
-                
-                    options.log(params.input);
-                    future = AFS.readFile(params.input, "utf8").then(text => translate(text, options));
-                }
-                
-                future.then(text => {
+                bundle(params.input, options).then(text => {
                 
                     if (params.output) writeFile(params.output, text);
                     else console.log(text);

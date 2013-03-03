@@ -26,41 +26,19 @@ if (typeof require === "function" &&
 };
 
 __modules[1] = function(exports) {
-var Class = __require(3).Class;
-var emulate = __require(4).emulate;
-
-var initialized = false,
-    global = this;
-
-function initialize() {
-
-    if (initialized)
-        return;
-    
-    emulate();
-    
-    global.es6now = {
-    
-        Class: Class
-    };
-    
-    initialized = true;
-}
-
-exports.initialize = initialize;
+var _M0 = __require(3); Object.keys(_M0).forEach(function(k) { exports[k] = _M0[k]; });
 };
 
 __modules[2] = function(exports) {
 var FS = require("fs");
 var Path = require("path");
-var CommandLine = __require(5);
+var CommandLine = __require(4);
+var FFS = __require(5);
 
-var NodePromise = __require(6).NodePromise;
+var Promise = __require(6).Promise;
 var bundle = __require(7).bundle;
 var Server = __require(8).Server;
 var translate = __require(9).translate;
-
-var AFS = NodePromise.FS;
 
 function absPath(path) {
 
@@ -126,7 +104,57 @@ function run() {
                     required: false
                 },
                 
-                "bundle": { flag: true, short: "b" },
+                "global": { short: "g" },
+                
+                "debug": { flag: true }
+            },
+            
+            execute: function(params) {
+            
+                var options = { 
+                
+                    global: params.global,
+                    
+                    log: function(filename) { 
+                    
+                        console.log("[Reading] " + absPath(filename));
+                    }
+                };
+                
+                options.log(params.input);
+                
+                FFS
+                .readFile(params.input, "utf8")
+                .then((function(text) { return translate(text, options); }))
+                .then((function(text) {
+                
+                    if (params.output) writeFile(params.output, text);
+                    else console.log(text);
+                    
+                }), (function(err) {
+                
+                    throw err;
+                }));           
+            }
+        },
+        
+        bundle: {
+        
+            params: {
+        
+                "input": {
+        
+                    short: "i",
+                    positional: true,
+                    required: true
+                },
+                
+                "output": {
+                    
+                    short: "o",
+                    positional: true,
+                    required: false
+                },
                 
                 "global": { short: "g" },
                 
@@ -145,19 +173,7 @@ function run() {
                     }
                 };
                 
-                var future;
-                
-                if (params.bundle) {
-                
-                    future = bundle(params.input, options);
-                    
-                } else {
-                
-                    options.log(params.input);
-                    future = AFS.readFile(params.input, "utf8").then((function(text) { return translate(text, options); }));
-                }
-                
-                future.then((function(text) {
+                bundle(params.input, options).then((function(text) {
                 
                     if (params.output) writeFile(params.output, text);
                     else console.log(text);
@@ -215,204 +231,31 @@ exports.run = run;
 };
 
 __modules[3] = function(exports) {
-var HOP = {}.hasOwnProperty,
-    STATIC = /^__static_/;
+var Class = __require(10).Class;
+var emulate = __require(11).emulate;
 
-function copyMethods(to, from, classMethods) {
+var initialized = false,
+    global = this;
 
-    var keys = Object.keys(from),
-        isStatic,
-        desc,
-        k,
-        i;
+function initialize() {
+
+    if (initialized)
+        return;
     
-    for (i = 0; i < keys.length; ++i) {
+    emulate();
     
-        k = keys[i];
-        desc = Object.getOwnPropertyDescriptor(from, k);
-        
-        if (STATIC.test(k) === classMethods)
-            Object.defineProperty(to, classMethods ? k.replace(STATIC, "") : k, desc);
-    }
+    global.es6now = {
     
-    return to;
+        Class: Class
+    };
+    
+    initialized = true;
 }
 
-function Class(base, def) {
-
-    function constructor() { 
-    
-        if (parent && parent.constructor)
-            parent.constructor.apply(this, arguments);
-    }
-    
-	var parent = null,
-	    proto,
-	    props;
-	
-	if (base) {
-	
-        if (typeof base === "function") {
-        
-            parent = base.prototype;
-            
-        } else {
-        
-            parent = base;
-            base = null;
-        }
-	}
-	
-	// Generate the method collection, closing over "super"
-	props = def(parent);
-	
-	// Create prototype object
-	proto = copyMethods(Object.create(parent), props, false);
-	
-	// Get constructor method
-	if (HOP.call(props, "constructor")) constructor = props.constructor;
-	else proto.constructor = constructor;
-	
-	// Set constructor's prototype
-	constructor.prototype = proto;
-	
-	// "Inherit" class methods
-	if (base) copyMethods(constructor, base, false);
-	
-	// Set class "static" methods
-	copyMethods(constructor, props, true);
-	
-	return constructor;
-}
-
-
-exports.Class = Class;
+exports.initialize = initialize;
 };
 
 __modules[4] = function(exports) {
-var ES5 = __require(10);
-
-var global = this;
-
-function addProps(obj, props) {
-
-    Object.keys(props).forEach((function(k) {
-    
-        if (typeof obj[k] !== "undefined")
-            return;
-        
-        Object.defineProperty(obj, k, {
-        
-            value: props[k],
-            configurable: true,
-            enumerable: false,
-            writable: true
-        });
-    }));
-}
-
-function emulate() {
-
-    ES5.emulate();
-    
-    addProps(Number, {
-    
-        EPSILON: Number.EPSILON || (function() {
-        
-            var next, result;
-            
-            for (next = 1; 1 + next !== 1; next = next / 2)
-                result = next;
-            
-            return result;
-        }()),
-        
-        MAX_INTEGER: 9007199254740992,
-        
-        isFinite: function(val) {
-            
-            return typeof val === "number" && isFinite(val);
-        },
-        
-        isNaN: function(val) {
-        
-            return typeof val === "number" && isNaN(val);
-        },
-        
-        isInteger: function(val) {
-        
-            typeof val === "number" && val | 0 === val;
-        },
-        
-        toInteger: function(val) {
-            
-            return val | 0;
-        }
-    });
-    
-    addProps(Array, {
-    
-        from: function(arg) {
-            // TODO
-        },
-        
-        of: function() {
-            // ?
-        }
-    
-    });
-    
-    addProps(String.prototype, {
-        
-        repeat: function(count) {
-        
-            return new Array(count + 1).join(this);
-        },
-        
-        startsWith: function(search, start) {
-        
-            return this.indexOf(search, start) === start;
-        },
-        
-        endsWith: function(search, end) {
-        
-            return this.slice(-search.length) === search;
-        },
-        
-        contains: function(search, pos) {
-        
-            return this.indexOf(search, pos) !== -1;
-        }
-    });
-    
-    if (typeof Map === "undefined") global.Map = (function() {
-    
-        function Map() {
-        
-        }
-        
-        return Map;
-        
-    })();
-    
-    if (typeof Set === "undefined") global.Set = (function() {
-    
-        function Set() {
-        
-        }
-        
-        return Set;
-        
-    })();
-    
-}
-
-
-
-exports.emulate = emulate;
-};
-
-__modules[5] = function(exports) {
 function parse(argv, params) {
 
     var pos = Object.keys(params),
@@ -593,65 +436,109 @@ exports.runCommand = runCommand;
 exports.run = run;
 };
 
+__modules[5] = function(exports) {
+var FS = require("fs");
+
+var Promise = __require(6).Promise;
+
+// Wraps a standard Node async function with a promise
+// generating function
+function wrap(obj, name) {
+
+	return function() {
+	
+		var a = [].slice.call(arguments, 0),
+			promise = new Promise;
+		
+		a.push((function(err, data) {
+		
+			if (err) promise.reject(err);
+			else promise.resolve(data);
+		}));
+		
+		if (name) obj[name].apply(obj, a);
+    	else obj.apply(null, a);
+		
+		return promise.future;
+	};
+}
+
+var 
+    exists = wrap(FS.exists),
+    readFile = wrap(FS.readFile),
+    close = wrap(FS.close),
+    open = wrap(FS.open),
+    read = wrap(FS.read),
+    write = wrap(FS.write),
+    rename = wrap(FS.rename),
+    truncate = wrap(FS.truncate),
+    rmdir = wrap(FS.rmdir),
+    fsync = wrap(FS.fsync),
+    mkdir = wrap(FS.mkdir),
+    sendfile = wrap(FS.sendfile),
+    readdir = wrap(FS.readdir),
+    fstat = wrap(FS.fstat),
+    lstat = wrap(FS.lstat),
+    stat = wrap(FS.stat),
+    readlink = wrap(FS.readlink),
+    symlink = wrap(FS.symlink),
+    link = wrap(FS.link),
+    unlink = wrap(FS.unlink),
+    fchmod = wrap(FS.fchmod),
+    lchmod = wrap(FS.lchmod),
+    chmod = wrap(FS.chmod),
+    lchown = wrap(FS.lchown),
+    fchown = wrap(FS.fchown),
+    chown = wrap(FS.chown),
+    utimes = wrap(FS.utimes),
+    futimes = wrap(FS.futimes),
+    writeFile = wrap(FS.writeFile),
+    appendFile = wrap(FS.appendFile),
+    realpath = wrap(FS.realpath);
+
+exports.exists = exists;
+exports.readFile = readFile;
+exports.close = close;
+exports.open = open;
+exports.read = read;
+exports.write = write;
+exports.rename = rename;
+exports.truncate = truncate;
+exports.rmdir = rmdir;
+exports.fsync = fsync;
+exports.mkdir = mkdir;
+exports.sendfile = sendfile;
+exports.readdir = readdir;
+exports.fstat = fstat;
+exports.lstat = lstat;
+exports.stat = stat;
+exports.readlink = readlink;
+exports.symlink = symlink;
+exports.link = link;
+exports.unlink = unlink;
+exports.fchmod = fchmod;
+exports.lchmod = lchmod;
+exports.chmod = chmod;
+exports.lchown = lchown;
+exports.fchown = fchown;
+exports.chown = chown;
+exports.utimes = utimes;
+exports.futimes = futimes;
+exports.writeFile = writeFile;
+exports.appendFile = appendFile;
+exports.realpath = realpath;
+};
+
 __modules[6] = function(exports) {
-var __this = this; var FS = require("fs");
-
-var Promise = __require(11).Promise;
-
-var wrappedFS = {};
-
-var NodePromise = es6now.Class(Promise, function(__super) { return {
-
-    constructor: function() { var __this = this; 
-    
-        this.callback = (function(err, val) {
-        
-            if (err) __this.reject(err);
-            else __this.resolve(val);
-        });
-        
-        __super.constructor.call(this);
-    },
-    
-    get __static_FS() { return wrappedFS; },
-    
-    // Wraps a standard Node async function with a promise
-    // generating function
-    __static_wrapFunction: function(obj, name) {
-    
-        return function() {
-        
-            var a = [].slice.call(arguments, 0),
-                promise = new NodePromise;
-            
-            a.push(promise.callback);
-            
-            if (name) obj[name].apply(obj, a);
-            else obj.apply(null, a);
-            
-            return promise.future;
-        };
-    }
-     
-}});
-
-
-// Add wrapped versions of FS async functions
-Object.keys(FS).forEach((function(key) {
-
-    if (typeof FS[key + "Sync"] === "function")
-        wrappedFS[key] = NodePromise.wrapFunction(FS[key]);
-}));
-exports.NodePromise = NodePromise;
+var _M0 = __require(12); Object.keys(_M0).forEach(function(k) { exports[k] = _M0[k]; });
 };
 
 __modules[7] = function(exports) {
 var Path = require("path");
+var FFS = __require(5);
 
-var NodePromise = __require(6).NodePromise;
+var Promise = __require(6).Promise;
 var _M0 = __require(9), translate = _M0.translate, wrap = _M0.wrap;
-
-var AFS = NodePromise.FS;
 
 var EXTERNAL = /^[a-z]+:|^[^\.]+$/i;
 
@@ -713,7 +600,7 @@ function bundle(filename, options) {
     function next() {
     
         if (current >= nodes.length)
-            return NodePromise.when(end());
+            return Promise.when(end());
         
         var node = nodes[current],
             path = node.path,
@@ -725,7 +612,7 @@ function bundle(filename, options) {
             options.log(path);
         
         // Read file
-        return AFS.readFile(path, "utf8").then((function(text) {
+        return FFS.readFile(path, "utf8").then((function(text) {
         
             node.factory = translate(text, {
             
@@ -776,12 +663,11 @@ var __this = this; var FS = require("fs");
 var HTTP = require("http");
 var Path = require("path");
 var URL = require("url");
+var FFS = __require(5);
 
-var NodePromise = __require(6).NodePromise;
+var Promise = __require(6).Promise;
 var _M0 = __require(9), translate = _M0.translate, isWrapped = _M0.isWrapped;
-var mimeTypes = __require(12).mimeTypes;
-
-var AFS = NodePromise.FS;
+var mimeTypes = __require(13).mimeTypes;
 
 var DEFAULT_PORT = 8080,
     DEFAULT_ROOT = ".",
@@ -803,7 +689,7 @@ var Server = es6now.Class(null, function(__super) { return {
     start: function(port, hostname) {
     
         if (this.active)
-            throw new Error("Server already listening");
+            throw new Error("Server is already listening");
         
         if (port)
             this.port = port;
@@ -811,7 +697,7 @@ var Server = es6now.Class(null, function(__super) { return {
         if (hostname)
             this.hostname = hostname;
         
-        var promise = new NodePromise;
+        var promise = new Promise;
         this.server.listen(this.port, this.hostname, promise.callback);
         
         this.active = true;
@@ -821,7 +707,7 @@ var Server = es6now.Class(null, function(__super) { return {
     
     stop: function() {
     
-        var promise = new NodePromise;
+        var promise = new Promise;
         
         if (this.active) {
         
@@ -848,7 +734,7 @@ var Server = es6now.Class(null, function(__super) { return {
         if (path.indexOf(this.root) !== 0)
             return this.error(403, response);
         
-        AFS.stat(path).then((function(stat) {
+        FFS.stat(path).then((function(stat) {
         
             if (stat.isDirectory())
                 return __this.streamDefault(path, response);
@@ -888,7 +774,7 @@ var Server = es6now.Class(null, function(__super) { return {
             var file = files.shift(),
                 search = Path.join(path, file);
             
-            AFS.stat(search).then((function(stat) {
+            FFS.stat(search).then((function(stat) {
             
                 if (!stat.isFile())
                     return next();
@@ -907,10 +793,11 @@ var Server = es6now.Class(null, function(__super) { return {
     
     streamJS: function(path, response) { var __this = this; 
         
-        AFS.readFile(path, "utf8").then((function(source) {
+        FFS.readFile(path, "utf8").then((function(source) {
         
             if (!isWrapped(source)) {
             
+                // TODO:  A better way to report errors?
                 try { source = translate(source); } 
                 catch (x) { source += "\n\n// " + x.message; }
             }
@@ -962,7 +849,7 @@ exports.Server = Server;
 };
 
 __modules[9] = function(exports) {
-var Replacer = __require(13).Replacer;
+var Replacer = __require(14).Replacer;
 
 var SIGNATURE = "/*=es6now=*/";
 
@@ -1045,6 +932,1252 @@ exports.isWrapped = isWrapped;
 };
 
 __modules[10] = function(exports) {
+var HOP = {}.hasOwnProperty,
+    STATIC = /^__static_/;
+
+function copyMethods(to, from, classMethods) {
+
+    var keys = Object.keys(from),
+        isStatic,
+        desc,
+        k,
+        i;
+    
+    for (i = 0; i < keys.length; ++i) {
+    
+        k = keys[i];
+        desc = Object.getOwnPropertyDescriptor(from, k);
+        
+        if (STATIC.test(k) === classMethods)
+            Object.defineProperty(to, classMethods ? k.replace(STATIC, "") : k, desc);
+    }
+    
+    return to;
+}
+
+function Class(base, def) {
+
+    function constructor() { 
+    
+        if (parent && parent.constructor)
+            parent.constructor.apply(this, arguments);
+    }
+    
+	var parent = null,
+	    proto,
+	    props;
+	
+	if (base) {
+	
+        if (typeof base === "function") {
+        
+            parent = base.prototype;
+            
+        } else {
+        
+            parent = base;
+            base = null;
+        }
+	}
+	
+	// Generate the method collection, closing over "super"
+	props = def(parent);
+	
+	// Create prototype object
+	proto = copyMethods(Object.create(parent), props, false);
+	
+	// Get constructor method
+	if (HOP.call(props, "constructor")) constructor = props.constructor;
+	else proto.constructor = constructor;
+	
+	// Set constructor's prototype
+	constructor.prototype = proto;
+	
+	// "Inherit" class methods
+	if (base) copyMethods(constructor, base, false);
+	
+	// Set class "static" methods
+	copyMethods(constructor, props, true);
+	
+	return constructor;
+}
+
+
+exports.Class = Class;
+};
+
+__modules[11] = function(exports) {
+var ES5 = __require(15);
+
+var global = this;
+
+function addProps(obj, props) {
+
+    Object.keys(props).forEach((function(k) {
+    
+        if (typeof obj[k] !== "undefined")
+            return;
+        
+        Object.defineProperty(obj, k, {
+        
+            value: props[k],
+            configurable: true,
+            enumerable: false,
+            writable: true
+        });
+    }));
+}
+
+function emulate() {
+
+    ES5.emulate();
+    
+    addProps(Number, {
+    
+        EPSILON: Number.EPSILON || (function() {
+        
+            var next, result;
+            
+            for (next = 1; 1 + next !== 1; next = next / 2)
+                result = next;
+            
+            return result;
+        }()),
+        
+        MAX_INTEGER: 9007199254740992,
+        
+        isFinite: function(val) {
+            
+            return typeof val === "number" && isFinite(val);
+        },
+        
+        isNaN: function(val) {
+        
+            return typeof val === "number" && isNaN(val);
+        },
+        
+        isInteger: function(val) {
+        
+            typeof val === "number" && val | 0 === val;
+        },
+        
+        toInteger: function(val) {
+            
+            return val | 0;
+        }
+    });
+    
+    addProps(Array, {
+    
+        from: function(arg) {
+            // TODO
+        },
+        
+        of: function() {
+            // ?
+        }
+    
+    });
+    
+    addProps(String.prototype, {
+        
+        repeat: function(count) {
+        
+            return new Array(count + 1).join(this);
+        },
+        
+        startsWith: function(search, start) {
+        
+            return this.indexOf(search, start) === start;
+        },
+        
+        endsWith: function(search, end) {
+        
+            return this.slice(-search.length) === search;
+        },
+        
+        contains: function(search, pos) {
+        
+            return this.indexOf(search, pos) !== -1;
+        }
+    });
+    
+    if (typeof Map === "undefined") global.Map = (function() {
+    
+        function Map() {
+        
+        }
+        
+        return Map;
+        
+    })();
+    
+    if (typeof Set === "undefined") global.Set = (function() {
+    
+        function Set() {
+        
+        }
+        
+        return Set;
+        
+    })();
+    
+}
+
+
+
+exports.emulate = emulate;
+};
+
+__modules[12] = function(exports) {
+var identity = (function(obj) { return obj; }),
+    freeze = Object.freeze || identity,
+    queue = [],
+    waiting = false,
+    asap;
+
+// UUID property names used for duck-typing
+var DISPATCH = "07b06b7e-3880-42b1-ad55-e68a77514eb9",
+    IS_FAILURE = "7d24bf0f-d8b1-4783-b594-cec32313f6bc";
+
+var EMPTY_LIST_MSG = "List cannot be empty.",
+    WAS_RESOLVED_MSG = "The promise has already been resolved.",
+    CYCLE_MSG = "A promise cycle was detected.";
+
+var THROW_DELAY = 50;
+
+// Enqueues a message
+function enqueue(future, args) {
+
+    queue.push({ fn: future[DISPATCH], args: args });
+    
+    if (!waiting) {
+    
+        waiting = true;
+        asap(flush);
+    }
+}
+
+// Flushes the message queue
+function flush() {
+
+    waiting = false;
+
+    while (queue.length > 0) {
+        
+        // Send each message in queue
+        for (var count = queue.length, msg; count > 0; --count) {
+        
+            msg = queue.shift();
+            msg.fn.apply(void 0, msg.args);
+        }
+    }
+}
+
+// Returns a cycle error
+function cycleError() {
+
+    return failure(CYCLE_MSG);
+}
+
+// Future constructor
+function Future(dispatch) {
+    
+    this[DISPATCH] = dispatch;
+}
+
+// Registers a callback for completion when a future is complete
+Future.prototype.then = function then(onSuccess, onFail) {
+
+    onSuccess || (onSuccess = identity);
+    
+    var resolve = (function(value) { return finish(value, onSuccess); }),
+        reject = (function(value) { return finish(value, onFail); }),
+        promise = new Promise(onQueue),
+        target = this,
+        done = false;
+    
+    onQueue(onSuccess, onFail);
+    
+    return promise.future;
+    
+    function onQueue(success, error) {
+    
+        if (success && resolve) {
+        
+            enqueue(target, [ resolve, null ]);
+            resolve = null;
+        }
+        
+        if (error && reject) {
+        
+            enqueue(target, [ null, reject ]);
+            reject = null;
+        }
+    }
+    
+    function finish(value, transform) {
+    
+        if (!done) {
+        
+            done = true;
+            promise.resolve(applyTransform(transform, value));
+        }
+    }
+};
+
+// Begins a deferred operation
+function Promise(onQueue) {
+
+    var token = {},
+        pending = [],
+        throwable = true,
+        next = null;
+
+    this.future = freeze(new Future(dispatch));
+    this.resolve = resolve;
+    this.reject = reject;
+    
+    freeze(this);
+    
+    // Dispatch function for future
+    function dispatch(success, error, src) {
+    
+        var msg = [success, error, src || token];
+        
+        if (error)
+            throwable = false;
+        
+        if (pending) {
+        
+            pending.push(msg);
+            
+            if (onQueue)
+                onQueue(success, error);
+        
+        } else {
+        
+            // If a cycle is detected, convert resolution to a rejection
+            if (src === token) {
+            
+                next = cycleError();
+                maybeThrow();
+            }
+            
+            enqueue(next, msg);
+        }
+    }
+    
+    // Resolves the promise
+    function resolve(value) {
+    
+        if (!pending)
+            throw new Error(WAS_RESOLVED_MSG);
+        
+        var list = pending;
+        pending = false;
+        
+        // Create a future from the provided value
+        next = when(value);
+
+        // Send internally queued messages to the next future
+        for (var i = 0; i < list.length; ++i)
+            enqueue(next, list[i]);
+        
+        maybeThrow();
+    }
+    
+    // Resolves the promise with a rejection
+    function reject(error) {
+    
+        resolve(failure(error));
+    }
+    
+    // Throws an error if the promise is rejected and there
+    // are no error handlers
+    function maybeThrow() {
+    
+        if (!throwable || !isFailure(next))
+            return;
+        
+        setTimeout((function() {
+        
+            var error = null;
+            
+            // Get the error value
+            next[DISPATCH](null, (function(val) { return error = val; }));
+            
+            // Throw it
+            if (error && throwable)
+                throw error;
+            
+        }), THROW_DELAY);
+    }
+}
+
+// Returns a future for an object
+function when(obj) {
+
+    if (obj && obj[DISPATCH])
+        return obj;
+    
+    if (obj && obj.then) {
+    
+        var promise = new Promise();
+        obj.then(promise.resolve, promise.reject);
+        return promise.future;
+    }
+    
+    // Wrap a value in an immediate future
+    return freeze(new Future((function(success) { return success && success(obj); })));
+}
+
+// Returns true if the object is a failed future
+function isFailure(obj) {
+
+    return obj && obj[IS_FAILURE];
+}
+
+// Creates a failure Future
+function failure(value) {
+
+    var future = new Future((function(success, error) { return error && error(value); }));
+    
+    // Tag the future as a failure
+    future[IS_FAILURE] = true;
+    
+    return freeze(future);
+}
+
+// Applies a promise transformation function
+function applyTransform(transform, value) {
+
+    try { return (transform || failure)(value); }
+    catch (ex) { return failure(ex); }
+}
+
+// Returns a future for every completed future in an array
+function whenAll(list) {
+
+    var count = list.length,
+        promise = new Promise(),
+        out = [],
+        value = out,
+        i;
+    
+    for (i = 0; i < list.length; ++i)
+        waitFor(list[i], i);
+    
+    if (count === 0)
+        promise.resolve(out);
+    
+    return promise.future;
+    
+    function waitFor(f, index) {
+    
+        when(f).then((function(val) { 
+        
+            out[index] = val;
+            
+            if (--count === 0)
+                promise.resolve(value);
+        
+        }), (function(err) {
+        
+            value = failure(err);
+            
+            if (--count === 0)
+                promise.resolve(value);
+        }));
+    }
+}
+
+// Returns a future for the first completed future in an array
+function whenAny(list) {
+
+    if (list.length === 0)
+        throw new Error(EMPTY_LIST_MSG);
+    
+    var promise = new Promise(), i;
+    
+    for (i = 0; i < list.length; ++i)
+        when(list[i]).then((function(val) { return promise.resolve(val); }), (function(err) { return promise.reject(err); }));
+    
+    return promise.future;
+}
+
+// Returns a future for the values produced by a callback for every
+// element in an array, executed sequentially
+function forEach(list, fn) {
+
+    var out = [];
+    
+    function next() {
+    
+        var i = out.length;
+        
+        if (i === list.length)
+            return out;
+        
+        return when(fn(list[i], i, list)).then((function(val) {
+        
+            out.push(val);
+            return next();
+        }));
+    }
+    
+    return when(next());
+}
+
+// === Event Loop API ===
+
+asap = (function(global) {
+    
+    var msg = uuid(),
+        process = global.process,
+        window = global.window,
+        msgChannel = null,
+        list = [];
+    
+    if (process && typeof process.nextTick === "function") {
+    
+        // NodeJS
+        return process.nextTick;
+   
+    } else if (window && window.addEventListener && window.postMessage) {
+    
+        // Modern Browsers
+        if (window.MessageChannel) {
+        
+            msgChannel = new window.MessageChannel();
+            msgChannel.port1.onmessage = onmsg;
+        
+        } else {
+        
+            window.addEventListener("message", onmsg, true);
+        }
+        
+        return (function(fn) {
+        
+            list.push(fn);
+            
+            if (msgChannel !== null)
+                msgChannel.port2.postMessage(msg);
+            else
+                window.postMessage(msg, "*");
+            
+            return 1;
+        });
+    
+    } else {
+    
+        // Legacy
+        return (function(fn) { return setTimeout(fn, 0); });
+    }
+        
+    function onmsg(evt) {
+    
+        if (msgChannel || (evt.source === window && evt.data === msg)) {
+        
+            evt.stopPropagation();
+            if (list.length) list.shift()();
+        }
+    }
+    
+    function uuid() {
+    
+        return [32, 16, 16, 16, 48].map((function(bits) { return rand(bits); })).join("-");
+        
+        function rand(bits) {
+        
+            if (bits > 32) 
+                return rand(bits - 32) + rand(32);
+            
+            var str = (Math.random() * 0xffffffff >>> (32 - bits)).toString(16),
+                len = bits / 4 >>> 0;
+            
+            if (str.length < len) 
+                str = (new Array(len - str.length + 1)).join("0") + str;
+            
+            return str;
+        }
+    }
+    
+})(this);
+
+Promise.when = when;
+Promise.whenAny = whenAny;
+Promise.whenAll = whenAll;
+Promise.forEach = forEach;
+Promise.reject = failure;
+
+
+exports.Promise = Promise;
+};
+
+__modules[13] = function(exports) {
+var mimeTypes = {
+
+    "aiff": "audio/x-aiff",
+    "arj": "application/x-arj-compressed",
+    "asf": "video/x-ms-asf",
+    "asx": "video/x-ms-asx",
+    "au": "audio/ulaw",
+    "avi": "video/x-msvideo",
+    "bcpio": "application/x-bcpio",
+    "ccad": "application/clariscad",
+    "cod": "application/vnd.rim.cod",
+    "com": "application/x-msdos-program",
+    "cpio": "application/x-cpio",
+    "cpt": "application/mac-compactpro",
+    "csh": "application/x-csh",
+    "css": "text/css",
+    "deb": "application/x-debian-package",
+    "dl": "video/dl",
+    "doc": "application/msword",
+    "drw": "application/drafting",
+    "dvi": "application/x-dvi",
+    "dwg": "application/acad",
+    "dxf": "application/dxf",
+    "dxr": "application/x-director",
+    "etx": "text/x-setext",
+    "ez": "application/andrew-inset",
+    "fli": "video/x-fli",
+    "flv": "video/x-flv",
+    "gif": "image/gif",
+    "gl": "video/gl",
+    "gtar": "application/x-gtar",
+    "gz": "application/x-gzip",
+    "hdf": "application/x-hdf",
+    "hqx": "application/mac-binhex40",
+    "htm": "text/html",
+    "html": "text/html",
+    "ice": "x-conference/x-cooltalk",
+    "ico": "image/x-icon",
+    "ief": "image/ief",
+    "igs": "model/iges",
+    "ips": "application/x-ipscript",
+    "ipx": "application/x-ipix",
+    "jad": "text/vnd.sun.j2me.app-descriptor",
+    "jar": "application/java-archive",
+    "jpeg": "image/jpeg",
+    "jpg": "image/jpeg",
+    "js": "text/javascript",
+    "json": "application/json",
+    "latex": "application/x-latex",
+    "less": "text/css",
+    "lsp": "application/x-lisp",
+    "lzh": "application/octet-stream",
+    "m": "text/plain",
+    "m3u": "audio/x-mpegurl",
+    "man": "application/x-troff-man",
+    "manifest": "text/cache-manifest",
+    "me": "application/x-troff-me",
+    "midi": "audio/midi",
+    "mif": "application/x-mif",
+    "mime": "www/mime",
+    "movie": "video/x-sgi-movie",
+    "mp4": "video/mp4",
+    "mpg": "video/mpeg",
+    "mpga": "audio/mpeg",
+    "ms": "application/x-troff-ms",
+    "nc": "application/x-netcdf",
+    "oda": "application/oda",
+    "ogm": "application/ogg",
+    "pbm": "image/x-portable-bitmap",
+    "pdf": "application/pdf",
+    "pgm": "image/x-portable-graymap",
+    "pgn": "application/x-chess-pgn",
+    "pgp": "application/pgp",
+    "pm": "application/x-perl",
+    "png": "image/png",
+    "pnm": "image/x-portable-anymap",
+    "ppm": "image/x-portable-pixmap",
+    "ppz": "application/vnd.ms-powerpoint",
+    "pre": "application/x-freelance",
+    "prt": "application/pro_eng",
+    "ps": "application/postscript",
+    "qt": "video/quicktime",
+    "ra": "audio/x-realaudio",
+    "rar": "application/x-rar-compressed",
+    "ras": "image/x-cmu-raster",
+    "rgb": "image/x-rgb",
+    "rm": "audio/x-pn-realaudio",
+    "rpm": "audio/x-pn-realaudio-plugin",
+    "rtf": "text/rtf",
+    "rtx": "text/richtext",
+    "scm": "application/x-lotusscreencam",
+    "set": "application/set",
+    "sgml": "text/sgml",
+    "sh": "application/x-sh",
+    "shar": "application/x-shar",
+    "silo": "model/mesh",
+    "sit": "application/x-stuffit",
+    "skt": "application/x-koan",
+    "smil": "application/smil",
+    "snd": "audio/basic",
+    "sol": "application/solids",
+    "spl": "application/x-futuresplash",
+    "src": "application/x-wais-source",
+    "stl": "application/SLA",
+    "stp": "application/STEP",
+    "sv4cpio": "application/x-sv4cpio",
+    "sv4crc": "application/x-sv4crc",
+    "svg": "image/svg+xml",
+    "swf": "application/x-shockwave-flash",
+    "tar": "application/x-tar",
+    "tcl": "application/x-tcl",
+    "tex": "application/x-tex",
+    "texinfo": "application/x-texinfo",
+    "tgz": "application/x-tar-gz",
+    "tiff": "image/tiff",
+    "tr": "application/x-troff",
+    "tsi": "audio/TSP-audio",
+    "tsp": "application/dsptype",
+    "tsv": "text/tab-separated-values",
+    "txt": "text/plain",
+    "unv": "application/i-deas",
+    "ustar": "application/x-ustar",
+    "vcd": "application/x-cdlink",
+    "vda": "application/vda",
+    "vivo": "video/vnd.vivo",
+    "vrm": "x-world/x-vrml",
+    "wav": "audio/x-wav",
+    "wax": "audio/x-ms-wax",
+    "wma": "audio/x-ms-wma",
+    "wmv": "video/x-ms-wmv",
+    "wmx": "video/x-ms-wmx",
+    "wrl": "model/vrml",
+    "wvx": "video/x-ms-wvx",
+    "xbm": "image/x-xbitmap",
+    "xlw": "application/vnd.ms-excel",
+    "xml": "text/xml",
+    "xpm": "image/x-xpixmap",
+    "xwd": "image/x-xwindowdump",
+    "xyz": "chemical/x-pdb",
+    "zip": "application/zip",
+    "*": "application/octect-stream"
+};
+
+exports.mimeTypes = mimeTypes;
+};
+
+__modules[14] = function(exports) {
+/*
+
+== Notes ==
+
+- With this approach, we can't have cyclic dependencies.  But there are
+  many other restrictions as well.  They may be lifted at some point in
+  the future.
+
+*/
+
+var __this = this; var Parser = __require(16);
+
+var FILENAME = /^[^\.\/\\][\s\S]*?\.[^\s\.]+$/;
+
+function requireCall(url) {
+
+    return "require(" + JSON.stringify(url) + ")";
+}
+
+var Replacer = es6now.Class(null, function(__super) { return {
+
+    constructor: function() {
+        
+        this.requireCall = requireCall;
+    },
+    
+    replace: function(input) { var __this = this; 
+    
+        this.exports = {};
+        this.imports = {};
+        this.dependencies = [];
+        this.uid = 0;
+        this.input = input;
+
+        var root = Parser.parseModule(input);
+        
+        var visit = (function(node) {
+        
+            // Perform a depth-first traversal
+            Parser.forEachChild(node, (function(child) {
+            
+                child.parentNode = node;
+                visit(child);
+            }));
+            
+            node.text = __this.stringify(node);
+            
+            // Call replacer
+            if (__this[node.type]) {
+            
+                var replaced = __this[node.type](node);
+                
+                node.text = (replaced === undefined || replaced === null) ?
+                    __this.stringify(node) :
+                    replaced;
+            }
+            
+            return node.text;
+        });
+        
+        return visit({ 
+        
+            type: "$", 
+            root: root, 
+            start: 0, 
+            end: input.length
+        });
+    },
+
+    DoWhileStatement: function(node) {
+    
+        if (node.text.slice(-1) !== ";")
+            return node.text + ";";
+    },
+    
+    Module: function(node) {
+    
+        if (node.createThisBinding)
+            return "var __this = this; " + node.text;
+    },
+    
+    Script: function(node) {
+    
+        if (node.createThisBinding)
+            return "var __this = this; " + node.text;
+    },
+    
+    FunctionBody: function(node) {
+    
+        if (node.parentNode.createThisBinding)
+            return "{ var __this = this; " + node.text.slice(1);
+    },
+    
+    ExpressionStatement: function(node) {
+    
+        // Remove 'use strict' directives (will be added to head of output)
+        if (node.directive === "use strict")
+            return "";
+    },
+    
+    VariableDeclaration: function(node) {
+    
+        // TODO?  Per-iteration bindings mean that we'll need to use
+        // the try { throw void 0; } catch (x) {} trick.  Worth it?
+    },
+    
+    MethodDefinition: function(node) {
+    
+        // TODO: Generator methods
+        
+        // TODO: will fail if name is a string:  static "name"() {}
+        if (node.static)
+            node.name.text = "__static_" + node.name.text;
+        
+        if (!node.accessor)
+            return node.name.text + ": function(" + this.joinList(node.params) + ") " + node.body.text;
+    },
+    
+    PropertyDefinition: function(node) {
+    
+        if (node.expression === null)
+            return node.name.text + ": " + node.name.text;
+    },
+    
+    ModuleAlias: function(node) {
+    
+        var spec = node.specifier;
+        
+        var expr = spec.type === "String" ?
+            this.requireCall(this.requirePath(spec.value)) :
+            spec.text;
+        
+        return "var " + node.ident.text + " = " + expr + ";";
+    },
+    
+    ModuleDeclaration: function(node) {
+    
+        // TODO: Inline modules
+    },
+    
+    ModuleRegistration: function(node) {
+    
+        // TODO: Pre-loaded modules
+    },
+    
+    ImportDeclaration: function(node) {
+    
+        var binding = node.binding,
+            from = node.from,
+            moduleSpec,
+            out = "",
+            tmp;
+        
+        moduleSpec = from.type === "String" ?
+            this.requireCall(this.requirePath(from.value)) :
+            from.text;
+        
+        if (binding.type === "Identifier") {
+        
+            out = "var " + binding.text + " = " + moduleSpec + "." + binding.text + ";";
+            
+        } else if (binding.type === "ImportSpecifierSet") {
+        
+            tmp = "_M" + (this.uid++);
+            out = "var " + tmp + " = " + moduleSpec;
+            
+            binding.specifiers.forEach((function(spec) {
+            
+                var name = spec.name,
+                    ident = spec.ident || name;
+                
+                out += ", " + ident.text + " = " + tmp + "." + name.text;
+            }));
+            
+            out += ";";
+        }
+        
+        return out;
+    },
+    
+    ExportDeclaration: function(node) {
+    
+        var binding = node.binding,
+            bindingType = binding ? binding.type : "*",
+            exports = this.exports,
+            ident;
+        
+        // Exported declarations
+        switch (bindingType) {
+        
+            case "VariableDeclaration":
+            
+                binding.declarations.forEach((function(decl) {
+            
+                    // TODO: Destructuring!
+                    ident = decl.pattern.text;
+                    exports[ident] = ident;
+                }));
+                
+                return binding.text + ";";
+            
+            case "FunctionDeclaration":
+            case "ClassDeclaration":
+            
+                ident = binding.ident.text;
+                exports[ident] = ident;
+                return binding.text;
+        }
+        
+        var from = node.from,
+            fromPath = "",
+            out = "";
+        
+        if (from) {
+        
+            if (from.type === "String") {
+            
+                fromPath = "_M" + (this.uid++);
+                out = "var " + fromPath + " = " + this.requireCall(this.requirePath(from.value)) + "; ";
+            
+            } else {
+            
+                fromPath = node.from.text;
+            }
+        }
+        
+        // Exported bindings
+        switch (bindingType) {
+        
+            case "*":
+            
+                if (from) {
+                
+                    out += "Object.keys(" + fromPath + ").forEach(function(k) { exports[k] = " + fromPath + "[k]; });";
+                    
+                } else {
+                
+                    // TODO:
+                    throw new Error("`export *;` is not implemented.");
+                }
+                
+                break;
+                
+            case "Identifier":
+            
+                ident = binding.text;
+                exports[ident] = from ? (fromPath + "." + ident) : ident;
+                break;
+            
+            default:
+            
+                binding.specifiers.forEach((function(spec) {
+            
+                    var ident = spec.ident.text,
+                        path = spec.path ? spec.path.text : ident;
+                    
+                    exports[ident] = from ? 
+                        fromPath + "." + path :
+                        path;
+                }));
+                
+                break;
+        }
+        
+        return out;
+    },
+    
+    CallExpression: function(node) {
+    
+        var callee = node.callee,
+            args = node.arguments;
+        
+        // Translate CommonJS require calls
+        if (callee.type === "Identifier" && 
+            callee.value === "require" &&
+            args.length === 1 &&
+            args[0].type === "String") {
+        
+            return this.requireCall(this.requirePath(args[0].value));
+        }
+        
+        if (node.isSuperCall) {
+        
+            var argText = "this";
+            
+            if (args.length > 0)
+                argText += ", " + this.joinList(args);
+            
+            // TODO: what if callee is of the form super["abc"]?
+            return callee.text + ".call(" + argText + ")";
+        }
+    },
+    
+    SuperExpression: function(node) {
+    
+        var p = node.parentNode;
+        
+        if (p.type === "CallExpression") {
+        
+            p.isSuperCall = true;
+            
+            var m = this.parentFunction(p),
+                name = (m.type === "MethodDefinition" ? m.name.text : "constructor");
+            
+            // TODO: what if method name is not an identifier?
+            return "__super." + name;
+        }
+        
+        p = p.parentNode;
+        
+        if (p.type === "CallExpression")
+            p.isSuperCall = true;
+        
+        return "__super";
+    },
+    
+    ArrowFunction: function(node) {
+    
+        var head, body, expr;
+        
+        head = "function(" + this.joinList(node.params) + ")";
+        
+        if (node.body.type === "FunctionBody") {
+        
+            body = node.body.text;
+        
+        } else {
+        
+            body = "{ return " + node.body.text + "; }";
+        }
+
+        return "(" + head + " " + body + ")";
+    },
+    
+    ThisExpression: function(node) {
+    
+        var fn = this.parentFunction(node);
+        
+        if (fn.type === "ArrowFunction") {
+        
+            while (fn = this.parentFunction(fn))
+                if (fn.type !== "ArrowFunction")
+                    fn.createThisBinding = true;
+            
+            return "__this";
+        }
+    },
+    
+    ClassDeclaration: function(node) {
+    
+        var name = node.ident ? ("var " + node.ident.text + " = ") : "";
+        
+        return name + "es6now.Class(" + 
+            (node.base ? node.base.text : "null") + ", " +
+            "function(__super) { return " +
+            node.body.text + "});";
+    },
+    
+    ClassExpression: function(node) {
+    
+        // TODO:  named class expressions aren't currently supported
+        
+        return "es6now.Class(" + 
+            (node.base ? node.base.text : "null") + ", " +
+            "function(__super) { return" +
+            node.body.text + "})";
+    },
+    
+    ClassBody: function(node) {
+    
+        var elems = node.elements, 
+            e,
+            i;
+        
+        for (i = elems.length; i--;) {
+        
+            e = elems[i];
+            
+            if (e.static)
+                e.text = e.text.replace(/^static\s+/, "");
+            
+            if (i < elems.length - 1)
+                e.text += ",";
+        }
+    },
+    
+    TemplateExpression: function(node) {
+    
+        var lit = node.literals,
+            sub = node.substitutions,
+            out = "",
+            i;
+        
+        for (i = 0; i < lit.length; ++i) {
+        
+            if (i > 0)
+                out += " + (" + sub[i - 1].text + ") + ";
+            
+            out += JSON.stringify(lit[i].value);
+        }
+        
+        return out;
+    },
+    
+    parentFunction: function(node) {
+    
+        for (var p = node.parentNode; p; p = p.parentNode) {
+        
+            switch (p.type) {
+            
+                case "ArrowFunction":
+                case "FunctionDeclaration":
+                case "FunctionExpression":
+                case "MethodDefinition":
+                case "Script":
+                case "Module":
+                    return p;
+            }
+        }
+        
+        return null;
+    },
+    
+    hasThisRef: function(node) {
+    
+        var hasThis = {};
+        
+        try { 
+        
+            visit(node);
+        
+        } catch (err) { 
+        
+            if (err === hasThis) return true; 
+            else throw err;
+        }
+        
+        return false;
+        
+        function visit(node) {
+        
+            if (node.type === "FunctionExpression" || 
+                node.type === "FunctionDeclaration")
+                return;
+            
+            if (node.type === "ThisExpression")
+                throw hasThis;
+            
+            Parser.forEachChild(node, visit);
+        }
+    },
+    
+    requirePath: function(url) {
+    
+        // If this is a simple local filename, then add "./" prefix
+        // so that Node will not treat it as a package
+        if (FILENAME.test(url))
+            url = "./" + url;
+        
+        // Add to dependency list
+        if (this.imports[url] !== true) {
+        
+            this.imports[url] = true;
+            this.dependencies.push(url);
+        }
+        
+        return url;
+    },
+    
+    stringify: function(node) {
+        
+        var offset = node.start,
+            input = this.input,
+            text = "";
+        
+        // Build text from child nodes
+        Parser.forEachChild(node, (function(child) {
+        
+            if (offset < child.start)
+                text += input.slice(offset, child.start);
+            
+            text += child.text;
+            offset = child.end;
+        }));
+        
+        if (offset < node.end)
+            text += input.slice(offset, node.end);
+        
+        return text;
+    },
+    
+    joinList: function(list) {
+    
+        var input = this.input,
+            offset = -1, 
+            text = "";
+        
+        list.forEach((function(child) {
+        
+            if (offset >= 0 && offset < child.start)
+                text += input.slice(offset, child.start);
+            
+            text += child.text;
+            offset = child.end;
+        }));
+        
+        return text;
+    }
+
+}});
+
+exports.Replacer = Replacer;
+};
+
+__modules[15] = function(exports) {
 /*
 
 Provides basic support for methods added in EcmaScript 5 for EcmaScript 4 browsers.
@@ -1564,1062 +2697,14 @@ exports.addKeys = addKeys;
 exports.emulate = emulate;
 };
 
-__modules[11] = function(exports) {
-var identity = (function(obj) { return obj; }),
-    freeze = Object.freeze || identity,
-    queue = [],
-    waiting = false,
-    asap;
-
-// UUID property names used for duck-typing
-var DISPATCH = "07b06b7e-3880-42b1-ad55-e68a77514eb9",
-    IS_FAILURE = "7d24bf0f-d8b1-4783-b594-cec32313f6bc";
-
-var EMPTY_LIST_MSG = "List cannot be empty.",
-    WAS_RESOLVED_MSG = "The promise has already been resolved.",
-    CYCLE_MSG = "A promise cycle was detected.";
-
-var THROW_DELAY = 50;
-
-// Enqueues a message
-function enqueue(future, args) {
-
-    queue.push({ fn: future[DISPATCH], args: args });
-    
-    if (!waiting) {
-    
-        waiting = true;
-        asap(flush);
-    }
-}
-
-// Flushes the message queue
-function flush() {
-
-    waiting = false;
-
-    while (queue.length > 0) {
-        
-        // Send each message in queue
-        for (var count = queue.length, msg; count > 0; --count) {
-        
-            msg = queue.shift();
-            msg.fn.apply(void 0, msg.args);
-        }
-    }
-}
-
-// Returns a cycle error
-function cycleError() {
-
-    return failure(CYCLE_MSG);
-}
-
-// Future constructor
-function Future(dispatch) {
-    
-    this[DISPATCH] = dispatch;
-}
-
-// Registers a callback for completion when a future is complete
-Future.prototype.then = function then(onSuccess, onFail) {
-
-    onSuccess || (onSuccess = identity);
-    
-    var resolve = (function(value) { return finish(value, onSuccess); }),
-        reject = (function(value) { return finish(value, onFail); }),
-        promise = new Promise(onQueue),
-        target = this,
-        done = false;
-    
-    onQueue(onSuccess, onFail);
-    
-    return promise.future;
-    
-    function onQueue(success, error) {
-    
-        if (success && resolve) {
-        
-            enqueue(target, [ resolve, null ]);
-            resolve = null;
-        }
-        
-        if (error && reject) {
-        
-            enqueue(target, [ null, reject ]);
-            reject = null;
-        }
-    }
-    
-    function finish(value, transform) {
-    
-        if (!done) {
-        
-            done = true;
-            promise.resolve(applyTransform(transform, value));
-        }
-    }
+__modules[16] = function(exports) {
+var _M0 = __require(17); Object.keys(_M0).forEach(function(k) { exports[k] = _M0[k]; });
 };
 
-// Begins a deferred operation
-function Promise(onQueue) {
-
-    var token = {},
-        pending = [],
-        throwable = true,
-        next = null;
-
-    this.future = freeze(new Future(dispatch));
-    this.resolve = resolve;
-    this.reject = reject;
-    
-    freeze(this);
-    
-    // Dispatch function for future
-    function dispatch(success, error, src) {
-    
-        var msg = [success, error, src || token];
-        
-        if (error)
-            throwable = false;
-        
-        if (pending) {
-        
-            pending.push(msg);
-            
-            if (onQueue)
-                onQueue(success, error);
-        
-        } else {
-        
-            // If a cycle is detected, convert resolution to a rejection
-            if (src === token) {
-            
-                next = cycleError();
-                maybeThrow();
-            }
-            
-            enqueue(next, msg);
-        }
-    }
-    
-    // Resolves the promise
-    function resolve(value) {
-    
-        if (!pending)
-            throw new Error(WAS_RESOLVED_MSG);
-        
-        var list = pending;
-        pending = false;
-        
-        // Create a future from the provided value
-        next = when(value);
-
-        // Send internally queued messages to the next future
-        for (var i = 0; i < list.length; ++i)
-            enqueue(next, list[i]);
-        
-        maybeThrow();
-    }
-    
-    // Resolves the promise with a rejection
-    function reject(error) {
-    
-        resolve(failure(error));
-    }
-    
-    // Throws an error if the promise is rejected and there
-    // are no error handlers
-    function maybeThrow() {
-    
-        if (!throwable || !isFailure(next))
-            return;
-        
-        setTimeout((function() {
-        
-            var error = null;
-            
-            // Get the error value
-            next[DISPATCH](null, (function(val) { return error = val; }));
-            
-            // Throw it
-            if (error && throwable)
-                throw error;
-            
-        }), THROW_DELAY);
-    }
-}
-
-// Returns a future for an object
-function when(obj) {
-
-    if (obj && obj[DISPATCH])
-        return obj;
-    
-    if (obj && obj.then) {
-    
-        var promise = new Promise();
-        obj.then(promise.resolve, promise.reject);
-        return promise.future;
-    }
-    
-    // Wrap a value in an immediate future
-    return freeze(new Future((function(success) { return success && success(obj); })));
-}
-
-// Returns true if the object is a failed future
-function isFailure(obj) {
-
-    return obj && obj[IS_FAILURE];
-}
-
-// Creates a failure Future
-function failure(value) {
-
-    var future = new Future((function(success, error) { return error && error(value); }));
-    
-    // Tag the future as a failure
-    future[IS_FAILURE] = true;
-    
-    return freeze(future);
-}
-
-// Applies a promise transformation function
-function applyTransform(transform, value) {
-
-    try { return (transform || failure)(value); }
-    catch (ex) { return failure(ex); }
-}
-
-// Returns a future for every completed future in an array
-function whenAll(list) {
-
-    var count = list.length,
-        promise = new Promise(),
-        out = [],
-        value = out,
-        i;
-    
-    for (i = 0; i < list.length; ++i)
-        waitFor(list[i], i);
-    
-    if (count === 0)
-        promise.resolve(out);
-    
-    return promise.future;
-    
-    function waitFor(f, index) {
-    
-        when(f).then((function(val) { 
-        
-            out[index] = val;
-            
-            if (--count === 0)
-                promise.resolve(value);
-        
-        }), (function(err) {
-        
-            value = failure(err);
-            
-            if (--count === 0)
-                promise.resolve(value);
-        }));
-    }
-}
-
-// Returns a future for the first completed future in an array
-function whenAny(list) {
-
-    if (list.length === 0)
-        throw new Error(EMPTY_LIST_MSG);
-    
-    var promise = new Promise(), i;
-    
-    for (i = 0; i < list.length; ++i)
-        when(list[i]).then((function(val) { return promise.resolve(val); }), (function(err) { return promise.reject(err); }));
-    
-    return promise.future;
-}
-
-// Returns a future for the values produced by a callback for every
-// element in an array, executed sequentially
-function forEach(list, fn) {
-
-    var out = [];
-    
-    function next() {
-    
-        var i = out.length;
-        
-        if (i === list.length)
-            return out;
-        
-        return when(fn(list[i], i, list)).then((function(val) {
-        
-            out.push(val);
-            return next();
-        }));
-    }
-    
-    return when(next());
-}
-
-// === Event Loop API ===
-
-asap = (function(global) {
-    
-    var msg = uuid(),
-        process = global.process,
-        window = global.window,
-        msgChannel = null,
-        list = [];
-    
-    if (process && typeof process.nextTick === "function") {
-    
-        // NodeJS
-        return process.nextTick;
-   
-    } else if (window && window.addEventListener && window.postMessage) {
-    
-        // Modern Browsers
-        if (window.MessageChannel) {
-        
-            msgChannel = new window.MessageChannel();
-            msgChannel.port1.onmessage = onmsg;
-        
-        } else {
-        
-            window.addEventListener("message", onmsg, true);
-        }
-        
-        return (function(fn) {
-        
-            list.push(fn);
-            
-            if (msgChannel !== null)
-                msgChannel.port2.postMessage(msg);
-            else
-                window.postMessage(msg, "*");
-            
-            return 1;
-        });
-    
-    } else {
-    
-        // Legacy
-        return (function(fn) { return setTimeout(fn, 0); });
-    }
-        
-    function onmsg(evt) {
-    
-        if (msgChannel || (evt.source === window && evt.data === msg)) {
-        
-            evt.stopPropagation();
-            if (list.length) list.shift()();
-        }
-    }
-    
-    function uuid() {
-    
-        return [32, 16, 16, 16, 48].map((function(bits) { return rand(bits); })).join("-");
-        
-        function rand(bits) {
-        
-            if (bits > 32) 
-                return rand(bits - 32) + rand(32);
-            
-            var str = (Math.random() * 0xffffffff >>> (32 - bits)).toString(16),
-                len = bits / 4 >>> 0;
-            
-            if (str.length < len) 
-                str = (new Array(len - str.length + 1)).join("0") + str;
-            
-            return str;
-        }
-    }
-    
-})(this);
-
-Promise.when = when;
-Promise.whenAny = whenAny;
-Promise.whenAll = whenAll;
-Promise.forEach = forEach;
-Promise.reject = failure;
-
-
-exports.Promise = Promise;
-};
-
-__modules[12] = function(exports) {
-var mimeTypes = {
-
-    "aiff": "audio/x-aiff",
-    "arj": "application/x-arj-compressed",
-    "asf": "video/x-ms-asf",
-    "asx": "video/x-ms-asx",
-    "au": "audio/ulaw",
-    "avi": "video/x-msvideo",
-    "bcpio": "application/x-bcpio",
-    "ccad": "application/clariscad",
-    "cod": "application/vnd.rim.cod",
-    "com": "application/x-msdos-program",
-    "cpio": "application/x-cpio",
-    "cpt": "application/mac-compactpro",
-    "csh": "application/x-csh",
-    "css": "text/css",
-    "deb": "application/x-debian-package",
-    "dl": "video/dl",
-    "doc": "application/msword",
-    "drw": "application/drafting",
-    "dvi": "application/x-dvi",
-    "dwg": "application/acad",
-    "dxf": "application/dxf",
-    "dxr": "application/x-director",
-    "etx": "text/x-setext",
-    "ez": "application/andrew-inset",
-    "fli": "video/x-fli",
-    "flv": "video/x-flv",
-    "gif": "image/gif",
-    "gl": "video/gl",
-    "gtar": "application/x-gtar",
-    "gz": "application/x-gzip",
-    "hdf": "application/x-hdf",
-    "hqx": "application/mac-binhex40",
-    "htm": "text/html",
-    "html": "text/html",
-    "ice": "x-conference/x-cooltalk",
-    "ico": "image/x-icon",
-    "ief": "image/ief",
-    "igs": "model/iges",
-    "ips": "application/x-ipscript",
-    "ipx": "application/x-ipix",
-    "jad": "text/vnd.sun.j2me.app-descriptor",
-    "jar": "application/java-archive",
-    "jpeg": "image/jpeg",
-    "jpg": "image/jpeg",
-    "js": "text/javascript",
-    "json": "application/json",
-    "latex": "application/x-latex",
-    "less": "text/css",
-    "lsp": "application/x-lisp",
-    "lzh": "application/octet-stream",
-    "m": "text/plain",
-    "m3u": "audio/x-mpegurl",
-    "man": "application/x-troff-man",
-    "manifest": "text/cache-manifest",
-    "me": "application/x-troff-me",
-    "midi": "audio/midi",
-    "mif": "application/x-mif",
-    "mime": "www/mime",
-    "movie": "video/x-sgi-movie",
-    "mp4": "video/mp4",
-    "mpg": "video/mpeg",
-    "mpga": "audio/mpeg",
-    "ms": "application/x-troff-ms",
-    "nc": "application/x-netcdf",
-    "oda": "application/oda",
-    "ogm": "application/ogg",
-    "pbm": "image/x-portable-bitmap",
-    "pdf": "application/pdf",
-    "pgm": "image/x-portable-graymap",
-    "pgn": "application/x-chess-pgn",
-    "pgp": "application/pgp",
-    "pm": "application/x-perl",
-    "png": "image/png",
-    "pnm": "image/x-portable-anymap",
-    "ppm": "image/x-portable-pixmap",
-    "ppz": "application/vnd.ms-powerpoint",
-    "pre": "application/x-freelance",
-    "prt": "application/pro_eng",
-    "ps": "application/postscript",
-    "qt": "video/quicktime",
-    "ra": "audio/x-realaudio",
-    "rar": "application/x-rar-compressed",
-    "ras": "image/x-cmu-raster",
-    "rgb": "image/x-rgb",
-    "rm": "audio/x-pn-realaudio",
-    "rpm": "audio/x-pn-realaudio-plugin",
-    "rtf": "text/rtf",
-    "rtx": "text/richtext",
-    "scm": "application/x-lotusscreencam",
-    "set": "application/set",
-    "sgml": "text/sgml",
-    "sh": "application/x-sh",
-    "shar": "application/x-shar",
-    "silo": "model/mesh",
-    "sit": "application/x-stuffit",
-    "skt": "application/x-koan",
-    "smil": "application/smil",
-    "snd": "audio/basic",
-    "sol": "application/solids",
-    "spl": "application/x-futuresplash",
-    "src": "application/x-wais-source",
-    "stl": "application/SLA",
-    "stp": "application/STEP",
-    "sv4cpio": "application/x-sv4cpio",
-    "sv4crc": "application/x-sv4crc",
-    "svg": "image/svg+xml",
-    "swf": "application/x-shockwave-flash",
-    "tar": "application/x-tar",
-    "tcl": "application/x-tcl",
-    "tex": "application/x-tex",
-    "texinfo": "application/x-texinfo",
-    "tgz": "application/x-tar-gz",
-    "tiff": "image/tiff",
-    "tr": "application/x-troff",
-    "tsi": "audio/TSP-audio",
-    "tsp": "application/dsptype",
-    "tsv": "text/tab-separated-values",
-    "txt": "text/plain",
-    "unv": "application/i-deas",
-    "ustar": "application/x-ustar",
-    "vcd": "application/x-cdlink",
-    "vda": "application/vda",
-    "vivo": "video/vnd.vivo",
-    "vrm": "x-world/x-vrml",
-    "wav": "audio/x-wav",
-    "wax": "audio/x-ms-wax",
-    "wma": "audio/x-ms-wma",
-    "wmv": "video/x-ms-wmv",
-    "wmx": "video/x-ms-wmx",
-    "wrl": "model/vrml",
-    "wvx": "video/x-ms-wvx",
-    "xbm": "image/x-xbitmap",
-    "xlw": "application/vnd.ms-excel",
-    "xml": "text/xml",
-    "xpm": "image/x-xpixmap",
-    "xwd": "image/x-xwindowdump",
-    "xyz": "chemical/x-pdb",
-    "zip": "application/zip",
-    "*": "application/octect-stream"
-};
-
-exports.mimeTypes = mimeTypes;
-};
-
-__modules[13] = function(exports) {
-/*
-
-== Notes ==
-
-- With this approach, we can't have cyclic dependencies.  But there are
-  many other restrictions as well.  They may be lifted at some point in
-  the future.
-
-*/
-
-var __this = this; var Parser = __require(14);
-
-var FILENAME = /^[^\.\/\\][\s\S]*?\.[^\s\.]+$/;
-
-function requireCall(url) {
-
-    return "require(" + JSON.stringify(url) + ")";
-}
-
-var Replacer = es6now.Class(null, function(__super) { return {
-
-    constructor: function() {
-        
-        this.requireCall = requireCall;
-    },
-    
-    replace: function(input) { var __this = this; 
-    
-        this.exports = {};
-        this.imports = {};
-        this.dependencies = [];
-        this.uid = 0;
-        this.input = input;
-
-        var root = Parser.parseModule(input);
-        
-        var visit = (function(node) {
-        
-            // Perform a depth-first traversal
-            Parser.forEachChild(node, (function(child) {
-            
-                child.parentNode = node;
-                visit(child);
-            }));
-            
-            node.text = __this.stringify(node);
-            
-            // Call replacer
-            if (__this[node.type]) {
-            
-                var replaced = __this[node.type](node);
-                
-                node.text = (replaced === undefined || replaced === null) ?
-                    __this.stringify(node) :
-                    replaced;
-            }
-            
-            return node.text;
-        });
-        
-        return visit({ 
-        
-            type: "$", 
-            root: root, 
-            start: 0, 
-            end: input.length
-        });
-    },
-
-    DoWhileStatement: function(node) {
-    
-        if (node.text.slice(-1) !== ";")
-            return node.text + ";";
-    },
-    
-    Module: function(node) {
-    
-        if (node.createThisBinding)
-            return "var __this = this; " + node.text;
-    },
-    
-    Script: function(node) {
-    
-        if (node.createThisBinding)
-            return "var __this = this; " + node.text;
-    },
-    
-    FunctionBody: function(node) {
-    
-        if (node.parentNode.createThisBinding)
-            return "{ var __this = this; " + node.text.slice(1);
-    },
-    
-    ExpressionStatement: function(node) {
-    
-        // Remove 'use strict' directives (will be added to head of output)
-        if (node.directive === "use strict")
-            return "";
-    },
-    
-    VariableDeclaration: function(node) {
-    
-        // TODO?  Per-iteration bindings mean that we'll need to use
-        // the try { throw void 0; } catch (x) {} trick.  Worth it?
-    },
-    
-    MethodDefinition: function(node) {
-    
-        // TODO: Generator methods
-        
-        // TODO: will fail if name is a string:  static "name"() {}
-        if (node.static)
-            node.name.text = "__static_" + node.name.text;
-        
-        if (!node.accessor)
-            return node.name.text + ": function(" + this.joinList(node.params) + ") " + node.body.text;
-    },
-    
-    PropertyDefinition: function(node) {
-    
-        if (node.expression === null)
-            return node.name.text + ": " + node.name.text;
-    },
-    
-    ModuleAlias: function(node) {
-    
-        var spec = node.specifier;
-        
-        var expr = spec.type === "String" ?
-            this.requireCall(this.requirePath(spec.value)) :
-            spec.text;
-        
-        return "var " + node.ident.text + " = " + expr + ";";
-    },
-    
-    ModuleDeclaration: function(node) {
-    
-        // TODO: Inline modules
-    },
-    
-    ModuleRegistration: function(node) {
-    
-        // TODO: Pre-loaded modules
-    },
-    
-    ImportDeclaration: function(node) {
-    
-        var binding = node.binding,
-            from = node.from,
-            moduleSpec,
-            out = "",
-            tmp;
-        
-        moduleSpec = from.type === "String" ?
-            this.requireCall(this.requirePath(from.value)) :
-            from.text;
-        
-        if (binding.type === "Identifier") {
-        
-            out = "var " + binding.text + " = " + moduleSpec + "." + binding.text + ";";
-            
-        } else if (binding.type === "ImportSpecifierSet") {
-        
-            tmp = "_M" + (this.uid++);
-            out = "var " + tmp + " = " + moduleSpec;
-            
-            binding.specifiers.forEach((function(spec) {
-            
-                var name = spec.name,
-                    ident = spec.ident || name;
-                
-                out += ", " + ident.text + " = " + tmp + "." + name.text;
-            }));
-            
-            out += ";";
-        }
-        
-        return out;
-    },
-    
-    ExportDeclaration: function(node) {
-    
-        var binding = node.binding,
-            bindingType = binding ? binding.type : "*",
-            exports = this.exports,
-            ident;
-        
-        // Exported declarations
-        switch (bindingType) {
-        
-            case "VariableDeclaration":
-            
-                binding.declarations.forEach((function(decl) {
-            
-                    // TODO: Destructuring!
-                    ident = decl.pattern.text;
-                    exports[ident] = ident;
-                }));
-                
-                return binding.text + ";";
-            
-            case "FunctionDeclaration":
-            case "ClassDeclaration":
-            
-                ident = binding.ident.text;
-                exports[ident] = ident;
-                return binding.text;
-        }
-        
-        var from = node.from,
-            fromPath = "",
-            out = "";
-        
-        if (from) {
-        
-            if (from.type === "String") {
-            
-                fromPath = "_M" + (this.uid++);
-                out = "var " + fromPath + " = " + this.requireCall(this.requirePath(from.value)) + "; ";
-            
-            } else {
-            
-                fromPath = node.from.text;
-            }
-        }
-        
-        // Exported bindings
-        switch (bindingType) {
-        
-            case "*":
-            
-                if (from) {
-                
-                    out += "Object.keys(" + fromPath + ").forEach(function(k) { exports[k] = " + fromPath + "[k]; });";
-                    
-                } else {
-                
-                    // TODO:
-                    throw new Error("`export *;` is not implemented.");
-                }
-                
-                break;
-                
-            case "Identifier":
-            
-                ident = binding.text;
-                exports[ident] = from ? (fromPath + "." + ident) : ident;
-                break;
-            
-            default:
-            
-                binding.specifiers.forEach((function(spec) {
-            
-                    var ident = spec.ident.text,
-                        path = spec.path ? spec.path.text : ident;
-                    
-                    exports[ident] = from ? 
-                        fromPath + "." + path :
-                        path;
-                }));
-                
-                break;
-        }
-        
-        return out;
-    },
-    
-    CallExpression: function(node) {
-    
-        var callee = node.callee,
-            args = node.arguments;
-        
-        // Translate CommonJS require calls
-        if (callee.type === "Identifier" && 
-            callee.value === "require" &&
-            args.length === 1 &&
-            args[0].type === "String") {
-        
-            return this.requireCall(this.requirePath(args[0].value));
-        }
-        
-        if (node.isSuperCall) {
-        
-            var argText = "this";
-            
-            if (args.length > 0)
-                argText += ", " + this.joinList(args);
-            
-            // TODO: what if callee is of the form super["abc"]?
-            return callee.text + ".call(" + argText + ")";
-        }
-    },
-    
-    SuperExpression: function(node) {
-    
-        var p = node.parentNode;
-        
-        if (p.type === "CallExpression") {
-        
-            p.isSuperCall = true;
-            
-            var m = this.parentFunction(p),
-                name = (m.type === "MethodDefinition" ? m.name.text : "constructor");
-            
-            // TODO: what if method name is not an identifier?
-            return "__super." + name;
-        }
-        
-        p = p.parentNode;
-        
-        if (p.type === "CallExpression")
-            p.isSuperCall = true;
-        
-        return "__super";
-    },
-    
-    ArrowFunction: function(node) {
-    
-        var head, body, expr;
-        
-        head = "function(" + this.joinList(node.params) + ")";
-        
-        if (node.body.type === "FunctionBody") {
-        
-            body = node.body.text;
-        
-        } else {
-        
-            body = "{ return " + node.body.text + "; }";
-        }
-
-        return "(" + head + " " + body + ")";
-    },
-    
-    ThisExpression: function(node) {
-    
-        var fn = this.parentFunction(node);
-        
-        if (fn.type === "ArrowFunction") {
-        
-            while (fn = this.parentFunction(fn))
-                if (fn.type !== "ArrowFunction")
-                    fn.createThisBinding = true;
-            
-            return "__this";
-        }
-    },
-    
-    ClassDeclaration: function(node) {
-    
-        var name = node.ident ? ("var " + node.ident.text + " = ") : "";
-        
-        return name + "es6now.Class(" + 
-            (node.base ? node.base.text : "null") + ", " +
-            "function(__super) { return " +
-            node.body.text + "});";
-    },
-    
-    ClassExpression: function(node) {
-    
-        // TODO:  named class expressions aren't currently supported
-        
-        return "es6now.Class(" + 
-            (node.base ? node.base.text : "null") + ", " +
-            "function(__super) { return" +
-            node.body.text + "})";
-    },
-    
-    ClassBody: function(node) {
-    
-        var elems = node.elements, 
-            e,
-            i;
-        
-        for (i = elems.length; i--;) {
-        
-            e = elems[i];
-            
-            if (e.static)
-                e.text = e.text.replace(/^static\s+/, "");
-            
-            if (i < elems.length - 1)
-                e.text += ",";
-        }
-    },
-    
-    TemplateExpression: function(node) {
-    
-        var lit = node.literals,
-            sub = node.substitutions,
-            out = "",
-            i;
-        
-        for (i = 0; i < lit.length; ++i) {
-        
-            if (i > 0)
-                out += " + (" + sub[i - 1].text + ") + ";
-            
-            out += JSON.stringify(lit[i].value);
-        }
-        
-        return out;
-    },
-    
-    parentFunction: function(node) {
-    
-        for (var p = node.parentNode; p; p = p.parentNode) {
-        
-            switch (p.type) {
-            
-                case "ArrowFunction":
-                case "FunctionDeclaration":
-                case "FunctionExpression":
-                case "MethodDefinition":
-                case "Script":
-                case "Module":
-                    return p;
-            }
-        }
-        
-        return null;
-    },
-    
-    hasThisRef: function(node) {
-    
-        var hasThis = {};
-        
-        try { 
-        
-            visit(node);
-        
-        } catch (err) { 
-        
-            if (err === hasThis) return true; 
-            else throw err;
-        }
-        
-        return false;
-        
-        function visit(node) {
-        
-            if (node.type === "FunctionExpression" || 
-                node.type === "FunctionDeclaration")
-                return;
-            
-            if (node.type === "ThisExpression")
-                throw hasThis;
-            
-            Parser.forEachChild(node, visit);
-        }
-    },
-    
-    requirePath: function(url) {
-    
-        // If this is a simple local filename, then add "./" prefix
-        // so that Node will not treat it as a package
-        if (FILENAME.test(url))
-            url = "./" + url;
-        
-        // Add to dependency list
-        if (this.imports[url] !== true) {
-        
-            this.imports[url] = true;
-            this.dependencies.push(url);
-        }
-        
-        return url;
-    },
-    
-    stringify: function(node) {
-        
-        var offset = node.start,
-            input = this.input,
-            text = "";
-        
-        // Build text from child nodes
-        Parser.forEachChild(node, (function(child) {
-        
-            if (offset < child.start)
-                text += input.slice(offset, child.start);
-            
-            text += child.text;
-            offset = child.end;
-        }));
-        
-        if (offset < node.end)
-            text += input.slice(offset, node.end);
-        
-        return text;
-    },
-    
-    joinList: function(list) {
-    
-        var input = this.input,
-            offset = -1, 
-            text = "";
-        
-        list.forEach((function(child) {
-        
-            if (offset >= 0 && offset < child.start)
-                text += input.slice(offset, child.start);
-            
-            text += child.text;
-            offset = child.end;
-        }));
-        
-        return text;
-    }
-
-}});
-
-exports.Replacer = Replacer;
-};
-
-__modules[14] = function(exports) {
-var _M0 = __require(15); Object.keys(_M0).forEach(function(k) { exports[k] = _M0[k]; });
-};
-
-__modules[15] = function(exports) {
-var Node = __require(16);
-var Parser = __require(17).Parser;
-var Scanner = __require(18).Scanner;
+__modules[17] = function(exports) {
+var Node = __require(18);
+var Parser = __require(19).Parser;
+var Scanner = __require(20).Scanner;
 
 
 
@@ -2672,7 +2757,7 @@ exports.parseScript = parseScript;
 exports.forEachChild = forEachChild;
 };
 
-__modules[16] = function(exports) {
+__modules[18] = function(exports) {
 
 var Identifier = es6now.Class(null, function(__super) { return {
 
@@ -2783,12 +2868,12 @@ exports.ThisExpression = ThisExpression;
 exports.SuperExpression = SuperExpression;
 };
 
-__modules[17] = function(exports) {
-var Node = __require(16);
+__modules[19] = function(exports) {
+var Node = __require(18);
 
-var Scanner = __require(18).Scanner;
-var Transform = __require(19).Transform;
-var Validate = __require(20).Validate;
+var Scanner = __require(20).Scanner;
+var Transform = __require(21).Transform;
+var Validate = __require(22).Validate;
 
 // Binary operator precedence levels
 var operatorPrecedence = {
@@ -5237,7 +5322,7 @@ mixin(Validate);
 exports.Parser = Parser;
 };
 
-__modules[18] = function(exports) {
+__modules[20] = function(exports) {
 // === Unicode Categories for Javascript ===
 var Unicode = (function() {
 
@@ -6092,7 +6177,7 @@ var Scanner = es6now.Class(null, function(__super) { return {
 exports.Scanner = Scanner;
 };
 
-__modules[19] = function(exports) {
+__modules[21] = function(exports) {
 var Transform = es6now.Class(null, function(__super) { return {
 
     // Transform an expression into a formal parameter list
@@ -6267,7 +6352,7 @@ var Transform = es6now.Class(null, function(__super) { return {
 exports.Transform = Transform;
 };
 
-__modules[20] = function(exports) {
+__modules[22] = function(exports) {
 // Object literal property name flags
 var PROP_NORMAL = 1,
     PROP_ASSIGN = 2,

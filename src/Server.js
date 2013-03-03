@@ -2,12 +2,11 @@ module FS = "fs";
 module HTTP = "http";
 module Path = "path";
 module URL = "url";
+module FFS = "FutureFS.js";
 
-import NodePromise from "NodePromise.js";
+import Promise from "Promise.js";
 import { translate, isWrapped } from "Translator.js";
 import mimeTypes from "ServerMime.js";
-
-var AFS = NodePromise.FS;
 
 var DEFAULT_PORT = 8080,
     DEFAULT_ROOT = ".",
@@ -29,7 +28,7 @@ export class Server {
     start(port, hostname) {
     
         if (this.active)
-            throw new Error("Server already listening");
+            throw new Error("Server is already listening");
         
         if (port)
             this.port = port;
@@ -37,7 +36,7 @@ export class Server {
         if (hostname)
             this.hostname = hostname;
         
-        var promise = new NodePromise;
+        var promise = new Promise;
         this.server.listen(this.port, this.hostname, promise.callback);
         
         this.active = true;
@@ -47,7 +46,7 @@ export class Server {
     
     stop() {
     
-        var promise = new NodePromise;
+        var promise = new Promise;
         
         if (this.active) {
         
@@ -74,7 +73,7 @@ export class Server {
         if (path.indexOf(this.root) !== 0)
             return this.error(403, response);
         
-        AFS.stat(path).then(stat => {
+        FFS.stat(path).then(stat => {
         
             if (stat.isDirectory())
                 return this.streamDefault(path, response);
@@ -114,7 +113,7 @@ export class Server {
             var file = files.shift(),
                 search = Path.join(path, file);
             
-            AFS.stat(search).then(stat => {
+            FFS.stat(search).then(stat => {
             
                 if (!stat.isFile())
                     return next();
@@ -133,10 +132,11 @@ export class Server {
     
     streamJS(path, response) {
         
-        AFS.readFile(path, "utf8").then(source => {
+        FFS.readFile(path, "utf8").then(source => {
         
             if (!isWrapped(source)) {
             
+                // TODO:  A better way to report errors?
                 try { source = translate(source); } 
                 catch (x) { source += "\n\n// " + x.message; }
             }
