@@ -24,8 +24,20 @@ function overrideCompilation() {
     // Compile ES6 js files
     require.extensions[".js"] = (module, filename) => {
     
-        // TODO: better error reporting!
-        var text = translate(FS.readFileSync(filename, "utf8"));
+        var text;
+        
+        try {
+        
+            text = translate(FS.readFileSync(filename, "utf8"));
+        
+        } catch (e) {
+        
+            if (e instanceof SyntaxError)
+                e = new SyntaxError(`${ e.message } (${ filename }:${ e.position.line }:${ e.position.column })`);
+            
+            throw e;
+        }
+        
         return module._compile(text, filename);
     };
 }

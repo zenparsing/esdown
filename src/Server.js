@@ -8,7 +8,7 @@ import Promise from "Promise.js";
 import { translate, isWrapped } from "Translator.js";
 import mimeTypes from "ServerMime.js";
 
-var DEFAULT_PORT = 8080,
+var DEFAULT_PORT = 80,
     DEFAULT_ROOT = ".",
     JS_FILE = /\.js$/i;
 
@@ -51,7 +51,7 @@ export class Server {
         if (this.active) {
         
             this.active = false;
-            this.server.close(promise.callback);
+            this.server.close(ok => promise.resolve(null));
         
         } else {
         

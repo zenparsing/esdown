@@ -56,8 +56,20 @@ function overrideCompilation() {
     // Compile ES6 js files
     require.extensions[".js"] = (function(module, filename) {
     
-        // TODO: better error reporting!
-        var text = translate(FS.readFileSync(filename, "utf8"));
+        var text;
+        
+        try {
+        
+            text = translate(FS.readFileSync(filename, "utf8"));
+        
+        } catch (e) {
+        
+            if (e instanceof SyntaxError)
+                e = new SyntaxError("" + (e.message) + " (" + (filename) + ":" + (e.position.line) + ":" + (e.position.column) + ")");
+            
+            throw e;
+        }
+        
         return module._compile(text, filename);
     });
 }
@@ -669,7 +681,7 @@ var Promise = __require(6).Promise;
 var _M0 = __require(9), translate = _M0.translate, isWrapped = _M0.isWrapped;
 var mimeTypes = __require(13).mimeTypes;
 
-var DEFAULT_PORT = 8080,
+var DEFAULT_PORT = 80,
     DEFAULT_ROOT = ".",
     JS_FILE = /\.js$/i;
 
@@ -712,7 +724,7 @@ var Server = es6now.Class(null, function(__super) { return {
         if (this.active) {
         
             this.active = false;
-            this.server.close(promise.callback);
+            this.server.close((function(ok) { return promise.resolve(null); }));
         
         } else {
         
@@ -1406,27 +1418,20 @@ function whenAny(list) {
     return promise.future;
 }
 
-// Returns a future for the values produced by a callback for every
-// element in an array, executed sequentially
+function iterate(fn) {
+
+    var done = false,
+        stop = (function(val) { done = true; return val; }),
+        next = (function(last) { return done ? last : when(fn(stop)).then(next); });
+    
+    return when(null).then(next);
+}
+
 function forEach(list, fn) {
 
-    var out = [];
+    var i = -1;
     
-    function next() {
-    
-        var i = out.length;
-        
-        if (i === list.length)
-            return out;
-        
-        return when(fn(list[i], i, list)).then((function(val) {
-        
-            out.push(val);
-            return next();
-        }));
-    }
-    
-    return when(next());
+    return iterate((function(stop) { return (++i >= list.length) ? stop() : fn(list[i], i, list); }));
 }
 
 // === Event Loop API ===
@@ -1509,6 +1514,7 @@ Promise.when = when;
 Promise.whenAny = whenAny;
 Promise.whenAll = whenAll;
 Promise.forEach = forEach;
+Promise.iterate = iterate;
 Promise.reject = failure;
 
 
@@ -3075,8 +3081,11 @@ var Parser = es6now.Class(null, function(__super) { return {
     
     fail: function(msg, loc) {
     
-        var pos = this.scanner.position(loc || this.peek0);
-        throw new SyntaxError(msg + " (line " + pos.line + ", col " + pos.col + ")");
+        var pos = this.scanner.position(loc || this.peek0),
+            err = new SyntaxError(msg);
+        
+        err.position = pos;
+        throw err;
     },
     
     readKeyword: function(word) {
@@ -5585,7 +5594,7 @@ var Scanner = es6now.Class(null, function(__super) { return {
         
             offset: offset, 
             line: i, 
-            col: offset - this.lines[i - 1]
+            column: offset - this.lines[i - 1]
         };
     },
     
