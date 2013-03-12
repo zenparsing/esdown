@@ -4,17 +4,9 @@
   a convenient way to get all of the in-scope bindings.
 - String method polyfills are hacky right now - they need to match the spec.
 - Class inheritance needs to match spec.
-- Do we really need "use strict" for every arrow function?  We could probably
-  find out if the outer scope is strict and thus eliminate it.
 
 
-== New Features ==
-
-- Let and const declarations:
-
-  If a binding is already defined in the current var-scope, then create
-  a new name.  Find all occurances of the old name and replace with the
-  new name.
+== Maybe Features ==
 
 - Rest parameters:
 
@@ -31,26 +23,22 @@
   [ a, b, ...array, c, d ];
   ([ a, b ]).concat(array).concat([ c, d ]);
 
-- Parameter defaults (waiting on scope issue consensus):
+- Parameter defaults (waiting on scope issue consensus)
 
-- Destructuring everything:
+- Destructuring everything
 
 - Map, Set polyfills.
 
-- Array comprehensions:
-
-
-== Maybe, Maybe Not ==
-
-- Change the module-to-require transformation:  Replace all occurances
-  of imported declarations with member expressions (MODULE.exportedName), in
-  order to support cyclical dependencies.  Maybe?
-- Generators, yield (transformation to CPS is complex.  Can it be done
-  without breaking line-numbers?)
-- WeakMap, WeakSet
-- Symbols & at-names
+- Array comprehensions
 
 
 == Nope ==
 
-- Proxies
+- Let and const:  block declarations fall apart with per-iteration bindings.  It's
+  possible to hack by using try statements, but that goes against our stance against
+  rewriting.  And performance?
+- Generators, yield.  It can be done, but transformation to CPS is complex and 
+  consititutes rewriting.
+- Replace all occurances of imported declarations with member expressions 
+  (MODULE.exportedName), in order to support cyclical dependencies.  This is a
+  significant caveat
