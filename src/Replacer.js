@@ -351,7 +351,7 @@ export class Replacer {
         var name = node.ident ? ("var " + node.ident.text + " = ") : "";
         
         return name + "es6now.Class(" + 
-            (node.base ? node.base.text : "null") + ", " +
+            (node.base ? (node.base.text + ",") : "") +
             "function(__super) { return " +
             node.body.text + "});";
     }
@@ -361,7 +361,7 @@ export class Replacer {
         // TODO:  named class expressions aren't currently supported
         
         return "es6now.Class(" + 
-            (node.base ? node.base.text : "null") + ", " +
+            (node.base ? (node.base.text + ",") : "") +
             "function(__super) { return" +
             node.body.text + "})";
     }

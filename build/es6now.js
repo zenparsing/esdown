@@ -949,7 +949,7 @@ var HOP = {}.hasOwnProperty,
 
 function copyMethods(to, from, classMethods) {
 
-    var keys = Object.keys(from),
+    var keys = Object.getOwnPropertyNames(from),
         isStatic,
         desc,
         k,
@@ -975,28 +975,38 @@ function Class(base, def) {
             parent.constructor.apply(this, arguments);
     }
     
-	var parent = null,
-	    proto,
-	    props;
-	
-	if (base) {
-	
-        if (typeof base === "function") {
+    var parent;
+    
+    if (def === void 0) {
+    
+        // If no base class is specified, then Object.prototype
+        // is the parent prototype
+        def = base;
+        base = null;
+        parent = Object.prototype;
+    
+    } else if (base === null) {
+    
+        // If the base is null, then then then the parent prototype is null
+        parent = null;
         
-            parent = base.prototype;
-            
-        } else {
+    } else if (typeof base === "function") {
+    
+        parent = base.prototype;
         
-            parent = base;
-            base = null;
-        }
-	}
-	
-	// Generate the method collection, closing over "super"
-	props = def(parent);
-	
-	// Create prototype object
-	proto = copyMethods(Object.create(parent), props, false);
+        // Prototype must be null or an object
+        if (parent !== null && Object(parent) !== parent)
+            parent = void 0;
+    }
+    
+    if (parent === void 0)
+        throw new TypeError();
+    
+    // Generate the method collection, closing over "super"
+    var props = def(parent);
+    
+    // Create prototype object
+	var proto = copyMethods(Object.create(parent), props, false);
 	
 	// Get constructor method
 	if (HOP.call(props, "constructor")) constructor = props.constructor;
@@ -1013,6 +1023,7 @@ function Class(base, def) {
 	
 	return constructor;
 }
+
 
 
 exports.Class = Class;
@@ -2022,7 +2033,7 @@ var Replacer = es6now.Class(null, function(__super) { return {
         var name = node.ident ? ("var " + node.ident.text + " = ") : "";
         
         return name + "es6now.Class(" + 
-            (node.base ? node.base.text : "null") + ", " +
+            (node.base ? (node.base.text + ",") : "") +
             "function(__super) { return " +
             node.body.text + "});";
     },
@@ -2032,7 +2043,7 @@ var Replacer = es6now.Class(null, function(__super) { return {
         // TODO:  named class expressions aren't currently supported
         
         return "es6now.Class(" + 
-            (node.base ? node.base.text : "null") + ", " +
+            (node.base ? (node.base.text + ",") : "") +
             "function(__super) { return" +
             node.body.text + "})";
     },
@@ -2765,6 +2776,28 @@ exports.forEachChild = forEachChild;
 
 __modules[18] = function(exports) {
 
+var Script = es6now.Class(null, function(__super) { return {
+
+    constructor: function(statements, start, end) {
+    
+        this.type = "Script";
+        this.statements = statements;
+        this.start = start;
+        this.end = end;
+    }
+}});
+
+var Module = es6now.Class(null, function(__super) { return {
+
+    constructor: function(statements, start, end) {
+    
+        this.type = "Module";
+        this.statements = statements;
+        this.start = start;
+        this.end = end;
+    }
+}});
+
 var Identifier = es6now.Class(null, function(__super) { return {
 
     constructor: function(value, context, start, end) {
@@ -2863,6 +2896,77 @@ var SuperExpression = es6now.Class(null, function(__super) { return {
         this.end = end;
     }
 }});
+
+var SequenceExpression = es6now.Class(null, function(__super) { return {
+
+    constructor: function(list, start, end) {
+    
+        this.type = "SequenceExpression";
+        this.expressions = list;
+        this.start = start;
+        this.end = end;
+    }
+}});
+
+var AssignmentExpression = es6now.Class(null, function(__super) { return {
+
+    constructor: function(op, left, right, start, end) {
+    
+        this.type = "AssignmentExpression";
+        this.operator = op;
+        this.left = left;
+        this.right = right;
+        this.start = start;
+        this.end = end;
+    }
+}});
+
+var SpreadExpression = es6now.Class(null, function(__super) { return {
+
+    constructor: function(expr, start, end) {
+    
+        this.type = "SpreadExpression";
+        this.expression = expr;
+        this.start = start;
+        this.end = end;
+    }
+}});
+
+var ParenExpression = es6now.Class(null, function(__super) { return {
+    
+    constructor: function(expr, start, end) {
+    
+        this.type = "ParenExpression";
+        this.expression = expr;
+        this.start = start;
+        this.end = end;
+    }
+}});
+
+var ObjectExpression = es6now.Class(null, function(__super) { return {
+
+    constructor: function(props, start, end) {
+    
+        this.type = "ObjectExpression";
+        this.properties = props;
+        this.start = start;
+        this.end = end;
+    }
+}});
+
+var PropertyDefinition = es6now.Class(null, function(__super) { return {
+
+    constructor: function(name, expr, start, end) {
+    
+        this.type = "PropertyDefinition";
+        this.name = name;
+        this.expression = expr;
+        this.start = start;
+        this.end = end;
+    }
+}});
+exports.Script = Script;
+exports.Module = Module;
 exports.Identifier = Identifier;
 exports.Number = Number;
 exports.String = String;
@@ -2872,6 +2976,12 @@ exports.Null = Null;
 exports.Boolean = Boolean;
 exports.ThisExpression = ThisExpression;
 exports.SuperExpression = SuperExpression;
+exports.SequenceExpression = SequenceExpression;
+exports.AssignmentExpression = AssignmentExpression;
+exports.SpreadExpression = SpreadExpression;
+exports.ParenExpression = ParenExpression;
+exports.ObjectExpression = ObjectExpression;
+exports.PropertyDefinition = PropertyDefinition;
 };
 
 __modules[19] = function(exports) {
@@ -3195,31 +3305,19 @@ var Parser = es6now.Class(null, function(__super) { return {
     
     Script: function() {
     
-        var start = this.startOffset,
-            statements = this.StatementList(true, false);
+        var start = this.startOffset;
         
-        return { 
-            type: "Script", 
-            statements: statements,
-            start: start,
-            end: this.endOffset
-        };
+        return new Node.Script(this.StatementList(true, false), start, this.endOffset);
     },
     
     Module: function() {
     
+        var start = this.startOffset;
+        
         // Modules are always strict
         this.setStrict();
         
-        var start = this.startOffset,
-            statements = this.StatementList(true, true);
-        
-        return { 
-            type: "Module", 
-            statements: statements,
-            start: start,
-            end: this.endOffset
-        };
+        return new Node.Module(this.StatementList(true, true), start, this.endOffset);
     },
     
     // === Expressions ===
@@ -3242,17 +3340,8 @@ var Parser = es6now.Class(null, function(__super) { return {
             
             this.read();
             
-            if (list === null) {
-            
-                list = [expr];
-                
-                expr = { 
-                    type: "SequenceExpression", 
-                    expressions: list, 
-                    start: start,
-                    end: -1
-                };
-            }
+            if (list === null)
+                expr = new Node.SequenceExpression(list = [expr], start, -1);
             
             list.push(this.AssignmentExpression(noIn));
         }
@@ -3297,15 +3386,12 @@ var Parser = es6now.Class(null, function(__super) { return {
                 break;
         }
         
-        return {
-        
-            type: "AssignmentExpression",
-            operator: this.read(),
-            left: left,
-            right: this.AssignmentExpression(noIn),
-            start: start,
-            end: this.endOffset
-        };
+        return new Node.AssignmentExpression(
+            this.read(),
+            left,
+            this.AssignmentExpression(noIn),
+            start,
+            this.endOffset);
     },
     
     SpreadAssignment: function(noIn) {
@@ -3316,12 +3402,10 @@ var Parser = es6now.Class(null, function(__super) { return {
             
             this.read();
             
-            return {
-                type: "SpreadExpression",
-                expression: this.AssignmentExpression(noIn),
-                start: start,
-                end: this.endOffset
-            };
+            return new Node.SpreadExpression(
+                this.AssignmentExpression(noIn), 
+                start, 
+                this.endOffset);
         }
         
         return this.AssignmentExpression(noIn);
@@ -3329,9 +3413,10 @@ var Parser = es6now.Class(null, function(__super) { return {
     
     YieldExpression: function() {
     
+        var start = this.startOffset,
+            delegate = false;
+            
         this.read("yield");
-        
-        var delegate = false;
         
         if (this.peek() === "*") {
         
@@ -3342,7 +3427,9 @@ var Parser = es6now.Class(null, function(__super) { return {
         return {
             type: "YieldExpression",
             delegate: delegate,
-            expression: this.AssignmentExpression()
+            expression: this.AssignmentExpression(),
+            start: startOffset,
+            end: this.endOffset
         };  
     },
     
@@ -3645,12 +3732,18 @@ var Parser = es6now.Class(null, function(__super) { return {
             
             case "function": return this.FunctionExpression();
             case "class": return this.ClassExpression();
-            case "[": return this.ArrayExpression();
-            case "{": return this.ObjectExpression();
-            case "(": return this.ParenExpression();
             case "TEMPLATE": return this.TemplateExpression();
             case "NUMBER": return this.Number();
             case "STRING": return this.String();
+            case "{": return this.ObjectExpression();
+            
+            case "(": return this.peek(null, 1) === "for" ? 
+                this.GeneratorComprehension() :
+                this.ParenExpression();
+            
+            case "[": return this.peek(null, 1) === "for" ?
+                this.ArrayComprehension() :
+                this.ArrayExpression();
             
             case "IDENTIFIER":
             
@@ -3770,10 +3863,6 @@ var Parser = es6now.Class(null, function(__super) { return {
                 break;
         }
         
-        // Look for generator comprehensions
-        if (expr && this.peek() === "for")
-            return this.GeneratorComprehension(expr, start);
-        
         // Look for a trailing rest formal parameter within an arrow formal list
         if (!rest && this.peek() === "," && this.peek(null, 1) === "...") {
         
@@ -3787,12 +3876,7 @@ var Parser = es6now.Class(null, function(__super) { return {
         if (expr === null || rest !== null || this.peek("div") === "=>")
             return this.ArrowFunction(expr, rest, start);
         
-        return {
-            type: "ParenExpression",
-            expression: expr,
-            start: start,
-            end: this.endOffset
-        };
+        return new Node.ParenExpression(expr, start, this.endOffset);
     },
     
     ObjectExpression: function() {
@@ -3814,12 +3898,7 @@ var Parser = es6now.Class(null, function(__super) { return {
         
         this.read("}");
         
-        return { 
-            type: "ObjectExpression", 
-            properties: list,
-            start: start,
-            end: this.endOffset
-        };
+        return new Node.ObjectExpression(list, start, this.endOffset);
     },
     
     PropertyDefinition: function(nameSet) {
@@ -3853,7 +3932,7 @@ var Parser = es6now.Class(null, function(__super) { return {
             case ":":
                 
                 flag = PROP_ASSIGN;
-                
+                    
                 node = {
                     type: "PropertyDefinition",
                     name: this.PropertyName(),
@@ -3982,13 +4061,7 @@ var Parser = es6now.Class(null, function(__super) { return {
         
         while (type = this.peekUntil("]")) {
             
-            if (type === "for" && 
-                list.length === 1 && 
-                next.type !== "SpreadExpression") {
-            
-                return this.ArrayComprehension(list[0], start);
-                
-            } else if (type === ",") {
+            if (type === ",") {
             
                 this.read();
                 
@@ -4015,66 +4088,97 @@ var Parser = es6now.Class(null, function(__super) { return {
         };
     },
     
-    ArrayComprehension: function(expr, start) {
+    ArrayComprehension: function() {
     
-        var list = [], 
-            test = null;
+        var start = this.startOffset;
         
-        while (this.peek() === "for")
-            list.push(this.ComprehensionFor());
+        this.read("[");
         
-        if (this.peek() === "if") {
-        
-            this.read();
-            test = this.Expression();
-        }
+        var list = this.ComprehensionQualifierList(),
+            expr = this.AssignmentExpression();
         
         this.read("]");
         
         return {
             type: "ArrayComprehension",
+            qualifiers: list,
             expression: expr,
-            list: list,
-            test: test,
             start: start,
             end: this.endOffset
         };
     },
     
-    GeneratorComprehension: function(expr, start) {
+    GeneratorComprehension: function() {
     
-        var list = [], 
-            test = null;
+        var start = this.startOffset;
         
-        while (this.peek() === "for")
-            list.push(this.ComprehensionFor());
+        this.read("(");
         
-        if (this.peek() === "if") {
-        
-            this.read();
-            test = this.Expression();
-        }
+        var list = this.ComprehensionQualifierList(),
+            expr = this.AssignmentExpression();
         
         this.read(")");
         
         return {
             type: "GeneratorComprehension",
+            qualifiers: list,
             expression: expr,
-            list: list,
-            test: test,
             start: start,
             end: this.endOffset
         };
     },
     
+    ComprehensionQualifierList: function() {
+    
+        var list = [],
+            done = false;
+        
+        list.push(this.ComprehensionFor());
+        
+        while (!done) {
+        
+            switch (this.peek()) {
+            
+                case "for": list.push(this.ComprehensionFor()); break;
+                case "if": list.push(this.ComprehensionIf()); break;
+                default: done = true; break;
+            }
+        }
+        
+        return list;
+    },
+    
     ComprehensionFor: function() {
     
+        var start = this.startOffset;
+        
         this.read("for");
         
         return {
             type: "ComprehensionFor",
             binding: this.BindingPattern(),
-            of: (this.readKeyword("of"), this.Expression())
+            of: (this.readKeyword("of"), this.AssignmentExpression()),
+            start: start,
+            end: this.endOffset
+        };
+    },
+    
+    ComprehensionIf: function() {
+    
+        var start = this.startOffset,
+            test;
+            
+        this.read("if");
+        
+        this.read("(");
+        test = this.AssignmentExpression();
+        this.read(")");
+        
+        return {
+            type: "ComprehensionIf",
+            test: test,
+            start: start,
+            end: this.endOffset
         };
     },
     
@@ -4534,7 +4638,7 @@ var Parser = es6now.Class(null, function(__super) { return {
         this.checkForInit(init, "of");
         
         this.readKeyword("of");
-        var expr = this.Expression();
+        var expr = this.AssignmentExpression();
         this.read(")");
         
         return {
