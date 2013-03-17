@@ -1,8 +1,8 @@
-module FS = "fs";
-module HTTP = "http";
-module Path = "path";
-module URL = "url";
-module FFS = "FutureFS.js";
+import "fs" as FS;
+import "http" as HTTP;
+import "path" as Path;
+import "url" as URL;
+import "FutureFS.js" as FFS;
 
 import Promise from "Promise.js";
 import { translate, isWrapped } from "Translator.js";

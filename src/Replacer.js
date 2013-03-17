@@ -8,7 +8,7 @@
 
 */
 
-module Parser = "Parser.js";
+import "Parser.js" as Parser;
 
 var FILENAME = /^[^\.\/\\][\s\S]*?\.[^\s\.]+$/;
 
@@ -122,13 +122,9 @@ export class Replacer {
             return node.name.text + ": " + node.name.text;
     }
     
-    ModuleAlias(node) {
+    ImportAsDeclaration(node) {
     
-        var spec = node.specifier;
-        
-        var expr = spec.type === "String" ?
-            this.requireCall(this.requirePath(spec.value)) :
-            spec.text;
+        var expr = this.requireCall(this.requirePath(node.url.value));
         
         return "var " + node.ident.text + " = " + expr + ";";
     }
@@ -136,11 +132,6 @@ export class Replacer {
     ModuleDeclaration(node) {
     
         // TODO: Inline modules
-    }
-    
-    ModuleRegistration(node) {
-    
-        // TODO: Pre-loaded modules
     }
     
     ImportDeclaration(node) {

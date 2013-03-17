@@ -3,7 +3,7 @@ import initialize from "Runtime.js";
 // Initialize the runtime support library
 initialize();
 
-module Program = "Program.js";
+import "Program.js" as Program;
 
 if (typeof require === "function" && 
     typeof module !== "undefined" && 

@@ -1,7 +1,7 @@
-module FS = "fs";
-module Path = "path";
-module CommandLine = "CommandLine.js";
-module FFS = "FutureFS.js";
+import "fs" as FS;
+import "path" as Path;
+import "CommandLine.js" as CommandLine;
+import "FutureFS.js" as FFS;
 
 import Promise from "Promise.js";
 import bundle from "Bundler.js";
@@ -33,7 +33,7 @@ function overrideCompilation() {
         } catch (e) {
         
             if (e instanceof SyntaxError)
-                e = new SyntaxError(`${ e.message } (${ filename }:${ e.position.line }:${ e.position.column })`);
+                e = new SyntaxError(e.message);
             
             throw e;
         }

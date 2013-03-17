@@ -1,5 +1,5 @@
-module Path = "path";
-module FFS = "FutureFS.js";
+import "path" as Path;
+import "FutureFS.js" as FFS;
 
 import Promise from "Promise.js";
 import { translate, wrap } from "Translator.js";
