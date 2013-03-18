@@ -947,22 +947,37 @@ __modules[10] = function(exports) {
 var HOP = {}.hasOwnProperty,
     STATIC = /^__static_/;
 
-function copyMethods(to, from, classMethods) {
+function inherit(to, from) {
 
-    var keys = Object.getOwnPropertyNames(from),
-        isStatic,
-        desc,
-        k,
-        i;
+    for (; from; from = Object.getPrototypeOf(from)) {
     
-    for (i = 0; i < keys.length; ++i) {
-    
-        k = keys[i];
-        desc = Object.getOwnPropertyDescriptor(from, k);
+        forEachDesc(from, (function(name, desc) {
         
-        if (STATIC.test(k) === classMethods)
-            Object.defineProperty(to, classMethods ? k.replace(STATIC, "") : k, desc);
+            if (!HOP.call(to, name))
+                Object.defineProperty(to, name, desc);
+        }));
     }
+    
+    return to;
+}
+
+function forEachDesc(obj, fn) {
+
+    var names = Object.getOwnPropertyNames(obj);
+    
+    for (var i = 0, name; i < names.length; ++i)
+        fn(names[i], Object.getOwnPropertyDescriptor(obj, names[i]));
+    
+    return obj;
+}
+
+function defineMethods(to, from, classMethods) {
+
+    forEachDesc(from, (function(name, desc) {
+    
+        if (STATIC.test(name) === classMethods)
+            Object.defineProperty(to, classMethods ? name.replace(STATIC, "") : name, desc);
+    }));
     
     return to;
 }
@@ -1006,7 +1021,7 @@ function Class(base, def) {
     var props = def(parent);
     
     // Create prototype object
-	var proto = copyMethods(Object.create(parent), props, false);
+	var proto = defineMethods(Object.create(parent), props, false);
 	
 	// Get constructor method
 	if (HOP.call(props, "constructor")) constructor = props.constructor;
@@ -1015,11 +1030,19 @@ function Class(base, def) {
 	// Set constructor's prototype
 	constructor.prototype = proto;
 	
-	// "Inherit" class methods
-	if (base) copyMethods(constructor, base, false);
+	// Make constructor non-enumerable
+	Object.defineProperty(proto, "constructor", { 
+	
+	    enumerable: false, 
+	    writable: true, 
+	    configurable: true 
+	});
 	
 	// Set class "static" methods
-	copyMethods(constructor, props, true);
+	defineMethods(constructor, props, true);
+	
+	// "Inherit" from base constructor
+	if (base) inherit(constructor, base);
 	
 	return constructor;
 }
@@ -3106,6 +3129,7 @@ var CoveredPatternProperty = es6now.Class(function(__super) { return {
         this.end = end;
     }
 }});
+
 exports.Script = Script;
 exports.Module = Module;
 exports.Identifier = Identifier;
@@ -3210,15 +3234,6 @@ function isUnary(op) {
     }
     
     return false;
-}
-
-// Adds methods to the Parser prototype
-function mixin(source) {
-
-    Object.keys(source.prototype).forEach((function(k) { 
-    
-        Parser.prototype[k] = source.prototype[k];
-    }));
 }
 
 var TokenData = es6now.Class(function(__super) { return {
@@ -5298,16 +5313,8 @@ var Parser = es6now.Class(function(__super) { return {
             
             case "IDENTIFIER":
             
-                if (this.peekModule(false)) {
-                
-                    binding = this.ModuleDeclaration();
-                
-                } else {
-                
-                    binding = this.Identifier();
-                    maybeFrom = true;
-                }
-                
+                binding = this.Identifier();
+                maybeFrom = true;
                 break;
             
             case "*":
