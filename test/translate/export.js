@@ -10,5 +10,4 @@ export { D: C };
 export { E: A.B };
 
 export * from Z;
-export * from Z.Z;
 export * from "Z.js";

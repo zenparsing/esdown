@@ -1,5 +1,5 @@
-module FS = "fs";
-module Path = "path";
+import "fs" as FS;
+import "path" as Path;
 
 import translate from "../src/Translator.js";
 

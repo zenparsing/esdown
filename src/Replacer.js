@@ -109,10 +109,13 @@ export class Replacer {
         // TODO: Generator methods
         
         // TODO: will fail if name is a string:  static "name"() {}
-        if (node.static)
+        if (node.parentNode.type === "ClassElement" && 
+            node.parentNode.static) {
+            
             node.name.text = "__static_" + node.name.text;
+        }
         
-        if (!node.accessor)
+        if (!node.modifier)
             return node.name.text + ": function(" + this.joinList(node.params) + ") " + node.body.text;
     }
     
@@ -342,7 +345,7 @@ export class Replacer {
         var name = node.ident ? ("var " + node.ident.text + " = ") : "";
         
         return name + "es6now.Class(" + 
-            (node.base ? (node.base.text + ",") : "") +
+            (node.base ? (node.base.text + ", ") : "") +
             "function(__super) { return " +
             node.body.text + "});";
     }
@@ -352,7 +355,7 @@ export class Replacer {
         // TODO:  named class expressions aren't currently supported
         
         return "es6now.Class(" + 
-            (node.base ? (node.base.text + ",") : "") +
+            (node.base ? (node.base.text + ", ") : "") +
             "function(__super) { return" +
             node.body.text + "})";
     }

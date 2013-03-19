@@ -944,23 +944,27 @@ exports.isWrapped = isWrapped;
 };
 
 __modules[10] = function(exports) {
-var HOP = {}.hasOwnProperty,
+var HOP = Object.prototype.hasOwnProperty,
     STATIC = /^__static_/;
 
-function inherit(to, from) {
+// Returns true if the object has the specified property
+function hasOwn(obj, name) {
 
-    for (; from; from = Object.getPrototypeOf(from)) {
-    
-        forEachDesc(from, (function(name, desc) {
-        
-            if (!HOP.call(to, name))
-                Object.defineProperty(to, name, desc);
-        }));
-    }
-    
-    return to;
+    return HOP.call(obj, name);
 }
 
+// Returns true if the object has the specified property in
+// its prototype chain
+function has(obj, name) {
+
+    for (; obj; obj = Object.getPrototypeOf(obj))
+        if (HOP.call(obj, name))
+            return true;
+    
+    return false;
+}
+
+// Iterates over the descriptors for each own property of an object
 function forEachDesc(obj, fn) {
 
     var names = Object.getOwnPropertyNames(obj);
@@ -969,6 +973,21 @@ function forEachDesc(obj, fn) {
         fn(names[i], Object.getOwnPropertyDescriptor(obj, names[i]));
     
     return obj;
+}
+
+// Performs copy-based inheritance
+function inherit(to, from) {
+
+    for (; from; from = Object.getPrototypeOf(from)) {
+    
+        forEachDesc(from, (function(name, desc) {
+        
+            if (!has(to, name))
+                Object.defineProperty(to, name, desc);
+        }));
+    }
+    
+    return to;
 }
 
 function defineMethods(to, from, classMethods) {
@@ -1024,7 +1043,7 @@ function Class(base, def) {
 	var proto = defineMethods(Object.create(parent), props, false);
 	
 	// Get constructor method
-	if (HOP.call(props, "constructor")) constructor = props.constructor;
+	if (hasOwn(props, "constructor")) constructor = props.constructor;
 	else proto.constructor = constructor;
 	
 	// Set constructor's prototype
@@ -1839,10 +1858,13 @@ var Replacer = es6now.Class(function(__super) { return {
         // TODO: Generator methods
         
         // TODO: will fail if name is a string:  static "name"() {}
-        if (node.static)
+        if (node.parentNode.type === "ClassElement" && 
+            node.parentNode.static) {
+            
             node.name.text = "__static_" + node.name.text;
+        }
         
-        if (!node.accessor)
+        if (!node.modifier)
             return node.name.text + ": function(" + this.joinList(node.params) + ") " + node.body.text;
     },
     
@@ -2072,7 +2094,7 @@ var Replacer = es6now.Class(function(__super) { return {
         var name = node.ident ? ("var " + node.ident.text + " = ") : "";
         
         return name + "es6now.Class(" + 
-            (node.base ? (node.base.text + ",") : "") +
+            (node.base ? (node.base.text + ", ") : "") +
             "function(__super) { return " +
             node.body.text + "});";
     },
@@ -2082,7 +2104,7 @@ var Replacer = es6now.Class(function(__super) { return {
         // TODO:  named class expressions aren't currently supported
         
         return "es6now.Class(" + 
-            (node.base ? (node.base.text + ",") : "") +
+            (node.base ? (node.base.text + ", ") : "") +
             "function(__super) { return" +
             node.body.text + "})";
     },
@@ -2390,18 +2412,17 @@ function emulate() {
         getPrototypeOf: function(o) {
         
             var p = o.__proto__ || o.constructor.prototype;
-            if (p) return p;
-            throw new Error("Object.getPrototypeOf is not supported.");
+            return p;
         },
         
         /*
         
-        getOwnPropertyNames is not supported since there is no way to 
-        get non-enumerable ES3 properties.  However, we don't provide a 
-        throwing function so that users can fallback to Object.keys if
-        they choose.
+        getOwnPropertyNames is buggy since there is no way to get non-enumerable 
+        ES3 properties.
         
         */
+        
+        getOwnProperyNames: keys,
         
         freeze: identity,
         seal: identity,
@@ -2678,10 +2699,10 @@ function emulate() {
         function parse(s) {
         
             if (s.replace(TOK, "").length > 0)
-                throw new Error("JSON syntax error.");
+                throw new Error("JSON syntax error");
             
             try { return (new Function("return (" + s + ");"))(); }
-            catch (x) { throw new Error("JSON sytax error."); }
+            catch (x) { throw new Error("JSON sytax error"); }
         }
         
         function esc(s) {
@@ -2699,7 +2720,7 @@ function emulate() {
             }
         }
         
-        function tos(o) {
+        function stringify(o) {
         
             var i, a;
             
@@ -2723,18 +2744,18 @@ function emulate() {
                     } else if (Array.isArray(o)) {
                     
                         for (a = [], i = 0; i < o.length; ++i) 
-                            a.push(tos(o[i]));
+                            a.push(stringify(o[i]));
                         
                         return "[" + a.join(",") + "]";
                     
                     } else if (o.toJSON) {
                     
-                        return tos(o.toJSON());
+                        return stringify(o.toJSON());
                     
                     } else {
                     
                         for (a = Object.keys(o), i = 0; i < a.length; ++i)
-                            a[i] = tos(a[i]) + ":" + tos(o[a[i]]);
+                            a[i] = stringify(a[i]) + ":" + stringify(o[a[i]]);
                         
                         return "{" + a.join(",") + "}";
                     }
@@ -2744,7 +2765,7 @@ function emulate() {
             throw new Error("Cannot convert object to JSON string.");
         }
         
-        return { parse: parse, stringify: tos };
+        return { parse: parse, stringify: stringify };
         
     })();
 }
@@ -3130,6 +3151,31 @@ var CoveredPatternProperty = es6now.Class(function(__super) { return {
     }
 }});
 
+var MethodDefinition = es6now.Class(function(__super) { return {
+
+    constructor: function(modifier, name, params, body, start, end) {
+    
+        this.type = "MethodDefinition";
+        this.modifier = modifier;
+        this.name = name;
+        this.params = params;
+        this.body = body;
+        this.start = start;
+        this.end = end;
+    }
+}});
+
+var ClassElement = es6now.Class(function(__super) { return {
+
+    constructor: function(isStatic, method, start, end) {
+    
+        this.type = "ClassElement";
+        this.static = isStatic;
+        this.method = method;
+        this.start = start;
+        this.end = end;
+    }
+}});
 exports.Script = Script;
 exports.Module = Module;
 exports.Identifier = Identifier;
@@ -3157,6 +3203,8 @@ exports.ParenExpression = ParenExpression;
 exports.ObjectExpression = ObjectExpression;
 exports.PropertyDefinition = PropertyDefinition;
 exports.CoveredPatternProperty = CoveredPatternProperty;
+exports.MethodDefinition = MethodDefinition;
+exports.ClassElement = ClassElement;
 };
 
 __modules[19] = function(exports) {
@@ -4027,7 +4075,7 @@ var Parser = es6now.Class(function(__super) { return {
                 
                 node = this.MethodDefinition();
                 
-                switch (node.accessor) {
+                switch (node.modifier) {
                 
                     case "get": flag = PROP_GET; break;
                     case "set": flag = PROP_SET; break;
@@ -4108,24 +4156,15 @@ var Parser = es6now.Class(function(__super) { return {
     MethodDefinition: function() {
     
         var start = this.startOffset,
-            accessor = null,
-            isStatic = false,
-            gen = false,
+            modifier = null,
             params,
             name;
-        
-        if (this.peekToken("name").value === "static" &&
-            this.peek("name", 1) !== "(") {
-        
-            isStatic = true;
-            this.read();
-        }
         
         if (this.peek("name") === "*") {
         
             this.read();
             
-            gen = true;
+            modifier = "*";
             name = this.PropertyName();
         
         } else {
@@ -4136,22 +4175,18 @@ var Parser = es6now.Class(function(__super) { return {
                 this.peek("name") !== "(" &&
                 (name.value === "get" || name.value === "set")) {
             
-                accessor = name.value;
+                modifier = name.value;
                 name = this.PropertyName();
             }
         }
         
-        return {
-            type: "MethodDefinition",
-            static: isStatic,
-            generator: gen,
-            accessor: accessor,
-            name: name,
-            params: (params = this.FormalParameters()),
-            body: this.FunctionBody(null, params, false),
-            start: start,
-            end: this.endOffset
-        };
+        return new Node.MethodDefinition(
+            modifier,
+            name,
+            params = this.FormalParameters(),
+            this.FunctionBody(null, params, false),
+            start,
+            this.endOffset);
     },
     
     ArrayExpression: function() {
@@ -5469,12 +5504,13 @@ var Parser = es6now.Class(function(__super) { return {
         
         var start = this.startOffset,
             nameSet = {}, 
+            staticSet = {},
             list = [];
         
         this.read("{");
         
         while (this.peekUntil("}", "name"))
-            list.push(this.ClassElement(nameSet));
+            list.push(this.ClassElement(nameSet, staticSet));
         
         this.read("}");
         
@@ -5488,26 +5524,39 @@ var Parser = es6now.Class(function(__super) { return {
         };
     },
     
-    ClassElement: function(nameSet) {
+    ClassElement: function(nameSet, staticSet) {
     
-        var node = this.MethodDefinition(),
+        var start = this.startOffset,
+            isStatic = false,
             flag = PROP_NORMAL,
+            method,
             name;
         
-        switch (node.accessor) {
+        // Check for static modifier
+        if (this.peekToken("name").value === "static" &&
+            this.peek("name", 1) !== "(") {
+        
+            isStatic = true;
+            nameSet = staticSet;
+            this.read();
+        }
+        
+        method = this.MethodDefinition();
+        
+        switch (method.modifier) {
         
             case "get": flag = PROP_GET; break;
             case "set": flag = PROP_SET; break;
         }
         
         // Check for duplicate names
-        if (this.isDuplicateName(flag, nameSet[name = "." + node.name.value]))
-            this.fail("Duplicate element name in class definition.", node);
+        if (this.isDuplicateName(flag, nameSet[name = "." + method.name.value]))
+            this.fail("Duplicate element name in class definition.", method);
         
         // Set name flag
         nameSet[name] |= flag;
         
-        return node;
+        return new Node.ClassElement(isStatic, method, start, this.endOffset);
     }
     
     
