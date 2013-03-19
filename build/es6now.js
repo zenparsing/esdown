@@ -710,7 +710,7 @@ var Server = es6now.Class(function(__super) { return {
             this.hostname = hostname;
         
         var promise = new Promise;
-        this.server.listen(this.port, this.hostname, promise.callback);
+        this.server.listen(this.port, this.hostname, (function(ok) { return promise.resolve(null); }));
         
         this.active = true;
         
@@ -1040,30 +1040,30 @@ function Class(base, def) {
     var props = def(parent);
     
     // Create prototype object
-	var proto = defineMethods(Object.create(parent), props, false);
-	
-	// Get constructor method
-	if (hasOwn(props, "constructor")) constructor = props.constructor;
-	else proto.constructor = constructor;
-	
-	// Set constructor's prototype
-	constructor.prototype = proto;
-	
-	// Make constructor non-enumerable
-	Object.defineProperty(proto, "constructor", { 
-	
-	    enumerable: false, 
-	    writable: true, 
-	    configurable: true 
-	});
-	
-	// Set class "static" methods
-	defineMethods(constructor, props, true);
-	
-	// "Inherit" from base constructor
-	if (base) inherit(constructor, base);
-	
-	return constructor;
+    var proto = defineMethods(Object.create(parent), props, false);
+    
+    // Get constructor method
+    if (hasOwn(props, "constructor")) constructor = props.constructor;
+    else proto.constructor = constructor;
+    
+    // Set constructor's prototype
+    constructor.prototype = proto;
+    
+    // Make constructor non-enumerable
+    Object.defineProperty(proto, "constructor", { 
+    
+        enumerable: false, 
+        writable: true, 
+        configurable: true 
+    });
+    
+    // Set class "static" methods
+    defineMethods(constructor, props, true);
+    
+    // "Inherit" from base constructor
+    if (base) inherit(constructor, base);
+    
+    return constructor;
 }
 
 
@@ -3176,6 +3176,76 @@ var ClassElement = es6now.Class(function(__super) { return {
         this.end = end;
     }
 }});
+
+var ArrayExpression = es6now.Class(function(__super) { return {
+
+    constructor: function(elements, start, end) {
+    
+        this.type = "ArrayExpression";
+        this.elements = elements;
+        this.start = start;
+        this.end = end;
+    }
+}});
+
+var ArrayComprehension = es6now.Class(function(__super) { return {
+
+    constructor: function(qualifiers, expr, start, end) {
+    
+        this.type = "ArrayComprehension";
+        this.qualifiers = qualifiers;
+        this.expression = expr;
+        this.start = start;
+        this.end = end;
+    }
+}});
+
+var GeneratorComprehension = es6now.Class(function(__super) { return {
+
+    constructor: function(qualifiers, expr, start, end) {
+    
+        this.type = "GeneratorComprehension";
+        this.qualifiers = qualifiers;
+        this.expression = expr;
+        this.start = start;
+        this.end = end;
+    }
+}});
+
+var ComprehensionFor = es6now.Class(function(__super) { return {
+
+    constructor: function(left, right, start, end) {
+    
+        this.type = "ComprehensionFor";
+        this.left = left;
+        this.right = right;
+        this.start = start;
+        this.end = end;
+    }
+}});
+
+var ComprehensionIf = es6now.Class(function(__super) { return {
+
+    constructor: function(test, start, end) {
+    
+        this.type = "ComprehensionIf";
+        this.test = test;
+        this.start = start;
+        this.end = end;
+    }
+}});
+
+var TemplateExpression = es6now.Class(function(__super) { return {
+
+    constructor: function(lits, subs, start, end) {
+    
+        this.type = "TemplateExpression";
+        this.literals = lits;
+        this.substitutions = subs;
+        this.start = start;
+        this.end = end;
+    }
+}});
 exports.Script = Script;
 exports.Module = Module;
 exports.Identifier = Identifier;
@@ -3205,6 +3275,12 @@ exports.PropertyDefinition = PropertyDefinition;
 exports.CoveredPatternProperty = CoveredPatternProperty;
 exports.MethodDefinition = MethodDefinition;
 exports.ClassElement = ClassElement;
+exports.ArrayExpression = ArrayExpression;
+exports.ArrayComprehension = ArrayComprehension;
+exports.GeneratorComprehension = GeneratorComprehension;
+exports.ComprehensionFor = ComprehensionFor;
+exports.ComprehensionIf = ComprehensionIf;
+exports.TemplateExpression = TemplateExpression;
 };
 
 __modules[19] = function(exports) {
@@ -4219,13 +4295,7 @@ var Parser = es6now.Class(function(__super) { return {
         
         this.read("]");
         
-        return { 
-            type: "ArrayExpression", 
-            elements: list,
-            trailingComma: comma,
-            start: start,
-            end: this.endOffset
-        };
+        return new Node.ArrayExpression(list, start, this.endOffset);
     },
     
     ArrayComprehension: function() {
@@ -4239,13 +4309,7 @@ var Parser = es6now.Class(function(__super) { return {
         
         this.read("]");
         
-        return {
-            type: "ArrayComprehension",
-            qualifiers: list,
-            expression: expr,
-            start: start,
-            end: this.endOffset
-        };
+        return new Node.ArrayComprehension(list, expr, start, this.endOffset);
     },
     
     GeneratorComprehension: function() {
@@ -4259,13 +4323,7 @@ var Parser = es6now.Class(function(__super) { return {
         
         this.read(")");
         
-        return {
-            type: "GeneratorComprehension",
-            qualifiers: list,
-            expression: expr,
-            start: start,
-            end: this.endOffset
-        };
+        return new Node.GeneratorComprehension(list, expr, start, this.endOffset);
     },
     
     ComprehensionQualifierList: function() {
@@ -4294,13 +4352,11 @@ var Parser = es6now.Class(function(__super) { return {
         
         this.read("for");
         
-        return {
-            type: "ComprehensionFor",
-            binding: this.BindingPattern(),
-            of: (this.readKeyword("of"), this.AssignmentExpression()),
-            start: start,
-            end: this.endOffset
-        };
+        return new Node.ComprehensionFor(
+            this.BindingPattern(),
+            (this.readKeyword("of"), this.AssignmentExpression()),
+            start,
+            this.endOffset);
     },
     
     ComprehensionIf: function() {
@@ -4314,12 +4370,7 @@ var Parser = es6now.Class(function(__super) { return {
         test = this.AssignmentExpression();
         this.read(")");
         
-        return {
-            type: "ComprehensionIf",
-            test: test,
-            start: start,
-            end: this.endOffset
-        };
+        return new Node.ComprehensionIf(test, start, this.endOffset);
     },
     
     TemplateExpression: function() {
@@ -4339,13 +4390,7 @@ var Parser = es6now.Class(function(__super) { return {
             lit.push(atom = this.Template());
         }
         
-        return { 
-            type: "TemplateExpression", 
-            literals: lit, 
-            substitutions: sub,
-            start: start,
-            end: this.endOffset
-        };
+        return new Node.TemplateExpression(lit, sub, start, this.endOffset);
     },
     
     // === Statements ===

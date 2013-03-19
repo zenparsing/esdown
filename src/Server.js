@@ -37,7 +37,7 @@ export class Server {
             this.hostname = hostname;
         
         var promise = new Promise;
-        this.server.listen(this.port, this.hostname, promise.callback);
+        this.server.listen(this.port, this.hostname, ok => promise.resolve(null));
         
         this.active = true;
         
