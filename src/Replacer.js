@@ -91,19 +91,6 @@ export class Replacer {
             return "{ var __this = this; " + node.text.slice(1);
     }
     
-    ExpressionStatement(node) {
-    
-        // Remove 'use strict' directives (will be added to head of output)
-        if (node.directive === "use strict")
-            return "";
-    }
-    
-    VariableDeclaration(node) {
-    
-        // TODO?  Per-iteration bindings mean that we'll need to use
-        // the try { throw void 0; } catch (x) {} trick.  Worth it?
-    }
-    
     MethodDefinition(node) {
     
         // TODO: Generator methods
@@ -342,9 +329,7 @@ export class Replacer {
     
     ClassDeclaration(node) {
     
-        var name = node.ident ? ("var " + node.ident.text + " = ") : "";
-        
-        return name + "es6now.Class(" + 
+        return "var " + node.ident.text + " = es6now.Class(" + 
             (node.base ? (node.base.text + ", ") : "") +
             "function(__super) { return " +
             node.body.text + "});";
@@ -352,12 +337,21 @@ export class Replacer {
     
     ClassExpression(node) {
     
-        // TODO:  named class expressions aren't currently supported
+        var before = "", 
+            after = "";
         
-        return "es6now.Class(" + 
+        if (node.ident) {
+        
+            before = "(function() { var " + node.ident.text + " = ";
+            after = "; return " + node.ident.text + "; })()";
+        }
+        
+        return before + 
+            "es6now.Class(" + 
             (node.base ? (node.base.text + ", ") : "") +
             "function(__super) { return" +
-            node.body.text + "})";
+            node.body.text + "})" +
+            after;
     }
     
     ClassBody(node) {

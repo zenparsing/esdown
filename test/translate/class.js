@@ -20,3 +20,5 @@ class A extends B {
     
     static get T() {}
 }
+
+(class C {});

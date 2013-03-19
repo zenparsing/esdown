@@ -1840,19 +1840,6 @@ var Replacer = es6now.Class(function(__super) { return {
             return "{ var __this = this; " + node.text.slice(1);
     },
     
-    ExpressionStatement: function(node) {
-    
-        // Remove 'use strict' directives (will be added to head of output)
-        if (node.directive === "use strict")
-            return "";
-    },
-    
-    VariableDeclaration: function(node) {
-    
-        // TODO?  Per-iteration bindings mean that we'll need to use
-        // the try { throw void 0; } catch (x) {} trick.  Worth it?
-    },
-    
     MethodDefinition: function(node) {
     
         // TODO: Generator methods
@@ -2091,9 +2078,7 @@ var Replacer = es6now.Class(function(__super) { return {
     
     ClassDeclaration: function(node) {
     
-        var name = node.ident ? ("var " + node.ident.text + " = ") : "";
-        
-        return name + "es6now.Class(" + 
+        return "var " + node.ident.text + " = es6now.Class(" + 
             (node.base ? (node.base.text + ", ") : "") +
             "function(__super) { return " +
             node.body.text + "});";
@@ -2101,12 +2086,21 @@ var Replacer = es6now.Class(function(__super) { return {
     
     ClassExpression: function(node) {
     
-        // TODO:  named class expressions aren't currently supported
+        var before = "", 
+            after = "";
         
-        return "es6now.Class(" + 
+        if (node.ident) {
+        
+            before = "(function() { var " + node.ident.text + " = ";
+            after = "; return " + node.ident.text + "; })()";
+        }
+        
+        return before + 
+            "es6now.Class(" + 
             (node.base ? (node.base.text + ", ") : "") +
             "function(__super) { return" +
-            node.body.text + "})";
+            node.body.text + "})" +
+            after;
     },
     
     ClassBody: function(node) {
@@ -3565,20 +3559,14 @@ var Parser = es6now.Class(function(__super) { return {
         return false;
     },
     
-    peekModule: function(allowURL) {
+    peekModule: function() {
     
         if (this.peekToken().value === "module") {
         
             var p = this.peekToken("div", 1);
             
-            if (!p.newlineBefore) {
-            
-                switch (p.type) {
-                
-                    case "IDENTIFIER": return true;
-                    case "STRING": return allowURL;
-                }
-            }
+            if (!p.newlineBefore && p.type === "STRING")
+                return true;
         }
         
         return false;
@@ -5043,7 +5031,7 @@ var Parser = es6now.Class(function(__super) { return {
             
             case "IDENTIFIER":
                 
-                if (this.peekModule(true))
+                if (this.peekModule())
                     return this.ModuleDeclaration();
                 
                 break;

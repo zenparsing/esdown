@@ -20,3 +20,5 @@ var A = es6now.Class(B, function(__super) { return {
     
     get __static_T() {}
 }});
+
+((function() { var C = es6now.Class(function(__super) { return{}}); return C; })());
