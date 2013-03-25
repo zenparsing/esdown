@@ -13,6 +13,20 @@ function absPath(path) {
     return Path.resolve(process.cwd(), path);
 }
 
+function getOutPath(inPath, outPath) {
+
+    var stat;
+    
+    outPath = absPath(outPath);
+    
+    try { stat = FS.statSync(outPath); } catch (e) {}
+    
+    if (stat && stat.isDirectory())
+        return Path.resolve(outPath, Path.basename(inPath));
+    
+    return outPath;
+}
+
 function writeFile(path, text) {
 
     console.log("[Writing] " + absPath(path));
@@ -107,14 +121,21 @@ export function run() {
                 .readFile(params.input, "utf8")
                 .then(text => translate(text, options))
                 .then(text => {
-                
-                    if (params.output) writeFile(params.output, text);
-                    else console.log(text);
+                    
+                    if (params.output) {
+                    
+                        var out = getOutPath(params.input, params.output);
+                        writeFile(out, text);
+                    
+                    } else {
+                    
+                        console.log(text);
+                    }
                     
                 }, err => {
                 
                     throw err;
-                });           
+                });
             }
         },
         
@@ -155,8 +176,15 @@ export function run() {
                 
                 bundle(params.input, options).then(text => {
                 
-                    if (params.output) writeFile(params.output, text);
-                    else console.log(text);
+                    if (params.output) {
+                    
+                        var out = getOutPath(params.input, params.output);
+                        writeFile(out, text);
+                    
+                    } else {
+                    
+                        console.log(text);
+                    }
                     
                 }, err => {
                 

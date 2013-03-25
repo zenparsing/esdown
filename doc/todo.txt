@@ -1,9 +1,10 @@
 == Issues ==
 
+- Should ArgumentList be a node?  Should all lists be wrapped in a node?
+  FormalParameters.
 - Better (unique) names for module import variables.  Ultimately we need
   a convenient way to get all of the in-scope bindings.
 - String method polyfills are hacky right now - they need to match the spec.
-- Class inheritance needs to match spec.
 
 
 == Maybe Features ==

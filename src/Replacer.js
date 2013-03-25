@@ -114,7 +114,7 @@ export class Replacer {
     
     ImportAsDeclaration(node) {
     
-        var expr = this.requireCall(this.requirePath(node.url.value));
+        var expr = this.requireCall(this.requirePath(node.from.value));
         
         return "var " + node.ident.text + " = " + expr + ";";
     }

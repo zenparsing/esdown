@@ -45,6 +45,20 @@ function absPath(path) {
     return Path.resolve(process.cwd(), path);
 }
 
+function getOutPath(inPath, outPath) {
+
+    var stat;
+    
+    outPath = absPath(outPath);
+    
+    try { stat = FS.statSync(outPath); } catch (e) {}
+    
+    if (stat && stat.isDirectory())
+        return Path.resolve(outPath, Path.basename(inPath));
+    
+    return outPath;
+}
+
 function writeFile(path, text) {
 
     console.log("[Writing] " + absPath(path));
@@ -139,14 +153,21 @@ function run() {
                 .readFile(params.input, "utf8")
                 .then((function(text) { return translate(text, options); }))
                 .then((function(text) {
-                
-                    if (params.output) writeFile(params.output, text);
-                    else console.log(text);
+                    
+                    if (params.output) {
+                    
+                        var out = getOutPath(params.input, params.output);
+                        writeFile(out, text);
+                    
+                    } else {
+                    
+                        console.log(text);
+                    }
                     
                 }), (function(err) {
                 
                     throw err;
-                }));           
+                }));
             }
         },
         
@@ -187,8 +208,15 @@ function run() {
                 
                 bundle(params.input, options).then((function(text) {
                 
-                    if (params.output) writeFile(params.output, text);
-                    else console.log(text);
+                    if (params.output) {
+                    
+                        var out = getOutPath(params.input, params.output);
+                        writeFile(out, text);
+                    
+                    } else {
+                    
+                        console.log(text);
+                    }
                     
                 }), (function(err) {
                 
@@ -1863,7 +1891,7 @@ var Replacer = es6now.Class(function(__super) { return {
     
     ImportAsDeclaration: function(node) {
     
-        var expr = this.requireCall(this.requirePath(node.url.value));
+        var expr = this.requireCall(this.requirePath(node.from.value));
         
         return "var " + node.ident.text + " = " + expr + ";";
     },
@@ -3159,18 +3187,6 @@ var MethodDefinition = es6now.Class(function(__super) { return {
     }
 }});
 
-var ClassElement = es6now.Class(function(__super) { return {
-
-    constructor: function(isStatic, method, start, end) {
-    
-        this.type = "ClassElement";
-        this.static = isStatic;
-        this.method = method;
-        this.start = start;
-        this.end = end;
-    }
-}});
-
 var ArrayExpression = es6now.Class(function(__super) { return {
 
     constructor: function(elements, start, end) {
@@ -3240,6 +3256,503 @@ var TemplateExpression = es6now.Class(function(__super) { return {
         this.end = end;
     }
 }});
+
+var Block = es6now.Class(function(__super) { return {
+
+    constructor: function(statements, start, end) {
+    
+        this.type = "Block";
+        this.statements = statements;
+        this.start = start;
+        this.end = end;
+    }
+}});
+
+var LabelledStatement = es6now.Class(function(__super) { return {
+
+    constructor: function(label, statement) {
+    
+        this.type = "LabelledStatement";
+        this.label = label;
+        this.statement = statement;
+    }
+}});
+
+var ExpressionStatement = es6now.Class(function(__super) { return {
+
+    constructor: function(expr, start, end) {
+    
+        this.type = "ExpressionStatement";
+        this.expression = expr;
+        this.directive = null;
+        this.start = start;
+        this.end = end;
+    }
+}});
+
+var EmptyStatement = es6now.Class(function(__super) { return {
+
+    constructor: function(start, end) {
+    
+        this.type = "EmptyStatement";
+        this.start = start;
+        this.end = end;
+    }
+}});
+
+var VariableDeclaration = es6now.Class(function(__super) { return {
+
+    constructor: function(keyword, list, start, end) {
+    
+        this.type = "VariableDeclaration";
+        this.keyword = keyword;
+        this.declarations = list;
+        this.start = start;
+        this.end = end;
+    }
+}});
+
+var VariableDeclarator = es6now.Class(function(__super) { return {
+
+    constructor: function(pattern, init, start, end) {
+    
+        this.type = "VariableDeclarator";
+        this.pattern = pattern;
+        this.init = init;
+        this.start = start;
+        this.end = end;
+    }
+}});
+
+var ReturnStatement = es6now.Class(function(__super) { return {
+
+    constructor: function(arg, start, end) {
+    
+        this.type = "ReturnStatement";
+        this.argument = arg;
+        this.start = start;
+        this.end = end;
+    }
+}});
+
+var BreakStatement = es6now.Class(function(__super) { return {
+
+    constructor: function(label, start, end) {
+    
+        this.type = "BreakStatement";
+        this.start = start;
+        this.end = end;
+    }
+}});
+
+var ContinueStatement = es6now.Class(function(__super) { return {
+
+    constructor: function(label, start, end) {
+    
+        this.type = "ContinueStatement";
+        this.start = start;
+        this.end = end;
+    }
+}});
+
+var ThrowStatement = es6now.Class(function(__super) { return {
+
+    constructor: function(expr, start, end) {
+    
+        this.type = "ThrowStatement";
+        this.expression = expr;
+        this.start = start;
+        this.end = end;
+    }
+}});
+
+var DebuggerStatement = es6now.Class(function(__super) { return {
+
+    constructor: function(start, end) {
+    
+        this.type = "DebuggerStatement";
+        this.start = start;
+        this.end = end;
+    }
+}});
+
+var IfStatement = es6now.Class(function(__super) { return {
+
+    constructor: function(test, cons, alt, start, end) {
+    
+        this.type = "IfStatement";
+        this.test = test;
+        this.consequent = cons;
+        this.alternate = alt;
+        this.start = start;
+        this.end = end;
+    }
+}});
+
+var DoWhileStatement = es6now.Class(function(__super) { return {
+
+    constructor: function(body, test, start, end) {
+    
+        this.type = "DoWhileStatement";
+        this.body = body;
+        this.test = test;
+        this.start = start;
+        this.end = end;
+    }
+}});
+
+var WhileStatement = es6now.Class(function(__super) { return {
+
+    constructor: function(test, body, start, end) {
+    
+        this.type = "WhileStatement";
+        this.test = test;
+        this.body = body;
+        this.start = start;
+        this.end = end;
+    }
+}});
+
+var ForStatement = es6now.Class(function(__super) { return {
+
+    constructor: function(init, test, update, body, start, end) {
+    
+        this.type = "ForStatement";
+        this.init = init;
+        this.test = test;
+        this.update = update;
+        this.body = body;
+        this.start = start;
+        this.end = end;
+    }
+}});
+
+var ForInStatement = es6now.Class(function(__super) { return {
+
+    constructor: function(left, right, body, start, end) {
+    
+        this.type = "ForInStatement";
+        this.left = left;
+        this.right = right;
+        this.body = body;
+        this.start = start;
+        this.end = end;
+    }
+}});
+
+var ForOfStatement = es6now.Class(function(__super) { return {
+
+    constructor: function(left, right, body, start, end) {
+    
+        this.type = "ForOfStatement";
+        this.left = left;
+        this.right = right;
+        this.body = body;
+        this.start = start;
+        this.end = end;
+    }
+}});
+
+var WithStatement = es6now.Class(function(__super) { return {
+
+    constructor: function(object, body, start, end) {
+    
+        this.type = "WithStatement";
+        this.object = object;
+        this.body = body;
+        this.start = start;
+        this.end = end;
+    }
+}});
+
+var SwitchStatement = es6now.Class(function(__super) { return {
+
+    constructor: function(desc, cases, start, end) {
+    
+        this.type = "SwitchStatement";
+        this.descriminant = desc;
+        this.cases = cases;
+        this.start = start;
+        this.end = end;
+    }
+}});
+
+var SwitchCase = es6now.Class(function(__super) { return {
+
+    constructor: function(test, cons, start, end) {
+    
+        this.type = "SwitchCase";
+        this.test = test;
+        this.consequent = cons;
+        this.start = start;
+        this.end = end;
+    }
+}});
+
+var TryStatement = es6now.Class(function(__super) { return {
+
+    constructor: function(block, handler, fin, start, end) {
+    
+        this.type = "TryStatement";
+        this.block = block;
+        this.handler = handler;
+        this.finalizer = fin;
+        this.start = start;
+        this.end = end;
+    }
+}});
+
+var CatchClause = es6now.Class(function(__super) { return {
+
+    constructor: function(param, body, start, end) {
+    
+        this.type = "CatchClause";
+        this.param = param;
+        this.body = body;
+        this.start = start;
+        this.end = end;
+    }
+}});
+
+var FunctionDeclaration = es6now.Class(function(__super) { return {
+
+    constructor: function(gen, ident, params, body, start, end) {
+    
+        this.type = "FunctionDeclaration";
+        this.generator = gen;
+        this.ident = ident;
+        this.params = params;
+        this.body = body;
+        this.start = start;
+        this.end = end;
+    }
+}});
+
+var FunctionExpression = es6now.Class(function(__super) { return {
+
+    constructor: function(gen, ident, params, body, start, end) {
+    
+        this.type = "FunctionExpression";
+        this.generator = gen;
+        this.ident = ident;
+        this.params = params;
+        this.body = body;
+        this.start = start;
+        this.end = end;
+    }
+}});
+
+var FormalParameter = es6now.Class(function(__super) { return {
+
+    constructor: function(pattern, init, start, end) {
+    
+        this.type = "FormalParameter";
+        this.pattern = pattern;
+        this.init = init;
+        this.start = start;
+        this.end = end;
+    }
+}});
+
+var RestParameter = es6now.Class(function(__super) { return {
+
+    constructor: function(ident, start, end) {
+    
+        this.type = "RestParameter";
+        this.ident = ident;
+        this.start = start;
+        this.end = end;
+    }
+}});
+
+var FunctionBody = es6now.Class(function(__super) { return {
+
+    constructor: function(statements, start, end) {
+    
+        this.type = "FunctionBody";
+        this.statements = statements;
+        this.start = start;
+        this.end = end;
+    }
+}});
+
+var ArrowFunction = es6now.Class(function(__super) { return {
+
+    constructor: function(params, body, start, end) {
+    
+        this.type = "ArrowFunction";
+        this.params = params;
+        this.body = body;
+        this.start = start;
+        this.end = end;
+    }
+}});
+
+var ModuleDeclaration = es6now.Class(function(__super) { return {
+
+    constructor: function(url, body, start, end) {
+    
+        this.type = "ModuleDeclaration";
+        this.url = url;
+        this.body = body;
+        this.start = start;
+        this.end = end;
+    }
+}});
+
+var ModuleBody = es6now.Class(function(__super) { return {
+
+    constructor: function(statements, start, end) {
+    
+        this.type = "ModuleBody";
+        this.statements = statements;
+        this.start = start;
+        this.end = end;
+    }
+}});
+
+var ImportAsDeclaration = es6now.Class(function(__super) { return {
+
+    constructor: function(from, ident, start, end) {
+    
+        this.type = "ImportAsDeclaration";
+        this.from = from;
+        this.ident = ident;
+        this.start = start;
+        this.end = end;
+    }
+}});
+
+var ImportDeclaration = es6now.Class(function(__super) { return {
+
+    constructor: function(binding, from, start, end) {
+    
+        this.type = "ImportDeclaration";
+        this.binding = binding;
+        this.from = from;
+        this.start = start;
+        this.end = end;
+    }
+}});
+
+var ImportSpecifierSet = es6now.Class(function(__super) { return {
+
+    constructor: function(list, start, end) {
+    
+        this.type = "ImportSpecifierSet";
+        this.specifiers = list;
+        this.start = start;
+        this.end = end;
+    }
+}});
+
+var ImportSpecifier = es6now.Class(function(__super) { return {
+
+    constructor: function(name, ident, start, end) {
+    
+        this.type = "ImportSpecifier";
+        this.name = name;
+        this.ident = ident;
+        this.start = start;
+        this.end = end;
+    }
+}});
+
+var ExportDeclaration = es6now.Class(function(__super) { return {
+
+    constructor: function(binding, from, start, end) {
+    
+        this.type = "ExportDeclaration";
+        this.binding = binding;
+        this.from = from;
+        this.start = start;
+        this.end = end;
+    }
+}});
+
+var ExportSpecifierSet = es6now.Class(function(__super) { return {
+
+    constructor: function(list, start, end) {
+    
+        this.type = "ExportSpecifierSet";
+        this.specifiers = list;
+        this.start = start;
+        this.end = end;
+    }
+}});
+
+var ExportSpecifier = es6now.Class(function(__super) { return {
+
+    constructor: function(ident, path, start, end) {
+    
+        this.type = "ExportSpecifier";
+        this.ident = ident;
+        this.path = path;
+        this.start = start;
+        this.end = end;
+    }
+}});
+
+var BindingPath = es6now.Class(function(__super) { return {
+    
+    constructor: function(list, start, end) {
+    
+        this.type = "BindingPath";
+        this.elements = list;
+        this.start = start;
+        this.end = end;
+    }
+}});
+
+var ClassDeclaration = es6now.Class(function(__super) { return {
+
+    constructor: function(ident, base, body, start, end) {
+    
+        this.type = "ClassDeclaration";
+        this.ident = ident;
+        this.base = base;
+        this.body = body;
+        this.start = start;
+        this.end = end;
+    }
+}});
+
+var ClassExpression = es6now.Class(function(__super) { return {
+
+    constructor: function(ident, base, body, start, end) {
+    
+        this.type = "ClassExpression";
+        this.ident = ident;
+        this.base = base;
+        this.body = body;
+        this.start = start;
+        this.end = end;
+    }
+}});
+
+var ClassBody = es6now.Class(function(__super) { return {
+
+    constructor: function(elems, start, end) {
+    
+        this.type = "ClassBody";
+        this.elements = elems;
+        this.start = start;
+        this.end = end;
+    }
+}});
+
+var ClassElement = es6now.Class(function(__super) { return {
+
+    constructor: function(isStatic, method, start, end) {
+    
+        this.type = "ClassElement";
+        this.static = isStatic;
+        this.method = method;
+        this.start = start;
+        this.end = end;
+    }
+}});
+
 exports.Script = Script;
 exports.Module = Module;
 exports.Identifier = Identifier;
@@ -3268,13 +3781,54 @@ exports.ObjectExpression = ObjectExpression;
 exports.PropertyDefinition = PropertyDefinition;
 exports.CoveredPatternProperty = CoveredPatternProperty;
 exports.MethodDefinition = MethodDefinition;
-exports.ClassElement = ClassElement;
 exports.ArrayExpression = ArrayExpression;
 exports.ArrayComprehension = ArrayComprehension;
 exports.GeneratorComprehension = GeneratorComprehension;
 exports.ComprehensionFor = ComprehensionFor;
 exports.ComprehensionIf = ComprehensionIf;
 exports.TemplateExpression = TemplateExpression;
+exports.Block = Block;
+exports.LabelledStatement = LabelledStatement;
+exports.ExpressionStatement = ExpressionStatement;
+exports.EmptyStatement = EmptyStatement;
+exports.VariableDeclaration = VariableDeclaration;
+exports.VariableDeclarator = VariableDeclarator;
+exports.ReturnStatement = ReturnStatement;
+exports.BreakStatement = BreakStatement;
+exports.ContinueStatement = ContinueStatement;
+exports.ThrowStatement = ThrowStatement;
+exports.DebuggerStatement = DebuggerStatement;
+exports.IfStatement = IfStatement;
+exports.DoWhileStatement = DoWhileStatement;
+exports.WhileStatement = WhileStatement;
+exports.ForStatement = ForStatement;
+exports.ForInStatement = ForInStatement;
+exports.ForOfStatement = ForOfStatement;
+exports.WithStatement = WithStatement;
+exports.SwitchStatement = SwitchStatement;
+exports.SwitchCase = SwitchCase;
+exports.TryStatement = TryStatement;
+exports.CatchClause = CatchClause;
+exports.FunctionDeclaration = FunctionDeclaration;
+exports.FunctionExpression = FunctionExpression;
+exports.FormalParameter = FormalParameter;
+exports.RestParameter = RestParameter;
+exports.FunctionBody = FunctionBody;
+exports.ArrowFunction = ArrowFunction;
+exports.ModuleDeclaration = ModuleDeclaration;
+exports.ModuleBody = ModuleBody;
+exports.ImportAsDeclaration = ImportAsDeclaration;
+exports.ImportDeclaration = ImportDeclaration;
+exports.ImportSpecifierSet = ImportSpecifierSet;
+exports.ImportSpecifier = ImportSpecifier;
+exports.ExportDeclaration = ExportDeclaration;
+exports.ExportSpecifierSet = ExportSpecifierSet;
+exports.ExportSpecifier = ExportSpecifier;
+exports.BindingPath = BindingPath;
+exports.ClassDeclaration = ClassDeclaration;
+exports.ClassExpression = ClassExpression;
+exports.ClassBody = ClassBody;
+exports.ClassElement = ClassElement;
 };
 
 __modules[19] = function(exports) {
@@ -4437,12 +4991,7 @@ var Parser = es6now.Class(function(__super) { return {
         var list = this.StatementList(false);
         this.read("}");
         
-        return { 
-            type: "Block", 
-            statements: list,
-            start: start,
-            end: this.endOffset
-        };
+        return new Node.Block(list, start, this.endOffset);
     },
     
     Semicolon: function() {
@@ -4461,13 +5010,11 @@ var Parser = es6now.Class(function(__super) { return {
         
         this.read(":");
         
-        return { 
-            type: "LabelledStatement", 
-            label: label, 
-            statement: this.StatementWithLabel(label),
-            start: start,
-            end: this.endOffset
-        };
+        return new Node.LabelledStatement(
+            label, 
+            this.StatementWithLabel(label),
+            start,
+            this.endOffset);
     },
     
     ExpressionStatement: function() {
@@ -4477,13 +5024,7 @@ var Parser = es6now.Class(function(__super) { return {
         
         this.Semicolon();
         
-        return { 
-            type: "ExpressionStatement", 
-            expression: expr,
-            directive: null,
-            start: start,
-            end: this.endOffset
-        };
+        return new Node.ExpressionStatement(expr, start, this.endOffset);
     },
     
     EmptyStatement: function() {
@@ -4492,11 +5033,7 @@ var Parser = es6now.Class(function(__super) { return {
         
         this.Semicolon();
         
-        return { 
-            type: "EmptyStatement", 
-            start: start,
-            end: this.endOffset
-        };
+        return new Node.EmptyStatement(start, this.endOffset);
     },
     
     VariableStatement: function() {
@@ -4541,13 +5078,7 @@ var Parser = es6now.Class(function(__super) { return {
             else break;
         }
         
-        return { 
-            type: "VariableDeclaration", 
-            keyword: keyword,
-            declarations: list, 
-            start: start,
-            end: this.endOffset
-        };
+        return new Node.VariableDeclaration(keyword, list, start, this.endOffset);
     },
     
     VariableDeclarator: function(noIn, isConst) {
@@ -4566,13 +5097,7 @@ var Parser = es6now.Class(function(__super) { return {
             this.fail("Missing const initializer", pattern);
         }
         
-        return { 
-            type: "VariableDeclarator", 
-            pattern: pattern, 
-            init: init,
-            start: start,
-            end: this.endOffset
-        };
+        return new Node.VariableDeclarator(pattern, init, start, this.endOffset);
     },
     
     ReturnStatement: function() {
@@ -4583,16 +5108,11 @@ var Parser = es6now.Class(function(__super) { return {
         var start = this.startOffset;
         
         this.read("return");
-        var init = this.maybeEnd() ? this.Expression() : null;
+        var value = this.maybeEnd() ? this.Expression() : null;
         
         this.Semicolon();
         
-        return { 
-            type: "ReturnStatement", 
-            argument: init,
-            start: start,
-            end: this.endOffset
-        };
+        return new Node.ReturnStatement(value, start, this.endOffset);
     },
     
     BreakOrContinueStatement: function() {
@@ -4619,12 +5139,9 @@ var Parser = es6now.Class(function(__super) { return {
                 this.fail("Invalid " + keyword + " statement", token);
         }
         
-        return { 
-            type: keyword === "break" ? "Break" : "Continue", 
-            label: label,
-            start: start,
-            end: this.endOffset
-        };
+        return keyword === "break" ?
+            new Node.BreakStatement(label, start, this.endOffset) :
+            new Node.ContinueStatement(label, start, this.endOffset);
     },
     
     ThrowStatement: function() {
@@ -4640,12 +5157,7 @@ var Parser = es6now.Class(function(__super) { return {
         
         this.Semicolon();
         
-        return { 
-            type: "ThrowStatement", 
-            expression: expr,
-            start: start,
-            end: this.endOffset
-        };
+        return new Node.ThrowStatement(expr, start, this.endOffset);
     },
     
     DebuggerStatement: function() {
@@ -4655,11 +5167,7 @@ var Parser = es6now.Class(function(__super) { return {
         this.read("debugger");
         this.Semicolon();
         
-        return { 
-            type: "DebuggerStatement",
-            start: start,
-            end: this.endOffset
-        };
+        return new Node.DebuggerStatement(start, this.endOffset);
     },
     
     IfStatement: function() {
@@ -4682,14 +5190,7 @@ var Parser = es6now.Class(function(__super) { return {
             elseBody = this.Statement();
         }
         
-        return { 
-            type: "IfStatement", 
-            test: test, 
-            consequent: body, 
-            alternate: elseBody,
-            start: start,
-            end: this.endOffset
-        };
+        return new Node.IfStatement(test, body, elseBody, start, this.endOffset);
     },
     
     DoWhileStatement: function() {
@@ -4708,13 +5209,7 @@ var Parser = es6now.Class(function(__super) { return {
         
         this.read(")");
         
-        return { 
-            type: "DoWhileStatement", 
-            body: body, 
-            test: test,
-            start: start,
-            end: this.endOffset
-        };
+        return new Node.DoWhileStatement(body, test, start, this.endOffset);
     },
     
     WhileStatement: function() {
@@ -4724,13 +5219,11 @@ var Parser = es6now.Class(function(__super) { return {
         this.read("while");
         this.read("(");
         
-        return {
-            type: "WhileStatement",
-            test: this.Expression(),
-            body: (this.read(")"), this.StatementWithLabel()),
-            start: start,
-            end: this.endOffset
-        };
+        return new Node.WhileStatement(
+            this.Expression(), 
+            (this.read(")"), this.StatementWithLabel()), 
+            start, 
+            this.endOffset);
     },
     
     ForStatement: function() {
@@ -4777,15 +5270,13 @@ var Parser = es6now.Class(function(__super) { return {
         
         this.read(")");
         
-        return {
-            type: "ForStatement",
-            init: init,
-            test: test,
-            update: step,
-            body: this.StatementWithLabel(),
-            start: start,
-            end: this.endOffset
-        };
+        return new Node.ForStatement(
+            init, 
+            test, 
+            step, 
+            this.StatementWithLabel(), 
+            start, 
+            this.endOffset);
     },
     
     ForInStatement: function(init, start) {
@@ -4796,14 +5287,12 @@ var Parser = es6now.Class(function(__super) { return {
         var expr = this.Expression();
         this.read(")");
         
-        return {
-            type: "ForInStatement",
-            left: init,
-            right: expr,
-            body: this.StatementWithLabel(),
-            start: start,
-            end: this.endOffset
-        };
+        return new Node.ForInStatement(
+            init, 
+            expr, 
+            this.StatementWithLabel(), 
+            start, 
+            this.endOffset);
     },
     
     ForOfStatement: function(init, start) {
@@ -4814,14 +5303,12 @@ var Parser = es6now.Class(function(__super) { return {
         var expr = this.AssignmentExpression();
         this.read(")");
         
-        return {
-            type: "ForOfStatement",
-            left: init,
-            right: expr,
-            body: this.StatementWithLabel(),
-            start: start,
-            end: this.endOffset
-        };
+        return new Node.ForOfStatement(
+            init, 
+            expr, 
+            this.StatementWithLabel(), 
+            start, 
+            this.endOffset);
     },
     
     WithStatement: function() {
@@ -4834,13 +5321,11 @@ var Parser = es6now.Class(function(__super) { return {
         this.read("with");
         this.read("(");
         
-        return {
-            type: "WithStatement",
-            object: this.Expression(),
-            body: (this.read(")"), this.Statement()),
-            start: start,
-            end: this.endOffset
-        };
+        return new Node.WithStatement(
+            this.Expression(), 
+            (this.read(")"), this.Statement()),
+            start,
+            this.endOffset);
     },
     
     SwitchStatement: function() {
@@ -4861,7 +5346,7 @@ var Parser = es6now.Class(function(__super) { return {
         
         while (this.peekUntil("}")) {
         
-            node = this.Case();
+            node = this.SwitchCase();
             
             if (node.test === null) {
             
@@ -4877,16 +5362,10 @@ var Parser = es6now.Class(function(__super) { return {
         this.context.switchDepth -= 1;
         this.read("}");
         
-        return {
-            type: "SwitchStatement",
-            descriminant: head,
-            cases: cases,
-            start: start,
-            end: this.endOffset
-        };
+        return new Node.SwitchStatement(head, cases, start, this.endOffset);
     },
     
-    Case: function() {
+    SwitchCase: function() {
     
         var start = this.startOffset,
             expr = null, 
@@ -4913,13 +5392,7 @@ var Parser = es6now.Class(function(__super) { return {
             list.push(this.Statement());
         }
         
-        return {
-            type: "SwitchCase",
-            test: expr,
-            consequent: list,
-            start: start,
-            end: this.endOffset
-        };
+        return new Node.SwitchCase(expr, list, start, this.endOffset);
     },
     
     TryStatement: function() {
@@ -4933,7 +5406,7 @@ var Parser = es6now.Class(function(__super) { return {
             fin = null;
         
         if (this.peek() === "catch")
-            handler = this.Catch();
+            handler = this.CatchClause();
         
         if (this.peek() === "finally") {
         
@@ -4941,34 +5414,19 @@ var Parser = es6now.Class(function(__super) { return {
             fin = this.Block();
         }
         
-        return {
-            type: "TryStatement",
-            block: tryBlock,
-            handler: handler,
-            finalizer: fin,
-            start: start,
-            end: this.endOffset
-        };
+        return new Node.TryStatement(tryBlock, handler, fin, start, this.endOffset);
     },
     
-    Catch: function() {
+    CatchClause: function() {
     
         var start = this.startOffset;
         
         this.read("catch");
         this.read("(");
-    
         var param = this.BindingPattern();
-        
         this.read(")");
         
-        return {
-            type: "CatchClause",
-            param: param,
-            body: this.Block(),
-            start: start,
-            end: this.endOffset
-        };
+        return new Node.CatchClause(param, this.Block(), start, this.endOffset);
     },
     
     // === Declarations ===
@@ -5067,15 +5525,13 @@ var Parser = es6now.Class(function(__super) { return {
             gen = true;
         }
         
-        return { 
-            type: "FunctionDeclaration", 
-            generator: gen,
-            ident: (ident = this.Identifier()),
-            params: (params = this.FormalParameters()),
-            body: this.FunctionBody(ident, params, false),
-            start: start,
-            end: this.endOffset
-        };
+        return new Node.FunctionDeclaration(
+            gen,
+            ident = this.Identifier(),
+            params = this.FormalParameters(),
+            this.FunctionBody(ident, params, false),
+            start,
+            this.endOffset);
     },
     
     FunctionExpression: function() {
@@ -5096,15 +5552,13 @@ var Parser = es6now.Class(function(__super) { return {
         if (this.peek() !== "(")
             ident = this.Identifier();
         
-        return { 
-            type: "FunctionExpression", 
-            generator: gen,
-            ident: ident,
-            params: (params = this.FormalParameters()),
-            body: this.FunctionBody(ident, params, false),
-            start: start,
-            end: this.endOffset
-        };
+        return new Node.FunctionExpression(
+            gen,
+            ident,
+            params = this.FormalParameters(),
+            this.FunctionBody(ident, params, false),
+            start,
+            this.endOffset);
     },
     
     FormalParameters: function() {
@@ -5145,13 +5599,7 @@ var Parser = es6now.Class(function(__super) { return {
             init = this.AssignmentExpression();
         }
         
-        return { 
-            type: "FormalParameter", 
-            pattern: pattern, 
-            init: init,
-            start: start,
-            end: this.endOffset
-        };
+        return new Node.FormalParameter(pattern, init, start, this.endOffset);
     },
     
     RestParameter: function() {
@@ -5160,12 +5608,7 @@ var Parser = es6now.Class(function(__super) { return {
         
         this.read("...");
         
-        return { 
-            type: "RestParameter", 
-            ident: this.BindingIdentifier(),
-            start: start,
-            end: this.endOffset
-        };
+        return new Node.RestParameter(this.BindingIdentifier(), start, this.endOffset);
     },
     
     FunctionBody: function(ident, params, isStrict) {
@@ -5183,12 +5626,7 @@ var Parser = es6now.Class(function(__super) { return {
         
         this.popContext();
         
-        return {
-            type: "FunctionBody",
-            statements: statements,
-            start: start,
-            end: this.endOffset
-        };
+        return new Node.FunctionBody(statements, start, this.endOffset);
     },
     
     ArrowFunction: function(formals, rest, start) {
@@ -5212,13 +5650,7 @@ var Parser = es6now.Class(function(__super) { return {
             body = this.AssignmentExpression();
         }
         
-        return {
-            type: "ArrowFunction",
-            params: params,
-            body: body,
-            start: start,
-            end: this.endOffset
-        };
+        return new Node.ArrowFunction(params, body, start, this.endOffset);
     },
     
     // === Modules ===
@@ -5229,13 +5661,11 @@ var Parser = es6now.Class(function(__super) { return {
         
         this.readKeyword("module");
         
-        return {
-            type: "ModuleDeclaration",
-            url: this.String(),
-            body: this.ModuleBody(),
-            start: start,
-            end: this.endOffset
-        };
+        return new Node.ModuleDeclaration(
+            this.String(),
+            this.ModuleBody(),
+            start,
+            this.endOffset);
     },
     
     ModuleBody: function() {
@@ -5250,12 +5680,7 @@ var Parser = es6now.Class(function(__super) { return {
         
         this.popContext();
         
-        return {
-            type: "ModuleBody", 
-            statements: list,
-            start: start,
-            end: this.endOffset
-        };
+        return new Node.ModuleBody(list, start, this.endOffset);
     },
     
     ImportDeclaration: function() {
@@ -5273,14 +5698,7 @@ var Parser = es6now.Class(function(__super) { return {
             binding = this.BindingIdentifier();
             this.Semicolon();
             
-            return {
-            
-                type: "ImportAsDeclaration",
-                url: from,
-                ident: binding,
-                start: start,
-                end: this.endOffset
-            };
+            return new Node.ImportAsDeclaration(from, binding, start, this.endOffset);
         }
         
         binding = this.peek() === "{" ?
@@ -5291,13 +5709,7 @@ var Parser = es6now.Class(function(__super) { return {
         from = this.peek() === "STRING" ? this.String() : this.Identifier();
         this.Semicolon();
         
-        return { 
-            type: "ImportDeclaration",
-            binding: binding,
-            from: from,
-            start: start,
-            end: this.endOffset
-        };
+        return new Node.ImportDeclaration(binding, from, start, this.endOffset);
     },
     
     ImportSpecifierSet: function() {
@@ -5317,12 +5729,7 @@ var Parser = es6now.Class(function(__super) { return {
         
         this.read("}");
         
-        return { 
-            type: "ImportSpecifierSet", 
-            specifiers: list,
-            start: start,
-            end: this.endOffset
-        };
+        return new Node.ImportSpecifierSet(list, start, this.endOffset);
     },
     
     ImportSpecifier: function() {
@@ -5341,13 +5748,7 @@ var Parser = es6now.Class(function(__super) { return {
             this.checkBindingIdent(name);
         }
         
-        return { 
-            type: "ImportSpecifier", 
-            name: name, 
-            ident: ident,
-            start: start,
-            end: this.endOffset
-        };
+        return new Node.ImportSpecifier(name, ident, start, this.endOffset);
     },
     
     ExportDeclaration: function() {
@@ -5409,13 +5810,7 @@ var Parser = es6now.Class(function(__super) { return {
             this.Semicolon();
         }
         
-        return { 
-            type: "ExportDeclaration", 
-            binding: binding,
-            from: from,
-            start: start,
-            end: this.endOffset
-        };
+        return new Node.ExportDeclaration(binding, from, start, this.endOffset);
     },
     
     ExportSpecifierSet: function() {
@@ -5435,12 +5830,7 @@ var Parser = es6now.Class(function(__super) { return {
         
         this.read("}");
         
-        return { 
-            type: "ExportSpecifierSet", 
-            specifiers: list,
-            start: start,
-            end: this.endOffset
-        };
+        return new Node.ExportSpecifierSet(list, start, this.endOffset);
     },
     
     ExportSpecifier: function() {
@@ -5457,13 +5847,7 @@ var Parser = es6now.Class(function(__super) { return {
             path = this.BindingPath();
         }
         
-        return { 
-            type: "ExportSpecifier", 
-            ident: ident, 
-            path: path,
-            start: start,
-            end: this.endOffset
-        };
+        return new Node.ExportSpecifier(ident, path, start, this.endOffset);
     },
     
     BindingPath: function() {
@@ -5479,41 +5863,20 @@ var Parser = es6now.Class(function(__super) { return {
             else break;
         }
         
-        return { 
-            type: "BindingPath", 
-            elements: path,
-            start: start,
-            end: this.endOffset
-        };
+        return new Node.BindingPath(path, start, this.endOffset);
     },
     
     // === Classes ===
     
     ClassDeclaration: function() {
     
-        var start = this.startOffset;
+        var start = this.startOffset,
+            ident = null,
+            base = null;
         
         this.read("class");
         
-        return this.ClassLiteral("ClassDeclaration", this.BindingIdentifier(), start);
-    },
-    
-    ClassExpression: function() {
-    
-        var start = this.startOffset, 
-            ident = null;
-        
-        this.read("class");
-        
-        if (this.peek() === "IDENTIFIER")
-            ident = this.BindingIdentifier();
-        
-        return this.ClassLiteral("ClassExpression", ident, start);
-    },
-    
-    ClassLiteral: function(type, ident, start) {
-    
-        var base = null;
+        ident = this.BindingIdentifier();
         
         if (this.peek() === "extends") {
         
@@ -5521,14 +5884,37 @@ var Parser = es6now.Class(function(__super) { return {
             base = this.AssignmentExpression();
         }
         
-        return {
-            type: type,
-            ident: ident,
-            base: base,
-            body: this.ClassBody(),
-            start: start,
-            end: this.endOffset
-        };
+        return new Node.ClassDeclaration(
+            ident,
+            base,
+            this.ClassBody(),
+            start,
+            this.endOffset);
+    },
+    
+    ClassExpression: function() {
+    
+        var start = this.startOffset, 
+            ident = null,
+            base = null;
+        
+        this.read("class");
+        
+        if (this.peek() === "IDENTIFIER")
+            ident = this.BindingIdentifier();
+        
+        if (this.peek() === "extends") {
+        
+            this.read();
+            base = this.AssignmentExpression();
+        }
+        
+        return new Node.ClassExpression(
+            ident, 
+            base, 
+            this.ClassBody(), 
+            start, 
+            this.endOffset);
     },
     
     ClassBody: function() {
@@ -5549,12 +5935,7 @@ var Parser = es6now.Class(function(__super) { return {
         
         this.popContext();
         
-        return {
-            type: "ClassBody",
-            elements: list,
-            start: start,
-            end: this.endOffset
-        };
+        return new Node.ClassBody(list, start, this.endOffset);
     },
     
     ClassElement: function(nameSet, staticSet) {
