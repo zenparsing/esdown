@@ -1,1 +1,1 @@
-export * from "../../es6parse/src/main.js";
+export * from "../../es6parse/src/es6parse.js";

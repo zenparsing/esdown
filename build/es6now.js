@@ -1067,23 +1067,25 @@ function Class(base, def) {
     // Generate the method collection, closing over "super"
     var props = def(parent);
     
+    // Get constructor
+    if (hasOwn(props, "constructor"))
+        constructor = props.constructor;
+    
+    // Make constructor non-enumerable and assign a default
+    // if none is provided
+    Object.defineProperty(props, "constructor", {
+    
+        enumerable: false,
+        writable: true,
+        configurable: true,
+        value: constructor
+    });
+    
     // Create prototype object
     var proto = defineMethods(Object.create(parent), props, false);
     
-    // Get constructor method
-    if (hasOwn(props, "constructor")) constructor = props.constructor;
-    else proto.constructor = constructor;
-    
     // Set constructor's prototype
     constructor.prototype = proto;
-    
-    // Make constructor non-enumerable
-    Object.defineProperty(proto, "constructor", { 
-    
-        enumerable: false, 
-        writable: true, 
-        configurable: true 
-    });
     
     // Set class "static" methods
     defineMethods(constructor, props, true);
@@ -3270,11 +3272,13 @@ var Block = es6now.Class(function(__super) { return {
 
 var LabelledStatement = es6now.Class(function(__super) { return {
 
-    constructor: function(label, statement) {
+    constructor: function(label, statement, start, end) {
     
         this.type = "LabelledStatement";
         this.label = label;
         this.statement = statement;
+        this.start = start;
+        this.end = end;
     }
 }});
 
@@ -6050,8 +6054,8 @@ var multiCharPunctuator = new RegExp("^(?:" +
 
 // === Miscellaneous Patterns ===
 var octalEscape = /^(?:[0-3][0-7]{0,2}|[4-7][0-7]?)/,
-      blockCommentPattern = /\r\n?|[\n\u2028\u2029]|\*\//g,
-      hexChar = /[0-9a-f]/i;
+    blockCommentPattern = /\r\n?|[\n\u2028\u2029]|\*\//g,
+    hexChar = /[0-9a-f]/i;
 
 // === Character Types ===
 var WHITESPACE = 1,
