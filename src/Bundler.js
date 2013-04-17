@@ -2,7 +2,7 @@ import "path" as Path;
 import "FutureFS.js" as FFS;
 
 import Promise from "Promise.js";
-import { translate, wrap } from "Translator.js";
+import translate, wrap from "Translator.js";
 
 var EXTERNAL = /^[a-z]+:|^[^\.]+$/i;
 

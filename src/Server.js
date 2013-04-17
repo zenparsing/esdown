@@ -5,7 +5,7 @@ import "url" as URL;
 import "FutureFS.js" as FFS;
 
 import Promise from "Promise.js";
-import { translate, isWrapped } from "Translator.js";
+import translate, isWrapped from "Translator.js";
 import mimeTypes from "ServerMime.js";
 
 var DEFAULT_PORT = 80,

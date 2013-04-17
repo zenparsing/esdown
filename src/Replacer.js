@@ -115,7 +115,6 @@ export class Replacer {
     ImportAsDeclaration(node) {
     
         var expr = this.requireCall(this.requirePath(node.from.value));
-        
         return "var " + node.ident.text + " = " + expr + ";";
     }
     
@@ -126,35 +125,37 @@ export class Replacer {
     
     ImportDeclaration(node) {
     
-        var binding = node.binding,
-            from = node.from,
-            moduleSpec,
-            out = "",
-            tmp;
+        var isURL = node.from.type === "String",
+            tmp,
+            out;
         
-        moduleSpec = from.type === "String" ?
-            this.requireCall(this.requirePath(from.value)) :
-            from.text;
+        var moduleSpec = isURL ?
+            this.requireCall(this.requirePath(node.from.value)) :
+            node.from.text;
         
-        if (binding.type === "Identifier") {
+        if (!isURL || node.specifiers.length === 1) {
         
-            out = "var " + binding.text + " = " + moduleSpec + "." + binding.text + ";";
-            
-        } else if (binding.type === "ImportSpecifierSet") {
+            tmp = moduleSpec;
+            out = "";
+        
+        } else {
         
             tmp = "_M" + (this.uid++);
             out = "var " + tmp + " = " + moduleSpec;
-            
-            binding.specifiers.forEach(spec => {
-            
-                var name = spec.name,
-                    ident = spec.ident || name;
-                
-                out += ", " + ident.text + " = " + tmp + "." + name.text;
-            });
-            
-            out += ";";
         }
+        
+        node.specifiers.forEach(spec => {
+        
+            var remote = spec.remote,
+                local = spec.local || remote;
+            
+            if (out) out += ", ";
+            else out = "var ";
+            
+            out += local.text + " = " + tmp + "." + remote.text;
+        });
+        
+        out += ";";
         
         return out;
     }
@@ -167,7 +168,7 @@ export class Replacer {
             ident;
         
         // Exported declarations
-        switch (bindingType) {
+        switch (binding.type) {
         
             case "VariableDeclaration":
             
@@ -188,7 +189,7 @@ export class Replacer {
                 return binding.text;
         }
         
-        var from = node.from,
+        var from = binding.from,
             fromPath = "",
             out = "";
         
@@ -201,46 +202,33 @@ export class Replacer {
             
             } else {
             
-                fromPath = node.from.text;
+                fromPath = from.text;
             }
         }
         
-        // Exported bindings
-        switch (bindingType) {
+        if (!binding.specifiers) {
         
-            case "*":
+            if (from) {
             
-                if (from) {
+                out += "Object.keys(" + fromPath + ").forEach(function(k) { exports[k] = " + fromPath + "[k]; });";
                 
-                    out += "Object.keys(" + fromPath + ").forEach(function(k) { exports[k] = " + fromPath + "[k]; });";
-                    
-                } else {
-                
-                    // TODO:
-                    throw new Error("`export *;` is not implemented.");
-                }
-                
-                break;
-                
-            case "Identifier":
+            } else {
             
-                ident = binding.text;
-                exports[ident] = from ? (fromPath + "." + ident) : ident;
-                break;
+                // TODO:
+                throw new Error("`export *;` is not implemented.");
+            }
+        
+        } else {
+        
+            binding.specifiers.forEach(spec => {
             
-            default:
+                var local = spec.local.text,
+                    remote = spec.remote ? spec.remote.text : local;
             
-                binding.specifiers.forEach(spec => {
-            
-                    var ident = spec.ident.text,
-                        path = spec.path ? spec.path.text : ident;
-                    
-                    exports[ident] = from ? 
-                        fromPath + "." + path :
-                        path;
-                });
-                
-                break;
+                exports[remote] = from ? 
+                    fromPath + "." + local :
+                    local;
+            });        
         }
         
         return out;

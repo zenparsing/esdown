@@ -5,9 +5,9 @@ function B() {}
 export B;
 
 function C() {}
-export { C };
-export { D: C };
-export { E: A.B };
+export C;
+export C as D;
+export B from E.A;
 
 export * from Z;
 export * from "Z.js";
