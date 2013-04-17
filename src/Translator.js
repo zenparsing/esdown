@@ -51,11 +51,6 @@ export function translate(input, options) {
     input = sanitize(input);
     output = replacer.replace(input);
     
-    Object.keys(replacer.exports).forEach(k => {
-    
-        output += "\nexports." + k + " = " + replacer.exports[k] + ";";
-    });
-    
     if (options.wrap !== false)
         output = wrap(output, replacer.dependencies, options.global);
     

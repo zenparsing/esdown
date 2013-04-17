@@ -26,7 +26,7 @@ export class Replacer {
     
     replace(input) {
     
-        this.exports = {};
+        this.exportStack = [this.exports = {}];
         this.imports = {};
         this.dependencies = [];
         this.uid = 0;
@@ -36,6 +36,10 @@ export class Replacer {
         
         var visit = (node) => {
         
+            // Call pre-visit method
+            if (this[node.type + "$"])
+                this[node.type + "$"](node);
+            
             // Perform a depth-first traversal
             Parser.forEachChild(node, child => {
             
@@ -58,13 +62,20 @@ export class Replacer {
             return node.text;
         };
         
-        return visit({ 
+        var output = visit({ 
         
             type: "$", 
             root: root, 
             start: 0, 
             end: input.length
         });
+        
+        Object.keys(this.exports).forEach(k => {
+    
+            output += "\nexports." + k + " = " + this.exports[k] + ";";
+        });
+        
+        return output;
     }
 
     DoWhileStatement(node) {
@@ -118,9 +129,28 @@ export class Replacer {
         return "var " + node.ident.text + " = " + expr + ";";
     }
     
+    ModuleDeclaration$(node) {
+    
+        this.exportStack.push(this.exports = {});
+    }
+    
     ModuleDeclaration(node) {
     
-        // TODO: Inline modules
+        var out = "var " + node.ident.text + " = (function() { ";
+        
+        out += node.body.text + ";"
+        
+        Object.keys(this.exports).forEach(k => {
+    
+            out += " exports." + k + " = " + this.exports[k] + ";";
+        });
+        
+        this.exportStack.pop();
+        this.exports = this.exportStack[this.exportStack.length - 1];
+        
+        out += " return exports; }());";
+        
+        return out;
     }
     
     ImportDeclaration(node) {

@@ -942,11 +942,6 @@ function translate(input, options) {
     input = sanitize(input);
     output = replacer.replace(input);
     
-    Object.keys(replacer.exports).forEach((function(k) {
-    
-        output += "\nexports." + k + " = " + replacer.exports[k] + ";";
-    }));
-    
     if (options.wrap !== false)
         output = wrap(output, replacer.dependencies, options.global);
     
@@ -1805,7 +1800,7 @@ var Replacer = es6now.Class(function(__super) { return {
     
     replace: function(input) { var __this = this; 
     
-        this.exports = {};
+        this.exportStack = [this.exports = {}];
         this.imports = {};
         this.dependencies = [];
         this.uid = 0;
@@ -1815,6 +1810,10 @@ var Replacer = es6now.Class(function(__super) { return {
         
         var visit = (function(node) {
         
+            // Call pre-visit method
+            if (__this[node.type + "$"])
+                __this[node.type + "$"](node);
+            
             // Perform a depth-first traversal
             Parser.forEachChild(node, (function(child) {
             
@@ -1837,13 +1836,20 @@ var Replacer = es6now.Class(function(__super) { return {
             return node.text;
         });
         
-        return visit({ 
+        var output = visit({ 
         
             type: "$", 
             root: root, 
             start: 0, 
             end: input.length
         });
+        
+        Object.keys(this.exports).forEach((function(k) {
+    
+            output += "\nexports." + k + " = " + __this.exports[k] + ";";
+        }));
+        
+        return output;
     },
 
     DoWhileStatement: function(node) {
@@ -1897,9 +1903,28 @@ var Replacer = es6now.Class(function(__super) { return {
         return "var " + node.ident.text + " = " + expr + ";";
     },
     
-    ModuleDeclaration: function(node) {
+    ModuleDeclaration$: function(node) {
     
-        // TODO: Inline modules
+        this.exportStack.push(this.exports = {});
+    },
+    
+    ModuleDeclaration: function(node) { var __this = this; 
+    
+        var out = "var " + node.ident.text + " = (function() { ";
+        
+        out += node.body.text + ";"
+        
+        Object.keys(this.exports).forEach((function(k) {
+    
+            out += " exports." + k + " = " + __this.exports[k] + ";";
+        }));
+        
+        this.exportStack.pop();
+        this.exports = this.exportStack[this.exportStack.length - 1];
+        
+        out += " return exports; }());";
+        
+        return out;
     },
     
     ImportDeclaration: function(node) {
