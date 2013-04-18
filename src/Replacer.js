@@ -36,9 +36,9 @@ export class Replacer {
         
         var visit = (node) => {
         
-            // Call pre-visit method
-            if (this[node.type + "$"])
-                this[node.type + "$"](node);
+            // Call pre-order traversal method
+            if (this[node.type + "Begin"])
+                this[node.type + "Begin"](node);
             
             // Perform a depth-first traversal
             Parser.forEachChild(node, child => {
@@ -129,14 +129,14 @@ export class Replacer {
         return "var " + node.ident.text + " = " + expr + ";";
     }
     
-    ModuleDeclaration$(node) {
+    ModuleDeclarationBegin(node) {
     
         this.exportStack.push(this.exports = {});
     }
     
     ModuleDeclaration(node) {
     
-        var out = "var " + node.ident.text + " = (function() { ";
+        var out = "var " + node.ident.text + " = (function(exports) { ";
         
         out += node.body.text + ";"
         
@@ -148,7 +148,7 @@ export class Replacer {
         this.exportStack.pop();
         this.exports = this.exportStack[this.exportStack.length - 1];
         
-        out += " return exports; }());";
+        out += " return exports; }({}));";
         
         return out;
     }

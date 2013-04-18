@@ -1810,9 +1810,9 @@ var Replacer = es6now.Class(function(__super) { return {
         
         var visit = (function(node) {
         
-            // Call pre-visit method
-            if (__this[node.type + "$"])
-                __this[node.type + "$"](node);
+            // Call pre-order traversal method
+            if (__this[node.type + "Begin"])
+                __this[node.type + "Begin"](node);
             
             // Perform a depth-first traversal
             Parser.forEachChild(node, (function(child) {
@@ -1903,14 +1903,14 @@ var Replacer = es6now.Class(function(__super) { return {
         return "var " + node.ident.text + " = " + expr + ";";
     },
     
-    ModuleDeclaration$: function(node) {
+    ModuleDeclarationBegin: function(node) {
     
         this.exportStack.push(this.exports = {});
     },
     
     ModuleDeclaration: function(node) { var __this = this; 
     
-        var out = "var " + node.ident.text + " = (function() { ";
+        var out = "var " + node.ident.text + " = (function(exports) { ";
         
         out += node.body.text + ";"
         
@@ -1922,7 +1922,7 @@ var Replacer = es6now.Class(function(__super) { return {
         this.exportStack.pop();
         this.exports = this.exportStack[this.exportStack.length - 1];
         
-        out += " return exports; }());";
+        out += " return exports; }({}));";
         
         return out;
     },
