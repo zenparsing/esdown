@@ -1,8 +1,8 @@
-var X = (function(exports) { {
+var X = (function(exports) {
 
     function A() {}
     var X;
-}; exports.A = A; exports.X = X; return exports; }({}));
+exports.A = A; exports.X = X; return exports; }({}));
 
 var A = X.A;
 

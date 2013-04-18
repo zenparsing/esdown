@@ -136,19 +136,19 @@ export class Replacer {
     
     ModuleDeclaration(node) {
     
-        var out = "var " + node.ident.text + " = (function(exports) { ";
+        var out = "var " + node.ident.text + " = (function(exports) ";
         
-        out += node.body.text + ";"
+        out += node.body.text.replace(/\}$/, "");
         
         Object.keys(this.exports).forEach(k => {
     
-            out += " exports." + k + " = " + this.exports[k] + ";";
+            out += "exports." + k + " = " + this.exports[k] + "; ";
         });
         
         this.exportStack.pop();
         this.exports = this.exportStack[this.exportStack.length - 1];
         
-        out += " return exports; }({}));";
+        out += "return exports; }({}));";
         
         return out;
     }

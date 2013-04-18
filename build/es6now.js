@@ -1910,19 +1910,19 @@ var Replacer = es6now.Class(function(__super) { return {
     
     ModuleDeclaration: function(node) { var __this = this; 
     
-        var out = "var " + node.ident.text + " = (function(exports) { ";
+        var out = "var " + node.ident.text + " = (function(exports) ";
         
-        out += node.body.text + ";"
+        out += node.body.text.replace(/\}$/, "");
         
         Object.keys(this.exports).forEach((function(k) {
     
-            out += " exports." + k + " = " + __this.exports[k] + ";";
+            out += "exports." + k + " = " + __this.exports[k] + "; ";
         }));
         
         this.exportStack.pop();
         this.exports = this.exportStack[this.exportStack.length - 1];
         
-        out += " return exports; }({}));";
+        out += "return exports; }({}));";
         
         return out;
     },
@@ -5956,9 +5956,9 @@ var WHITESPACE = 1,
     LBRACE = 12;
 
 // === Character Type Lookup Table ===
-var charTable = (function() {
+var LookupTable = (function(exports) {
 
-    var table = new Array(128), i;
+    var charTable = new Array(128), i;
     
     add(WHITESPACE, "\t\v\f ");
     add(NEWLINE, "\r\n");
@@ -5973,17 +5973,16 @@ var charTable = (function() {
     add(TEMPLATE, "`");
     
     add(IDENTIFIER, "$_\\");
-    for (i = 65; i <= 90; ++i) table[i] = IDENTIFIER;
-    for (i = 97; i <= 122; ++i) table[i] = IDENTIFIER;
-    
-    return table;
+    for (i = 65; i <= 90; ++i) charTable[i] = IDENTIFIER;
+    for (i = 97; i <= 122; ++i) charTable[i] = IDENTIFIER;
     
     function add(type, string) {
     
-        string.split("").forEach((function(c) { return table[c.charCodeAt(0)] = type; }));
+        string.split("").forEach((function(c) { return charTable[c.charCodeAt(0)] = type; }));
     }
+exports.charTable = charTable; exports.i = i; return exports; }({}));
 
-})();
+var charTable = LookupTable.charTable;
 
 // Performs a binary search on an array
 function binarySearch(array, val) {
