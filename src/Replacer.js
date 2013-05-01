@@ -10,18 +10,19 @@
 
 import "Parser.js" as Parser;
 
-var FILENAME = /^[^\.\/\\][\s\S]*?\.[^\s\.]+$/;
+var HAS_SCHEMA = /^[a-z]+:/i,
+    NPM_SCHEMA = /^npm:/i;
 
-function requireCall(url) {
+function loadCall(url) {
 
-    return "require(" + JSON.stringify(url) + ")";
+    return "__load(" + JSON.stringify(url) + ")";
 }
 
 export class Replacer {
 
     constructor() {
         
-        this.requireCall = requireCall;
+        this.loadCall = loadCall;
     }
     
     replace(input) {
@@ -69,6 +70,21 @@ export class Replacer {
             start: 0, 
             end: input.length
         });
+        
+        var head = "";
+        
+        this.dependencies.forEach(url => {
+        
+            if (head) head += ", ";
+            else head = "var ";
+            
+            head += this.imports[url] + " = " + this.loadCall(url);
+        });
+        
+        if (head) 
+            head += "; ";
+        
+        output = head + output;
         
         Object.keys(this.exports).forEach(k => {
     
@@ -125,8 +141,7 @@ export class Replacer {
     
     ImportAsDeclaration(node) {
     
-        var expr = this.requireCall(this.requirePath(node.from.value));
-        return "var " + node.ident.text + " = " + expr + ";";
+        return "var " + node.ident.text + " = " + this.moduleIdent(node.from.value) + ";";
     }
     
     ModuleDeclarationBegin(node) {
@@ -148,31 +163,18 @@ export class Replacer {
         this.exportStack.pop();
         this.exports = this.exportStack[this.exportStack.length - 1];
         
-        out += "return exports; }({}));";
+        out += "return exports; }).call(this, {});";
         
         return out;
     }
     
     ImportDeclaration(node) {
     
-        var isURL = node.from.type === "String",
-            tmp,
-            out;
+        var out = "";
         
-        var moduleSpec = isURL ?
-            this.requireCall(this.requirePath(node.from.value)) :
+        var moduleSpec = node.from.type === "String" ?
+            this.moduleIdent(node.from.value) :
             node.from.text;
-        
-        if (!isURL || node.specifiers.length === 1) {
-        
-            tmp = moduleSpec;
-            out = "";
-        
-        } else {
-        
-            tmp = "_M" + (this.uid++);
-            out = "var " + tmp + " = " + moduleSpec;
-        }
         
         node.specifiers.forEach(spec => {
         
@@ -182,7 +184,7 @@ export class Replacer {
             if (out) out += ", ";
             else out = "var ";
             
-            out += local.text + " = " + tmp + "." + remote.text;
+            out += local.text + " = " + moduleSpec + "." + remote.text;
         });
         
         out += ";";
@@ -225,15 +227,9 @@ export class Replacer {
         
         if (from) {
         
-            if (from.type === "String") {
-            
-                fromPath = "_M" + (this.uid++);
-                out = "var " + fromPath + " = " + this.requireCall(this.requirePath(from.value)) + "; ";
-            
-            } else {
-            
-                fromPath = from.text;
-            }
+            fromPath = from.type === "String" ?
+                this.moduleIdent(from.value) :
+                from.text;
         }
         
         if (!binding.specifiers) {
@@ -269,14 +265,16 @@ export class Replacer {
         var callee = node.callee,
             args = node.arguments;
         
+        /*
         // Translate CommonJS require calls
         if (callee.type === "Identifier" && 
             callee.value === "require" &&
             args.length === 1 &&
             args[0].type === "String") {
         
-            return this.requireCall(this.requirePath(args[0].value));
+            return this.loadCall(this.requirePath(args[0].value));
         }
+        */
         
         if (node.isSuperCall) {
         
@@ -456,21 +454,43 @@ export class Replacer {
         }
     }
     
+    /*
     requirePath(url) {
     
-        // If this is a simple local filename, then add "./" prefix
-        // so that Node will not treat it as a package
-        if (FILENAME.test(url))
+        url = url.trim();
+        
+        if (NPM_SCHEMA.test(url))
+            url = url.replace(NPM_SCHEMA, "");
+        else if (!HAS_SCHEMA.test(url) && url.charAt(0) !== "/")
             url = "./" + url;
         
         // Add to dependency list
-        if (this.imports[url] !== true) {
+        if (typeof this.imports[url] !== "string") {
         
-            this.imports[url] = true;
+            this.imports[url] = "_M" + (this.uid++);
             this.dependencies.push(url);
         }
         
         return url;
+    }
+    */
+    
+    moduleIdent(url) {
+    
+        url = url.trim();
+        
+        if (NPM_SCHEMA.test(url))
+            url = url.replace(NPM_SCHEMA, "");
+        else if (!HAS_SCHEMA.test(url) && url.charAt(0) !== "/")
+            url = "./" + url;
+        
+        if (typeof this.imports[url] !== "string") {
+        
+            this.imports[url] = "_M" + (this.uid++);
+            this.dependencies.push(url);
+        }
+        
+        return this.imports[url];
     }
     
     stringify(node) {

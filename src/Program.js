@@ -1,5 +1,5 @@
-import "fs" as FS;
-import "path" as Path;
+import "npm:fs" as FS;
+import "npm:path" as Path;
 import "CommandLine.js" as CommandLine;
 import "FutureFS.js" as FFS;
 
@@ -7,6 +7,8 @@ import Promise from "Promise.js";
 import bundle from "Bundler.js";
 import Server from "Server.js";
 import translate from "Translator.js";
+
+var ES6_GUESS = /(?:^|\n)\s*(?:import|export|class)\s/;
 
 function absPath(path) {
 
@@ -42,7 +44,10 @@ function overrideCompilation() {
         
         try {
         
-            text = translate(FS.readFileSync(filename, "utf8"));
+            text = FS.readFileSync(filename, "utf8");
+            
+            if (ES6_GUESS.test(text))
+                text = translate(text);
         
         } catch (e) {
         

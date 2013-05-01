@@ -1,8 +1,8 @@
-/*=es6now=*/(function(fn, deps) { if (typeof exports !== 'undefined') fn.call(typeof global === 'object' ? global : this, require, exports); else if (typeof __MODULE === 'function') __MODULE(fn, deps); else if (typeof define === 'function' && define.amd) define(['require', 'exports'].concat(deps), fn); else if (typeof window !== 'undefined' && "") fn.call(window, null, window[""] = {}); else fn.call(window || this, null, {}); })(function(require, exports) { "use strict"; 
+/*=es6now=*/(function(fn, deps) { if (typeof exports !== 'undefined') fn.call(typeof global === 'object' ? global : this, require, exports); else if (typeof __MODULE === 'function') __MODULE(fn, deps); else if (typeof define === 'function' && define.amd) define(['require', 'exports'].concat(deps), fn); else if (typeof window !== 'undefined' && "") fn.call(window, null, window[""] = {}); else fn.call(window || this, null, {}); })(function(require, exports) { 'use strict'; function __load(p) { var e = require(p); return typeof e === 'object' ? e : { module: e }; } 
 
 var __modules = [], __exports = [], __global = this; 
 
-function __require(i, obj) { 
+function __init(i, obj) { 
     var e = __exports; 
     if (e[i] !== void 0) return e[i]; 
     __modules[i].call(__global, e[i] = (obj || {})); 
@@ -10,12 +10,8 @@ function __require(i, obj) {
 } 
 
 __modules[0] = function(exports) {
-var initialize = __require(1).initialize;
-
-// Initialize the runtime support library
-initialize();
-
-var Program = __require(2);
+var _M0 = __init(1), _M1 = __init(2); var Runtime = _M0;
+var Program = _M1;
 
 if (typeof require === "function" && 
     typeof module !== "undefined" && 
@@ -26,19 +22,21 @@ if (typeof require === "function" &&
 };
 
 __modules[1] = function(exports) {
-var _M0 = __require(3); Object.keys(_M0).forEach(function(k) { exports[k] = _M0[k]; });
+var _M0 = __init(3); Object.keys(_M0).forEach(function(k) { exports[k] = _M0[k]; });
 };
 
 __modules[2] = function(exports) {
-var FS = require("fs");
-var Path = require("path");
-var CommandLine = __require(4);
-var FFS = __require(5);
+var _M0 = __load("fs"), _M1 = __load("path"), _M2 = __init(4), _M3 = __init(5), _M4 = __init(6), _M5 = __init(7), _M6 = __init(8), _M7 = __init(9); var FS = _M0;
+var Path = _M1;
+var CommandLine = _M2;
+var FFS = _M3;
 
-var Promise = __require(6).Promise;
-var bundle = __require(7).bundle;
-var Server = __require(8).Server;
-var translate = __require(9).translate;
+var Promise = _M4.Promise;
+var bundle = _M5.bundle;
+var Server = _M6.Server;
+var translate = _M7.translate;
+
+var ES6_GUESS = /(?:^|\n)\s*(?:import|export|class)\s/;
 
 function absPath(path) {
 
@@ -74,7 +72,10 @@ function overrideCompilation() {
         
         try {
         
-            text = translate(FS.readFileSync(filename, "utf8"));
+            text = FS.readFileSync(filename, "utf8");
+            
+            if (ES6_GUESS.test(text))
+                text = translate(text);
         
         } catch (e) {
         
@@ -271,28 +272,13 @@ exports.run = run;
 };
 
 __modules[3] = function(exports) {
-var Class = __require(10).Class;
-var emulate = __require(11).emulate;
+var _M0 = __init(10), _M1 = __init(11); var Class = _M0.Class;
+var emulate = _M1.emulate;
 
-var initialized = false,
-    global = this;
+this.es6now = { Class: Class };
 
-function initialize() {
+emulate();
 
-    if (initialized)
-        return;
-    
-    emulate();
-    
-    global.es6now = {
-    
-        Class: Class
-    };
-    
-    initialized = true;
-}
-
-exports.initialize = initialize;
 };
 
 __modules[4] = function(exports) {
@@ -477,9 +463,9 @@ exports.run = run;
 };
 
 __modules[5] = function(exports) {
-var FS = require("fs");
+var _M0 = __load("fs"), _M1 = __init(6); var FS = _M0;
 
-var Promise = __require(6).Promise;
+var Promise = _M1.Promise;
 
 // Wraps a standard Node async function with a promise
 // generating function
@@ -570,21 +556,21 @@ exports.realpath = realpath;
 };
 
 __modules[6] = function(exports) {
-var _M0 = __require(12); Object.keys(_M0).forEach(function(k) { exports[k] = _M0[k]; });
+var _M0 = __init(12); Object.keys(_M0).forEach(function(k) { exports[k] = _M0[k]; });
 };
 
 __modules[7] = function(exports) {
-var Path = require("path");
-var FFS = __require(5);
+var _M0 = __load("path"), _M1 = __init(5), _M2 = __init(6), _M3 = __init(9); var Path = _M0;
+var FFS = _M1;
 
-var Promise = __require(6).Promise;
-var _M0 = __require(9), translate = _M0.translate, wrap = _M0.wrap;
+var Promise = _M2.Promise;
+var translate = _M3.translate, wrap = _M3.wrap;
 
 var EXTERNAL = /^[a-z]+:|^[^\.]+$/i;
 
 var OUTPUT_BEGIN = "var __modules = [], __exports = [], __global = this; \n\
 \n\
-function __require(i, obj) { \n\
+function __init(i, obj) { \n\
     var e = __exports; \n\
     if (e[i] !== void 0) return e[i]; \n\
     __modules[i].call(__global, e[i] = (obj || {})); \n\
@@ -620,27 +606,10 @@ function bundle(filename, options) {
     
     createNode(filename, null);
     
-    return next();
-    
-    function createNode(path, base) {
-    
-        path = resolve(path, base);
-        
-        if (hasKey(modules, path))
-            return modules[path];
-        
-        var index = nodes.length;
-        
-        modules[path] = index;
-        nodes.push({ path: path, factory: "" });
-        
-        return index;
-    }
-    
-    function next() {
+    return Promise.iterate((function(stop) {
     
         if (current >= nodes.length)
-            return Promise.when(end());
+            return stop();
         
         var node = nodes[current],
             path = node.path,
@@ -658,27 +627,21 @@ function bundle(filename, options) {
             
                 wrap: false,
                 
-                requireCall: function(url) {
+                loadCall: function(url) {
                 
                     if (isExternal(url)) {
                 
                         externals[url] = 1;
-                        return "require(" + JSON.stringify(url) + ")";
+                        return "__load(" + JSON.stringify(url) + ")";
                     }
                     
-                    return "__require(" + createNode(url, dir).toString() + ")";
-                },
-                
-                mapURL: function() {
-                
+                    return "__init(" + createNode(url, dir).toString() + ")";
                 }
+                
             });
-            
-            return next();
         }));
-    }
-    
-    function end() {
+            
+    })).then((function($) {
     
         var out = OUTPUT_BEGIN, i;
 
@@ -688,10 +651,26 @@ function bundle(filename, options) {
             out += "function(exports) {\n" + nodes[i].factory + "\n};\n";
         }
         
-        out += "\n__require(0, exports);\n";
+        out += "\n__init(0, exports);\n";
         out = wrap("\n\n" + out, Object.keys(externals), options.global);
         
         return out;
+    
+    }));
+    
+    function createNode(path, base) {
+    
+        path = resolve(path, base);
+        
+        if (hasKey(modules, path))
+            return modules[path];
+        
+        var index = nodes.length;
+        
+        modules[path] = index;
+        nodes.push({ path: path, factory: "" });
+        
+        return index;
     }
 }
 
@@ -699,15 +678,15 @@ exports.bundle = bundle;
 };
 
 __modules[8] = function(exports) {
-var __this = this; var FS = require("fs");
-var HTTP = require("http");
-var Path = require("path");
-var URL = require("url");
-var FFS = __require(5);
+var _M0 = __load("fs"), _M1 = __load("http"), _M2 = __load("path"), _M3 = __load("url"), _M4 = __init(5), _M5 = __init(6), _M6 = __init(9), _M7 = __init(13); var __this = this; var FS = _M0;
+var HTTP = _M1;
+var Path = _M2;
+var URL = _M3;
+var FFS = _M4;
 
-var Promise = __require(6).Promise;
-var _M0 = __require(9), translate = _M0.translate, isWrapped = _M0.isWrapped;
-var mimeTypes = __require(13).mimeTypes;
+var Promise = _M5.Promise;
+var translate = _M6.translate, isWrapped = _M6.isWrapped;
+var mimeTypes = _M7.mimeTypes;
 
 var DEFAULT_PORT = 80,
     DEFAULT_ROOT = ".",
@@ -889,13 +868,13 @@ exports.Server = Server;
 };
 
 __modules[9] = function(exports) {
-var Replacer = __require(14).Replacer;
+var _M0 = __init(14); var Replacer = _M0.Replacer;
 
 var SIGNATURE = "/*=es6now=*/";
 
 var WRAP_CALLEE = "(function(fn, deps) { " +
 
-    // Node.js, Rewrapped:
+    // Node.js:
     "if (typeof exports !== 'undefined') " +
         "fn.call(typeof global === 'object' ? global : this, require, exports); " +
         
@@ -917,6 +896,15 @@ var WRAP_CALLEE = "(function(fn, deps) { " +
 
 "})";
 
+var WRAP_HEADER = "function(require, exports) { " +
+    "'use strict'; " +
+    "function __load(p) { " +
+        "var e = require(p); " +
+        "return typeof e === 'object' ? e : { module: e }; " +
+    "} ";
+
+var WRAP_FOOTER = "\n\n}";
+
 function sanitize(text) {
 
     // From node/lib/module.js/Module.prototype._compile
@@ -936,8 +924,8 @@ function translate(input, options) {
     var replacer = new Replacer(),
         output;
     
-    if (options.requireCall)
-        replacer.requireCall = options.requireCall;
+    if (options.loadCall)
+        replacer.loadCall = options.loadCall;
     
     input = sanitize(input);
     output = replacer.replace(input);
@@ -952,7 +940,7 @@ function wrap(text, dep, global) {
 
     var callee = WRAP_CALLEE.replace(/\{0\}/g, JSON.stringify(global || ""));
     
-    return SIGNATURE + callee + "(function(require, exports) { \"use strict\"; " + text + "\n\n}, " + JSON.stringify(dep) + ");";
+    return SIGNATURE + callee + "(" + WRAP_HEADER + text + WRAP_FOOTER + ", " + JSON.stringify(dep) + ");";
 }
 
 function isWrapped(text) {
@@ -1097,7 +1085,7 @@ exports.Class = Class;
 };
 
 __modules[11] = function(exports) {
-var ES5 = __require(15);
+var _M0 = __init(15); var ES5 = _M0;
 
 var global = this;
 
@@ -1245,11 +1233,88 @@ exports.emulate = emulate;
 };
 
 __modules[12] = function(exports) {
+var EventLoop = (function(exports) {
+
+    var asap;
+    
+    var msg = uuid(),
+        process = this.process,
+        window = this.window,
+        msgChannel = null,
+        list = [];
+    
+    if (process && typeof process.nextTick === "function") {
+    
+        // NodeJS
+        asap = process.nextTick;
+   
+    } else if (window && window.addEventListener && window.postMessage) {
+    
+        // Modern Browsers
+        if (window.MessageChannel) {
+        
+            msgChannel = new window.MessageChannel();
+            msgChannel.port1.onmessage = onmsg;
+        
+        } else {
+        
+            window.addEventListener("message", onmsg, true);
+        }
+        
+        asap = (function(fn) {
+        
+            list.push(fn);
+            
+            if (msgChannel !== null)
+                msgChannel.port2.postMessage(msg);
+            else
+                window.postMessage(msg, "*");
+            
+            return 1;
+        });
+    
+    } else {
+    
+        // Legacy
+        asap = (function(fn) { return setTimeout(fn, 0); });
+    }
+        
+    function onmsg(evt) {
+    
+        if (msgChannel || (evt.source === window && evt.data === msg)) {
+        
+            evt.stopPropagation();
+            if (list.length) list.shift()();
+        }
+    }
+    
+    function uuid() {
+    
+        return [32, 16, 16, 16, 48].map((function(bits) { return rand(bits); })).join("-");
+        
+        function rand(bits) {
+        
+            if (bits > 32) 
+                return rand(bits - 32) + rand(32);
+            
+            var str = (Math.random() * 0xffffffff >>> (32 - bits)).toString(16),
+                len = bits / 4 >>> 0;
+            
+            if (str.length < len) 
+                str = (new Array(len - str.length + 1)).join("0") + str;
+            
+            return str;
+        }
+    }
+    
+exports.asap = asap; return exports; }).call(this, {});
+
+var asap = EventLoop.asap;
+
 var identity = (function(obj) { return obj; }),
     freeze = Object.freeze || identity,
     queue = [],
-    waiting = false,
-    asap;
+    waiting = false;
 
 // UUID property names used for duck-typing
 var DISPATCH = "07b06b7e-3880-42b1-ad55-e68a77514eb9",
@@ -1436,7 +1501,7 @@ function when(obj) {
     if (obj && obj[DISPATCH])
         return obj;
     
-    if (obj && obj.then) {
+    if (obj && typeof obj.then === "function") {
     
         var promise = new Promise();
         obj.then(promise.resolve, promise.reject);
@@ -1536,82 +1601,6 @@ function forEach(list, fn) {
     
     return iterate((function(stop) { return (++i >= list.length) ? stop() : fn(list[i], i, list); }));
 }
-
-// === Event Loop API ===
-
-asap = (function(global) {
-    
-    var msg = uuid(),
-        process = global.process,
-        window = global.window,
-        msgChannel = null,
-        list = [];
-    
-    if (process && typeof process.nextTick === "function") {
-    
-        // NodeJS
-        return process.nextTick;
-   
-    } else if (window && window.addEventListener && window.postMessage) {
-    
-        // Modern Browsers
-        if (window.MessageChannel) {
-        
-            msgChannel = new window.MessageChannel();
-            msgChannel.port1.onmessage = onmsg;
-        
-        } else {
-        
-            window.addEventListener("message", onmsg, true);
-        }
-        
-        return (function(fn) {
-        
-            list.push(fn);
-            
-            if (msgChannel !== null)
-                msgChannel.port2.postMessage(msg);
-            else
-                window.postMessage(msg, "*");
-            
-            return 1;
-        });
-    
-    } else {
-    
-        // Legacy
-        return (function(fn) { return setTimeout(fn, 0); });
-    }
-        
-    function onmsg(evt) {
-    
-        if (msgChannel || (evt.source === window && evt.data === msg)) {
-        
-            evt.stopPropagation();
-            if (list.length) list.shift()();
-        }
-    }
-    
-    function uuid() {
-    
-        return [32, 16, 16, 16, 48].map((function(bits) { return rand(bits); })).join("-");
-        
-        function rand(bits) {
-        
-            if (bits > 32) 
-                return rand(bits - 32) + rand(32);
-            
-            var str = (Math.random() * 0xffffffff >>> (32 - bits)).toString(16),
-                len = bits / 4 >>> 0;
-            
-            if (str.length < len) 
-                str = (new Array(len - str.length + 1)).join("0") + str;
-            
-            return str;
-        }
-    }
-    
-})(this);
 
 Promise.when = when;
 Promise.whenAny = whenAny;
@@ -1772,7 +1761,7 @@ exports.mimeTypes = mimeTypes;
 };
 
 __modules[14] = function(exports) {
-/*
+var _M0 = __init(16); /*
 
 == Notes ==
 
@@ -1782,20 +1771,21 @@ __modules[14] = function(exports) {
 
 */
 
-var __this = this; var Parser = __require(16);
+var __this = this; var Parser = _M0;
 
-var FILENAME = /^[^\.\/\\][\s\S]*?\.[^\s\.]+$/;
+var HAS_SCHEMA = /^[a-z]+:/i,
+    NPM_SCHEMA = /^npm:/i;
 
-function requireCall(url) {
+function loadCall(url) {
 
-    return "require(" + JSON.stringify(url) + ")";
+    return "__load(" + JSON.stringify(url) + ")";
 }
 
 var Replacer = es6now.Class(function(__super) { return {
 
     constructor: function() {
         
-        this.requireCall = requireCall;
+        this.loadCall = loadCall;
     },
     
     replace: function(input) { var __this = this; 
@@ -1843,6 +1833,21 @@ var Replacer = es6now.Class(function(__super) { return {
             start: 0, 
             end: input.length
         });
+        
+        var head = "";
+        
+        this.dependencies.forEach((function(url) {
+        
+            if (head) head += ", ";
+            else head = "var ";
+            
+            head += __this.imports[url] + " = " + __this.loadCall(url);
+        }));
+        
+        if (head) 
+            head += "; ";
+        
+        output = head + output;
         
         Object.keys(this.exports).forEach((function(k) {
     
@@ -1899,8 +1904,7 @@ var Replacer = es6now.Class(function(__super) { return {
     
     ImportAsDeclaration: function(node) {
     
-        var expr = this.requireCall(this.requirePath(node.from.value));
-        return "var " + node.ident.text + " = " + expr + ";";
+        return "var " + node.ident.text + " = " + this.moduleIdent(node.from.value) + ";";
     },
     
     ModuleDeclarationBegin: function(node) {
@@ -1922,31 +1926,18 @@ var Replacer = es6now.Class(function(__super) { return {
         this.exportStack.pop();
         this.exports = this.exportStack[this.exportStack.length - 1];
         
-        out += "return exports; }({}));";
+        out += "return exports; }).call(this, {});";
         
         return out;
     },
     
     ImportDeclaration: function(node) {
     
-        var isURL = node.from.type === "String",
-            tmp,
-            out;
+        var out = "";
         
-        var moduleSpec = isURL ?
-            this.requireCall(this.requirePath(node.from.value)) :
+        var moduleSpec = node.from.type === "String" ?
+            this.moduleIdent(node.from.value) :
             node.from.text;
-        
-        if (!isURL || node.specifiers.length === 1) {
-        
-            tmp = moduleSpec;
-            out = "";
-        
-        } else {
-        
-            tmp = "_M" + (this.uid++);
-            out = "var " + tmp + " = " + moduleSpec;
-        }
         
         node.specifiers.forEach((function(spec) {
         
@@ -1956,7 +1947,7 @@ var Replacer = es6now.Class(function(__super) { return {
             if (out) out += ", ";
             else out = "var ";
             
-            out += local.text + " = " + tmp + "." + remote.text;
+            out += local.text + " = " + moduleSpec + "." + remote.text;
         }));
         
         out += ";";
@@ -1999,15 +1990,9 @@ var Replacer = es6now.Class(function(__super) { return {
         
         if (from) {
         
-            if (from.type === "String") {
-            
-                fromPath = "_M" + (this.uid++);
-                out = "var " + fromPath + " = " + this.requireCall(this.requirePath(from.value)) + "; ";
-            
-            } else {
-            
-                fromPath = from.text;
-            }
+            fromPath = from.type === "String" ?
+                this.moduleIdent(from.value) :
+                from.text;
         }
         
         if (!binding.specifiers) {
@@ -2043,14 +2028,16 @@ var Replacer = es6now.Class(function(__super) { return {
         var callee = node.callee,
             args = node.arguments;
         
+        /*
         // Translate CommonJS require calls
         if (callee.type === "Identifier" && 
             callee.value === "require" &&
             args.length === 1 &&
             args[0].type === "String") {
         
-            return this.requireCall(this.requirePath(args[0].value));
+            return this.loadCall(this.requirePath(args[0].value));
         }
+        */
         
         if (node.isSuperCall) {
         
@@ -2230,21 +2217,43 @@ var Replacer = es6now.Class(function(__super) { return {
         }
     },
     
-    requirePath: function(url) {
+    /*
+    requirePath(url) {
     
-        // If this is a simple local filename, then add "./" prefix
-        // so that Node will not treat it as a package
-        if (FILENAME.test(url))
+        url = url.trim();
+        
+        if (NPM_SCHEMA.test(url))
+            url = url.replace(NPM_SCHEMA, "");
+        else if (!HAS_SCHEMA.test(url) && url.charAt(0) !== "/")
             url = "./" + url;
         
         // Add to dependency list
-        if (this.imports[url] !== true) {
+        if (typeof this.imports[url] !== "string") {
         
-            this.imports[url] = true;
+            this.imports[url] = "_M" + (this.uid++);
             this.dependencies.push(url);
         }
         
         return url;
+    }
+    */
+    
+    moduleIdent: function(url) {
+    
+        url = url.trim();
+        
+        if (NPM_SCHEMA.test(url))
+            url = url.replace(NPM_SCHEMA, "");
+        else if (!HAS_SCHEMA.test(url) && url.charAt(0) !== "/")
+            url = "./" + url;
+        
+        if (typeof this.imports[url] !== "string") {
+        
+            this.imports[url] = "_M" + (this.uid++);
+            this.dependencies.push(url);
+        }
+        
+        return this.imports[url];
     },
     
     stringify: function(node) {
@@ -2734,13 +2743,13 @@ exports.emulate = emulate;
 };
 
 __modules[16] = function(exports) {
-var _M0 = __require(17); Object.keys(_M0).forEach(function(k) { exports[k] = _M0[k]; });
+var _M0 = __init(17); Object.keys(_M0).forEach(function(k) { exports[k] = _M0[k]; });
 };
 
 __modules[17] = function(exports) {
-var Node = __require(18);
-var Parser = __require(19).Parser;
-var Scanner = __require(20).Scanner;
+var _M0 = __init(18), _M1 = __init(19), _M2 = __init(20); var Node = _M0;
+var Parser = _M1.Parser;
+var Scanner = _M2.Scanner;
 
 
 
@@ -3759,11 +3768,11 @@ exports.ClassElement = ClassElement;
 };
 
 __modules[19] = function(exports) {
-var Node = __require(18);
+var _M0 = __init(18), _M1 = __init(20), _M2 = __init(21), _M3 = __init(22); var Node = _M0;
 
-var Scanner = __require(20).Scanner;
-var Transform = __require(21).Transform;
-var Validate = __require(22).Validate;
+var Scanner = _M1.Scanner;
+var Transform = _M2.Transform;
+var Validate = _M3.Validate;
 
 // Object literal property name flags
 var PROP_NORMAL = 1,
@@ -5980,7 +5989,7 @@ var LookupTable = (function(exports) {
     
         string.split("").forEach((function(c) { return charTable[c.charCodeAt(0)] = type; }));
     }
-exports.charTable = charTable; exports.i = i; return exports; }({}));
+exports.charTable = charTable; exports.i = i; return exports; }).call(this, {});
 
 var charTable = LookupTable.charTable;
 
@@ -7148,7 +7157,7 @@ var Validate = es6now.Class(function(__super) { return {
 exports.Validate = Validate;
 };
 
-__require(0, exports);
+__init(0, exports);
 
 
 }, ["fs","path","http","url"]);

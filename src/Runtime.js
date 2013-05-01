@@ -1,1 +1,1 @@
-export * from "../../es6now-runtime/src/main.js";
+export * from "../../es6now-runtime/src/es6now-runtime.js";

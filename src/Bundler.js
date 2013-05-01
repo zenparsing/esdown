@@ -1,4 +1,4 @@
-import "path" as Path;
+import "npm:path" as Path;
 import "FutureFS.js" as FFS;
 
 import Promise from "Promise.js";
@@ -8,7 +8,7 @@ var EXTERNAL = /^[a-z]+:|^[^\.]+$/i;
 
 var OUTPUT_BEGIN = "var __modules = [], __exports = [], __global = this; \n\
 \n\
-function __require(i, obj) { \n\
+function __init(i, obj) { \n\
     var e = __exports; \n\
     if (e[i] !== void 0) return e[i]; \n\
     __modules[i].call(__global, e[i] = (obj || {})); \n\
@@ -44,27 +44,10 @@ export function bundle(filename, options) {
     
     createNode(filename, null);
     
-    return next();
-    
-    function createNode(path, base) {
-    
-        path = resolve(path, base);
-        
-        if (hasKey(modules, path))
-            return modules[path];
-        
-        var index = nodes.length;
-        
-        modules[path] = index;
-        nodes.push({ path: path, factory: "" });
-        
-        return index;
-    }
-    
-    function next() {
+    return Promise.iterate(stop => {
     
         if (current >= nodes.length)
-            return Promise.when(end());
+            return stop();
         
         var node = nodes[current],
             path = node.path,
@@ -82,27 +65,21 @@ export function bundle(filename, options) {
             
                 wrap: false,
                 
-                requireCall(url) {
+                loadCall(url) {
                 
                     if (isExternal(url)) {
                 
                         externals[url] = 1;
-                        return "require(" + JSON.stringify(url) + ")";
+                        return "__load(" + JSON.stringify(url) + ")";
                     }
                     
-                    return "__require(" + createNode(url, dir).toString() + ")";
-                },
-                
-                mapURL() {
-                
+                    return "__init(" + createNode(url, dir).toString() + ")";
                 }
+                
             });
-            
-            return next();
         });
-    }
-    
-    function end() {
+            
+    }).then($=> {
     
         var out = OUTPUT_BEGIN, i;
 
@@ -112,9 +89,25 @@ export function bundle(filename, options) {
             out += "function(exports) {\n" + nodes[i].factory + "\n};\n";
         }
         
-        out += "\n__require(0, exports);\n";
+        out += "\n__init(0, exports);\n";
         out = wrap("\n\n" + out, Object.keys(externals), options.global);
         
         return out;
+    
+    });
+    
+    function createNode(path, base) {
+    
+        path = resolve(path, base);
+        
+        if (hasKey(modules, path))
+            return modules[path];
+        
+        var index = nodes.length;
+        
+        modules[path] = index;
+        nodes.push({ path: path, factory: "" });
+        
+        return index;
     }
 }

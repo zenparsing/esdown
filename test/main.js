@@ -1,5 +1,5 @@
-import "fs" as FS;
-import "path" as Path;
+import "npm:fs" as FS;
+import "npm:path" as Path;
 
 import translate from "../src/Translator.js";
 

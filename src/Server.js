@@ -1,7 +1,7 @@
-import "fs" as FS;
-import "http" as HTTP;
-import "path" as Path;
-import "url" as URL;
+import "npm:fs" as FS;
+import "npm:http" as HTTP;
+import "npm:path" as Path;
+import "npm:url" as URL;
 import "FutureFS.js" as FFS;
 
 import Promise from "Promise.js";

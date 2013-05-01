@@ -1,8 +1,4 @@
-import initialize from "Runtime.js";
-
-// Initialize the runtime support library
-initialize();
-
+import "Runtime.js" as Runtime;
 import "Program.js" as Program;
 
 if (typeof require === "function" && 
