@@ -11,3 +11,6 @@ export B from E.A;
 
 export * from Z;
 export * from "Z.js";
+
+export module X {}
+export module from X;

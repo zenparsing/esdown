@@ -215,6 +215,7 @@ export class Replacer {
             
             case "FunctionDeclaration":
             case "ClassDeclaration":
+            case "ModuleDeclaration":
             
                 ident = binding.ident.text;
                 exports[ident] = ident;
