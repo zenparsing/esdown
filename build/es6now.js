@@ -1,4 +1,4 @@
-/*=es6now=*/(function(fn, deps) { if (typeof exports !== 'undefined') fn.call(typeof global === 'object' ? global : this, require, exports); else if (typeof __MODULE === 'function') __MODULE(fn, deps); else if (typeof define === 'function' && define.amd) define(['require', 'exports'].concat(deps), fn); else if (typeof window !== 'undefined' && "") fn.call(window, null, window[""] = {}); else fn.call(window || this, null, {}); })(function(require, exports) { 'use strict'; function __load(p) { var e = require(p); return typeof e === 'object' ? e : { module: e }; } 
+/*=es6now=*/(function(fn, deps, name) { if (typeof exports !== 'undefined') fn.call(typeof global === 'object' ? global : this, require, exports); else if (typeof __MODULE === 'function') __MODULE(fn, deps); else if (typeof define === 'function' && define.amd) define(['require', 'exports'].concat(deps), fn); else if (typeof window !== 'undefined' && name) fn.call(window, null, window[name] = {}); else fn.call(window || this, null, {}); })(function(require, exports) { 'use strict'; function __load(p) { var e = require(p); return typeof e === 'object' ? e : { module: e }; } 
 
 var __modules = [], __exports = [], __global = this; 
 
@@ -682,6 +682,7 @@ var _M0 = __load("fs"), _M1 = __load("http"), _M2 = __load("path"), _M3 = __load
 var HTTP = _M1;
 var Path = _M2;
 var URL = _M3;
+
 var FFS = _M4;
 
 var Promise = _M5.Promise;
@@ -872,7 +873,7 @@ var _M0 = __init(14); var Replacer = _M0.Replacer;
 
 var SIGNATURE = "/*=es6now=*/";
 
-var WRAP_CALLEE = "(function(fn, deps) { " +
+var WRAP_CALLEE = "(function(fn, deps, name) { " +
 
     // Node.js:
     "if (typeof exports !== 'undefined') " +
@@ -887,8 +888,8 @@ var WRAP_CALLEE = "(function(fn, deps) { " +
         "define(['require', 'exports'].concat(deps), fn); " +
         
     // DOM global module:
-    "else if (typeof window !== 'undefined' && {0}) " +
-        "fn.call(window, null, window[{0}] = {}); " +
+    "else if (typeof window !== 'undefined' && name) " +
+        "fn.call(window, null, window[name] = {}); " +
     
     // Hail Mary:
     "else " +
@@ -938,9 +939,11 @@ function translate(input, options) {
 
 function wrap(text, dep, global) {
 
-    var callee = WRAP_CALLEE.replace(/\{0\}/g, JSON.stringify(global || ""));
-    
-    return SIGNATURE + callee + "(" + WRAP_HEADER + text + WRAP_FOOTER + ", " + JSON.stringify(dep) + ");";
+    return SIGNATURE + WRAP_CALLEE + "(" + 
+        WRAP_HEADER + text + WRAP_FOOTER + ", " + 
+        JSON.stringify(dep || []) + ", " + 
+        JSON.stringify(global || "") +
+    ");";
 }
 
 function isWrapped(text) {
@@ -1774,7 +1777,7 @@ var _M0 = __init(16); /*
 var __this = this; var Parser = _M0;
 
 var HAS_SCHEMA = /^[a-z]+:/i,
-    NPM_SCHEMA = /^npm:/i;
+    NODE_SCHEMA = /^(?:npm|node):/i;
 
 function loadCall(url) {
 
@@ -1978,6 +1981,7 @@ var Replacer = es6now.Class(function(__super) { return {
             
             case "FunctionDeclaration":
             case "ClassDeclaration":
+            case "ModuleDeclaration":
             
                 ident = binding.ident.text;
                 exports[ident] = ident;
@@ -2217,33 +2221,12 @@ var Replacer = es6now.Class(function(__super) { return {
         }
     },
     
-    /*
-    requirePath(url) {
-    
-        url = url.trim();
-        
-        if (NPM_SCHEMA.test(url))
-            url = url.replace(NPM_SCHEMA, "");
-        else if (!HAS_SCHEMA.test(url) && url.charAt(0) !== "/")
-            url = "./" + url;
-        
-        // Add to dependency list
-        if (typeof this.imports[url] !== "string") {
-        
-            this.imports[url] = "_M" + (this.uid++);
-            this.dependencies.push(url);
-        }
-        
-        return url;
-    }
-    */
-    
     moduleIdent: function(url) {
     
         url = url.trim();
         
-        if (NPM_SCHEMA.test(url))
-            url = url.replace(NPM_SCHEMA, "");
+        if (NODE_SCHEMA.test(url))
+            url = url.replace(NODE_SCHEMA, "");
         else if (!HAS_SCHEMA.test(url) && url.charAt(0) !== "/")
             url = "./" + url;
         
@@ -3548,6 +3531,18 @@ var ModuleDeclaration = es6now.Class(function(__super) { return {
     }
 }});
 
+var CoveredModuleHead = es6now.Class(function(__super) { return {
+
+    constructor: function(first, second, start, end) {
+    
+        this.type = "CoveredModuleHead";
+        this.first = first;
+        this.second = second;
+        this.start = start;
+        this.end = end;
+    }
+}});
+
 var ModuleBody = es6now.Class(function(__super) { return {
 
     constructor: function(statements, start, end) {
@@ -3753,6 +3748,7 @@ exports.RestParameter = RestParameter;
 exports.FunctionBody = FunctionBody;
 exports.ArrowFunction = ArrowFunction;
 exports.ModuleDeclaration = ModuleDeclaration;
+exports.CoveredModuleHead = CoveredModuleHead;
 exports.ModuleBody = ModuleBody;
 exports.ImportAsDeclaration = ImportAsDeclaration;
 exports.ImportDeclaration = ImportDeclaration;
@@ -3952,7 +3948,6 @@ var Parser = es6now.Class(function(__super) { return {
                 tok.regExpFlags = scanner.regExpFlags;
                 tok.templateEnd = scanner.templateEnd;
                 tok.flags = scanner.flags;
-                tok.precedence = 0;
                 
                 this.peek0 = tok;
                 return this.peek1 = this.nextToken(context);
@@ -4062,17 +4057,36 @@ var Parser = es6now.Class(function(__super) { return {
         return false;
     },
     
-    peekModule: function() {
+    peekModule: function(predict) {
     
+        var isModule = false;
+        
         if (this.peekToken().value === "module") {
         
-            var p = this.peekToken("div", 1);
+            var p = this.peekToken("div", 1),
+                offset;
             
-            if (!p.newlineBefore && p.type === "IDENTIFIER")
-                return true;
+            // If a module identifier follows...
+            if (!p.newlineBefore && p.type === "IDENTIFIER") {
+            
+                if (predict) {
+                
+                    // Scan for "{" token
+                    offset = this.readToken().start;
+                    isModule = (this.peek(null, 1) === "{");
+                
+                    // Restore scanner position
+                    this.unpeek();
+                    this.scanner.offset = offset;
+                    
+                } else {
+                
+                    isModule = true;
+                }
+            }
         }
         
-        return false;
+        return isModule;
     },
     
     addInvalidNode: function(node, error) {
@@ -5438,7 +5452,7 @@ var Parser = es6now.Class(function(__super) { return {
             
             case "IDENTIFIER":
                 
-                if (this.peekModule())
+                if (this.peekModule(false))
                     return this.ModuleDeclaration();
                 
                 break;
@@ -5690,11 +5704,12 @@ var Parser = es6now.Class(function(__super) { return {
     ExportDeclaration: function() {
     
         var start = this.startOffset,
-            binding;
+            binding,
+            tok;
         
         this.read("export");
         
-        switch (this.peek()) {
+        switch (tok = this.peek()) {
                 
             case "var":
             case "let":
@@ -5714,6 +5729,14 @@ var Parser = es6now.Class(function(__super) { return {
                 binding = this.ClassDeclaration();
                 break;
             
+            case "IDENTIFIER":
+            
+                if (this.peekModule(true)) {
+                
+                    binding = this.ModuleDeclaration();
+                    break;
+                }
+                
             default:
                 
                 binding = this.ExportSpecifierSet();
@@ -6104,7 +6127,6 @@ var Scanner = es6now.Class(function(__super) { return {
         this.regExpFlags = null;
         this.newlineBefore = false;
         this.flags = 0;
-        this.precedence = 0;
         this.error = "";
     },
     
@@ -6116,7 +6138,6 @@ var Scanner = es6now.Class(function(__super) { return {
         this.error = "";
         this.value = null;
         this.flags = 0;
-        this.precedence = 0;
         
         var type = null, 
             start;
@@ -7160,4 +7181,4 @@ exports.Validate = Validate;
 __init(0, exports);
 
 
-}, ["fs","path","http","url"]);
+}, ["fs","path","http","url"], "");

@@ -1,4 +1,4 @@
-import "npm:fs" as FS;
+import "node:fs" as FS;
 
 import Promise from "Promise.js";
 

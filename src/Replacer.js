@@ -11,7 +11,7 @@
 import "Parser.js" as Parser;
 
 var HAS_SCHEMA = /^[a-z]+:/i,
-    NPM_SCHEMA = /^npm:/i;
+    NODE_SCHEMA = /^(?:npm|node):/i;
 
 function loadCall(url) {
 
@@ -455,33 +455,12 @@ export class Replacer {
         }
     }
     
-    /*
-    requirePath(url) {
-    
-        url = url.trim();
-        
-        if (NPM_SCHEMA.test(url))
-            url = url.replace(NPM_SCHEMA, "");
-        else if (!HAS_SCHEMA.test(url) && url.charAt(0) !== "/")
-            url = "./" + url;
-        
-        // Add to dependency list
-        if (typeof this.imports[url] !== "string") {
-        
-            this.imports[url] = "_M" + (this.uid++);
-            this.dependencies.push(url);
-        }
-        
-        return url;
-    }
-    */
-    
     moduleIdent(url) {
     
         url = url.trim();
         
-        if (NPM_SCHEMA.test(url))
-            url = url.replace(NPM_SCHEMA, "");
+        if (NODE_SCHEMA.test(url))
+            url = url.replace(NODE_SCHEMA, "");
         else if (!HAS_SCHEMA.test(url) && url.charAt(0) !== "/")
             url = "./" + url;
         

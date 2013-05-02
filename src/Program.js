@@ -1,5 +1,5 @@
-import "npm:fs" as FS;
-import "npm:path" as Path;
+import "node:fs" as FS;
+import "node:path" as Path;
 import "CommandLine.js" as CommandLine;
 import "FutureFS.js" as FFS;
 

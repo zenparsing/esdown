@@ -1,4 +1,4 @@
-import "npm:path" as Path;
+import "node:path" as Path;
 import "FutureFS.js" as FFS;
 
 import Promise from "Promise.js";

@@ -2,7 +2,7 @@ import Replacer from "Replacer.js";
 
 var SIGNATURE = "/*=es6now=*/";
 
-var WRAP_CALLEE = "(function(fn, deps) { " +
+var WRAP_CALLEE = "(function(fn, deps, name) { " +
 
     // Node.js:
     "if (typeof exports !== 'undefined') " +
@@ -17,8 +17,8 @@ var WRAP_CALLEE = "(function(fn, deps) { " +
         "define(['require', 'exports'].concat(deps), fn); " +
         
     // DOM global module:
-    "else if (typeof window !== 'undefined' && {0}) " +
-        "fn.call(window, null, window[{0}] = {}); " +
+    "else if (typeof window !== 'undefined' && name) " +
+        "fn.call(window, null, window[name] = {}); " +
     
     // Hail Mary:
     "else " +
@@ -68,9 +68,11 @@ export function translate(input, options) {
 
 export function wrap(text, dep, global) {
 
-    var callee = WRAP_CALLEE.replace(/\{0\}/g, JSON.stringify(global || ""));
-    
-    return SIGNATURE + callee + "(" + WRAP_HEADER + text + WRAP_FOOTER + ", " + JSON.stringify(dep) + ");";
+    return SIGNATURE + WRAP_CALLEE + "(" + 
+        WRAP_HEADER + text + WRAP_FOOTER + ", " + 
+        JSON.stringify(dep || []) + ", " + 
+        JSON.stringify(global || "") +
+    ");";
 }
 
 export function isWrapped(text) {
