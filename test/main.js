@@ -1,7 +1,7 @@
-import "npm:fs" as FS;
-import "npm:path" as Path;
+module FS from "node:fs";
+module Path from "node:path";
 
-import translate from "../src/Translator.js";
+import { translate } from "../src/Translator.js";
 
 function statPath(path) {
 

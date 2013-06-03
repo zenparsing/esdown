@@ -1,5 +1,5 @@
-import "Runtime.js" as Runtime;
-import "Program.js" as Program;
+module Runtime from "Runtime.js";
+module Program from "Program.js";
 
 if (typeof require === "function" && 
     typeof module !== "undefined" && 

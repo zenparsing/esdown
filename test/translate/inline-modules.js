@@ -4,6 +4,6 @@ module X {
     export var X;
 }
 
-import A from X;
+import { A } from X;
 
-export A as Z;
+export { A as Z };

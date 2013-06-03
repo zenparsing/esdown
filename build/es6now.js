@@ -1,963 +1,5 @@
-/*=es6now=*/(function(fn, deps, name) { if (typeof exports !== 'undefined') fn.call(typeof global === 'object' ? global : this, require, exports); else if (typeof __MODULE === 'function') __MODULE(fn, deps); else if (typeof define === 'function' && define.amd) define(['require', 'exports'].concat(deps), fn); else if (typeof window !== 'undefined' && name) fn.call(window, null, window[name] = {}); else fn.call(window || this, null, {}); })(function(require, exports) { 'use strict'; function __load(p) { var e = require(p); return typeof e === 'object' ? e : { module: e }; } 
+/*=es6now=*/(function(fn, deps, name) { if (typeof exports !== 'undefined') fn.call(typeof global === 'object' ? global : this, require, exports); else if (typeof __MODULE === 'function') __MODULE(fn, deps); else if (typeof define === 'function' && define.amd) define(['require', 'exports'].concat(deps), fn); else if (typeof window !== 'undefined' && name) fn.call(window, null, window[name] = {}); else fn.call(window || this, null, {}); })(function(require, exports) { 'use strict'; function __load(p) { var e = require(p); return typeof e === 'object' ? e : { module: e }; } var _M0 = __load("fs"), _M1 = __load("path"), _M2 = __load("http"), _M3 = __load("url"); var __this = this; var Class_ = (function(exports) {
 
-var __modules = [], __exports = [], __global = this; 
-
-function __init(i, obj) { 
-    var e = __exports; 
-    if (e[i] !== void 0) return e[i]; 
-    __modules[i].call(__global, e[i] = (obj || {})); 
-    return e[i]; 
-} 
-
-__modules[0] = function(exports) {
-var _M0 = __init(1), _M1 = __init(2); var Runtime = _M0;
-var Program = _M1;
-
-if (typeof require === "function" && 
-    typeof module !== "undefined" && 
-    module === require.main) {
-    
-    Program.run();
-}
-};
-
-__modules[1] = function(exports) {
-var _M0 = __init(3); Object.keys(_M0).forEach(function(k) { exports[k] = _M0[k]; });
-};
-
-__modules[2] = function(exports) {
-var _M0 = __load("fs"), _M1 = __load("path"), _M2 = __init(4), _M3 = __init(5), _M4 = __init(6), _M5 = __init(7), _M6 = __init(8), _M7 = __init(9); var FS = _M0;
-var Path = _M1;
-var CommandLine = _M2;
-var FFS = _M3;
-
-var Promise = _M4.Promise;
-var bundle = _M5.bundle;
-var Server = _M6.Server;
-var translate = _M7.translate;
-
-var ES6_GUESS = /(?:^|\n)\s*(?:import|export|class)\s/;
-
-function absPath(path) {
-
-    return Path.resolve(process.cwd(), path);
-}
-
-function getOutPath(inPath, outPath) {
-
-    var stat;
-    
-    outPath = absPath(outPath);
-    
-    try { stat = FS.statSync(outPath); } catch (e) {}
-    
-    if (stat && stat.isDirectory())
-        return Path.resolve(outPath, Path.basename(inPath));
-    
-    return outPath;
-}
-
-function writeFile(path, text) {
-
-    console.log("[Writing] " + absPath(path));
-    FS.writeFileSync(path, text, "utf8");
-}
-
-function overrideCompilation() {
-
-    // Compile ES6 js files
-    require.extensions[".js"] = (function(module, filename) {
-    
-        var text;
-        
-        try {
-        
-            text = FS.readFileSync(filename, "utf8");
-            
-            if (ES6_GUESS.test(text))
-                text = translate(text);
-        
-        } catch (e) {
-        
-            if (e instanceof SyntaxError)
-                e = new SyntaxError(e.message);
-            
-            throw e;
-        }
-        
-        return module._compile(text, filename);
-    });
-}
-
-function run() {
-
-    CommandLine.run({
-    
-        "*": {
-        
-            params: {
-            
-                "target": {
-                
-                    positional: true,
-                    required: true
-                }
-            },
-            
-            execute: function(params) {
-            
-                params.debug = true;
-                overrideCompilation();
-                require(absPath(params.target));
-            }
-        
-        },
-        
-        translate: {
-        
-            params: {
-        
-                "input": {
-        
-                    short: "i",
-                    positional: true,
-                    required: true
-                },
-                
-                "output": {
-                    
-                    short: "o",
-                    positional: true,
-                    required: false
-                },
-                
-                "global": { short: "g" },
-                
-                "debug": { flag: true }
-            },
-            
-            execute: function(params) {
-            
-                var options = { 
-                
-                    global: params.global,
-                    
-                    log: function(filename) { 
-                    
-                        console.log("[Reading] " + absPath(filename));
-                    }
-                };
-                
-                options.log(params.input);
-                
-                FFS
-                .readFile(params.input, "utf8")
-                .then((function(text) { return translate(text, options); }))
-                .then((function(text) {
-                    
-                    if (params.output) {
-                    
-                        var out = getOutPath(params.input, params.output);
-                        writeFile(out, text);
-                    
-                    } else {
-                    
-                        console.log(text);
-                    }
-                    
-                }), (function(err) {
-                
-                    throw err;
-                }));
-            }
-        },
-        
-        bundle: {
-        
-            params: {
-        
-                "input": {
-        
-                    short: "i",
-                    positional: true,
-                    required: true
-                },
-                
-                "output": {
-                    
-                    short: "o",
-                    positional: true,
-                    required: false
-                },
-                
-                "global": { short: "g" },
-                
-                "debug": { flag: true }
-            },
-            
-            execute: function(params) {
-            
-                var options = { 
-                
-                    global: params.global,
-                    
-                    log: function(filename) { 
-                    
-                        console.log("[Reading] " + absPath(filename));
-                    }
-                };
-                
-                bundle(params.input, options).then((function(text) {
-                
-                    if (params.output) {
-                    
-                        var out = getOutPath(params.input, params.output);
-                        writeFile(out, text);
-                    
-                    } else {
-                    
-                        console.log(text);
-                    }
-                    
-                }), (function(err) {
-                
-                    throw err;
-                }));           
-            }
-        },
-        
-        serve: {
-        
-            params: {
-            
-                "root": { short: "r", positional: true },
-                "port": { short: "p", positional: true }
-            },
-            
-            execute: function(params) {
-            
-                var server = new Server(params);
-                server.start();
-                
-                console.log("Listening on port " + server.port + ".  Press Enter to exit.");
-                
-                var stdin = process.stdin;
-                
-                stdin.resume();
-                stdin.setEncoding('utf8');
-                
-                stdin.on("data", (function() { 
-                
-                    server.stop().then((function(val) { process.exit(0); }));
-                }));
-            }
-        },
-        
-        error: function(err, params) {
-        
-            if (params.debug) {
-            
-                throw err;
-            
-            } else {
-            
-                console.log("Oops! ", err.toString());
-            }
-            
-            process.exit(1);
-        }
-    });
-}
-exports.run = run;
-};
-
-__modules[3] = function(exports) {
-var _M0 = __init(10), _M1 = __init(11); var Class = _M0.Class;
-var emulate = _M1.emulate;
-
-this.es6now = { Class: Class };
-
-emulate();
-
-};
-
-__modules[4] = function(exports) {
-function parse(argv, params) {
-
-    var pos = Object.keys(params),
-        values = {},
-        shorts = {},
-        required = [],
-        param,
-        value,
-        name,
-        i,
-        a;
-    
-    // Create short-to-long mapping
-    pos.forEach((function(name) {
-    
-        var p = params[name];
-        
-        if (p.short)
-            shorts[p.short] = name;
-        
-        if (p.required)
-            required.push(name);
-    }));
-    
-    // For each command line arg...
-    for (i = 0; i < argv.length; ++i) {
-    
-        a = argv[i];
-        param = null;
-        value = null;
-        name = "";
-        
-        if (a[0] === "-") {
-        
-            if (a.slice(0, 2) === "--") {
-            
-                // Long named parameter
-                param = params[name = a.slice(2)];
-            
-            } else {
-            
-                // Short named parameter
-                param = params[name = shorts[a.slice(1)]];
-            }
-            
-            // Verify parameter exists
-            if (!param)
-                throw new Error("Invalid command line option: " + a);
-            
-            if (param.flag) {
-            
-                value = true;
-            
-            } else {
-            
-                // Get parameter value
-                value = argv[++i] || "";
-                
-                if (typeof value !== "string" || value[0] === "-")
-                    throw new Error("No value provided for option " + a);
-            }
-            
-        } else {
-        
-            // Positional parameter
-            do { param = params[name = pos.shift()]; } 
-            while (param && !param.positional);;
-            
-            value = a;
-        }
-        
-        if (param)
-            values[name] = value;
-    }
-    
-    required.forEach((function(name) {
-    
-        if (values[name] === undefined)
-            throw new Error("Missing required option: --" + name);
-    }));
-    
-    return values;
-}
-
-function fail(msg) {
-
-    console.log(msg);
-    process.exit(1);
-}
-
-function runCommand(command, options) {
-    
-    options || (options = {});
-    
-    var argv = options.args || process.argv.slice(2),
-        error = options.error || command.error || fail,
-        params = {};
-    
-    try {
-    
-        params = parse(argv, command.params || {});
-        return command.execute(params);
-    
-    } catch (err) {
-    
-        return error(err, params);
-    }
-}
-
-function run(config) {
-
-    var error = config.error || fail,
-        argv = process.argv.slice(2),
-        action = argv[0] || "*",
-        command;
-    
-    if (!action)
-        return error("No action specified.", {});
-    
-    command = config[action];
-    
-    if (!command) {
-    
-        if (config["*"]) {
-        
-            argv.unshift(command);
-            command = config["*"];
-
-        } else {
-        
-            return error("Invalid command: " + action, {});
-        }
-    }
-    
-    return runCommand(command, {
-    
-        args: argv.slice(1),
-        error: config.error 
-    });
-}
-
-/*
-
-Example: 
-
-parse(process.argv.slice(2), {
-
-    "verbose": {
-    
-        short: "v",
-        flag: true
-    },
-    
-    "input": {
-    
-        short: "i",
-        positional: true,
-        required: true
-    },
-    
-    "output": {
-    
-        short: "o",
-        positional: true
-    },
-    
-    "recursive": {
-    
-        short: "r",
-        flag: false
-    }
-});
-
-*/
-
-exports.parse = parse;
-exports.runCommand = runCommand;
-exports.run = run;
-};
-
-__modules[5] = function(exports) {
-var _M0 = __load("fs"), _M1 = __init(6); var FS = _M0;
-
-var Promise = _M1.Promise;
-
-// Wraps a standard Node async function with a promise
-// generating function
-function wrap(obj, name) {
-
-	return function() {
-	
-		var a = [].slice.call(arguments, 0),
-			promise = new Promise;
-		
-		a.push((function(err, data) {
-		
-			if (err) promise.reject(err);
-			else promise.resolve(data);
-		}));
-		
-		if (name) obj[name].apply(obj, a);
-    	else obj.apply(null, a);
-		
-		return promise.future;
-	};
-}
-
-var 
-    exists = wrap(FS.exists),
-    readFile = wrap(FS.readFile),
-    close = wrap(FS.close),
-    open = wrap(FS.open),
-    read = wrap(FS.read),
-    write = wrap(FS.write),
-    rename = wrap(FS.rename),
-    truncate = wrap(FS.truncate),
-    rmdir = wrap(FS.rmdir),
-    fsync = wrap(FS.fsync),
-    mkdir = wrap(FS.mkdir),
-    sendfile = wrap(FS.sendfile),
-    readdir = wrap(FS.readdir),
-    fstat = wrap(FS.fstat),
-    lstat = wrap(FS.lstat),
-    stat = wrap(FS.stat),
-    readlink = wrap(FS.readlink),
-    symlink = wrap(FS.symlink),
-    link = wrap(FS.link),
-    unlink = wrap(FS.unlink),
-    fchmod = wrap(FS.fchmod),
-    lchmod = wrap(FS.lchmod),
-    chmod = wrap(FS.chmod),
-    lchown = wrap(FS.lchown),
-    fchown = wrap(FS.fchown),
-    chown = wrap(FS.chown),
-    utimes = wrap(FS.utimes),
-    futimes = wrap(FS.futimes),
-    writeFile = wrap(FS.writeFile),
-    appendFile = wrap(FS.appendFile),
-    realpath = wrap(FS.realpath);
-
-exports.exists = exists;
-exports.readFile = readFile;
-exports.close = close;
-exports.open = open;
-exports.read = read;
-exports.write = write;
-exports.rename = rename;
-exports.truncate = truncate;
-exports.rmdir = rmdir;
-exports.fsync = fsync;
-exports.mkdir = mkdir;
-exports.sendfile = sendfile;
-exports.readdir = readdir;
-exports.fstat = fstat;
-exports.lstat = lstat;
-exports.stat = stat;
-exports.readlink = readlink;
-exports.symlink = symlink;
-exports.link = link;
-exports.unlink = unlink;
-exports.fchmod = fchmod;
-exports.lchmod = lchmod;
-exports.chmod = chmod;
-exports.lchown = lchown;
-exports.fchown = fchown;
-exports.chown = chown;
-exports.utimes = utimes;
-exports.futimes = futimes;
-exports.writeFile = writeFile;
-exports.appendFile = appendFile;
-exports.realpath = realpath;
-};
-
-__modules[6] = function(exports) {
-var _M0 = __init(12); Object.keys(_M0).forEach(function(k) { exports[k] = _M0[k]; });
-};
-
-__modules[7] = function(exports) {
-var _M0 = __load("path"), _M1 = __init(5), _M2 = __init(6), _M3 = __init(9); var Path = _M0;
-var FFS = _M1;
-
-var Promise = _M2.Promise;
-var translate = _M3.translate, wrap = _M3.wrap;
-
-var EXTERNAL = /^[a-z]+:|^[^\.]+$/i;
-
-var OUTPUT_BEGIN = "var __modules = [], __exports = [], __global = this; \n\
-\n\
-function __init(i, obj) { \n\
-    var e = __exports; \n\
-    if (e[i] !== void 0) return e[i]; \n\
-    __modules[i].call(__global, e[i] = (obj || {})); \n\
-    return e[i]; \n\
-} \n";
-
-function hasKey(obj, key) {
-
-    return Object.prototype.hasOwnProperty.call(obj, key);
-}
-
-function isExternal(path) {
-
-    return EXTERNAL.test(path);
-}
-
-function resolve(path, base) {
-
-    if (!isExternal(path) && base)
-        path = Path.resolve(base, path);
-    
-    return path;
-}
-
-function bundle(filename, options) {
-
-    options || (options = {});
-    
-    var externals = {},
-        modules = {},
-        nodes = [],
-        current = 0;
-    
-    createNode(filename, null);
-    
-    return Promise.iterate((function(stop) {
-    
-        if (current >= nodes.length)
-            return stop();
-        
-        var node = nodes[current],
-            path = node.path,
-            dir = Path.dirname(path);
-        
-        current += 1;
-        
-        if (options.log)
-            options.log(path);
-        
-        // Read file
-        return FFS.readFile(path, "utf8").then((function(text) {
-        
-            node.factory = translate(text, {
-            
-                wrap: false,
-                
-                loadCall: function(url) {
-                
-                    if (isExternal(url)) {
-                
-                        externals[url] = 1;
-                        return "__load(" + JSON.stringify(url) + ")";
-                    }
-                    
-                    return "__init(" + createNode(url, dir).toString() + ")";
-                }
-                
-            });
-        }));
-            
-    })).then((function($) {
-    
-        var out = OUTPUT_BEGIN, i;
-
-        for (i = 0; i < nodes.length; ++i) {
-        
-            out += "\n__modules[" + i.toString() + "] = ";
-            out += "function(exports) {\n" + nodes[i].factory + "\n};\n";
-        }
-        
-        out += "\n__init(0, exports);\n";
-        out = wrap("\n\n" + out, Object.keys(externals), options.global);
-        
-        return out;
-    
-    }));
-    
-    function createNode(path, base) {
-    
-        path = resolve(path, base);
-        
-        if (hasKey(modules, path))
-            return modules[path];
-        
-        var index = nodes.length;
-        
-        modules[path] = index;
-        nodes.push({ path: path, factory: "" });
-        
-        return index;
-    }
-}
-
-exports.bundle = bundle;
-};
-
-__modules[8] = function(exports) {
-var _M0 = __load("fs"), _M1 = __load("http"), _M2 = __load("path"), _M3 = __load("url"), _M4 = __init(5), _M5 = __init(6), _M6 = __init(9), _M7 = __init(13); var __this = this; var FS = _M0;
-var HTTP = _M1;
-var Path = _M2;
-var URL = _M3;
-
-var FFS = _M4;
-
-var Promise = _M5.Promise;
-var translate = _M6.translate, isWrapped = _M6.isWrapped;
-var mimeTypes = _M7.mimeTypes;
-
-var DEFAULT_PORT = 80,
-    DEFAULT_ROOT = ".",
-    JS_FILE = /\.js$/i;
-
-var Server = es6now.Class(function(__super) { return {
-
-    constructor: function(options) { var __this = this; 
-    
-        options || (options = {});
-    
-        this.root = Path.resolve(options.root || DEFAULT_ROOT);
-        this.port = options.port || DEFAULT_PORT;
-        this.hostname = options.hostname || null;
-        this.server = HTTP.createServer((function(request, response) { return __this.onRequest(request, response); }));
-        this.active = false;
-    },
-    
-    start: function(port, hostname) {
-    
-        if (this.active)
-            throw new Error("Server is already listening");
-        
-        if (port)
-            this.port = port;
-        
-        if (hostname)
-            this.hostname = hostname;
-        
-        var promise = new Promise;
-        this.server.listen(this.port, this.hostname, (function(ok) { return promise.resolve(null); }));
-        
-        this.active = true;
-        
-        return promise.future;
-    },
-    
-    stop: function() {
-    
-        var promise = new Promise;
-        
-        if (this.active) {
-        
-            this.active = false;
-            this.server.close((function(ok) { return promise.resolve(null); }));
-        
-        } else {
-        
-            promise.resolve(null);
-        }
-        
-        return promise.future;
-    },
-    
-    onRequest: function(request, response) { var __this = this; 
-    
-        if (request.method !== "GET" && request.method !== "HEAD")
-            return this.error(405, response);
-        
-        var path = URL.parse(request.url).pathname;
-        
-        path = Path.join(this.root, path);
-        
-        if (path.indexOf(this.root) !== 0)
-            return this.error(403, response);
-        
-        FFS.stat(path).then((function(stat) {
-        
-            if (stat.isDirectory())
-                return __this.streamDefault(path, response);
-            
-            if (stat.isFile()) {
-            
-                return JS_FILE.test(path) ? 
-                    __this.streamJS(path, response) : 
-                    __this.streamFile(path, stat.size, response);
-            }
-            
-            return __this.error(404, response);
-            
-        }), (function(err) {
-        
-            return __this.error(404, response);
-            
-        }));
-    },
-    
-    error: function(code, response) {
-    
-        response.writeHead(code, { "Content-Type": "text/plain" });
-        response.write(HTTP.STATUS_CODES[code] + "\n")
-        response.end();
-    },
-    
-    streamDefault: function(path, response) { var __this = this; 
-    
-        var files = [ "index.html", "index.htm", "default.html", "default.htm" ];
-        
-        var next = (function() {
-        
-            if (files.length === 0)
-                return __this.error(404, response);
-            
-            var file = files.shift(),
-                search = Path.join(path, file);
-            
-            FFS.stat(search).then((function(stat) {
-            
-                if (!stat.isFile())
-                    return next();
-                
-                path = search;
-                __this.streamFile(path, stat.size, response);
-                
-            }), (function(err) {
-            
-                return next();
-            }));
-        });
-        
-        next();
-    },
-    
-    streamJS: function(path, response) { var __this = this; 
-        
-        FFS.readFile(path, "utf8").then((function(source) {
-        
-            if (!isWrapped(source)) {
-            
-                // TODO:  A better way to report errors?
-                try { source = translate(source); } 
-                catch (x) { source += "\n\n// " + x.message; }
-            }
-            
-            response.writeHead(200, { "Content-Type": "text/javascript; charset=UTF-8" });
-            response.end(source, "utf8");
-        
-        }), (function(err) {
-        
-            __this.error(500, err);
-        }));
-    },
-    
-    streamFile: function(path, size, response) { var __this = this; 
-            
-        var ext = Path.extname(path).slice(1).toLowerCase();
-            
-        var headers = { 
-    
-            // TODO: we should only append charset to certain types
-            "Content-Type": (mimeTypes[ext] || mimeTypes["*"]) + "; charset=UTF-8",
-            "Content-Length": size
-        };
-            
-        var stream = FS.createReadStream(path, { 
-        
-            flags: "r", 
-            mode: 438
-        });
-        
-        stream.on("error", (function(err) {
-        
-            __this.error(500, response);
-        }));
-        
-        stream.on("data", (function(data) {
-        
-            if (headers) {
-            
-                response.writeHead(200, headers);
-                headers = null;
-            }
-        }));
-        
-        stream.pipe(response);
-    }
-}});
-exports.Server = Server;
-};
-
-__modules[9] = function(exports) {
-var _M0 = __init(14); var Replacer = _M0.Replacer;
-
-var SIGNATURE = "/*=es6now=*/";
-
-var WRAP_CALLEE = "(function(fn, deps, name) { " +
-
-    // Node.js:
-    "if (typeof exports !== 'undefined') " +
-        "fn.call(typeof global === 'object' ? global : this, require, exports); " +
-        
-    // Sane module transport:
-    "else if (typeof __MODULE === 'function') " +
-        "__MODULE(fn, deps); " +
-        
-    // Insane module transport:
-    "else if (typeof define === 'function' && define.amd) " +
-        "define(['require', 'exports'].concat(deps), fn); " +
-        
-    // DOM global module:
-    "else if (typeof window !== 'undefined' && name) " +
-        "fn.call(window, null, window[name] = {}); " +
-    
-    // Hail Mary:
-    "else " +
-        "fn.call(window || this, null, {}); " +
-
-"})";
-
-var WRAP_HEADER = "function(require, exports) { " +
-    "'use strict'; " +
-    "function __load(p) { " +
-        "var e = require(p); " +
-        "return typeof e === 'object' ? e : { module: e }; " +
-    "} ";
-
-var WRAP_FOOTER = "\n\n}";
-
-function sanitize(text) {
-
-    // From node/lib/module.js/Module.prototype._compile
-    text = text.replace(/^\#\!.*/, '');
-    
-    // From node/lib/module.js/stripBOM
-    if (text.charCodeAt(0) === 0xFEFF)
-        text = text.slice(1);
-    
-    return text;
-}
-
-function translate(input, options) {
-
-    options || (options = {});
-    
-    var replacer = new Replacer(),
-        output;
-    
-    if (options.loadCall)
-        replacer.loadCall = options.loadCall;
-    
-    input = sanitize(input);
-    output = replacer.replace(input);
-    
-    if (options.wrap !== false)
-        output = wrap(output, replacer.dependencies, options.global);
-    
-    return output;
-}
-
-function wrap(text, dep, global) {
-
-    return SIGNATURE + WRAP_CALLEE + "(" + 
-        WRAP_HEADER + text + WRAP_FOOTER + ", " + 
-        JSON.stringify(dep || []) + ", " + 
-        JSON.stringify(global || "") +
-    ");";
-}
-
-function isWrapped(text) {
-
-    return text.indexOf(SIGNATURE) === 0;
-}
-
-
-exports.translate = translate;
-exports.wrap = wrap;
-exports.isWrapped = isWrapped;
-};
-
-__modules[10] = function(exports) {
 var HOP = Object.prototype.hasOwnProperty,
     STATIC = /^__static_/;
 
@@ -1084,1207 +126,11 @@ function Class(base, def) {
 
 
 
-exports.Class = Class;
-};
 
-__modules[11] = function(exports) {
-var _M0 = __init(15); var ES5 = _M0;
+exports.Class = Class; return exports; }).call(this, {});
 
-var global = this;
+var ES5_ = (function(exports) {
 
-function addProps(obj, props) {
-
-    Object.keys(props).forEach((function(k) {
-    
-        if (typeof obj[k] !== "undefined")
-            return;
-        
-        Object.defineProperty(obj, k, {
-        
-            value: props[k],
-            configurable: true,
-            enumerable: false,
-            writable: true
-        });
-    }));
-}
-
-function emulate() {
-
-    ES5.emulate();
-
-    addProps(Object, {
-    
-        is: function(a, b) {
-        
-            // TODO
-        },
-        
-        assign: function(target, source) {
-        
-            Object.keys(source).forEach((function(k) { return target[k] = source[k]; }));
-            return target;
-        },
-        
-        mixin: function(target, source) {
-        
-            Object.getOwnPropertyNames(source).forEach((function(name) {
-            
-                var desc = Object.getOwnPropertyDescriptor(source, name);
-                Object.defineProperty(target, name, desc);
-            }));
-            
-            return target;
-        }
-    });
-    
-    addProps(Number, {
-    
-        EPSILON: Number.EPSILON || (function() {
-        
-            var next, result;
-            
-            for (next = 1; 1 + next !== 1; next = next / 2)
-                result = next;
-            
-            return result;
-        }()),
-        
-        MAX_INTEGER: 9007199254740992,
-        
-        isFinite: function(val) {
-            
-            return typeof val === "number" && isFinite(val);
-        },
-        
-        isNaN: function(val) {
-        
-            return typeof val === "number" && isNaN(val);
-        },
-        
-        isInteger: function(val) {
-        
-            typeof val === "number" && val | 0 === val;
-        },
-        
-        toInteger: function(val) {
-            
-            return val | 0;
-        }
-    });
-    
-    addProps(Array, {
-    
-        from: function(arg) {
-            // TODO
-        },
-        
-        of: function() {
-            // ?
-        }
-    
-    });
-    
-    addProps(String.prototype, {
-        
-        repeat: function(count) {
-        
-            return new Array(count + 1).join(this);
-        },
-        
-        startsWith: function(search, start) {
-        
-            return this.indexOf(search, start) === start;
-        },
-        
-        endsWith: function(search, end) {
-        
-            return this.slice(-search.length) === search;
-        },
-        
-        contains: function(search, pos) {
-        
-            return this.indexOf(search, pos) !== -1;
-        }
-    });
-    
-    if (typeof Map === "undefined") global.Map = (function() {
-    
-        function Map() {
-        
-        }
-        
-        return Map;
-        
-    })();
-    
-    if (typeof Set === "undefined") global.Set = (function() {
-    
-        function Set() {
-        
-        }
-        
-        return Set;
-        
-    })();
-    
-}
-
-
-
-exports.emulate = emulate;
-};
-
-__modules[12] = function(exports) {
-var EventLoop = (function(exports) {
-
-    var asap;
-    
-    var msg = uuid(),
-        process = this.process,
-        window = this.window,
-        msgChannel = null,
-        list = [];
-    
-    if (process && typeof process.nextTick === "function") {
-    
-        // NodeJS
-        asap = process.nextTick;
-   
-    } else if (window && window.addEventListener && window.postMessage) {
-    
-        // Modern Browsers
-        if (window.MessageChannel) {
-        
-            msgChannel = new window.MessageChannel();
-            msgChannel.port1.onmessage = onmsg;
-        
-        } else {
-        
-            window.addEventListener("message", onmsg, true);
-        }
-        
-        asap = (function(fn) {
-        
-            list.push(fn);
-            
-            if (msgChannel !== null)
-                msgChannel.port2.postMessage(msg);
-            else
-                window.postMessage(msg, "*");
-            
-            return 1;
-        });
-    
-    } else {
-    
-        // Legacy
-        asap = (function(fn) { return setTimeout(fn, 0); });
-    }
-        
-    function onmsg(evt) {
-    
-        if (msgChannel || (evt.source === window && evt.data === msg)) {
-        
-            evt.stopPropagation();
-            if (list.length) list.shift()();
-        }
-    }
-    
-    function uuid() {
-    
-        return [32, 16, 16, 16, 48].map((function(bits) { return rand(bits); })).join("-");
-        
-        function rand(bits) {
-        
-            if (bits > 32) 
-                return rand(bits - 32) + rand(32);
-            
-            var str = (Math.random() * 0xffffffff >>> (32 - bits)).toString(16),
-                len = bits / 4 >>> 0;
-            
-            if (str.length < len) 
-                str = (new Array(len - str.length + 1)).join("0") + str;
-            
-            return str;
-        }
-    }
-    
-exports.asap = asap; return exports; }).call(this, {});
-
-var asap = EventLoop.asap;
-
-var identity = (function(obj) { return obj; }),
-    freeze = Object.freeze || identity,
-    queue = [],
-    waiting = false;
-
-// UUID property names used for duck-typing
-var DISPATCH = "07b06b7e-3880-42b1-ad55-e68a77514eb9",
-    IS_FAILURE = "7d24bf0f-d8b1-4783-b594-cec32313f6bc";
-
-var EMPTY_LIST_MSG = "List cannot be empty.",
-    WAS_RESOLVED_MSG = "The promise has already been resolved.",
-    CYCLE_MSG = "A promise cycle was detected.";
-
-var THROW_DELAY = 50;
-
-// Enqueues a message
-function enqueue(future, args) {
-
-    queue.push({ fn: future[DISPATCH], args: args });
-    
-    if (!waiting) {
-    
-        waiting = true;
-        asap(flush);
-    }
-}
-
-// Flushes the message queue
-function flush() {
-
-    waiting = false;
-
-    while (queue.length > 0) {
-        
-        // Send each message in queue
-        for (var count = queue.length, msg; count > 0; --count) {
-        
-            msg = queue.shift();
-            msg.fn.apply(void 0, msg.args);
-        }
-    }
-}
-
-// Returns a cycle error
-function cycleError() {
-
-    return failure(CYCLE_MSG);
-}
-
-// Future constructor
-function Future(dispatch) {
-    
-    this[DISPATCH] = dispatch;
-}
-
-// Registers a callback for completion when a future is complete
-Future.prototype.then = function then(onSuccess, onFail) {
-
-    onSuccess || (onSuccess = identity);
-    
-    var resolve = (function(value) { return finish(value, onSuccess); }),
-        reject = (function(value) { return finish(value, onFail); }),
-        promise = new Promise(onQueue),
-        target = this,
-        done = false;
-    
-    onQueue(onSuccess, onFail);
-    
-    return promise.future;
-    
-    function onQueue(success, error) {
-    
-        if (success && resolve) {
-        
-            enqueue(target, [ resolve, null ]);
-            resolve = null;
-        }
-        
-        if (error && reject) {
-        
-            enqueue(target, [ null, reject ]);
-            reject = null;
-        }
-    }
-    
-    function finish(value, transform) {
-    
-        if (!done) {
-        
-            done = true;
-            promise.resolve(applyTransform(transform, value));
-        }
-    }
-};
-
-// Begins a deferred operation
-function Promise(onQueue) {
-
-    var token = {},
-        pending = [],
-        throwable = true,
-        next = null;
-
-    this.future = freeze(new Future(dispatch));
-    this.resolve = resolve;
-    this.reject = reject;
-    
-    freeze(this);
-    
-    // Dispatch function for future
-    function dispatch(success, error, src) {
-    
-        var msg = [success, error, src || token];
-        
-        if (error)
-            throwable = false;
-        
-        if (pending) {
-        
-            pending.push(msg);
-            
-            if (onQueue)
-                onQueue(success, error);
-        
-        } else {
-        
-            // If a cycle is detected, convert resolution to a rejection
-            if (src === token) {
-            
-                next = cycleError();
-                maybeThrow();
-            }
-            
-            enqueue(next, msg);
-        }
-    }
-    
-    // Resolves the promise
-    function resolve(value) {
-    
-        if (!pending)
-            throw new Error(WAS_RESOLVED_MSG);
-        
-        var list = pending;
-        pending = false;
-        
-        // Create a future from the provided value
-        next = when(value);
-
-        // Send internally queued messages to the next future
-        for (var i = 0; i < list.length; ++i)
-            enqueue(next, list[i]);
-        
-        maybeThrow();
-    }
-    
-    // Resolves the promise with a rejection
-    function reject(error) {
-    
-        resolve(failure(error));
-    }
-    
-    // Throws an error if the promise is rejected and there
-    // are no error handlers
-    function maybeThrow() {
-    
-        if (!throwable || !isFailure(next))
-            return;
-        
-        setTimeout((function() {
-        
-            var error = null;
-            
-            // Get the error value
-            next[DISPATCH](null, (function(val) { return error = val; }));
-            
-            // Throw it
-            if (error && throwable)
-                throw error;
-            
-        }), THROW_DELAY);
-    }
-}
-
-// Returns a future for an object
-function when(obj) {
-
-    if (obj && obj[DISPATCH])
-        return obj;
-    
-    if (obj && typeof obj.then === "function") {
-    
-        var promise = new Promise();
-        obj.then(promise.resolve, promise.reject);
-        return promise.future;
-    }
-    
-    // Wrap a value in an immediate future
-    return freeze(new Future((function(success) { return success && success(obj); })));
-}
-
-// Returns true if the object is a failed future
-function isFailure(obj) {
-
-    return obj && obj[IS_FAILURE];
-}
-
-// Creates a failure Future
-function failure(value) {
-
-    var future = new Future((function(success, error) { return error && error(value); }));
-    
-    // Tag the future as a failure
-    future[IS_FAILURE] = true;
-    
-    return freeze(future);
-}
-
-// Applies a promise transformation function
-function applyTransform(transform, value) {
-
-    try { return (transform || failure)(value); }
-    catch (ex) { return failure(ex); }
-}
-
-// Returns a future for every completed future in an array
-function whenAll(list) {
-
-    var count = list.length,
-        promise = new Promise(),
-        out = [],
-        value = out,
-        i;
-    
-    for (i = 0; i < list.length; ++i)
-        waitFor(list[i], i);
-    
-    if (count === 0)
-        promise.resolve(out);
-    
-    return promise.future;
-    
-    function waitFor(f, index) {
-    
-        when(f).then((function(val) { 
-        
-            out[index] = val;
-            
-            if (--count === 0)
-                promise.resolve(value);
-        
-        }), (function(err) {
-        
-            value = failure(err);
-            
-            if (--count === 0)
-                promise.resolve(value);
-        }));
-    }
-}
-
-// Returns a future for the first completed future in an array
-function whenAny(list) {
-
-    if (list.length === 0)
-        throw new Error(EMPTY_LIST_MSG);
-    
-    var promise = new Promise(), i;
-    
-    for (i = 0; i < list.length; ++i)
-        when(list[i]).then((function(val) { return promise.resolve(val); }), (function(err) { return promise.reject(err); }));
-    
-    return promise.future;
-}
-
-function iterate(fn) {
-
-    var done = false,
-        stop = (function(val) { done = true; return val; }),
-        next = (function(last) { return done ? last : when(fn(stop)).then(next); });
-    
-    return when(null).then(next);
-}
-
-function forEach(list, fn) {
-
-    var i = -1;
-    
-    return iterate((function(stop) { return (++i >= list.length) ? stop() : fn(list[i], i, list); }));
-}
-
-Promise.when = when;
-Promise.whenAny = whenAny;
-Promise.whenAll = whenAll;
-Promise.forEach = forEach;
-Promise.iterate = iterate;
-Promise.reject = failure;
-
-
-exports.Promise = Promise;
-};
-
-__modules[13] = function(exports) {
-var mimeTypes = {
-
-    "aiff": "audio/x-aiff",
-    "arj": "application/x-arj-compressed",
-    "asf": "video/x-ms-asf",
-    "asx": "video/x-ms-asx",
-    "au": "audio/ulaw",
-    "avi": "video/x-msvideo",
-    "bcpio": "application/x-bcpio",
-    "ccad": "application/clariscad",
-    "cod": "application/vnd.rim.cod",
-    "com": "application/x-msdos-program",
-    "cpio": "application/x-cpio",
-    "cpt": "application/mac-compactpro",
-    "csh": "application/x-csh",
-    "css": "text/css",
-    "deb": "application/x-debian-package",
-    "dl": "video/dl",
-    "doc": "application/msword",
-    "drw": "application/drafting",
-    "dvi": "application/x-dvi",
-    "dwg": "application/acad",
-    "dxf": "application/dxf",
-    "dxr": "application/x-director",
-    "etx": "text/x-setext",
-    "ez": "application/andrew-inset",
-    "fli": "video/x-fli",
-    "flv": "video/x-flv",
-    "gif": "image/gif",
-    "gl": "video/gl",
-    "gtar": "application/x-gtar",
-    "gz": "application/x-gzip",
-    "hdf": "application/x-hdf",
-    "hqx": "application/mac-binhex40",
-    "htm": "text/html",
-    "html": "text/html",
-    "ice": "x-conference/x-cooltalk",
-    "ico": "image/x-icon",
-    "ief": "image/ief",
-    "igs": "model/iges",
-    "ips": "application/x-ipscript",
-    "ipx": "application/x-ipix",
-    "jad": "text/vnd.sun.j2me.app-descriptor",
-    "jar": "application/java-archive",
-    "jpeg": "image/jpeg",
-    "jpg": "image/jpeg",
-    "js": "text/javascript",
-    "json": "application/json",
-    "latex": "application/x-latex",
-    "less": "text/css",
-    "lsp": "application/x-lisp",
-    "lzh": "application/octet-stream",
-    "m": "text/plain",
-    "m3u": "audio/x-mpegurl",
-    "man": "application/x-troff-man",
-    "manifest": "text/cache-manifest",
-    "me": "application/x-troff-me",
-    "midi": "audio/midi",
-    "mif": "application/x-mif",
-    "mime": "www/mime",
-    "movie": "video/x-sgi-movie",
-    "mp4": "video/mp4",
-    "mpg": "video/mpeg",
-    "mpga": "audio/mpeg",
-    "ms": "application/x-troff-ms",
-    "nc": "application/x-netcdf",
-    "oda": "application/oda",
-    "ogm": "application/ogg",
-    "pbm": "image/x-portable-bitmap",
-    "pdf": "application/pdf",
-    "pgm": "image/x-portable-graymap",
-    "pgn": "application/x-chess-pgn",
-    "pgp": "application/pgp",
-    "pm": "application/x-perl",
-    "png": "image/png",
-    "pnm": "image/x-portable-anymap",
-    "ppm": "image/x-portable-pixmap",
-    "ppz": "application/vnd.ms-powerpoint",
-    "pre": "application/x-freelance",
-    "prt": "application/pro_eng",
-    "ps": "application/postscript",
-    "qt": "video/quicktime",
-    "ra": "audio/x-realaudio",
-    "rar": "application/x-rar-compressed",
-    "ras": "image/x-cmu-raster",
-    "rgb": "image/x-rgb",
-    "rm": "audio/x-pn-realaudio",
-    "rpm": "audio/x-pn-realaudio-plugin",
-    "rtf": "text/rtf",
-    "rtx": "text/richtext",
-    "scm": "application/x-lotusscreencam",
-    "set": "application/set",
-    "sgml": "text/sgml",
-    "sh": "application/x-sh",
-    "shar": "application/x-shar",
-    "silo": "model/mesh",
-    "sit": "application/x-stuffit",
-    "skt": "application/x-koan",
-    "smil": "application/smil",
-    "snd": "audio/basic",
-    "sol": "application/solids",
-    "spl": "application/x-futuresplash",
-    "src": "application/x-wais-source",
-    "stl": "application/SLA",
-    "stp": "application/STEP",
-    "sv4cpio": "application/x-sv4cpio",
-    "sv4crc": "application/x-sv4crc",
-    "svg": "image/svg+xml",
-    "swf": "application/x-shockwave-flash",
-    "tar": "application/x-tar",
-    "tcl": "application/x-tcl",
-    "tex": "application/x-tex",
-    "texinfo": "application/x-texinfo",
-    "tgz": "application/x-tar-gz",
-    "tiff": "image/tiff",
-    "tr": "application/x-troff",
-    "tsi": "audio/TSP-audio",
-    "tsp": "application/dsptype",
-    "tsv": "text/tab-separated-values",
-    "txt": "text/plain",
-    "unv": "application/i-deas",
-    "ustar": "application/x-ustar",
-    "vcd": "application/x-cdlink",
-    "vda": "application/vda",
-    "vivo": "video/vnd.vivo",
-    "vrm": "x-world/x-vrml",
-    "wav": "audio/x-wav",
-    "wax": "audio/x-ms-wax",
-    "wma": "audio/x-ms-wma",
-    "wmv": "video/x-ms-wmv",
-    "wmx": "video/x-ms-wmx",
-    "wrl": "model/vrml",
-    "wvx": "video/x-ms-wvx",
-    "xbm": "image/x-xbitmap",
-    "xlw": "application/vnd.ms-excel",
-    "xml": "text/xml",
-    "xpm": "image/x-xpixmap",
-    "xwd": "image/x-xwindowdump",
-    "xyz": "chemical/x-pdb",
-    "zip": "application/zip",
-    "*": "application/octect-stream"
-};
-
-exports.mimeTypes = mimeTypes;
-};
-
-__modules[14] = function(exports) {
-var _M0 = __init(16); /*
-
-== Notes ==
-
-- With this approach, we can't have cyclic dependencies.  But there are
-  many other restrictions as well.  They may be lifted at some point in
-  the future.
-
-*/
-
-var __this = this; var Parser = _M0;
-
-var HAS_SCHEMA = /^[a-z]+:/i,
-    NODE_SCHEMA = /^(?:npm|node):/i;
-
-function loadCall(url) {
-
-    return "__load(" + JSON.stringify(url) + ")";
-}
-
-var Replacer = es6now.Class(function(__super) { return {
-
-    constructor: function() {
-        
-        this.loadCall = loadCall;
-    },
-    
-    replace: function(input) { var __this = this; 
-    
-        this.exportStack = [this.exports = {}];
-        this.imports = {};
-        this.dependencies = [];
-        this.uid = 0;
-        this.input = input;
-
-        var root = Parser.parseModule(input);
-        
-        var visit = (function(node) {
-        
-            // Call pre-order traversal method
-            if (__this[node.type + "Begin"])
-                __this[node.type + "Begin"](node);
-            
-            // Perform a depth-first traversal
-            Parser.forEachChild(node, (function(child) {
-            
-                child.parentNode = node;
-                visit(child);
-            }));
-            
-            node.text = __this.stringify(node);
-            
-            // Call replacer
-            if (__this[node.type]) {
-            
-                var replaced = __this[node.type](node);
-                
-                node.text = (replaced === undefined || replaced === null) ?
-                    __this.stringify(node) :
-                    replaced;
-            }
-            
-            return node.text;
-        });
-        
-        var output = visit({ 
-        
-            type: "$", 
-            root: root, 
-            start: 0, 
-            end: input.length
-        });
-        
-        var head = "";
-        
-        this.dependencies.forEach((function(url) {
-        
-            if (head) head += ", ";
-            else head = "var ";
-            
-            head += __this.imports[url] + " = " + __this.loadCall(url);
-        }));
-        
-        if (head) 
-            head += "; ";
-        
-        output = head + output;
-        
-        Object.keys(this.exports).forEach((function(k) {
-    
-            output += "\nexports." + k + " = " + __this.exports[k] + ";";
-        }));
-        
-        return output;
-    },
-
-    DoWhileStatement: function(node) {
-    
-        if (node.text.slice(-1) !== ";")
-            return node.text + ";";
-    },
-    
-    Module: function(node) {
-    
-        if (node.createThisBinding)
-            return "var __this = this; " + node.text;
-    },
-    
-    Script: function(node) {
-    
-        if (node.createThisBinding)
-            return "var __this = this; " + node.text;
-    },
-    
-    FunctionBody: function(node) {
-    
-        if (node.parentNode.createThisBinding)
-            return "{ var __this = this; " + node.text.slice(1);
-    },
-    
-    MethodDefinition: function(node) {
-    
-        // TODO: Generator methods
-        
-        // TODO: will fail if name is a string:  static "name"() {}
-        if (node.parentNode.type === "ClassElement" && 
-            node.parentNode.static) {
-            
-            node.name.text = "__static_" + node.name.text;
-        }
-        
-        if (!node.modifier)
-            return node.name.text + ": function(" + this.joinList(node.params) + ") " + node.body.text;
-    },
-    
-    PropertyDefinition: function(node) {
-    
-        if (node.expression === null)
-            return node.name.text + ": " + node.name.text;
-    },
-    
-    ImportAsDeclaration: function(node) {
-    
-        return "var " + node.ident.text + " = " + this.moduleIdent(node.from.value) + ";";
-    },
-    
-    ModuleDeclarationBegin: function(node) {
-    
-        this.exportStack.push(this.exports = {});
-    },
-    
-    ModuleDeclaration: function(node) { var __this = this; 
-    
-        var out = "var " + node.ident.text + " = (function(exports) ";
-        
-        out += node.body.text.replace(/\}$/, "");
-        
-        Object.keys(this.exports).forEach((function(k) {
-    
-            out += "exports." + k + " = " + __this.exports[k] + "; ";
-        }));
-        
-        this.exportStack.pop();
-        this.exports = this.exportStack[this.exportStack.length - 1];
-        
-        out += "return exports; }).call(this, {});";
-        
-        return out;
-    },
-    
-    ImportDeclaration: function(node) {
-    
-        var out = "";
-        
-        var moduleSpec = node.from.type === "String" ?
-            this.moduleIdent(node.from.value) :
-            node.from.text;
-        
-        node.specifiers.forEach((function(spec) {
-        
-            var remote = spec.remote,
-                local = spec.local || remote;
-            
-            if (out) out += ", ";
-            else out = "var ";
-            
-            out += local.text + " = " + moduleSpec + "." + remote.text;
-        }));
-        
-        out += ";";
-        
-        return out;
-    },
-    
-    ExportDeclaration: function(node) {
-    
-        var binding = node.binding,
-            bindingType = binding ? binding.type : "*",
-            exports = this.exports,
-            ident;
-        
-        // Exported declarations
-        switch (binding.type) {
-        
-            case "VariableDeclaration":
-            
-                binding.declarations.forEach((function(decl) {
-            
-                    // TODO: Destructuring!
-                    ident = decl.pattern.text;
-                    exports[ident] = ident;
-                }));
-                
-                return binding.text + ";";
-            
-            case "FunctionDeclaration":
-            case "ClassDeclaration":
-            case "ModuleDeclaration":
-            
-                ident = binding.ident.text;
-                exports[ident] = ident;
-                return binding.text;
-        }
-        
-        var from = binding.from,
-            fromPath = "",
-            out = "";
-        
-        if (from) {
-        
-            fromPath = from.type === "String" ?
-                this.moduleIdent(from.value) :
-                from.text;
-        }
-        
-        if (!binding.specifiers) {
-        
-            if (from) {
-            
-                out += "Object.keys(" + fromPath + ").forEach(function(k) { exports[k] = " + fromPath + "[k]; });";
-                
-            } else {
-            
-                // TODO:
-                throw new Error("`export *;` is not implemented.");
-            }
-        
-        } else {
-        
-            binding.specifiers.forEach((function(spec) {
-            
-                var local = spec.local.text,
-                    remote = spec.remote ? spec.remote.text : local;
-            
-                exports[remote] = from ? 
-                    fromPath + "." + local :
-                    local;
-            }));        
-        }
-        
-        return out;
-    },
-    
-    CallExpression: function(node) {
-    
-        var callee = node.callee,
-            args = node.arguments;
-        
-        /*
-        // Translate CommonJS require calls
-        if (callee.type === "Identifier" && 
-            callee.value === "require" &&
-            args.length === 1 &&
-            args[0].type === "String") {
-        
-            return this.loadCall(this.requirePath(args[0].value));
-        }
-        */
-        
-        if (node.isSuperCall) {
-        
-            var argText = "this";
-            
-            if (args.length > 0)
-                argText += ", " + this.joinList(args);
-            
-            // TODO: what if callee is of the form super["abc"]?
-            return callee.text + ".call(" + argText + ")";
-        }
-    },
-    
-    SuperExpression: function(node) {
-    
-        var p = node.parentNode;
-        
-        if (p.type === "CallExpression") {
-        
-            p.isSuperCall = true;
-            
-            var m = this.parentFunction(p),
-                name = (m.type === "MethodDefinition" ? m.name.text : "constructor");
-            
-            // TODO: what if method name is not an identifier?
-            return "__super." + name;
-        }
-        
-        p = p.parentNode;
-        
-        if (p.type === "CallExpression")
-            p.isSuperCall = true;
-        
-        return "__super";
-    },
-    
-    ArrowFunction: function(node) {
-    
-        var head, body, expr;
-        
-        head = "function(" + this.joinList(node.params) + ")";
-        
-        if (node.body.type === "FunctionBody") {
-        
-            body = node.body.text;
-        
-        } else {
-        
-            body = "{ return " + node.body.text + "; }";
-        }
-
-        return "(" + head + " " + body + ")";
-    },
-    
-    ThisExpression: function(node) {
-    
-        var fn = this.parentFunction(node);
-        
-        if (fn.type === "ArrowFunction") {
-        
-            while (fn = this.parentFunction(fn))
-                if (fn.type !== "ArrowFunction")
-                    fn.createThisBinding = true;
-            
-            return "__this";
-        }
-    },
-    
-    ClassDeclaration: function(node) {
-    
-        return "var " + node.ident.text + " = es6now.Class(" + 
-            (node.base ? (node.base.text + ", ") : "") +
-            "function(__super) { return " +
-            node.body.text + "});";
-    },
-    
-    ClassExpression: function(node) {
-    
-        var before = "", 
-            after = "";
-        
-        if (node.ident) {
-        
-            before = "(function() { var " + node.ident.text + " = ";
-            after = "; return " + node.ident.text + "; })()";
-        }
-        
-        return before + 
-            "es6now.Class(" + 
-            (node.base ? (node.base.text + ", ") : "") +
-            "function(__super) { return" +
-            node.body.text + "})" +
-            after;
-    },
-    
-    ClassBody: function(node) {
-    
-        var elems = node.elements, 
-            e,
-            i;
-        
-        for (i = elems.length; i--;) {
-        
-            e = elems[i];
-            
-            if (e.static)
-                e.text = e.text.replace(/^static\s+/, "");
-            
-            if (i < elems.length - 1)
-                e.text += ",";
-        }
-    },
-    
-    TemplateExpression: function(node) {
-    
-        var lit = node.literals,
-            sub = node.substitutions,
-            out = "",
-            i;
-        
-        for (i = 0; i < lit.length; ++i) {
-        
-            if (i > 0)
-                out += " + (" + sub[i - 1].text + ") + ";
-            
-            out += JSON.stringify(lit[i].value);
-        }
-        
-        return out;
-    },
-    
-    parentFunction: function(node) {
-    
-        for (var p = node.parentNode; p; p = p.parentNode) {
-        
-            switch (p.type) {
-            
-                case "ArrowFunction":
-                case "FunctionDeclaration":
-                case "FunctionExpression":
-                case "MethodDefinition":
-                case "Script":
-                case "Module":
-                    return p;
-            }
-        }
-        
-        return null;
-    },
-    
-    hasThisRef: function(node) {
-    
-        var hasThis = {};
-        
-        try { 
-        
-            visit(node);
-        
-        } catch (err) { 
-        
-            if (err === hasThis) return true; 
-            else throw err;
-        }
-        
-        return false;
-        
-        function visit(node) {
-        
-            if (node.type === "FunctionExpression" || 
-                node.type === "FunctionDeclaration")
-                return;
-            
-            if (node.type === "ThisExpression")
-                throw hasThis;
-            
-            Parser.forEachChild(node, visit);
-        }
-    },
-    
-    moduleIdent: function(url) {
-    
-        url = url.trim();
-        
-        if (NODE_SCHEMA.test(url))
-            url = url.replace(NODE_SCHEMA, "");
-        else if (!HAS_SCHEMA.test(url) && url.charAt(0) !== "/")
-            url = "./" + url;
-        
-        if (typeof this.imports[url] !== "string") {
-        
-            this.imports[url] = "_M" + (this.uid++);
-            this.dependencies.push(url);
-        }
-        
-        return this.imports[url];
-    },
-    
-    stringify: function(node) {
-        
-        var offset = node.start,
-            input = this.input,
-            text = "";
-        
-        // Build text from child nodes
-        Parser.forEachChild(node, (function(child) {
-        
-            if (offset < child.start)
-                text += input.slice(offset, child.start);
-            
-            text += child.text;
-            offset = child.end;
-        }));
-        
-        if (offset < node.end)
-            text += input.slice(offset, node.end);
-        
-        return text;
-    },
-    
-    joinList: function(list) {
-    
-        var input = this.input,
-            offset = -1, 
-            text = "";
-        
-        list.forEach((function(child) {
-        
-            if (offset >= 0 && offset < child.start)
-                text += input.slice(offset, child.start);
-            
-            text += child.text;
-            offset = child.end;
-        }));
-        
-        return text;
-    }
-
-}});
-
-exports.Replacer = Replacer;
-};
-
-__modules[15] = function(exports) {
 /*
 
 Provides basic support for methods added in EcmaScript 5 for EcmaScript 4 browsers.
@@ -2721,73 +567,689 @@ function emulate() {
     
 }
 
-exports.addKeys = addKeys;
-exports.emulate = emulate;
-};
 
-__modules[16] = function(exports) {
-var _M0 = __init(17); Object.keys(_M0).forEach(function(k) { exports[k] = _M0[k]; });
-};
+exports.addKeys = addKeys; exports.emulate = emulate; return exports; }).call(this, {});
 
-__modules[17] = function(exports) {
-var _M0 = __init(18), _M1 = __init(19), _M2 = __init(20); var Node = _M0;
-var Parser = _M1.Parser;
-var Scanner = _M2.Scanner;
+var ES6 = (function(exports) {
 
+var ES5 = ES5_;
 
+var global = this,
+    HAS_OWN = Object.prototype.hasOwnProperty;
 
-function parseModule(input, options) {
+function addProps(obj, props) {
 
-    return new Parser(input, options).parseModule();
+    Object.keys(props).forEach((function(k) {
+    
+        if (typeof obj[k] !== "undefined")
+            return;
+        
+        Object.defineProperty(obj, k, {
+        
+            value: props[k],
+            configurable: true,
+            enumerable: false,
+            writable: true
+        });
+    }));
 }
 
-function parseScript(input, options) {
+function emulate() {
 
-    return new Parser(input, options).parseScript();
-}
+    ES5.emulate();
 
-function forEachChild(node, fn) {
-
-    var keys = Object.keys(node), val, i, j;
+    addProps(Object, {
     
-    for (i = 0; i < keys.length; ++i) {
-    
-        if (keys[i] === "parentNode")
-            continue;
+        is: function(a, b) {
+        
+            // TODO
+        },
+        
+        assign: function(target, source) {
+        
+            Object.keys(source).forEach((function(k) { return target[k] = source[k]; }));
+            return target;
+        },
+        
+        mixin: function(target, source) {
+        
+            Object.getOwnPropertyNames(source).forEach((function(name) {
             
-        val = node[keys[i]];
+                var desc = Object.getOwnPropertyDescriptor(source, name);
+                Object.defineProperty(target, name, desc);
+            }));
+            
+            return target;
+        }
+    });
+    
+    addProps(Number, {
+    
+        EPSILON: Number.EPSILON || (function() {
         
-        // Skip non-objects
-        if (!val || typeof val !== "object") 
-            continue;
+            var next, result;
+            
+            for (next = 1; 1 + next !== 1; next = next / 2)
+                result = next;
+            
+            return result;
+        }()),
         
-        if (typeof val.type === "string") {
+        MAX_INTEGER: 9007199254740992,
         
-            // Nodes have a "type" property
-            fn(val);
+        isFinite: function(val) {
+            
+            return typeof val === "number" && isFinite(val);
+        },
         
+        isNaN: function(val) {
+        
+            return typeof val === "number" && isNaN(val);
+        },
+        
+        isInteger: function(val) {
+        
+            typeof val === "number" && val | 0 === val;
+        },
+        
+        toInteger: function(val) {
+            
+            return val | 0;
+        }
+    });
+    
+    addProps(Array, {
+    
+        from: function(arg) {
+            // TODO
+        },
+        
+        of: function() {
+            // ?
+        }
+    
+    });
+    
+    addProps(String.prototype, {
+        
+        repeat: function(count) {
+        
+            return new Array(count + 1).join(this);
+        },
+        
+        startsWith: function(search, start) {
+        
+            return this.indexOf(search, start) === start;
+        },
+        
+        endsWith: function(search, end) {
+        
+            return this.slice(-search.length) === search;
+        },
+        
+        contains: function(search, pos) {
+        
+            return this.indexOf(search, pos) !== -1;
+        }
+    });
+    
+    if (typeof Map === "undefined") global.Map = (function() {
+    
+        function Map() {
+        
+        }
+        
+        return Map;
+        
+    })();
+    
+    if (typeof Set === "undefined") global.Set = (function() {
+    
+        function Set() {
+        
+        }
+        
+        return Set;
+        
+    })();
+    
+    if (typeof Reflect === "undefined") global.Reflect = {
+    
+        hasOwn: function(obj, name) { return HAS_OWN.call(obj, name); }
+    };
+    
+}
+
+
+
+
+exports.emulate = emulate; return exports; }).call(this, {});
+
+var es6nowRuntime = (function(exports) {
+
+var Class = Class_.Class;
+var emulate = ES6.emulate;
+
+this.__class = Class;
+
+emulate();
+
+
+return exports; }).call(this, {});
+
+var Runtime_ = (function(exports) {
+
+Object.keys(es6nowRuntime).forEach(function(k) { exports[k] = es6nowRuntime[k]; });
+
+return exports; }).call(this, {});
+
+var Promise_ = (function(exports) {
+
+var EventLoop = (function(exports) {
+
+    var queueOuter;
+    
+    var process = this.process,
+        window = this.window,
+        msgChannel = null,
+        list = [];
+    
+    if (process && typeof process.nextTick === "function") {
+    
+        queueOuter = process.nextTick;
+        
+    } else if (typeof setImmediate === "function") {
+    
+        queueOuter = window ?
+            window.setImmediate.bind(window) :
+            setImmediate;
+   
+    } else if (window && window.MessageChannel) {
+        
+        msgChannel = new window.MessageChannel();
+        msgChannel.port1.onmessage = (function($) { if (list.length) list.shift()(); });
+    
+        queueOuter = (function(fn) {
+        
+            list.push(fn);
+            msgChannel.port2.postMessage(0);
+        });
+    
+    } else {
+    
+        queueOuter = (function(fn) { return setTimeout(fn, 0); });
+    }
+exports.queueOuter = queueOuter; return exports; }).call(this, {});
+
+var queueOuter = EventLoop.queueOuter;
+
+var queue = [],
+    throwList = [],
+    waiting = false;
+
+var PENDING = 0,
+    FULFILLED = 1,
+    REJECTED = 2;
+
+// Enqueues a future callback dispatch
+function enqueue(fn) {
+
+    queue.push(fn);
+    
+    if (!waiting) {
+    
+        waiting = true;
+        queueOuter(flush);
+    }
+}
+
+// Flushes the message queue
+function flush() {
+
+    var count;
+    
+    // Send each message in queue
+    while (queue.length > 0)
+        for (count = queue.length; count > 0; --count)
+            queue.shift()();
+    
+    waiting = false;
+    
+    checkpoint();
+}
+
+// Forces a checkpoint on the future graph, throwing an error
+// if any rejected nodes do not have outgoing edges
+function checkpoint() {
+
+    var item;
+
+    while (throwList.length) {
+    
+        item = throwList.shift();
+        
+        if (item.resolver.throwable)
+            throw item.error;
+    }
+}
+
+// Promise class
+function Promise(init) {
+
+    var fulfillList = [],
+        rejectList = [],
+        value = null,
+        state = PENDING,
+        future = this,
+        resolver;
+
+    this.then = then;
+    this.catch = (function(onReject) { return then(null, onReject); });
+    
+    init.call(this, resolver = { fulfill: fulfill, resolve: resolve, reject: reject, throwable: false });
+
+    // Dispatch function for future
+    function dispatch() {
+
+        var list = state === FULFILLED ? fulfillList : rejectList;
+        
+        while (list.length)
+            list.shift()(value);
+        
+        fulfillList = [];
+        rejectList = [];
+    }
+    
+    // Resolves the future with a value
+    function fulfill(val) {
+    
+        if (state) return;
+        
+        value = val;
+        state = FULFILLED;
+        enqueue(dispatch);
+    }
+
+    // Resolves the future
+    function resolve(value) {
+
+        if (state) return;
+        
+        if (value && typeof value.then === "function") {
+        
+            try { value.then(fulfill, reject); }
+            catch (ex) { reject(ex); }
+            
         } else {
         
-            // Iterate arrays
-            for (j = 0; j < (val.length >>> 0); ++j)
-                if (val[j] && typeof val[j].type === "string")
-                    fn(val[j]);
+            fulfill(value);
+        }
+    }
+
+    // Resolves the future with an error
+    function reject(error) {
+
+        if (state) return;
+        
+        value = error;
+        state = REJECTED;
+        enqueue(dispatch);
+        
+        if (resolver.throwable)
+            throwList.push({ resolver: resolver, error: error });
+    }
+    
+    // Chains a future
+    function then(onFulfill, onReject) {
+    
+        if (typeof onFulfill !== "function") onFulfill = null;
+        if (typeof onReject !== "function") onReject = null;
+            
+        var done = false,
+            resolveNext,
+            rejectNext;
+        
+        var next = new Promise((function(r) {
+        
+            // Nodes with incomming edges are throwable
+            r.throwable = true;
+            resolveNext = r.resolve;
+            rejectNext = r.reject;
+        }));
+        
+        // Nodes with outgoing edges are not throwable
+        resolver.throwable = false;
+        
+        // Add sucess and error handlers
+        fulfillList.push((function(value) { return transform(value, false); }));
+        rejectList.push((function(value) { return transform(value, true); }));
+        
+        // Dispatch handlers if future is resolved
+        if (state) enqueue(dispatch);
+        
+        return next;
+        
+        function transform(value, rejected) {
+        
+            if (done) return;
+            done = true;
+           
+            var fn = rejected ? onReject : onFulfill;
+            
+            if (fn) {
+            
+                try { 
+                
+                    value = fn.call(next, value);
+                    rejected = false;
+                
+                } catch (ex) { 
+                
+                    value = ex;
+                    rejected = true;
+                }
+            }
+            
+            if (rejected) rejectNext(value);
+            else resolveNext(value);
         }
     }
 }
 
+Promise.resolve = (function(value) { return new Promise((function(r) { return r.resolve(value); })); });
 
-exports.Parser = Parser;
-exports.Scanner = Scanner;
-exports.Node = Node;
-exports.parseModule = parseModule;
-exports.parseScript = parseScript;
-exports.forEachChild = forEachChild;
-};
+Promise.fulfill = (function(value) { return new Promise((function(r) { return r.fulfill(value); })); });
 
-__modules[18] = function(exports) {
+Promise.reject = (function(value) { return new Promise((function(r) { return r.reject(value); })); });
 
-var Script = es6now.Class(function(__super) { return {
+Promise.any = (function(values) { return new Promise((function(resolver) {
+
+    var empty = true;
+    
+    values.forEach((function(value) {
+    
+        empty = false;
+        Promise.resolve(value).then(resolver.resolve, resolver.reject);
+    }));
+    
+    if (empty) 
+        resolver.resolve(void 0);
+})); });
+
+Promise.all = (function(values) { return new Promise((function(resolver) {
+
+    var results = [],
+        remaining = 0;
+    
+    values.forEach((function(value, index) {
+    
+        ++remaining;
+        
+        Promise.resolve(value).then((function(v) {
+        
+            results[index] = v;
+            
+            if (--remaining === 0)
+                resolver.resolve(results);
+        
+        }), resolver.reject);
+    }));
+    
+    if (remaining === 0) 
+        resolver.resolve(void 0);
+})); });
+
+Promise.some = (function(values) { return new Promise((function(resolver) {
+
+    var errors = [],
+        remaining = 0;
+    
+    values.forEach((function(value, index) {
+    
+        ++remaining;
+        
+        Promise.resolve(value).then(resolver.resolve, (function(err) {
+        
+            errors[index] = err;
+            
+            if (--remaining === 0)
+                resolver.reject(errors);
+        }));
+    }));
+    
+    if (remaining === 0) 
+        resolver.resolve(void 0);
+})); });
+
+
+exports.Promise = Promise; return exports; }).call(this, {});
+
+var AsyncFS = (function(exports) {
+
+var FS = _M0;
+
+var Promise = Promise_.Promise;
+
+// Wraps a standard Node async function with a promise
+// generating function
+function wrap(obj, name) {
+
+	return function() {
+	
+		var a = [].slice.call(arguments, 0);
+		
+		var promise = new Promise((function(resolver) {
+		
+            a.push((function(err, data) {
+        
+                if (err) resolver.reject(err);
+                else resolver.resolve(data);
+            }));
+        }));
+		
+		if (name) obj[name].apply(obj, a);
+    	else obj.apply(null, a);
+		
+		return promise;
+	};
+}
+
+var 
+    exists = wrap(FS.exists),
+    readFile = wrap(FS.readFile),
+    close = wrap(FS.close),
+    open = wrap(FS.open),
+    read = wrap(FS.read),
+    write = wrap(FS.write),
+    rename = wrap(FS.rename),
+    truncate = wrap(FS.truncate),
+    rmdir = wrap(FS.rmdir),
+    fsync = wrap(FS.fsync),
+    mkdir = wrap(FS.mkdir),
+    sendfile = wrap(FS.sendfile),
+    readdir = wrap(FS.readdir),
+    fstat = wrap(FS.fstat),
+    lstat = wrap(FS.lstat),
+    stat = wrap(FS.stat),
+    readlink = wrap(FS.readlink),
+    symlink = wrap(FS.symlink),
+    link = wrap(FS.link),
+    unlink = wrap(FS.unlink),
+    fchmod = wrap(FS.fchmod),
+    lchmod = wrap(FS.lchmod),
+    chmod = wrap(FS.chmod),
+    lchown = wrap(FS.lchown),
+    fchown = wrap(FS.fchown),
+    chown = wrap(FS.chown),
+    utimes = wrap(FS.utimes),
+    futimes = wrap(FS.futimes),
+    writeFile = wrap(FS.writeFile),
+    appendFile = wrap(FS.appendFile),
+    realpath = wrap(FS.realpath);
+
+
+exports.exists = exists; exports.readFile = readFile; exports.close = close; exports.open = open; exports.read = read; exports.write = write; exports.rename = rename; exports.truncate = truncate; exports.rmdir = rmdir; exports.fsync = fsync; exports.mkdir = mkdir; exports.sendfile = sendfile; exports.readdir = readdir; exports.fstat = fstat; exports.lstat = lstat; exports.stat = stat; exports.readlink = readlink; exports.symlink = symlink; exports.link = link; exports.unlink = unlink; exports.fchmod = fchmod; exports.lchmod = lchmod; exports.chmod = chmod; exports.lchown = lchown; exports.fchown = fchown; exports.chown = chown; exports.utimes = utimes; exports.futimes = futimes; exports.writeFile = writeFile; exports.appendFile = appendFile; exports.realpath = realpath; return exports; }).call(this, {});
+
+var AsyncFS_ = (function(exports) {
+
+Object.keys(AsyncFS).forEach(function(k) { exports[k] = AsyncFS[k]; });
+
+return exports; }).call(this, {});
+
+var AsyncFS__ = (function(exports) {
+
+Object.keys(AsyncFS).forEach(function(k) { exports[k] = AsyncFS[k]; });
+
+return exports; }).call(this, {});
+
+var PromiseFlow = (function(exports) {
+
+var Promise = Promise_.Promise;
+
+function iterate(fn) {
+
+    var done = false,
+        stop = (function(val) { done = true; return val; }),
+        next = (function(last) { return done ? last : Promise.resolve(fn(stop)).then(next); });
+    
+    return Promise.resolve().then(next);
+}
+
+function forEach(list, fn) {
+
+    var i = -1;
+    return iterate((function(stop) { return (++i >= list.length) ? stop() : fn(list[i], i, list); }));
+}
+
+
+exports.iterate = iterate; exports.forEach = forEach; return exports; }).call(this, {});
+
+var Promise__ = (function(exports) {
+
+Object.keys(Promise_).forEach(function(k) { exports[k] = Promise_[k]; });
+Object.keys(PromiseFlow).forEach(function(k) { exports[k] = PromiseFlow[k]; });
+
+return exports; }).call(this, {});
+
+var StringMap__ = (function(exports) {
+
+var HAS = Object.prototype.hasOwnProperty;
+
+var StringMap = __class(function(__super) { return {
+
+    constructor: function() {
+    
+        this._map = {};
+    },
+    
+    get: function(key) {
+    
+        if (HAS.call(this._map, key))
+            return this._map[key];
+    },
+    
+    set: function(key, value) {
+    
+        this._map[key] = value;
+        return this;
+    },
+    
+    has: function(key) {
+    
+        return HAS.call(this._map, key);
+    },
+    
+    delete: function(key) {
+    
+        if (!HAS.call(this._map, key))
+            return false;
+        
+        delete this.map[key];
+        return true;
+    },
+    
+    clear: function() {
+    
+        this._map = {};
+    },
+    
+    keys: function() {
+    
+        return Object.keys(this._map);
+    },
+    
+    forEach: function(fn, thisArg) {
+    
+        var keys = this.keys(), i;
+        
+        for (i = 0; i < keys.length; ++i)
+            fn.call(thisArg, this._map[keys[i]], keys[i], this);
+    }
+}});
+
+exports.StringMap = StringMap; return exports; }).call(this, {});
+
+var StringMap_ = (function(exports) {
+
+Object.keys(StringMap__).forEach(function(k) { exports[k] = StringMap__[k]; });
+
+return exports; }).call(this, {});
+
+var StringSet = (function(exports) {
+
+var StringMap = StringMap__.StringMap;
+
+var StringSet = __class(function(__super) { return {
+
+    constructor: function() {
+    
+        this._map = new StringMap;
+    },
+    
+    has: function(key) {
+    
+        return this._map.has(key);
+    },
+    
+    add: function(key) {
+    
+        this._map.set(key, key);
+        return this;
+    },
+    
+    delete: function(key) {
+    
+        return this._map.delete(key);
+    },
+    
+    clear: function() {
+    
+        this._map.clear();
+    },
+    
+    keys: function() {
+    
+        return this._map.keys();
+    },
+    
+    forEach: function(fn, thisArg) { var __this = this; 
+    
+        this._map.forEach((function(value, key) { return fn.call(thisArg, value, key, __this); }));
+    }
+}});
+
+exports.StringSet = StringSet; return exports; }).call(this, {});
+
+var StringSet_ = (function(exports) {
+
+Object.keys(StringSet).forEach(function(k) { exports[k] = StringSet[k]; });
+
+return exports; }).call(this, {});
+
+var TreeNode = (function(exports) {
+
+
+var Script = __class(function(__super) { return {
 
     constructor: function(statements, start, end) {
     
@@ -2798,7 +1260,7 @@ var Script = es6now.Class(function(__super) { return {
     }
 }});
 
-var Module = es6now.Class(function(__super) { return {
+var Module = __class(function(__super) { return {
 
     constructor: function(statements, start, end) {
     
@@ -2809,7 +1271,7 @@ var Module = es6now.Class(function(__super) { return {
     }
 }});
 
-var Identifier = es6now.Class(function(__super) { return {
+var Identifier = __class(function(__super) { return {
 
     constructor: function(value, context, start, end) {
     
@@ -2821,7 +1283,7 @@ var Identifier = es6now.Class(function(__super) { return {
     }
 }});
 
-var Number = es6now.Class(function(__super) { return {
+var Number = __class(function(__super) { return {
 
     constructor: function(value, start, end) {
     
@@ -2832,7 +1294,7 @@ var Number = es6now.Class(function(__super) { return {
     }
 }});
 
-var String = es6now.Class(function(__super) { return {
+var String = __class(function(__super) { return {
 
     constructor: function(value, start, end) {
     
@@ -2843,7 +1305,7 @@ var String = es6now.Class(function(__super) { return {
     }
 }});
 
-var Template = es6now.Class(function(__super) { return {
+var Template = __class(function(__super) { return {
 
     constructor: function(value, isEnd, start, end) {
     
@@ -2855,7 +1317,7 @@ var Template = es6now.Class(function(__super) { return {
     }
 }});
 
-var RegularExpression = es6now.Class(function(__super) { return {
+var RegularExpression = __class(function(__super) { return {
 
     constructor: function(value, flags, start, end) {
     
@@ -2867,7 +1329,7 @@ var RegularExpression = es6now.Class(function(__super) { return {
     }
 }});
 
-var Null = es6now.Class(function(__super) { return {
+var Null = __class(function(__super) { return {
 
     constructor: function(start, end) {
     
@@ -2877,7 +1339,7 @@ var Null = es6now.Class(function(__super) { return {
     }
 }});
 
-var Boolean = es6now.Class(function(__super) { return {
+var Boolean = __class(function(__super) { return {
 
     constructor: function(value, start, end) {
     
@@ -2888,7 +1350,7 @@ var Boolean = es6now.Class(function(__super) { return {
     }
 }});
 
-var ThisExpression = es6now.Class(function(__super) { return {
+var ThisExpression = __class(function(__super) { return {
 
     constructor: function(start, end) {
     
@@ -2898,7 +1360,7 @@ var ThisExpression = es6now.Class(function(__super) { return {
     }
 }});
 
-var SuperExpression = es6now.Class(function(__super) { return {
+var SuperExpression = __class(function(__super) { return {
 
     constructor: function(start, end) {
     
@@ -2908,7 +1370,7 @@ var SuperExpression = es6now.Class(function(__super) { return {
     }
 }});
 
-var SequenceExpression = es6now.Class(function(__super) { return {
+var SequenceExpression = __class(function(__super) { return {
 
     constructor: function(list, start, end) {
     
@@ -2919,7 +1381,7 @@ var SequenceExpression = es6now.Class(function(__super) { return {
     }
 }});
 
-var AssignmentExpression = es6now.Class(function(__super) { return {
+var AssignmentExpression = __class(function(__super) { return {
 
     constructor: function(op, left, right, start, end) {
     
@@ -2932,7 +1394,7 @@ var AssignmentExpression = es6now.Class(function(__super) { return {
     }
 }});
 
-var SpreadExpression = es6now.Class(function(__super) { return {
+var SpreadExpression = __class(function(__super) { return {
 
     constructor: function(expr, start, end) {
     
@@ -2943,7 +1405,7 @@ var SpreadExpression = es6now.Class(function(__super) { return {
     }
 }});
 
-var YieldExpression = es6now.Class(function(__super) { return {
+var YieldExpression = __class(function(__super) { return {
 
     constructor: function(expr, delegate, start, end) {
     
@@ -2955,7 +1417,7 @@ var YieldExpression = es6now.Class(function(__super) { return {
     }
 }});
 
-var ConditionalExpression = es6now.Class(function(__super) { return {
+var ConditionalExpression = __class(function(__super) { return {
 
     constructor: function(test, cons, alt, start, end) {
     
@@ -2968,7 +1430,7 @@ var ConditionalExpression = es6now.Class(function(__super) { return {
     }
 }});
 
-var BinaryExpression = es6now.Class(function(__super) { return {
+var BinaryExpression = __class(function(__super) { return {
 
     constructor: function(op, left, right, start, end) {
     
@@ -2981,7 +1443,7 @@ var BinaryExpression = es6now.Class(function(__super) { return {
     }
 }});
 
-var UpdateExpression = es6now.Class(function(__super) { return {
+var UpdateExpression = __class(function(__super) { return {
 
     constructor: function(op, expr, prefix, start, end) {
     
@@ -2994,7 +1456,7 @@ var UpdateExpression = es6now.Class(function(__super) { return {
     }
 }});
 
-var UnaryExpression = es6now.Class(function(__super) { return {
+var UnaryExpression = __class(function(__super) { return {
 
     constructor: function(op, expr, start, end) {
     
@@ -3006,7 +1468,7 @@ var UnaryExpression = es6now.Class(function(__super) { return {
     }
 }});
 
-var MemberExpression = es6now.Class(function(__super) { return {
+var MemberExpression = __class(function(__super) { return {
 
     constructor: function(obj, prop, computed, start, end) {
     
@@ -3019,7 +1481,7 @@ var MemberExpression = es6now.Class(function(__super) { return {
     }
 }});
 
-var CallExpression = es6now.Class(function(__super) { return {
+var CallExpression = __class(function(__super) { return {
 
     constructor: function(callee, args, start, end) {
     
@@ -3031,7 +1493,7 @@ var CallExpression = es6now.Class(function(__super) { return {
     }
 }});
 
-var TaggedTemplateExpression = es6now.Class(function(__super) { return {
+var TaggedTemplateExpression = __class(function(__super) { return {
 
     constructor: function(tag, template, start, end) {
     
@@ -3043,7 +1505,7 @@ var TaggedTemplateExpression = es6now.Class(function(__super) { return {
     }
 }});
 
-var NewExpression = es6now.Class(function(__super) { return {
+var NewExpression = __class(function(__super) { return {
 
     constructor: function(callee, args, start, end) {
     
@@ -3055,7 +1517,7 @@ var NewExpression = es6now.Class(function(__super) { return {
     }
 }});
 
-var ParenExpression = es6now.Class(function(__super) { return {
+var ParenExpression = __class(function(__super) { return {
     
     constructor: function(expr, start, end) {
     
@@ -3066,7 +1528,7 @@ var ParenExpression = es6now.Class(function(__super) { return {
     }
 }});
 
-var ObjectExpression = es6now.Class(function(__super) { return {
+var ObjectExpression = __class(function(__super) { return {
 
     constructor: function(props, start, end) {
     
@@ -3077,7 +1539,7 @@ var ObjectExpression = es6now.Class(function(__super) { return {
     }
 }});
 
-var PropertyDefinition = es6now.Class(function(__super) { return {
+var PropertyDefinition = __class(function(__super) { return {
 
     constructor: function(name, expr, start, end) {
     
@@ -3089,7 +1551,7 @@ var PropertyDefinition = es6now.Class(function(__super) { return {
     }
 }});
 
-var CoveredPatternProperty = es6now.Class(function(__super) { return {
+var CoveredPatternProperty = __class(function(__super) { return {
 
     constructor: function(name, pattern, init, start, end) {
     
@@ -3102,7 +1564,7 @@ var CoveredPatternProperty = es6now.Class(function(__super) { return {
     }
 }});
 
-var MethodDefinition = es6now.Class(function(__super) { return {
+var MethodDefinition = __class(function(__super) { return {
 
     constructor: function(modifier, name, params, body, start, end) {
     
@@ -3116,7 +1578,7 @@ var MethodDefinition = es6now.Class(function(__super) { return {
     }
 }});
 
-var ArrayExpression = es6now.Class(function(__super) { return {
+var ArrayExpression = __class(function(__super) { return {
 
     constructor: function(elements, start, end) {
     
@@ -3127,7 +1589,7 @@ var ArrayExpression = es6now.Class(function(__super) { return {
     }
 }});
 
-var ArrayComprehension = es6now.Class(function(__super) { return {
+var ArrayComprehension = __class(function(__super) { return {
 
     constructor: function(qualifiers, expr, start, end) {
     
@@ -3139,7 +1601,7 @@ var ArrayComprehension = es6now.Class(function(__super) { return {
     }
 }});
 
-var GeneratorComprehension = es6now.Class(function(__super) { return {
+var GeneratorComprehension = __class(function(__super) { return {
 
     constructor: function(qualifiers, expr, start, end) {
     
@@ -3151,7 +1613,7 @@ var GeneratorComprehension = es6now.Class(function(__super) { return {
     }
 }});
 
-var ComprehensionFor = es6now.Class(function(__super) { return {
+var ComprehensionFor = __class(function(__super) { return {
 
     constructor: function(left, right, start, end) {
     
@@ -3163,7 +1625,7 @@ var ComprehensionFor = es6now.Class(function(__super) { return {
     }
 }});
 
-var ComprehensionIf = es6now.Class(function(__super) { return {
+var ComprehensionIf = __class(function(__super) { return {
 
     constructor: function(test, start, end) {
     
@@ -3174,7 +1636,7 @@ var ComprehensionIf = es6now.Class(function(__super) { return {
     }
 }});
 
-var TemplateExpression = es6now.Class(function(__super) { return {
+var TemplateExpression = __class(function(__super) { return {
 
     constructor: function(lits, subs, start, end) {
     
@@ -3186,7 +1648,7 @@ var TemplateExpression = es6now.Class(function(__super) { return {
     }
 }});
 
-var Block = es6now.Class(function(__super) { return {
+var Block = __class(function(__super) { return {
 
     constructor: function(statements, start, end) {
     
@@ -3197,7 +1659,7 @@ var Block = es6now.Class(function(__super) { return {
     }
 }});
 
-var LabelledStatement = es6now.Class(function(__super) { return {
+var LabelledStatement = __class(function(__super) { return {
 
     constructor: function(label, statement, start, end) {
     
@@ -3209,7 +1671,7 @@ var LabelledStatement = es6now.Class(function(__super) { return {
     }
 }});
 
-var ExpressionStatement = es6now.Class(function(__super) { return {
+var ExpressionStatement = __class(function(__super) { return {
 
     constructor: function(expr, start, end) {
     
@@ -3221,7 +1683,7 @@ var ExpressionStatement = es6now.Class(function(__super) { return {
     }
 }});
 
-var EmptyStatement = es6now.Class(function(__super) { return {
+var EmptyStatement = __class(function(__super) { return {
 
     constructor: function(start, end) {
     
@@ -3231,7 +1693,7 @@ var EmptyStatement = es6now.Class(function(__super) { return {
     }
 }});
 
-var VariableDeclaration = es6now.Class(function(__super) { return {
+var VariableDeclaration = __class(function(__super) { return {
 
     constructor: function(keyword, list, start, end) {
     
@@ -3243,7 +1705,7 @@ var VariableDeclaration = es6now.Class(function(__super) { return {
     }
 }});
 
-var VariableDeclarator = es6now.Class(function(__super) { return {
+var VariableDeclarator = __class(function(__super) { return {
 
     constructor: function(pattern, init, start, end) {
     
@@ -3255,7 +1717,7 @@ var VariableDeclarator = es6now.Class(function(__super) { return {
     }
 }});
 
-var ReturnStatement = es6now.Class(function(__super) { return {
+var ReturnStatement = __class(function(__super) { return {
 
     constructor: function(arg, start, end) {
     
@@ -3266,7 +1728,7 @@ var ReturnStatement = es6now.Class(function(__super) { return {
     }
 }});
 
-var BreakStatement = es6now.Class(function(__super) { return {
+var BreakStatement = __class(function(__super) { return {
 
     constructor: function(label, start, end) {
     
@@ -3276,7 +1738,7 @@ var BreakStatement = es6now.Class(function(__super) { return {
     }
 }});
 
-var ContinueStatement = es6now.Class(function(__super) { return {
+var ContinueStatement = __class(function(__super) { return {
 
     constructor: function(label, start, end) {
     
@@ -3286,7 +1748,7 @@ var ContinueStatement = es6now.Class(function(__super) { return {
     }
 }});
 
-var ThrowStatement = es6now.Class(function(__super) { return {
+var ThrowStatement = __class(function(__super) { return {
 
     constructor: function(expr, start, end) {
     
@@ -3297,7 +1759,7 @@ var ThrowStatement = es6now.Class(function(__super) { return {
     }
 }});
 
-var DebuggerStatement = es6now.Class(function(__super) { return {
+var DebuggerStatement = __class(function(__super) { return {
 
     constructor: function(start, end) {
     
@@ -3307,7 +1769,7 @@ var DebuggerStatement = es6now.Class(function(__super) { return {
     }
 }});
 
-var IfStatement = es6now.Class(function(__super) { return {
+var IfStatement = __class(function(__super) { return {
 
     constructor: function(test, cons, alt, start, end) {
     
@@ -3320,7 +1782,7 @@ var IfStatement = es6now.Class(function(__super) { return {
     }
 }});
 
-var DoWhileStatement = es6now.Class(function(__super) { return {
+var DoWhileStatement = __class(function(__super) { return {
 
     constructor: function(body, test, start, end) {
     
@@ -3332,7 +1794,7 @@ var DoWhileStatement = es6now.Class(function(__super) { return {
     }
 }});
 
-var WhileStatement = es6now.Class(function(__super) { return {
+var WhileStatement = __class(function(__super) { return {
 
     constructor: function(test, body, start, end) {
     
@@ -3344,7 +1806,7 @@ var WhileStatement = es6now.Class(function(__super) { return {
     }
 }});
 
-var ForStatement = es6now.Class(function(__super) { return {
+var ForStatement = __class(function(__super) { return {
 
     constructor: function(init, test, update, body, start, end) {
     
@@ -3358,7 +1820,7 @@ var ForStatement = es6now.Class(function(__super) { return {
     }
 }});
 
-var ForInStatement = es6now.Class(function(__super) { return {
+var ForInStatement = __class(function(__super) { return {
 
     constructor: function(left, right, body, start, end) {
     
@@ -3371,7 +1833,7 @@ var ForInStatement = es6now.Class(function(__super) { return {
     }
 }});
 
-var ForOfStatement = es6now.Class(function(__super) { return {
+var ForOfStatement = __class(function(__super) { return {
 
     constructor: function(left, right, body, start, end) {
     
@@ -3384,7 +1846,7 @@ var ForOfStatement = es6now.Class(function(__super) { return {
     }
 }});
 
-var WithStatement = es6now.Class(function(__super) { return {
+var WithStatement = __class(function(__super) { return {
 
     constructor: function(object, body, start, end) {
     
@@ -3396,7 +1858,7 @@ var WithStatement = es6now.Class(function(__super) { return {
     }
 }});
 
-var SwitchStatement = es6now.Class(function(__super) { return {
+var SwitchStatement = __class(function(__super) { return {
 
     constructor: function(desc, cases, start, end) {
     
@@ -3408,7 +1870,7 @@ var SwitchStatement = es6now.Class(function(__super) { return {
     }
 }});
 
-var SwitchCase = es6now.Class(function(__super) { return {
+var SwitchCase = __class(function(__super) { return {
 
     constructor: function(test, cons, start, end) {
     
@@ -3420,7 +1882,7 @@ var SwitchCase = es6now.Class(function(__super) { return {
     }
 }});
 
-var TryStatement = es6now.Class(function(__super) { return {
+var TryStatement = __class(function(__super) { return {
 
     constructor: function(block, handler, fin, start, end) {
     
@@ -3433,7 +1895,7 @@ var TryStatement = es6now.Class(function(__super) { return {
     }
 }});
 
-var CatchClause = es6now.Class(function(__super) { return {
+var CatchClause = __class(function(__super) { return {
 
     constructor: function(param, body, start, end) {
     
@@ -3445,7 +1907,7 @@ var CatchClause = es6now.Class(function(__super) { return {
     }
 }});
 
-var FunctionDeclaration = es6now.Class(function(__super) { return {
+var FunctionDeclaration = __class(function(__super) { return {
 
     constructor: function(gen, ident, params, body, start, end) {
     
@@ -3459,7 +1921,7 @@ var FunctionDeclaration = es6now.Class(function(__super) { return {
     }
 }});
 
-var FunctionExpression = es6now.Class(function(__super) { return {
+var FunctionExpression = __class(function(__super) { return {
 
     constructor: function(gen, ident, params, body, start, end) {
     
@@ -3473,7 +1935,7 @@ var FunctionExpression = es6now.Class(function(__super) { return {
     }
 }});
 
-var FormalParameter = es6now.Class(function(__super) { return {
+var FormalParameter = __class(function(__super) { return {
 
     constructor: function(pattern, init, start, end) {
     
@@ -3485,7 +1947,7 @@ var FormalParameter = es6now.Class(function(__super) { return {
     }
 }});
 
-var RestParameter = es6now.Class(function(__super) { return {
+var RestParameter = __class(function(__super) { return {
 
     constructor: function(ident, start, end) {
     
@@ -3496,7 +1958,7 @@ var RestParameter = es6now.Class(function(__super) { return {
     }
 }});
 
-var FunctionBody = es6now.Class(function(__super) { return {
+var FunctionBody = __class(function(__super) { return {
 
     constructor: function(statements, start, end) {
     
@@ -3507,7 +1969,7 @@ var FunctionBody = es6now.Class(function(__super) { return {
     }
 }});
 
-var ArrowFunction = es6now.Class(function(__super) { return {
+var ArrowFunction = __class(function(__super) { return {
 
     constructor: function(params, body, start, end) {
     
@@ -3519,7 +1981,7 @@ var ArrowFunction = es6now.Class(function(__super) { return {
     }
 }});
 
-var ModuleDeclaration = es6now.Class(function(__super) { return {
+var ModuleDeclaration = __class(function(__super) { return {
 
     constructor: function(ident, body, start, end) {
     
@@ -3531,19 +1993,7 @@ var ModuleDeclaration = es6now.Class(function(__super) { return {
     }
 }});
 
-var CoveredModuleHead = es6now.Class(function(__super) { return {
-
-    constructor: function(first, second, start, end) {
-    
-        this.type = "CoveredModuleHead";
-        this.first = first;
-        this.second = second;
-        this.start = start;
-        this.end = end;
-    }
-}});
-
-var ModuleBody = es6now.Class(function(__super) { return {
+var ModuleBody = __class(function(__super) { return {
 
     constructor: function(statements, start, end) {
     
@@ -3554,19 +2004,19 @@ var ModuleBody = es6now.Class(function(__super) { return {
     }
 }});
 
-var ImportAsDeclaration = es6now.Class(function(__super) { return {
+var ModuleFromDeclaration = __class(function(__super) { return {
 
-    constructor: function(from, ident, start, end) {
+    constructor: function(ident, from, start, end) {
     
-        this.type = "ImportAsDeclaration";
-        this.from = from;
+        this.type = "ModuleFromDeclaration";
         this.ident = ident;
+        this.from = from;
         this.start = start;
         this.end = end;
     }
 }});
 
-var ImportDeclaration = es6now.Class(function(__super) { return {
+var ImportDeclaration = __class(function(__super) { return {
 
     constructor: function(specifiers, from, start, end) {
     
@@ -3578,7 +2028,7 @@ var ImportDeclaration = es6now.Class(function(__super) { return {
     }
 }});
 
-var ImportSpecifier = es6now.Class(function(__super) { return {
+var ImportSpecifier = __class(function(__super) { return {
 
     constructor: function(remote, local, start, end) {
     
@@ -3590,7 +2040,7 @@ var ImportSpecifier = es6now.Class(function(__super) { return {
     }
 }});
 
-var ExportDeclaration = es6now.Class(function(__super) { return {
+var ExportDeclaration = __class(function(__super) { return {
 
     constructor: function(binding, start, end) {
     
@@ -3601,7 +2051,7 @@ var ExportDeclaration = es6now.Class(function(__super) { return {
     }
 }});
 
-var ExportSpecifierSet = es6now.Class(function(__super) { return {
+var ExportSpecifierSet = __class(function(__super) { return {
 
     constructor: function(list, from, start, end) {
     
@@ -3613,7 +2063,7 @@ var ExportSpecifierSet = es6now.Class(function(__super) { return {
     }
 }});
 
-var ExportSpecifier = es6now.Class(function(__super) { return {
+var ExportSpecifier = __class(function(__super) { return {
 
     constructor: function(local, remote, start, end) {
     
@@ -3625,7 +2075,7 @@ var ExportSpecifier = es6now.Class(function(__super) { return {
     }
 }});
 
-var ModulePath = es6now.Class(function(__super) { return {
+var ModulePath = __class(function(__super) { return {
     
     constructor: function(list, start, end) {
     
@@ -3636,7 +2086,7 @@ var ModulePath = es6now.Class(function(__super) { return {
     }
 }});
 
-var ClassDeclaration = es6now.Class(function(__super) { return {
+var ClassDeclaration = __class(function(__super) { return {
 
     constructor: function(ident, base, body, start, end) {
     
@@ -3649,7 +2099,7 @@ var ClassDeclaration = es6now.Class(function(__super) { return {
     }
 }});
 
-var ClassExpression = es6now.Class(function(__super) { return {
+var ClassExpression = __class(function(__super) { return {
 
     constructor: function(ident, base, body, start, end) {
     
@@ -3662,7 +2112,7 @@ var ClassExpression = es6now.Class(function(__super) { return {
     }
 }});
 
-var ClassBody = es6now.Class(function(__super) { return {
+var ClassBody = __class(function(__super) { return {
 
     constructor: function(elems, start, end) {
     
@@ -3673,7 +2123,7 @@ var ClassBody = es6now.Class(function(__super) { return {
     }
 }});
 
-var ClassElement = es6now.Class(function(__super) { return {
+var ClassElement = __class(function(__super) { return {
 
     constructor: function(isStatic, method, start, end) {
     
@@ -3685,90 +2135,1268 @@ var ClassElement = es6now.Class(function(__super) { return {
     }
 }});
 
-exports.Script = Script;
-exports.Module = Module;
-exports.Identifier = Identifier;
-exports.Number = Number;
-exports.String = String;
-exports.Template = Template;
-exports.RegularExpression = RegularExpression;
-exports.Null = Null;
-exports.Boolean = Boolean;
-exports.ThisExpression = ThisExpression;
-exports.SuperExpression = SuperExpression;
-exports.SequenceExpression = SequenceExpression;
-exports.AssignmentExpression = AssignmentExpression;
-exports.SpreadExpression = SpreadExpression;
-exports.YieldExpression = YieldExpression;
-exports.ConditionalExpression = ConditionalExpression;
-exports.BinaryExpression = BinaryExpression;
-exports.UpdateExpression = UpdateExpression;
-exports.UnaryExpression = UnaryExpression;
-exports.MemberExpression = MemberExpression;
-exports.CallExpression = CallExpression;
-exports.TaggedTemplateExpression = TaggedTemplateExpression;
-exports.NewExpression = NewExpression;
-exports.ParenExpression = ParenExpression;
-exports.ObjectExpression = ObjectExpression;
-exports.PropertyDefinition = PropertyDefinition;
-exports.CoveredPatternProperty = CoveredPatternProperty;
-exports.MethodDefinition = MethodDefinition;
-exports.ArrayExpression = ArrayExpression;
-exports.ArrayComprehension = ArrayComprehension;
-exports.GeneratorComprehension = GeneratorComprehension;
-exports.ComprehensionFor = ComprehensionFor;
-exports.ComprehensionIf = ComprehensionIf;
-exports.TemplateExpression = TemplateExpression;
-exports.Block = Block;
-exports.LabelledStatement = LabelledStatement;
-exports.ExpressionStatement = ExpressionStatement;
-exports.EmptyStatement = EmptyStatement;
-exports.VariableDeclaration = VariableDeclaration;
-exports.VariableDeclarator = VariableDeclarator;
-exports.ReturnStatement = ReturnStatement;
-exports.BreakStatement = BreakStatement;
-exports.ContinueStatement = ContinueStatement;
-exports.ThrowStatement = ThrowStatement;
-exports.DebuggerStatement = DebuggerStatement;
-exports.IfStatement = IfStatement;
-exports.DoWhileStatement = DoWhileStatement;
-exports.WhileStatement = WhileStatement;
-exports.ForStatement = ForStatement;
-exports.ForInStatement = ForInStatement;
-exports.ForOfStatement = ForOfStatement;
-exports.WithStatement = WithStatement;
-exports.SwitchStatement = SwitchStatement;
-exports.SwitchCase = SwitchCase;
-exports.TryStatement = TryStatement;
-exports.CatchClause = CatchClause;
-exports.FunctionDeclaration = FunctionDeclaration;
-exports.FunctionExpression = FunctionExpression;
-exports.FormalParameter = FormalParameter;
-exports.RestParameter = RestParameter;
-exports.FunctionBody = FunctionBody;
-exports.ArrowFunction = ArrowFunction;
-exports.ModuleDeclaration = ModuleDeclaration;
-exports.CoveredModuleHead = CoveredModuleHead;
-exports.ModuleBody = ModuleBody;
-exports.ImportAsDeclaration = ImportAsDeclaration;
-exports.ImportDeclaration = ImportDeclaration;
-exports.ImportSpecifier = ImportSpecifier;
-exports.ExportDeclaration = ExportDeclaration;
-exports.ExportSpecifierSet = ExportSpecifierSet;
-exports.ExportSpecifier = ExportSpecifier;
-exports.ModulePath = ModulePath;
-exports.ClassDeclaration = ClassDeclaration;
-exports.ClassExpression = ClassExpression;
-exports.ClassBody = ClassBody;
-exports.ClassElement = ClassElement;
-};
 
-__modules[19] = function(exports) {
-var _M0 = __init(18), _M1 = __init(20), _M2 = __init(21), _M3 = __init(22); var Node = _M0;
+exports.Script = Script; exports.Module = Module; exports.Identifier = Identifier; exports.Number = Number; exports.String = String; exports.Template = Template; exports.RegularExpression = RegularExpression; exports.Null = Null; exports.Boolean = Boolean; exports.ThisExpression = ThisExpression; exports.SuperExpression = SuperExpression; exports.SequenceExpression = SequenceExpression; exports.AssignmentExpression = AssignmentExpression; exports.SpreadExpression = SpreadExpression; exports.YieldExpression = YieldExpression; exports.ConditionalExpression = ConditionalExpression; exports.BinaryExpression = BinaryExpression; exports.UpdateExpression = UpdateExpression; exports.UnaryExpression = UnaryExpression; exports.MemberExpression = MemberExpression; exports.CallExpression = CallExpression; exports.TaggedTemplateExpression = TaggedTemplateExpression; exports.NewExpression = NewExpression; exports.ParenExpression = ParenExpression; exports.ObjectExpression = ObjectExpression; exports.PropertyDefinition = PropertyDefinition; exports.CoveredPatternProperty = CoveredPatternProperty; exports.MethodDefinition = MethodDefinition; exports.ArrayExpression = ArrayExpression; exports.ArrayComprehension = ArrayComprehension; exports.GeneratorComprehension = GeneratorComprehension; exports.ComprehensionFor = ComprehensionFor; exports.ComprehensionIf = ComprehensionIf; exports.TemplateExpression = TemplateExpression; exports.Block = Block; exports.LabelledStatement = LabelledStatement; exports.ExpressionStatement = ExpressionStatement; exports.EmptyStatement = EmptyStatement; exports.VariableDeclaration = VariableDeclaration; exports.VariableDeclarator = VariableDeclarator; exports.ReturnStatement = ReturnStatement; exports.BreakStatement = BreakStatement; exports.ContinueStatement = ContinueStatement; exports.ThrowStatement = ThrowStatement; exports.DebuggerStatement = DebuggerStatement; exports.IfStatement = IfStatement; exports.DoWhileStatement = DoWhileStatement; exports.WhileStatement = WhileStatement; exports.ForStatement = ForStatement; exports.ForInStatement = ForInStatement; exports.ForOfStatement = ForOfStatement; exports.WithStatement = WithStatement; exports.SwitchStatement = SwitchStatement; exports.SwitchCase = SwitchCase; exports.TryStatement = TryStatement; exports.CatchClause = CatchClause; exports.FunctionDeclaration = FunctionDeclaration; exports.FunctionExpression = FunctionExpression; exports.FormalParameter = FormalParameter; exports.RestParameter = RestParameter; exports.FunctionBody = FunctionBody; exports.ArrowFunction = ArrowFunction; exports.ModuleDeclaration = ModuleDeclaration; exports.ModuleBody = ModuleBody; exports.ModuleFromDeclaration = ModuleFromDeclaration; exports.ImportDeclaration = ImportDeclaration; exports.ImportSpecifier = ImportSpecifier; exports.ExportDeclaration = ExportDeclaration; exports.ExportSpecifierSet = ExportSpecifierSet; exports.ExportSpecifier = ExportSpecifier; exports.ModulePath = ModulePath; exports.ClassDeclaration = ClassDeclaration; exports.ClassExpression = ClassExpression; exports.ClassBody = ClassBody; exports.ClassElement = ClassElement; return exports; }).call(this, {});
 
-var Scanner = _M1.Scanner;
-var Transform = _M2.Transform;
-var Validate = _M3.Validate;
+var Scanner_ = (function(exports) {
+
+// Unicode 6.2.0 | 2012-05-23, 20:34:59 GMT [MD]
+var identifierStart = /[\x24\x41-\x5A\x5F\x61-\x7A\xAA\xB5\xBA\xC0-\xD6\xD8-\xF6\xF8-\u02C1\u02C6-\u02D1\u02E0-\u02E4\u02EC\u02EE\u0370-\u0374\u0376-\u0377\u037A-\u037D\u0386\u0388-\u038A\u038C\u038E-\u03A1\u03A3-\u03F5\u03F7-\u0481\u048A-\u0527\u0531-\u0556\u0559\u0561-\u0587\u05D0-\u05EA\u05F0-\u05F2\u0620-\u064A\u066E-\u066F\u0671-\u06D3\u06D5\u06E5-\u06E6\u06EE-\u06EF\u06FA-\u06FC\u06FF\u0710\u0712-\u072F\u074D-\u07A5\u07B1\u07CA-\u07EA\u07F4-\u07F5\u07FA\u0800-\u0815\u081A\u0824\u0828\u0840-\u0858\u08A0\u08A2-\u08AC\u0904-\u0939\u093D\u0950\u0958-\u0961\u0971-\u0977\u0979-\u097F\u0985-\u098C\u098F-\u0990\u0993-\u09A8\u09AA-\u09B0\u09B2\u09B6-\u09B9\u09BD\u09CE\u09DC-\u09DD\u09DF-\u09E1\u09F0-\u09F1\u0A05-\u0A0A\u0A0F-\u0A10\u0A13-\u0A28\u0A2A-\u0A30\u0A32-\u0A33\u0A35-\u0A36\u0A38-\u0A39\u0A59-\u0A5C\u0A5E\u0A72-\u0A74\u0A85-\u0A8D\u0A8F-\u0A91\u0A93-\u0AA8\u0AAA-\u0AB0\u0AB2-\u0AB3\u0AB5-\u0AB9\u0ABD\u0AD0\u0AE0-\u0AE1\u0B05-\u0B0C\u0B0F-\u0B10\u0B13-\u0B28\u0B2A-\u0B30\u0B32-\u0B33\u0B35-\u0B39\u0B3D\u0B5C-\u0B5D\u0B5F-\u0B61\u0B71\u0B83\u0B85-\u0B8A\u0B8E-\u0B90\u0B92-\u0B95\u0B99-\u0B9A\u0B9C\u0B9E-\u0B9F\u0BA3-\u0BA4\u0BA8-\u0BAA\u0BAE-\u0BB9\u0BD0\u0C05-\u0C0C\u0C0E-\u0C10\u0C12-\u0C28\u0C2A-\u0C33\u0C35-\u0C39\u0C3D\u0C58-\u0C59\u0C60-\u0C61\u0C85-\u0C8C\u0C8E-\u0C90\u0C92-\u0CA8\u0CAA-\u0CB3\u0CB5-\u0CB9\u0CBD\u0CDE\u0CE0-\u0CE1\u0CF1-\u0CF2\u0D05-\u0D0C\u0D0E-\u0D10\u0D12-\u0D3A\u0D3D\u0D4E\u0D60-\u0D61\u0D7A-\u0D7F\u0D85-\u0D96\u0D9A-\u0DB1\u0DB3-\u0DBB\u0DBD\u0DC0-\u0DC6\u0E01-\u0E30\u0E32-\u0E33\u0E40-\u0E46\u0E81-\u0E82\u0E84\u0E87-\u0E88\u0E8A\u0E8D\u0E94-\u0E97\u0E99-\u0E9F\u0EA1-\u0EA3\u0EA5\u0EA7\u0EAA-\u0EAB\u0EAD-\u0EB0\u0EB2-\u0EB3\u0EBD\u0EC0-\u0EC4\u0EC6\u0EDC-\u0EDF\u0F00\u0F40-\u0F47\u0F49-\u0F6C\u0F88-\u0F8C\u1000-\u102A\u103F\u1050-\u1055\u105A-\u105D\u1061\u1065-\u1066\u106E-\u1070\u1075-\u1081\u108E\u10A0-\u10C5\u10C7\u10CD\u10D0-\u10FA\u10FC-\u1248\u124A-\u124D\u1250-\u1256\u1258\u125A-\u125D\u1260-\u1288\u128A-\u128D\u1290-\u12B0\u12B2-\u12B5\u12B8-\u12BE\u12C0\u12C2-\u12C5\u12C8-\u12D6\u12D8-\u1310\u1312-\u1315\u1318-\u135A\u1380-\u138F\u13A0-\u13F4\u1401-\u166C\u166F-\u167F\u1681-\u169A\u16A0-\u16EA\u16EE-\u16F0\u1700-\u170C\u170E-\u1711\u1720-\u1731\u1740-\u1751\u1760-\u176C\u176E-\u1770\u1780-\u17B3\u17D7\u17DC\u1820-\u1877\u1880-\u18A8\u18AA\u18B0-\u18F5\u1900-\u191C\u1950-\u196D\u1970-\u1974\u1980-\u19AB\u19C1-\u19C7\u1A00-\u1A16\u1A20-\u1A54\u1AA7\u1B05-\u1B33\u1B45-\u1B4B\u1B83-\u1BA0\u1BAE-\u1BAF\u1BBA-\u1BE5\u1C00-\u1C23\u1C4D-\u1C4F\u1C5A-\u1C7D\u1CE9-\u1CEC\u1CEE-\u1CF1\u1CF5-\u1CF6\u1D00-\u1DBF\u1E00-\u1F15\u1F18-\u1F1D\u1F20-\u1F45\u1F48-\u1F4D\u1F50-\u1F57\u1F59\u1F5B\u1F5D\u1F5F-\u1F7D\u1F80-\u1FB4\u1FB6-\u1FBC\u1FBE\u1FC2-\u1FC4\u1FC6-\u1FCC\u1FD0-\u1FD3\u1FD6-\u1FDB\u1FE0-\u1FEC\u1FF2-\u1FF4\u1FF6-\u1FFC\u2071\u207F\u2090-\u209C\u2102\u2107\u210A-\u2113\u2115\u2118-\u211D\u2124\u2126\u2128\u212A-\u2139\u213C-\u213F\u2145-\u2149\u214E\u2160-\u2188\u2C00-\u2C2E\u2C30-\u2C5E\u2C60-\u2CE4\u2CEB-\u2CEE\u2CF2-\u2CF3\u2D00-\u2D25\u2D27\u2D2D\u2D30-\u2D67\u2D6F\u2D80-\u2D96\u2DA0-\u2DA6\u2DA8-\u2DAE\u2DB0-\u2DB6\u2DB8-\u2DBE\u2DC0-\u2DC6\u2DC8-\u2DCE\u2DD0-\u2DD6\u2DD8-\u2DDE\u3005-\u3007\u3021-\u3029\u3031-\u3035\u3038-\u303C\u3041-\u3096\u309B-\u309F\u30A1-\u30FA\u30FC-\u30FF\u3105-\u312D\u3131-\u318E\u31A0-\u31BA\u31F0-\u31FF\u3400-\u4DB5\u4E00-\u9FCC\uA000-\uA48C\uA4D0-\uA4FD\uA500-\uA60C\uA610-\uA61F\uA62A-\uA62B\uA640-\uA66E\uA67F-\uA697\uA6A0-\uA6EF\uA717-\uA71F\uA722-\uA788\uA78B-\uA78E\uA790-\uA793\uA7A0-\uA7AA\uA7F8-\uA801\uA803-\uA805\uA807-\uA80A\uA80C-\uA822\uA840-\uA873\uA882-\uA8B3\uA8F2-\uA8F7\uA8FB\uA90A-\uA925\uA930-\uA946\uA960-\uA97C\uA984-\uA9B2\uA9CF\uAA00-\uAA28\uAA40-\uAA42\uAA44-\uAA4B\uAA60-\uAA76\uAA7A\uAA80-\uAAAF\uAAB1\uAAB5-\uAAB6\uAAB9-\uAABD\uAAC0\uAAC2\uAADB-\uAADD\uAAE0-\uAAEA\uAAF2-\uAAF4\uAB01-\uAB06\uAB09-\uAB0E\uAB11-\uAB16\uAB20-\uAB26\uAB28-\uAB2E\uABC0-\uABE2\uAC00-\uD7A3\uD7B0-\uD7C6\uD7CB-\uD7FB\uF900-\uFA6D\uFA70-\uFAD9\uFB00-\uFB06\uFB13-\uFB17\uFB1D\uFB1F-\uFB28\uFB2A-\uFB36\uFB38-\uFB3C\uFB3E\uFB40-\uFB41\uFB43-\uFB44\uFB46-\uFBB1\uFBD3-\uFD3D\uFD50-\uFD8F\uFD92-\uFDC7\uFDF0-\uFDFB\uFE70-\uFE74\uFE76-\uFEFC\uFF21-\uFF3A\uFF41-\uFF5A\uFF66-\uFFBE\uFFC2-\uFFC7\uFFCA-\uFFCF\uFFD2-\uFFD7\uFFDA-\uFFDC]/,
+    identifierPart = /[\x24\x30-\x39\x41-\x5A\x5F\x61-\x7A\xAA\xB5\xB7\xBA\xC0-\xD6\xD8-\xF6\xF8-\u02C1\u02C6-\u02D1\u02E0-\u02E4\u02EC\u02EE\u0300-\u036F\u0370-\u0374\u0376-\u0377\u037A-\u037D\u0386\u0387\u0388-\u038A\u038C\u038E-\u03A1\u03A3-\u03F5\u03F7-\u0481\u0483-\u0487\u048A-\u0527\u0531-\u0556\u0559\u0561-\u0587\u0591-\u05BD\u05BF\u05C1-\u05C2\u05C4-\u05C5\u05C7\u05D0-\u05EA\u05F0-\u05F2\u0610-\u061A\u0620-\u064A\u064B-\u0669\u066E-\u066F\u0670\u0671-\u06D3\u06D5\u06D6-\u06DC\u06DF-\u06E4\u06E5-\u06E6\u06E7-\u06E8\u06EA-\u06ED\u06EE-\u06EF\u06F0-\u06F9\u06FA-\u06FC\u06FF\u0710\u0711\u0712-\u072F\u0730-\u074A\u074D-\u07A5\u07A6-\u07B0\u07B1\u07C0-\u07C9\u07CA-\u07EA\u07EB-\u07F3\u07F4-\u07F5\u07FA\u0800-\u0815\u0816-\u0819\u081A\u081B-\u0823\u0824\u0825-\u0827\u0828\u0829-\u082D\u0840-\u0858\u0859-\u085B\u08A0\u08A2-\u08AC\u08E4-\u08FE\u0900-\u0903\u0904-\u0939\u093A-\u093C\u093D\u093E-\u094F\u0950\u0951-\u0957\u0958-\u0961\u0962-\u0963\u0966-\u096F\u0971-\u0977\u0979-\u097F\u0981-\u0983\u0985-\u098C\u098F-\u0990\u0993-\u09A8\u09AA-\u09B0\u09B2\u09B6-\u09B9\u09BC\u09BD\u09BE-\u09C4\u09C7-\u09C8\u09CB-\u09CD\u09CE\u09D7\u09DC-\u09DD\u09DF-\u09E1\u09E2-\u09E3\u09E6-\u09EF\u09F0-\u09F1\u0A01-\u0A03\u0A05-\u0A0A\u0A0F-\u0A10\u0A13-\u0A28\u0A2A-\u0A30\u0A32-\u0A33\u0A35-\u0A36\u0A38-\u0A39\u0A3C\u0A3E-\u0A42\u0A47-\u0A48\u0A4B-\u0A4D\u0A51\u0A59-\u0A5C\u0A5E\u0A66-\u0A71\u0A72-\u0A74\u0A75\u0A81-\u0A83\u0A85-\u0A8D\u0A8F-\u0A91\u0A93-\u0AA8\u0AAA-\u0AB0\u0AB2-\u0AB3\u0AB5-\u0AB9\u0ABC\u0ABD\u0ABE-\u0AC5\u0AC7-\u0AC9\u0ACB-\u0ACD\u0AD0\u0AE0-\u0AE1\u0AE2-\u0AE3\u0AE6-\u0AEF\u0B01-\u0B03\u0B05-\u0B0C\u0B0F-\u0B10\u0B13-\u0B28\u0B2A-\u0B30\u0B32-\u0B33\u0B35-\u0B39\u0B3C\u0B3D\u0B3E-\u0B44\u0B47-\u0B48\u0B4B-\u0B4D\u0B56-\u0B57\u0B5C-\u0B5D\u0B5F-\u0B61\u0B62-\u0B63\u0B66-\u0B6F\u0B71\u0B82\u0B83\u0B85-\u0B8A\u0B8E-\u0B90\u0B92-\u0B95\u0B99-\u0B9A\u0B9C\u0B9E-\u0B9F\u0BA3-\u0BA4\u0BA8-\u0BAA\u0BAE-\u0BB9\u0BBE-\u0BC2\u0BC6-\u0BC8\u0BCA-\u0BCD\u0BD0\u0BD7\u0BE6-\u0BEF\u0C01-\u0C03\u0C05-\u0C0C\u0C0E-\u0C10\u0C12-\u0C28\u0C2A-\u0C33\u0C35-\u0C39\u0C3D\u0C3E-\u0C44\u0C46-\u0C48\u0C4A-\u0C4D\u0C55-\u0C56\u0C58-\u0C59\u0C60-\u0C61\u0C62-\u0C63\u0C66-\u0C6F\u0C82-\u0C83\u0C85-\u0C8C\u0C8E-\u0C90\u0C92-\u0CA8\u0CAA-\u0CB3\u0CB5-\u0CB9\u0CBC\u0CBD\u0CBE-\u0CC4\u0CC6-\u0CC8\u0CCA-\u0CCD\u0CD5-\u0CD6\u0CDE\u0CE0-\u0CE1\u0CE2-\u0CE3\u0CE6-\u0CEF\u0CF1-\u0CF2\u0D02-\u0D03\u0D05-\u0D0C\u0D0E-\u0D10\u0D12-\u0D3A\u0D3D\u0D3E-\u0D44\u0D46-\u0D48\u0D4A-\u0D4D\u0D4E\u0D57\u0D60-\u0D61\u0D62-\u0D63\u0D66-\u0D6F\u0D7A-\u0D7F\u0D82-\u0D83\u0D85-\u0D96\u0D9A-\u0DB1\u0DB3-\u0DBB\u0DBD\u0DC0-\u0DC6\u0DCA\u0DCF-\u0DD4\u0DD6\u0DD8-\u0DDF\u0DF2-\u0DF3\u0E01-\u0E30\u0E31\u0E32-\u0E33\u0E34-\u0E3A\u0E40-\u0E46\u0E47-\u0E4E\u0E50-\u0E59\u0E81-\u0E82\u0E84\u0E87-\u0E88\u0E8A\u0E8D\u0E94-\u0E97\u0E99-\u0E9F\u0EA1-\u0EA3\u0EA5\u0EA7\u0EAA-\u0EAB\u0EAD-\u0EB0\u0EB1\u0EB2-\u0EB3\u0EB4-\u0EB9\u0EBB-\u0EBC\u0EBD\u0EC0-\u0EC4\u0EC6\u0EC8-\u0ECD\u0ED0-\u0ED9\u0EDC-\u0EDF\u0F00\u0F18-\u0F19\u0F20-\u0F29\u0F35\u0F37\u0F39\u0F3E-\u0F3F\u0F40-\u0F47\u0F49-\u0F6C\u0F71-\u0F84\u0F86-\u0F87\u0F88-\u0F8C\u0F8D-\u0F97\u0F99-\u0FBC\u0FC6\u1000-\u102A\u102B-\u103E\u103F\u1040-\u1049\u1050-\u1055\u1056-\u1059\u105A-\u105D\u105E-\u1060\u1061\u1062-\u1064\u1065-\u1066\u1067-\u106D\u106E-\u1070\u1071-\u1074\u1075-\u1081\u1082-\u108D\u108E\u108F-\u109D\u10A0-\u10C5\u10C7\u10CD\u10D0-\u10FA\u10FC-\u1248\u124A-\u124D\u1250-\u1256\u1258\u125A-\u125D\u1260-\u1288\u128A-\u128D\u1290-\u12B0\u12B2-\u12B5\u12B8-\u12BE\u12C0\u12C2-\u12C5\u12C8-\u12D6\u12D8-\u1310\u1312-\u1315\u1318-\u135A\u135D-\u135F\u1369-\u1371\u1380-\u138F\u13A0-\u13F4\u1401-\u166C\u166F-\u167F\u1681-\u169A\u16A0-\u16EA\u16EE-\u16F0\u1700-\u170C\u170E-\u1711\u1712-\u1714\u1720-\u1731\u1732-\u1734\u1740-\u1751\u1752-\u1753\u1760-\u176C\u176E-\u1770\u1772-\u1773\u1780-\u17B3\u17B4-\u17D3\u17D7\u17DC\u17DD\u17E0-\u17E9\u180B-\u180D\u1810-\u1819\u1820-\u1877\u1880-\u18A8\u18A9\u18AA\u18B0-\u18F5\u1900-\u191C\u1920-\u192B\u1930-\u193B\u1946-\u194F\u1950-\u196D\u1970-\u1974\u1980-\u19AB\u19B0-\u19C0\u19C1-\u19C7\u19C8-\u19C9\u19D0-\u19DA\u1A00-\u1A16\u1A17-\u1A1B\u1A20-\u1A54\u1A55-\u1A5E\u1A60-\u1A7C\u1A7F-\u1A89\u1A90-\u1A99\u1AA7\u1B00-\u1B04\u1B05-\u1B33\u1B34-\u1B44\u1B45-\u1B4B\u1B50-\u1B59\u1B6B-\u1B73\u1B80-\u1B82\u1B83-\u1BA0\u1BA1-\u1BAD\u1BAE-\u1BAF\u1BB0-\u1BB9\u1BBA-\u1BE5\u1BE6-\u1BF3\u1C00-\u1C23\u1C24-\u1C37\u1C40-\u1C49\u1C4D-\u1C4F\u1C50-\u1C59\u1C5A-\u1C7D\u1CD0-\u1CD2\u1CD4-\u1CE8\u1CE9-\u1CEC\u1CED\u1CEE-\u1CF1\u1CF2-\u1CF4\u1CF5-\u1CF6\u1D00-\u1DBF\u1DC0-\u1DE6\u1DFC-\u1DFF\u1E00-\u1F15\u1F18-\u1F1D\u1F20-\u1F45\u1F48-\u1F4D\u1F50-\u1F57\u1F59\u1F5B\u1F5D\u1F5F-\u1F7D\u1F80-\u1FB4\u1FB6-\u1FBC\u1FBE\u1FC2-\u1FC4\u1FC6-\u1FCC\u1FD0-\u1FD3\u1FD6-\u1FDB\u1FE0-\u1FEC\u1FF2-\u1FF4\u1FF6-\u1FFC\u200C-\u200D\u203F-\u2040\u2054\u2071\u207F\u2090-\u209C\u20D0-\u20DC\u20E1\u20E5-\u20F0\u2102\u2107\u210A-\u2113\u2115\u2118-\u211D\u2124\u2126\u2128\u212A-\u2139\u213C-\u213F\u2145-\u2149\u214E\u2160-\u2188\u2C00-\u2C2E\u2C30-\u2C5E\u2C60-\u2CE4\u2CEB-\u2CEE\u2CEF-\u2CF1\u2CF2-\u2CF3\u2D00-\u2D25\u2D27\u2D2D\u2D30-\u2D67\u2D6F\u2D7F\u2D80-\u2D96\u2DA0-\u2DA6\u2DA8-\u2DAE\u2DB0-\u2DB6\u2DB8-\u2DBE\u2DC0-\u2DC6\u2DC8-\u2DCE\u2DD0-\u2DD6\u2DD8-\u2DDE\u2DE0-\u2DFF\u3005-\u3007\u3021-\u3029\u302A-\u302F\u3031-\u3035\u3038-\u303C\u3041-\u3096\u3099-\u309A\u309B-\u309F\u30A1-\u30FA\u30FC-\u30FF\u3105-\u312D\u3131-\u318E\u31A0-\u31BA\u31F0-\u31FF\u3400-\u4DB5\u4E00-\u9FCC\uA000-\uA48C\uA4D0-\uA4FD\uA500-\uA60C\uA610-\uA61F\uA620-\uA629\uA62A-\uA62B\uA640-\uA66E\uA66F\uA674-\uA67D\uA67F-\uA697\uA69F\uA6A0-\uA6EF\uA6F0-\uA6F1\uA717-\uA71F\uA722-\uA788\uA78B-\uA78E\uA790-\uA793\uA7A0-\uA7AA\uA7F8-\uA801\uA802\uA803-\uA805\uA806\uA807-\uA80A\uA80B\uA80C-\uA822\uA823-\uA827\uA840-\uA873\uA880-\uA881\uA882-\uA8B3\uA8B4-\uA8C4\uA8D0-\uA8D9\uA8E0-\uA8F1\uA8F2-\uA8F7\uA8FB\uA900-\uA909\uA90A-\uA925\uA926-\uA92D\uA930-\uA946\uA947-\uA953\uA960-\uA97C\uA980-\uA983\uA984-\uA9B2\uA9B3-\uA9C0\uA9CF\uA9D0-\uA9D9\uAA00-\uAA28\uAA29-\uAA36\uAA40-\uAA42\uAA43\uAA44-\uAA4B\uAA4C-\uAA4D\uAA50-\uAA59\uAA60-\uAA76\uAA7A\uAA7B\uAA80-\uAAAF\uAAB0\uAAB1\uAAB2-\uAAB4\uAAB5-\uAAB6\uAAB7-\uAAB8\uAAB9-\uAABD\uAABE-\uAABF\uAAC0\uAAC1\uAAC2\uAADB-\uAADD\uAAE0-\uAAEA\uAAEB-\uAAEF\uAAF2-\uAAF4\uAAF5-\uAAF6\uAB01-\uAB06\uAB09-\uAB0E\uAB11-\uAB16\uAB20-\uAB26\uAB28-\uAB2E\uABC0-\uABE2\uABE3-\uABEA\uABEC-\uABED\uABF0-\uABF9\uAC00-\uD7A3\uD7B0-\uD7C6\uD7CB-\uD7FB\uF900-\uFA6D\uFA70-\uFAD9\uFB00-\uFB06\uFB13-\uFB17\uFB1D\uFB1E\uFB1F-\uFB28\uFB2A-\uFB36\uFB38-\uFB3C\uFB3E\uFB40-\uFB41\uFB43-\uFB44\uFB46-\uFBB1\uFBD3-\uFD3D\uFD50-\uFD8F\uFD92-\uFDC7\uFDF0-\uFDFB\uFE00-\uFE0F\uFE20-\uFE26\uFE33-\uFE34\uFE4D-\uFE4F\uFE70-\uFE74\uFE76-\uFEFC\uFF10-\uFF19\uFF21-\uFF3A\uFF3F\uFF41-\uFF5A\uFF66-\uFFBE\uFFC2-\uFFC7\uFFCA-\uFFCF\uFFD2-\uFFD7\uFFDA-\uFFDC]/,
+    whitespaceChars = /[\x09\x0B-\x0C\x20\xA0\u1680\u180E\u2000-\u200A\u202F\u205F\u3000\uFEFF]/;
+
+var identifierEscape = /\\u([0-9a-fA-F]{4})/g,
+    newlineSequence = /\r\n?|[\n\u2028\u2029]/g;
+
+// === Reserved Words ===
+var reservedWord = new RegExp("^(?:" +
+    "break|case|catch|class|const|continue|debugger|default|delete|do|" +
+    "else|enum|export|extends|false|finally|for|function|if|import|in|" +
+    "instanceof|new|null|return|super|switch|this|throw|true|try|typeof|" +
+    "var|void|while|with" +
+")$");
+
+var strictReservedWord = new RegExp("^(?:" +
+    "implements|private|public|interface|package|let|protected|static|yield" +
+")$");
+
+// === Punctuators ===
+var multiCharPunctuator = new RegExp("^(?:" +
+    "[-+]{2}|" +
+    "[&|]{2}|" +
+    "<<=?|" +
+    ">>>?=?|" +
+    "[!=]==|" +
+    "=>|" +
+    "[\.]{2,3}|" +
+    "[-+&|<>!=*&\^%\/]=" +
+")$");
+
+var ASSIGNMENT = 1,
+    UNARY = 2,
+    INCREMENT = 4;
+
+// === Miscellaneous Patterns ===
+var octalEscape = /^(?:[0-3][0-7]{0,2}|[4-7][0-7]?)/,
+    blockCommentPattern = /\r\n?|[\n\u2028\u2029]|\*\//g,
+    hexChar = /[0-9a-f]/i;
+
+// === Character Types ===
+var WHITESPACE = 1,
+    NEWLINE = 2,
+    DECIMAL_DIGIT = 3,
+    PUNCTUATOR = 4,
+    PUNCTUATOR_CHAR = 5,
+    STRING = 6,
+    TEMPLATE = 7,
+    IDENTIFIER = 8,
+    ZERO = 9,
+    DOT = 10,
+    SLASH = 11,
+    LBRACE = 12;
+
+// === Character Type Lookup Table ===
+var LookupTable = (function(exports) {
+
+    var charTable = new Array(128), i;
+    
+    add(WHITESPACE, "\t\v\f ");
+    add(NEWLINE, "\r\n");
+    add(DECIMAL_DIGIT, "123456789");
+    add(PUNCTUATOR_CHAR, "{[]();,?:");
+    add(PUNCTUATOR, "<>+-*%&|^!~=");
+    add(DOT, ".");
+    add(SLASH, "/");
+    add(LBRACE, "}");
+    add(ZERO, "0");
+    add(STRING, "'\"");
+    add(TEMPLATE, "`");
+    
+    add(IDENTIFIER, "$_\\");
+    for (i = 65; i <= 90; ++i) charTable[i] = IDENTIFIER;
+    for (i = 97; i <= 122; ++i) charTable[i] = IDENTIFIER;
+    
+    function add(type, string) {
+    
+        string.split("").forEach((function(c) { return charTable[c.charCodeAt(0)] = type; }));
+    }
+exports.charTable = charTable; exports.i = i; return exports; }).call(this, {});
+
+var charTable = LookupTable.charTable;
+
+// Performs a binary search on an array
+function binarySearch(array, val) {
+
+    var right = array.length - 1,
+        left = 0,
+        mid,
+        test;
+    
+    while (left <= right) {
+        
+        mid = (left + right) >> 1;
+        test = array[mid];
+        
+        if (val > test) left = mid + 1;
+        else if (val < test) right = mid - 1;
+        else return mid;
+    }
+    
+    return left;
+}
+
+// Returns true if the character is a valid identifier part
+function isIdentifierPart(c) {
+
+    if (c === void 0)
+        return false;
+    
+    var code = c.charCodeAt(0);
+    
+    return  code > 64 && code < 91 || 
+            code > 96 && code < 123 ||
+            code > 47 && code < 58 ||
+            code === 36 ||
+            code === 95 ||
+            code === 92 ||
+            code > 123 && identifierPart.test(c);
+}
+
+// Returns true if the specified character is a newline
+function isNewlineChar(c) {
+
+    switch (c) {
+    
+        case "\r":
+        case "\n":
+        case "\u2028":
+        case "\u2029":
+            return true;
+    }
+    
+    return false;
+}
+
+// Returns true if the specified character can exist in a non-starting position
+function isPunctuatorNext(c) {
+
+    switch (c) {
+    
+        case "+":
+        case "-":
+        case "&":
+        case "|":
+        case "<":
+        case ">":
+        case "=":
+        case ".":
+            return true;
+    }
+    
+    return false;
+}
+
+// Returns true if the specified character is a valid numeric following character
+function isNumberFollow(c) {
+
+    if (c === void 0)
+        return true;
+    
+    var code = c.charCodeAt(0);
+    
+    return !(
+        code > 64 && code < 91 || 
+        code > 96 && code < 123 ||
+        code > 47 && code < 58 ||
+        code === 36 ||
+        code === 95 ||
+        code === 92 ||
+        code > 123 && identifierStart.test(c)
+    );
+}
+
+var Scanner = __class(function(__super) { return {
+
+    constructor: function(input, offset) {
+
+        this.input = input || "";
+        this.offset = offset || 0;
+        this.length = this.input.length;
+        this.lines = [-1];
+        
+        this.strict = false;
+        
+        this.type = "";
+        this.start = 0;
+        this.end = 0;
+        this.value = "";
+        this.number = 0;
+        this.templateEnd = false;
+        this.regExpFlags = null;
+        this.newlineBefore = false;
+        this.error = "";
+    },
+    
+    next: function(context) {
+
+        if (this.type !== "COMMENT")
+            this.newlineBefore = false;
+        
+        this.error = "";
+        this.value = null;
+        
+        var type = null, 
+            start;
+        
+        while (type === null) {
+        
+            start = this.offset;
+            type = start >= this.length ? "EOF" : this.Start(context);
+        }
+        
+        this.type = type;
+        this.start = start;
+        this.end = this.offset;
+        
+        return type;
+    },
+    
+    raw: function(token) {
+    
+        token || (token = this);
+        return this.input.slice(this.start, this.end);
+    },
+    
+    position: function(token) {
+    
+        token || (token = this);
+        
+        var offset = token.start,
+            line = binarySearch(this.lines, offset),
+            pos = this.lines[line - 1],
+            column = offset - pos;
+        
+        return { 
+        
+            line: line, 
+            column: column,
+            startOffset: offset, 
+            endOffset: token.end,
+            lineOffset: pos + 1
+        };
+    },
+    
+    addLineBreak: function(offset) {
+    
+        this.lines.push(offset);
+    },
+    
+    readIdentifierEscape: function() {
+    
+        if (this.input[this.offset++] !== "u")
+            return null;
+        
+        var hex;
+        
+        if (this.input[this.offset] === "{") {
+        
+            this.offset++;
+            hex = this.readHex(0);
+            
+            if (this.input[this.offset++] !== "}")
+                return null;
+        
+        } else {
+        
+            hex = this.readHex(4);
+        
+            if (hex.length < 4)
+                return null;
+        }
+        
+        return String.fromCharCode(parseInt(hex, 16));
+    },
+    
+    readOctalEscape: function() {
+    
+        var m = octalEscape.exec(this.input.slice(this.offset, this.offset + 3)),
+            val = m ? m[0] : "";
+        
+        this.offset += val.length;
+        
+        return val;
+    },
+    
+    readStringEscape: function() {
+    
+        this.offset++;
+        
+        var chr, esc;
+        
+        switch (chr = this.input[this.offset++]) {
+        
+            case "t": return "\t";
+            case "b": return "\b";
+            case "v": return "\v";
+            case "f": return "\f";
+            case "r": return "\r";
+            case "n": return "\n";
+    
+            case "\r":
+            
+                this.addLineBreak(this.offset - 1);
+                
+                if (this.input[this.offset] === "\n")
+                    this.offset++;
+                
+                return "";
+            
+            case "\n":
+            case "\u2028":
+            case "\u2029":
+            
+                this.addLineBreak(this.offset - 1);
+                return "";
+
+            case "0":
+            case "1":
+            case "2":
+            case "3":
+            case "4":
+            case "5":
+            case "6":
+            case "7":
+            
+                this.offset--;
+                esc = this.readOctalEscape();
+                
+                if (esc === "0") {
+                
+                    return String.fromCharCode(0);
+                
+                } else if (this.strict) {
+                
+                    this.error = "Octal literals are not allowed in strict mode";
+                    return null;
+                    
+                } else {
+                
+                    return String.fromCharCode(parseInt(esc, 8));
+                }
+            
+            case "x":
+            
+                esc = this.readHex(2);
+                return (esc.length < 2) ? null : String.fromCharCode(parseInt(esc, 16));
+            
+            case "u":
+            
+                if (this.input[this.offset] === "{") {
+                
+                    this.offset++;
+                    esc = this.readHex(0);
+                    
+                    if (this.input[this.offset++] !== "}")
+                        return null;
+                    
+                } else {
+                
+                    esc = this.readHex(4);
+                    if (esc.length < 4) return null;
+                }
+                
+                return String.fromCharCode(parseInt(esc, 16));
+            
+            default: 
+            
+                return chr;
+        }
+    },
+    
+    readRange: function(low, high) {
+    
+        var start = this.offset,
+            code;
+        
+        while (code = this.input.charCodeAt(this.offset)) {
+        
+            if (code >= low && code <= high) this.offset++;
+            else break;
+        }
+        
+        return this.input.slice(start, this.offset);
+    },
+    
+    readInteger: function() {
+    
+        var start = this.offset,
+            code;
+        
+        while (code = this.input.charCodeAt(this.offset)) {
+        
+            if (code >= 48 && code <= 57) this.offset++;
+            else break;
+        }
+        
+        return this.input.slice(start, this.offset);
+    },
+    
+    readHex: function(maxLen) {
+        
+        var str = "", 
+            chr;
+        
+        while (chr = this.input[this.offset]) {
+        
+            if (!hexChar.test(chr))
+                break;
+            
+            str += chr;
+            this.offset++;
+            
+            if (str.length === maxLen)
+                break;
+        }
+        
+        return str;
+    },
+    
+    Start: function(context) {
+    
+        var code = this.input.charCodeAt(this.offset),
+            next;
+            
+        switch (charTable[code]) {
+        
+            case PUNCTUATOR_CHAR: return this.PunctuatorChar(code);
+            
+            case WHITESPACE: return this.Whitespace(code);
+            
+            case IDENTIFIER: 
+            
+                return context === "name" ? 
+                    this.IdentifierName(code) : 
+                    this.Identifier(code);
+            
+            case LBRACE:
+            
+                if (context === "template") return this.Template(code);
+                else return this.PunctuatorChar(code);
+            
+            case PUNCTUATOR: return this.Punctuator(code);
+            
+            case NEWLINE: return this.Newline(code);
+            
+            case DECIMAL_DIGIT: return this.Number(code);
+            
+            case TEMPLATE: return this.Template(code);
+            
+            case STRING: return this.String(code);
+            
+            case ZERO: 
+            
+                switch (next = this.input.charCodeAt(this.offset + 1)) {
+                
+                    case 88: case 120: return this.HexNumber(code);   // x
+                    case 66: case 98: return this.BinaryNumber(code); // b
+                    case 79: case 111: return this.OctalNumber(code); // o
+                }
+                
+                return next >= 48 && next <= 55 ?
+                    this.LegacyOctalNumber(code) :
+                    this.Number(code);
+            
+            case DOT: 
+            
+                next = this.input.charCodeAt(this.offset + 1);
+                
+                if (next >= 48 && next <= 57) return this.Number(code);
+                else return this.Punctuator(code);
+            
+            case SLASH:
+            
+                next = this.input.charCodeAt(this.offset + 1);
+
+                if (next === 47) return this.LineComment(code);       // /
+                else if (next === 42) return this.BlockComment(code); // *
+                else if (context === "div") return this.Punctuator(code);
+                else return this.RegularExpression(code);
+            
+        }
+        
+        var chr = this.input[this.offset];
+        
+        // Unicode newlines
+        if (isNewlineChar(chr))
+            return this.Newline(code);
+        
+        // Unicode whitespace
+        if (whitespaceChars.test(chr))
+            return this.UnicodeWhitespace(code);
+        
+        // Unicode identifier chars
+        if (identifierStart.test(chr))
+            return context === "name" ? this.IdentifierName(code) : this.Identifier(code);
+        
+        return this.Error();
+    },
+    
+    Whitespace: function(code) {
+    
+        this.offset++;
+        
+        while (code = this.input.charCodeAt(this.offset)) {
+        
+            // ASCII Whitespace:  [\t] [\v] [\f] [ ] 
+            if (code === 9 || code === 11 || code === 12 || code ===32)
+                this.offset++;
+            else
+                break;
+        }
+        
+        return null;
+    },
+    
+    UnicodeWhitespace: function() {
+    
+        this.offset++;
+        
+        // General unicode whitespace
+        while (whitespaceChars.test(this.input[this.offset]))
+            this.offset++;
+        
+        return null;
+    },
+    
+    Newline: function(code) {
+        
+        this.addLineBreak(this.offset++);
+        
+        // Treat /r/n as a single newline
+        if (code === 13 && this.input.charCodeAt(this.offset) === 10)
+            this.offset++;
+        
+        this.newlineBefore = true;
+        
+        return null;
+    },
+    
+    PunctuatorChar: function() {
+    
+        return this.input[this.offset++];
+    },
+    
+    Punctuator: function() {
+        
+        var op = this.input[this.offset++], 
+            chr,
+            next;
+        
+        while (
+            isPunctuatorNext(chr = this.input[this.offset]) &&
+            multiCharPunctuator.test(next = op + chr)) {
+    
+            this.offset++;
+            op = next;
+        }
+        
+        // ".." is not a valid token
+        if (op === "..") {
+        
+            this.offset--;
+            op = ".";
+        }
+        
+        return op;
+    },
+    
+    Template: function() {
+    
+        var first = this.input[this.offset++],
+            end = false, 
+            val = "", 
+            esc,
+            chr;
+        
+        while (chr = this.input[this.offset]) {
+            
+            if (chr === "`") {
+            
+                end = true;
+                break;
+            }
+            
+            if (chr === "$" && this.input[this.offset + 1] === "{") {
+            
+                this.offset++;
+                break;
+            }
+            
+            if (chr === "\\") {
+            
+                esc = this.readStringEscape();
+                
+                if (!esc) 
+                    return this.Error();
+                
+                val += esc;
+                
+            } else {
+            
+                val += chr;
+                this.offset++;
+            }
+        }
+        
+        if (!chr)
+            return this.Error();
+        
+        this.offset++;
+        
+        this.value = val;
+        this.templateEnd = end;
+        
+        return "TEMPLATE";
+    },
+    
+    String: function() {
+    
+        var delim = this.input[this.offset++],
+            val = "",
+            esc,
+            chr;
+        
+        while (chr = this.input[this.offset]) {
+        
+            if (chr === delim)
+                break;
+            
+            if (isNewlineChar(chr))
+                return this.Error();
+            
+            if (chr === "\\") {
+            
+                esc = this.readStringEscape();
+                
+                if (esc === null)
+                    return this.Error();
+                
+                val += esc;
+                
+            } else {
+            
+                val += chr;
+                this.offset++;
+            }
+        }
+        
+        if (!chr)
+            return this.Error();
+        
+        this.offset++;
+        this.value = val;
+        
+        return "STRING";
+    },
+    
+    RegularExpression: function() {
+    
+        this.offset++;
+        
+        var backslash = false, 
+            inClass = false,
+            flags = null,
+            val = "", 
+            chr;
+        
+        while (chr = this.input[this.offset++]) {
+        
+            if (isNewlineChar(chr))
+                return this.Error();
+            
+            if (backslash) {
+            
+                val += "\\" + chr;
+                backslash = false;
+            
+            } else if (chr === "[") {
+            
+                inClass = true;
+                val += chr;
+            
+            } else if (chr === "]" && inClass) {
+            
+                inClass = false;
+                val += chr;
+            
+            } else if (chr === "/" && !inClass) {
+            
+                break;
+            
+            } else if (chr === "\\") {
+            
+                backslash = true;
+                
+            } else {
+            
+                val += chr;
+            }
+        }
+        
+        if (!chr)
+            return this.Error();
+        
+        if (isIdentifierPart(this.input[this.offset]))
+            flags = this.IdentifierName().value;
+        
+        this.value = val;
+        this.regExpFlags = flags;
+        
+        return "REGEX";
+    },
+    
+    LegacyOctalNumber: function() {
+    
+        this.offset++;
+        
+        var start = this.offset,
+            code;
+        
+        while (code = this.input.charCodeAt(this.offset)) {
+        
+            if (code >= 48 && code <= 55)
+                this.offset++;
+            else
+                break;
+        }
+        
+        if (this.strict)
+            return this.Error("Octal literals are not allowed in strict mode");
+        
+        this.number = parseInt(this.input.slice(start, this.offset), 8);
+        
+        return isNumberFollow(this.input[this.offset]) ? "NUMBER" : this.Error();
+    },
+    
+    Number: function() {
+    
+        var start = this.offset,
+            next;
+        
+        this.readInteger();
+        
+        if (this.input[this.offset] === ".") {
+        
+            this.offset++;
+            this.readInteger();
+        }
+        
+        next = this.input[this.offset];
+        
+        if (next === "e" || next === "E") {
+        
+            this.offset++;
+            
+            next = this.input[this.offset];
+            
+            if (next === "+" || next === "-")
+                this.offset++;
+            
+            if (!this.readInteger())
+                return this.Error();
+        }
+        
+        this.number = parseFloat(this.input.slice(start, this.offset));
+        
+        return isNumberFollow(this.input[this.offset]) ? "NUMBER" : this.Error();
+    },
+    
+    BinaryNumber: function() {
+    
+        this.offset += 2;
+        this.number = parseInt(this.readRange(48, 49), 2);
+        
+        return isNumberFollow(this.input[this.offset]) ? "NUMBER" : this.Error();
+    },
+    
+    OctalNumber: function() {
+    
+        this.offset += 2;
+        this.number = parseInt(this.readRange(48, 55), 8);
+        
+        return isNumberFollow(this.input[this.offset]) ? "NUMBER" : this.Error();
+    },
+    
+    HexNumber: function() {
+    
+        this.offset += 2;
+        this.number = parseInt(this.readHex(0), 16);
+        
+        return isNumberFollow(this.input[this.offset]) ? "NUMBER" : this.Error();
+    },
+    
+    Identifier: function() {
+    
+        var start = this.offset,
+            id = "",
+            chr,
+            esc;
+
+        while (isIdentifierPart(chr = this.input[this.offset])) {
+        
+            if (chr === "\\") {
+            
+                id += this.input.slice(start, this.offset++);
+                esc = this.readIdentifierEscape();
+                
+                if (esc === null)
+                    return this.Error();
+                
+                id += esc;
+                start = this.offset;
+                
+            } else {
+            
+                this.offset++;
+            }
+        }
+        
+        id += this.input.slice(start, this.offset);
+        
+        if (reservedWord.test(id) || this.strict && strictReservedWord.test(id))
+            return id;
+        
+        this.value = id;
+        
+        return "IDENTIFIER";
+    },
+    
+    IdentifierName: function() {
+    
+        var start = this.offset,
+            id = "",
+            chr,
+            esc;
+
+        while (isIdentifierPart(chr = this.input[this.offset])) {
+        
+            if (chr === "\\") {
+            
+                id += this.input.slice(start, this.offset++);
+                esc = this.readIdentifierEscape();
+                
+                if (esc === null)
+                    return this.Error();
+                
+                id += esc;
+                start = this.offset;
+                
+            } else {
+            
+                this.offset++;
+            }
+        }
+        
+        this.value = id + this.input.slice(start, this.offset);
+        
+        return "IDENTIFIER";
+    },
+    
+    LineComment: function() {
+    
+        this.offset += 2;
+        
+        var start = this.offset,
+            chr;
+        
+        while (chr = this.input[this.offset]) {
+        
+            if (isNewlineChar(chr))
+                break;
+            
+            this.offset++;
+        }
+        
+        this.value = this.input.slice(start, this.offset);
+        
+        return "COMMENT";
+    },
+    
+    BlockComment: function() {
+    
+        this.offset += 2;
+        
+        var pattern = blockCommentPattern,
+            start = this.offset,
+            m;
+        
+        while (true) {
+        
+            pattern.lastIndex = this.offset;
+            
+            m = pattern.exec(this.input);
+            if (!m) return this.Error();
+            
+            this.offset = m.index + m[0].length;
+            
+            if (m[0] === "*/")
+                break;
+            
+            this.newlineBefore = true;
+            this.addLineBreak(m.index);
+        }
+        
+        this.value = this.input.slice(start, this.offset - 2);
+        
+        return "COMMENT";
+    },
+    
+    Error: function(msg) {
+    
+        this.offset++;
+        
+        if (msg)
+            this.error = msg;
+        
+        return "ILLEGAL";
+    }
+    
+}});
+
+
+exports.Scanner = Scanner; return exports; }).call(this, {});
+
+var Transform_ = (function(exports) {
+
+var Transform = __class(function(__super) { return {
+
+    // Transform an expression into a formal parameter list
+    transformFormals: function(expr) {
+    
+        if (expr === null)
+            return [];
+            
+        var list = (expr.type === "SequenceExpression") ? expr.expressions : [expr],
+            params = [],
+            param,
+            node,
+            i;
+    
+        for (i = 0; i < list.length; ++i) {
+        
+            node = list[i];
+            
+            params.push(param = {
+            
+                type: "FormalParameter",
+                pattern: node,
+                init: null,
+                start: node.start,
+                end: node.end
+            });
+            
+            this.transformPatternElement(param, true);
+        }
+        
+        return params;
+    },
+    
+    transformArrayPattern: function(node, binding) {
+    
+        node.type = "ArrayPattern";
+        
+        var elems = node.elements,
+            elem,
+            rest,
+            i;
+        
+        for (i = 0; i < elems.length; ++i) {
+        
+            elem = elems[i];
+            
+            if (!elem) 
+                continue;
+            
+            if (elem.type !== "PatternElement") {
+            
+                rest = (elem.type === "SpreadExpression");
+                
+                elem = elems[i] = {
+                
+                    type: "PatternElement",
+                    pattern: rest ? elem.expression : elem,
+                    init: null,
+                    rest: rest,
+                    start: elem.start,
+                    end: elem.end
+                };
+                
+                // No trailing comma allowed after rest
+                if (rest && (node.trailingComma || i < elems.length - 1))
+                    this.fail("Invalid destructuring pattern", elem);
+            }
+            
+            if (elem.rest) this.transformPattern(elem.pattern, binding);
+            else this.transformPatternElement(elem, binding);
+        }
+    },
+    
+    transformObjectPattern: function(node, binding) {
+
+        node.type = "ObjectPattern";
+        
+        var props = node.properties, 
+            prop,
+            i;
+        
+        for (i = 0; i < props.length; ++i) {
+        
+            prop = props[i];
+            
+            switch (prop.type) {
+            
+                case "PatternProperty":
+                
+                    break;
+                
+                case "CoveredPatternProperty":
+                    
+                    prop.type = "PatternProperty";
+                    break;
+                    
+                case "PropertyDefinition":
+                    
+                    prop.type = "PatternProperty";
+                    prop.pattern = prop.expression;
+                    prop.init = null;
+                    
+                    delete prop.expression;
+                    break;
+                
+                default:
+                
+                    this.fail("Invalid pattern", prop);
+            }
+            
+            // Clear error flags
+            if (prop.error)
+                delete prop.error;
+            
+            if (prop.pattern) this.transformPatternElement(prop, binding);
+            else this.transformPattern(prop.name, binding);
+        }
+    },
+    
+    transformPatternElement: function(elem, binding) {
+    
+        var node = elem.pattern;
+        
+        // Split assignment into pattern and initializer
+        if (node.type === "AssignmentExpression" && node.operator === "=") {
+        
+            elem.pattern = node.left;
+            elem.init = node.right;
+        }
+        
+        this.transformPattern(elem.pattern, binding);
+    },
+    
+    // Transforms an expression into a pattern
+    transformPattern: function(node, binding) {
+
+        switch (node.type) {
+        
+            case "Identifier":
+            
+                if (binding) this.checkBindingIdent(node, true);
+                else this.checkAssignTarget(node, true);
+                
+                break;
+            
+            case "MemberExpression":
+            case "CallExpression":
+                if (binding) this.fail("Invalid left-hand-side in binding pattern", node);
+                break;
+            
+            case "ObjectExpression":
+            case "ObjectPattern":
+                this.transformObjectPattern(node, binding);
+                break;
+            
+            case "ArrayExpression":
+            case "ArrayPattern":
+                this.transformArrayPattern(node, binding);
+                break;
+                
+            default:
+                this.fail("Invalid expression in pattern", node);
+                break;
+        }
+        
+        return node;
+    }
+    
+}});
+
+
+
+exports.Transform = Transform; return exports; }).call(this, {});
+
+var Validate_ = (function(exports) {
+
+// Object literal property name flags
+var PROP_NORMAL = 1,
+    PROP_ASSIGN = 2,
+    PROP_GET = 4,
+    PROP_SET = 8;
+
+// Returns true if the specified name is a restricted identifier in strict mode
+function isPoisonIdent(name) {
+
+    return name === "eval" || name === "arguments";
+}
+
+var Validate = __class(function(__super) { return {
+
+    // Checks an assignment target for strict mode restrictions
+    checkAssignTarget: function(node, strict) {
+    
+        if (node.type !== "Identifier")
+            return;
+        
+        // Mark identifier node as a variable
+        node.context = "variable";
+        
+        if (!strict && !this.context.strict)
+            return;
+        
+        if (isPoisonIdent(node.value))
+            this.fail("Cannot modify " + node.value + " in strict mode", node);
+    },
+    
+    // Checks a binding identifier for strict mode restrictions
+    checkBindingIdent: function(node, strict) {
+    
+        // Mark identifier node as a declaration
+        node.context = "declaration";
+        
+        if (!strict && !this.context.strict)
+            return;
+            
+        var name = node.value;
+        
+        if (isPoisonIdent(name))
+            this.fail("Binding cannot be created for '" + name + "' in strict mode", node);
+    },
+    
+    // Checks function formal parameters for strict mode restrictions
+    checkParameters: function(params) {
+    
+        if (!this.context.strict)
+            return;
+        
+        var names = {}, 
+            name,
+            node,
+            i;
+        
+        for (i = 0; i < params.length; ++i) {
+        
+            node = params[i];
+            
+            if (node.type !== "FormalParameter" || node.pattern.type !== "Identifier")
+                continue;
+            
+            name = node.pattern.value;
+            
+            if (isPoisonIdent(name))
+                this.fail("Parameter name " + name + " is not allowed in strict mode", node);
+            
+            if (names[name] === 1)
+                this.fail("Strict mode function may not have duplicate parameter names", node);
+            
+            names[name] = 1;
+        }
+    },
+    
+    // Performs validation on the init portion of a for-in or for-of statement
+    checkForInit: function(init, type) {
+    
+        if (init.type === "VariableDeclaration") {
+        
+            // For-in/of may only have one variable declaration
+            
+            if (init.declarations.length !== 1)
+                this.fail("for-" + type + " statement may not have more than one variable declaration", init);
+            
+            // A variable initializer is only allowed in for-in where 
+            // variable type is "var" and it is not a pattern
+                
+            var decl = init.declarations[0];
+            
+            if (decl.init && (
+                type === "of" ||
+                init.keyword !== "var" ||
+                decl.pattern.type !== "Identifier")) {
+                
+                this.fail("Invalid initializer in for-" + type + " statement", init);
+            }
+            
+        } else {
+        
+            // Transform object and array patterns
+            this.transformPattern(init, false);
+        }
+    },
+    
+    // Returns true if the specified name type is a duplicate for a given set of flags
+    isDuplicateName: function(type, flags) {
+    
+        if (!flags)
+            return false;
+        
+        switch (type) {
+        
+            case PROP_ASSIGN: return (this.context.strict || flags !== PROP_ASSIGN);
+            case PROP_GET: return (flags !== PROP_SET);
+            case PROP_SET: return (flags !== PROP_GET);
+            default: return !!flags;
+        }
+    },
+    
+    // Checks for duplicate property names in object literals or classes
+    checkInvalidNodes: function() {
+    
+        var context = this.context,
+            list = context.invalidNodes,
+            node,
+            i;
+        
+        if (list === null)
+            return;
+        
+        for (i = 0; i < list.length; ++i) {
+        
+            node = list[i];
+            
+            if (node.error)
+                this.fail(node.error, node);
+        }
+        
+        context.invalidNodes = null;
+    }
+    
+}});
+
+exports.Validate = Validate; return exports; }).call(this, {});
+
+var Parser_ = (function(exports) {
+
+var Node = TreeNode;
+
+var Scanner = Scanner_.Scanner;
+var Transform = Transform_.Transform;
+var Validate = Validate_.Validate;
 
 // Object literal property name flags
 var PROP_NORMAL = 1,
@@ -3858,7 +3486,23 @@ function isUnary(op) {
     return false;
 }
 
-var Parser = es6now.Class(function(__super) { return {
+var Token = __class(function(__super) { return {
+
+    constructor: function(s) {
+    
+        this.type = s.type;
+        this.start = s.start;
+        this.end = s.end;
+        this.value = s.value;
+        this.number = s.number;
+        this.templateEnd = s.templateEnd;
+        this.regExpFlags = s.regExpFlags;
+        this.newlineBefore = s.newlineBefore;
+        this.error = s.error;
+    }
+}});
+
+var Parser = __class(function(__super) { return {
 
     constructor: function(input, offset) {
 
@@ -3894,12 +3538,12 @@ var Parser = es6now.Class(function(__super) { return {
     nextToken: function(context) {
     
         var scanner = this.scanner,
-            type = null;
+            type;
         
-        while (!type || type === "COMMENT")
-            type = scanner.next(context);
+        do { type = scanner.next(context); }
+        while (type === "COMMENT");
         
-        return scanner;
+        return new Token(scanner);
     },
     
     readToken: function(type, context) {
@@ -3935,21 +3579,6 @@ var Parser = es6now.Class(function(__super) { return {
             
             } else if (this.peek0) {
             
-                // Copy scanner state to token (inlined for performance)
-                var tok = this.token, 
-                    scanner = this.scanner;
-        
-                tok.type = scanner.type;
-                tok.value = scanner.value;
-                tok.number = scanner.number;
-                tok.newlineBefore = scanner.newlineBefore;
-                tok.start = scanner.start;
-                tok.end = scanner.end;
-                tok.regExpFlags = scanner.regExpFlags;
-                tok.templateEnd = scanner.templateEnd;
-                tok.flags = scanner.flags;
-                
-                this.peek0 = tok;
                 return this.peek1 = this.nextToken(context);
             }
         }
@@ -3978,15 +3607,16 @@ var Parser = es6now.Class(function(__super) { return {
         return tok !== "EOF" && tok !== type ? tok : null;
     },
     
-    formatErrorMessage: function(msg, pos) {
-    
-        return "" + (msg) + " (line " + (pos.line) + ":" + (pos.column) + ")";
-    },
-    
     fail: function(msg, loc) {
     
         var pos = this.scanner.position(loc || this.peek0),
-            err = new SyntaxError(this.formatErrorMessage(msg, pos));
+            err = new SyntaxError(msg);
+        
+        err.line = pos.line;
+        err.column = err.column;
+        err.lineOffset = pos.lineOffset;
+        err.startOffset = pos.startOffset;
+        err.endOffset = pos.endOffset;
         
         throw err;
     },
@@ -4057,36 +3687,18 @@ var Parser = es6now.Class(function(__super) { return {
         return false;
     },
     
-    peekModule: function(predict) {
+    peekModule: function() {
     
-        var isModule = false;
-        
         if (this.peekToken().value === "module") {
         
-            var p = this.peekToken("div", 1),
-                offset;
+            var p = this.peekToken("div", 1);
             
             // If a module identifier follows...
-            if (!p.newlineBefore && p.type === "IDENTIFIER") {
-            
-                if (predict) {
-                
-                    // Scan for "{" token
-                    offset = this.readToken().start;
-                    isModule = (this.peek(null, 1) === "{");
-                
-                    // Restore scanner position
-                    this.unpeek();
-                    this.scanner.offset = offset;
-                    
-                } else {
-                
-                    isModule = true;
-                }
-            }
+            if (!p.newlineBefore && p.type === "IDENTIFIER")
+                return true;
         }
         
-        return isModule;
+        return false;
     },
     
     addInvalidNode: function(node, error) {
@@ -4466,7 +4078,7 @@ var Parser = es6now.Class(function(__super) { return {
     
         var tok = this.peekToken(),
             type = tok.type,
-            start = tok.start;
+            start = this.startOffset;
         
         switch (type) {
             
@@ -5452,7 +5064,7 @@ var Parser = es6now.Class(function(__super) { return {
             
             case "IDENTIFIER":
                 
-                if (this.peekModule(false))
+                if (this.peekModule())
                     return this.ModuleDeclaration();
                 
                 break;
@@ -5620,12 +5232,28 @@ var Parser = es6now.Class(function(__super) { return {
     
     ModuleDeclaration: function() {
         
-        var start = this.startOffset;
+        var start = this.startOffset,
+            ident;
         
         this.readKeyword("module");
         
+        ident = this.BindingIdentifier();
+        
+        if (this.peekKeyword("from")) {
+        
+            this.read();
+            var from = this.peek() === "STRING" ? this.String() : this.ModulePath();
+            this.Semicolon();
+            
+            return new Node.ModuleFromDeclaration(
+                ident,
+                from,
+                start,
+                this.endOffset);
+        }
+        
         return new Node.ModuleDeclaration(
-            this.BindingIdentifier(),
+            ident,
             this.ModuleBody(),
             start,
             this.endOffset);
@@ -5649,31 +5277,22 @@ var Parser = es6now.Class(function(__super) { return {
     ImportDeclaration: function() {
     
         var start = this.startOffset,
+            list = [],
             ident,
-            list,
             from;
         
         this.read("import");
+        this.read("{");
         
-        if (this.peek() === "STRING") {
-        
-            from = this.String();
-            this.readKeyword("as");
-            ident = this.BindingIdentifier();
-            this.Semicolon();
-            
-            return new Node.ImportAsDeclaration(from, ident, start, this.endOffset);
-        }
-        
-        list = [];
-        
-        while (true) {
+        while (this.peekUntil("}")) {
         
             list.push(this.ImportSpecifier());
             
-            if (this.peek() === ",") this.read();
-            else break;
+            if (this.peek() === ",") 
+                this.read();
         }
+        
+        this.read("}");
         
         this.readKeyword("from");
         from = this.peek() === "STRING" ? this.String() : this.ModulePath();
@@ -5704,12 +5323,11 @@ var Parser = es6now.Class(function(__super) { return {
     ExportDeclaration: function() {
     
         var start = this.startOffset,
-            binding,
-            tok;
+            binding;
         
         this.read("export");
         
-        switch (tok = this.peek()) {
+        switch (this.peek()) {
                 
             case "var":
             case "let":
@@ -5731,7 +5349,7 @@ var Parser = es6now.Class(function(__super) { return {
             
             case "IDENTIFIER":
             
-                if (this.peekModule(true)) {
+                if (this.peekModule()) {
                 
                     binding = this.ModuleDeclaration();
                     break;
@@ -5740,6 +5358,7 @@ var Parser = es6now.Class(function(__super) { return {
             default:
                 
                 binding = this.ExportSpecifierSet();
+                this.Semicolon();
                 break;
         }
         
@@ -5756,27 +5375,28 @@ var Parser = es6now.Class(function(__super) { return {
         
             this.read();
             
+            if (this.peekKeyword("from")) {
+            
+                this.read();
+                from = this.peek() === "STRING" ? this.String() : this.ModulePath();
+            }
+            
         } else {
         
             list = [];
             
-            while (true) {
+            this.read("{");
+            
+            while (this.peekUntil("}")) {
         
                 list.push(this.ExportSpecifier());
             
-                if (this.peek() === ",") this.read();
-                else break;
+                if (this.peek() === ",") 
+                    this.read();
             }
-        }
-        
-        // TODO: Make sure that token after "from" is valid!
-        if (this.peekKeyword("from")) {
             
-            this.read();
-            from = this.peek() === "STRING" ? this.String() : this.ModulePath();
+            this.read("}");
         }
-        
-        this.Semicolon();
         
         return new Node.ExportSpecifierSet(list, from, start, this.endOffset);
     },
@@ -5787,11 +5407,10 @@ var Parser = es6now.Class(function(__super) { return {
             local = this.Identifier(),
             remote = null;
         
-        // TODO: Make sure that token after "as" is valid!
         if (this.peekKeyword("as")) {
         
             this.read();
-            remote = this.BindingIdentifier();
+            remote = this.IdentifierName();
         }
         
         return new Node.ExportSpecifier(local, remote, start, this.endOffset);
@@ -5928,1257 +5547,1640 @@ var Parser = es6now.Class(function(__super) { return {
 Object.mixin(Parser.prototype, Transform.prototype);
 Object.mixin(Parser.prototype, Validate.prototype);
 
-exports.Parser = Parser;
-};
 
-__modules[20] = function(exports) {
-// Unicode 6.2.0 | 2012-05-23, 20:34:59 GMT [MD]
-var identifierStart = /[\x24\x41-\x5A\x5F\x61-\x7A\xAA\xB5\xBA\xC0-\xD6\xD8-\xF6\xF8-\u02C1\u02C6-\u02D1\u02E0-\u02E4\u02EC\u02EE\u0370-\u0374\u0376-\u0377\u037A-\u037D\u0386\u0388-\u038A\u038C\u038E-\u03A1\u03A3-\u03F5\u03F7-\u0481\u048A-\u0527\u0531-\u0556\u0559\u0561-\u0587\u05D0-\u05EA\u05F0-\u05F2\u0620-\u064A\u066E-\u066F\u0671-\u06D3\u06D5\u06E5-\u06E6\u06EE-\u06EF\u06FA-\u06FC\u06FF\u0710\u0712-\u072F\u074D-\u07A5\u07B1\u07CA-\u07EA\u07F4-\u07F5\u07FA\u0800-\u0815\u081A\u0824\u0828\u0840-\u0858\u08A0\u08A2-\u08AC\u0904-\u0939\u093D\u0950\u0958-\u0961\u0971-\u0977\u0979-\u097F\u0985-\u098C\u098F-\u0990\u0993-\u09A8\u09AA-\u09B0\u09B2\u09B6-\u09B9\u09BD\u09CE\u09DC-\u09DD\u09DF-\u09E1\u09F0-\u09F1\u0A05-\u0A0A\u0A0F-\u0A10\u0A13-\u0A28\u0A2A-\u0A30\u0A32-\u0A33\u0A35-\u0A36\u0A38-\u0A39\u0A59-\u0A5C\u0A5E\u0A72-\u0A74\u0A85-\u0A8D\u0A8F-\u0A91\u0A93-\u0AA8\u0AAA-\u0AB0\u0AB2-\u0AB3\u0AB5-\u0AB9\u0ABD\u0AD0\u0AE0-\u0AE1\u0B05-\u0B0C\u0B0F-\u0B10\u0B13-\u0B28\u0B2A-\u0B30\u0B32-\u0B33\u0B35-\u0B39\u0B3D\u0B5C-\u0B5D\u0B5F-\u0B61\u0B71\u0B83\u0B85-\u0B8A\u0B8E-\u0B90\u0B92-\u0B95\u0B99-\u0B9A\u0B9C\u0B9E-\u0B9F\u0BA3-\u0BA4\u0BA8-\u0BAA\u0BAE-\u0BB9\u0BD0\u0C05-\u0C0C\u0C0E-\u0C10\u0C12-\u0C28\u0C2A-\u0C33\u0C35-\u0C39\u0C3D\u0C58-\u0C59\u0C60-\u0C61\u0C85-\u0C8C\u0C8E-\u0C90\u0C92-\u0CA8\u0CAA-\u0CB3\u0CB5-\u0CB9\u0CBD\u0CDE\u0CE0-\u0CE1\u0CF1-\u0CF2\u0D05-\u0D0C\u0D0E-\u0D10\u0D12-\u0D3A\u0D3D\u0D4E\u0D60-\u0D61\u0D7A-\u0D7F\u0D85-\u0D96\u0D9A-\u0DB1\u0DB3-\u0DBB\u0DBD\u0DC0-\u0DC6\u0E01-\u0E30\u0E32-\u0E33\u0E40-\u0E46\u0E81-\u0E82\u0E84\u0E87-\u0E88\u0E8A\u0E8D\u0E94-\u0E97\u0E99-\u0E9F\u0EA1-\u0EA3\u0EA5\u0EA7\u0EAA-\u0EAB\u0EAD-\u0EB0\u0EB2-\u0EB3\u0EBD\u0EC0-\u0EC4\u0EC6\u0EDC-\u0EDF\u0F00\u0F40-\u0F47\u0F49-\u0F6C\u0F88-\u0F8C\u1000-\u102A\u103F\u1050-\u1055\u105A-\u105D\u1061\u1065-\u1066\u106E-\u1070\u1075-\u1081\u108E\u10A0-\u10C5\u10C7\u10CD\u10D0-\u10FA\u10FC-\u1248\u124A-\u124D\u1250-\u1256\u1258\u125A-\u125D\u1260-\u1288\u128A-\u128D\u1290-\u12B0\u12B2-\u12B5\u12B8-\u12BE\u12C0\u12C2-\u12C5\u12C8-\u12D6\u12D8-\u1310\u1312-\u1315\u1318-\u135A\u1380-\u138F\u13A0-\u13F4\u1401-\u166C\u166F-\u167F\u1681-\u169A\u16A0-\u16EA\u16EE-\u16F0\u1700-\u170C\u170E-\u1711\u1720-\u1731\u1740-\u1751\u1760-\u176C\u176E-\u1770\u1780-\u17B3\u17D7\u17DC\u1820-\u1877\u1880-\u18A8\u18AA\u18B0-\u18F5\u1900-\u191C\u1950-\u196D\u1970-\u1974\u1980-\u19AB\u19C1-\u19C7\u1A00-\u1A16\u1A20-\u1A54\u1AA7\u1B05-\u1B33\u1B45-\u1B4B\u1B83-\u1BA0\u1BAE-\u1BAF\u1BBA-\u1BE5\u1C00-\u1C23\u1C4D-\u1C4F\u1C5A-\u1C7D\u1CE9-\u1CEC\u1CEE-\u1CF1\u1CF5-\u1CF6\u1D00-\u1DBF\u1E00-\u1F15\u1F18-\u1F1D\u1F20-\u1F45\u1F48-\u1F4D\u1F50-\u1F57\u1F59\u1F5B\u1F5D\u1F5F-\u1F7D\u1F80-\u1FB4\u1FB6-\u1FBC\u1FBE\u1FC2-\u1FC4\u1FC6-\u1FCC\u1FD0-\u1FD3\u1FD6-\u1FDB\u1FE0-\u1FEC\u1FF2-\u1FF4\u1FF6-\u1FFC\u2071\u207F\u2090-\u209C\u2102\u2107\u210A-\u2113\u2115\u2118-\u211D\u2124\u2126\u2128\u212A-\u2139\u213C-\u213F\u2145-\u2149\u214E\u2160-\u2188\u2C00-\u2C2E\u2C30-\u2C5E\u2C60-\u2CE4\u2CEB-\u2CEE\u2CF2-\u2CF3\u2D00-\u2D25\u2D27\u2D2D\u2D30-\u2D67\u2D6F\u2D80-\u2D96\u2DA0-\u2DA6\u2DA8-\u2DAE\u2DB0-\u2DB6\u2DB8-\u2DBE\u2DC0-\u2DC6\u2DC8-\u2DCE\u2DD0-\u2DD6\u2DD8-\u2DDE\u3005-\u3007\u3021-\u3029\u3031-\u3035\u3038-\u303C\u3041-\u3096\u309B-\u309F\u30A1-\u30FA\u30FC-\u30FF\u3105-\u312D\u3131-\u318E\u31A0-\u31BA\u31F0-\u31FF\u3400-\u4DB5\u4E00-\u9FCC\uA000-\uA48C\uA4D0-\uA4FD\uA500-\uA60C\uA610-\uA61F\uA62A-\uA62B\uA640-\uA66E\uA67F-\uA697\uA6A0-\uA6EF\uA717-\uA71F\uA722-\uA788\uA78B-\uA78E\uA790-\uA793\uA7A0-\uA7AA\uA7F8-\uA801\uA803-\uA805\uA807-\uA80A\uA80C-\uA822\uA840-\uA873\uA882-\uA8B3\uA8F2-\uA8F7\uA8FB\uA90A-\uA925\uA930-\uA946\uA960-\uA97C\uA984-\uA9B2\uA9CF\uAA00-\uAA28\uAA40-\uAA42\uAA44-\uAA4B\uAA60-\uAA76\uAA7A\uAA80-\uAAAF\uAAB1\uAAB5-\uAAB6\uAAB9-\uAABD\uAAC0\uAAC2\uAADB-\uAADD\uAAE0-\uAAEA\uAAF2-\uAAF4\uAB01-\uAB06\uAB09-\uAB0E\uAB11-\uAB16\uAB20-\uAB26\uAB28-\uAB2E\uABC0-\uABE2\uAC00-\uD7A3\uD7B0-\uD7C6\uD7CB-\uD7FB\uF900-\uFA6D\uFA70-\uFAD9\uFB00-\uFB06\uFB13-\uFB17\uFB1D\uFB1F-\uFB28\uFB2A-\uFB36\uFB38-\uFB3C\uFB3E\uFB40-\uFB41\uFB43-\uFB44\uFB46-\uFBB1\uFBD3-\uFD3D\uFD50-\uFD8F\uFD92-\uFDC7\uFDF0-\uFDFB\uFE70-\uFE74\uFE76-\uFEFC\uFF21-\uFF3A\uFF41-\uFF5A\uFF66-\uFFBE\uFFC2-\uFFC7\uFFCA-\uFFCF\uFFD2-\uFFD7\uFFDA-\uFFDC]/,
-    identifierPart = /[\x24\x30-\x39\x41-\x5A\x5F\x61-\x7A\xAA\xB5\xB7\xBA\xC0-\xD6\xD8-\xF6\xF8-\u02C1\u02C6-\u02D1\u02E0-\u02E4\u02EC\u02EE\u0300-\u036F\u0370-\u0374\u0376-\u0377\u037A-\u037D\u0386\u0387\u0388-\u038A\u038C\u038E-\u03A1\u03A3-\u03F5\u03F7-\u0481\u0483-\u0487\u048A-\u0527\u0531-\u0556\u0559\u0561-\u0587\u0591-\u05BD\u05BF\u05C1-\u05C2\u05C4-\u05C5\u05C7\u05D0-\u05EA\u05F0-\u05F2\u0610-\u061A\u0620-\u064A\u064B-\u0669\u066E-\u066F\u0670\u0671-\u06D3\u06D5\u06D6-\u06DC\u06DF-\u06E4\u06E5-\u06E6\u06E7-\u06E8\u06EA-\u06ED\u06EE-\u06EF\u06F0-\u06F9\u06FA-\u06FC\u06FF\u0710\u0711\u0712-\u072F\u0730-\u074A\u074D-\u07A5\u07A6-\u07B0\u07B1\u07C0-\u07C9\u07CA-\u07EA\u07EB-\u07F3\u07F4-\u07F5\u07FA\u0800-\u0815\u0816-\u0819\u081A\u081B-\u0823\u0824\u0825-\u0827\u0828\u0829-\u082D\u0840-\u0858\u0859-\u085B\u08A0\u08A2-\u08AC\u08E4-\u08FE\u0900-\u0903\u0904-\u0939\u093A-\u093C\u093D\u093E-\u094F\u0950\u0951-\u0957\u0958-\u0961\u0962-\u0963\u0966-\u096F\u0971-\u0977\u0979-\u097F\u0981-\u0983\u0985-\u098C\u098F-\u0990\u0993-\u09A8\u09AA-\u09B0\u09B2\u09B6-\u09B9\u09BC\u09BD\u09BE-\u09C4\u09C7-\u09C8\u09CB-\u09CD\u09CE\u09D7\u09DC-\u09DD\u09DF-\u09E1\u09E2-\u09E3\u09E6-\u09EF\u09F0-\u09F1\u0A01-\u0A03\u0A05-\u0A0A\u0A0F-\u0A10\u0A13-\u0A28\u0A2A-\u0A30\u0A32-\u0A33\u0A35-\u0A36\u0A38-\u0A39\u0A3C\u0A3E-\u0A42\u0A47-\u0A48\u0A4B-\u0A4D\u0A51\u0A59-\u0A5C\u0A5E\u0A66-\u0A71\u0A72-\u0A74\u0A75\u0A81-\u0A83\u0A85-\u0A8D\u0A8F-\u0A91\u0A93-\u0AA8\u0AAA-\u0AB0\u0AB2-\u0AB3\u0AB5-\u0AB9\u0ABC\u0ABD\u0ABE-\u0AC5\u0AC7-\u0AC9\u0ACB-\u0ACD\u0AD0\u0AE0-\u0AE1\u0AE2-\u0AE3\u0AE6-\u0AEF\u0B01-\u0B03\u0B05-\u0B0C\u0B0F-\u0B10\u0B13-\u0B28\u0B2A-\u0B30\u0B32-\u0B33\u0B35-\u0B39\u0B3C\u0B3D\u0B3E-\u0B44\u0B47-\u0B48\u0B4B-\u0B4D\u0B56-\u0B57\u0B5C-\u0B5D\u0B5F-\u0B61\u0B62-\u0B63\u0B66-\u0B6F\u0B71\u0B82\u0B83\u0B85-\u0B8A\u0B8E-\u0B90\u0B92-\u0B95\u0B99-\u0B9A\u0B9C\u0B9E-\u0B9F\u0BA3-\u0BA4\u0BA8-\u0BAA\u0BAE-\u0BB9\u0BBE-\u0BC2\u0BC6-\u0BC8\u0BCA-\u0BCD\u0BD0\u0BD7\u0BE6-\u0BEF\u0C01-\u0C03\u0C05-\u0C0C\u0C0E-\u0C10\u0C12-\u0C28\u0C2A-\u0C33\u0C35-\u0C39\u0C3D\u0C3E-\u0C44\u0C46-\u0C48\u0C4A-\u0C4D\u0C55-\u0C56\u0C58-\u0C59\u0C60-\u0C61\u0C62-\u0C63\u0C66-\u0C6F\u0C82-\u0C83\u0C85-\u0C8C\u0C8E-\u0C90\u0C92-\u0CA8\u0CAA-\u0CB3\u0CB5-\u0CB9\u0CBC\u0CBD\u0CBE-\u0CC4\u0CC6-\u0CC8\u0CCA-\u0CCD\u0CD5-\u0CD6\u0CDE\u0CE0-\u0CE1\u0CE2-\u0CE3\u0CE6-\u0CEF\u0CF1-\u0CF2\u0D02-\u0D03\u0D05-\u0D0C\u0D0E-\u0D10\u0D12-\u0D3A\u0D3D\u0D3E-\u0D44\u0D46-\u0D48\u0D4A-\u0D4D\u0D4E\u0D57\u0D60-\u0D61\u0D62-\u0D63\u0D66-\u0D6F\u0D7A-\u0D7F\u0D82-\u0D83\u0D85-\u0D96\u0D9A-\u0DB1\u0DB3-\u0DBB\u0DBD\u0DC0-\u0DC6\u0DCA\u0DCF-\u0DD4\u0DD6\u0DD8-\u0DDF\u0DF2-\u0DF3\u0E01-\u0E30\u0E31\u0E32-\u0E33\u0E34-\u0E3A\u0E40-\u0E46\u0E47-\u0E4E\u0E50-\u0E59\u0E81-\u0E82\u0E84\u0E87-\u0E88\u0E8A\u0E8D\u0E94-\u0E97\u0E99-\u0E9F\u0EA1-\u0EA3\u0EA5\u0EA7\u0EAA-\u0EAB\u0EAD-\u0EB0\u0EB1\u0EB2-\u0EB3\u0EB4-\u0EB9\u0EBB-\u0EBC\u0EBD\u0EC0-\u0EC4\u0EC6\u0EC8-\u0ECD\u0ED0-\u0ED9\u0EDC-\u0EDF\u0F00\u0F18-\u0F19\u0F20-\u0F29\u0F35\u0F37\u0F39\u0F3E-\u0F3F\u0F40-\u0F47\u0F49-\u0F6C\u0F71-\u0F84\u0F86-\u0F87\u0F88-\u0F8C\u0F8D-\u0F97\u0F99-\u0FBC\u0FC6\u1000-\u102A\u102B-\u103E\u103F\u1040-\u1049\u1050-\u1055\u1056-\u1059\u105A-\u105D\u105E-\u1060\u1061\u1062-\u1064\u1065-\u1066\u1067-\u106D\u106E-\u1070\u1071-\u1074\u1075-\u1081\u1082-\u108D\u108E\u108F-\u109D\u10A0-\u10C5\u10C7\u10CD\u10D0-\u10FA\u10FC-\u1248\u124A-\u124D\u1250-\u1256\u1258\u125A-\u125D\u1260-\u1288\u128A-\u128D\u1290-\u12B0\u12B2-\u12B5\u12B8-\u12BE\u12C0\u12C2-\u12C5\u12C8-\u12D6\u12D8-\u1310\u1312-\u1315\u1318-\u135A\u135D-\u135F\u1369-\u1371\u1380-\u138F\u13A0-\u13F4\u1401-\u166C\u166F-\u167F\u1681-\u169A\u16A0-\u16EA\u16EE-\u16F0\u1700-\u170C\u170E-\u1711\u1712-\u1714\u1720-\u1731\u1732-\u1734\u1740-\u1751\u1752-\u1753\u1760-\u176C\u176E-\u1770\u1772-\u1773\u1780-\u17B3\u17B4-\u17D3\u17D7\u17DC\u17DD\u17E0-\u17E9\u180B-\u180D\u1810-\u1819\u1820-\u1877\u1880-\u18A8\u18A9\u18AA\u18B0-\u18F5\u1900-\u191C\u1920-\u192B\u1930-\u193B\u1946-\u194F\u1950-\u196D\u1970-\u1974\u1980-\u19AB\u19B0-\u19C0\u19C1-\u19C7\u19C8-\u19C9\u19D0-\u19DA\u1A00-\u1A16\u1A17-\u1A1B\u1A20-\u1A54\u1A55-\u1A5E\u1A60-\u1A7C\u1A7F-\u1A89\u1A90-\u1A99\u1AA7\u1B00-\u1B04\u1B05-\u1B33\u1B34-\u1B44\u1B45-\u1B4B\u1B50-\u1B59\u1B6B-\u1B73\u1B80-\u1B82\u1B83-\u1BA0\u1BA1-\u1BAD\u1BAE-\u1BAF\u1BB0-\u1BB9\u1BBA-\u1BE5\u1BE6-\u1BF3\u1C00-\u1C23\u1C24-\u1C37\u1C40-\u1C49\u1C4D-\u1C4F\u1C50-\u1C59\u1C5A-\u1C7D\u1CD0-\u1CD2\u1CD4-\u1CE8\u1CE9-\u1CEC\u1CED\u1CEE-\u1CF1\u1CF2-\u1CF4\u1CF5-\u1CF6\u1D00-\u1DBF\u1DC0-\u1DE6\u1DFC-\u1DFF\u1E00-\u1F15\u1F18-\u1F1D\u1F20-\u1F45\u1F48-\u1F4D\u1F50-\u1F57\u1F59\u1F5B\u1F5D\u1F5F-\u1F7D\u1F80-\u1FB4\u1FB6-\u1FBC\u1FBE\u1FC2-\u1FC4\u1FC6-\u1FCC\u1FD0-\u1FD3\u1FD6-\u1FDB\u1FE0-\u1FEC\u1FF2-\u1FF4\u1FF6-\u1FFC\u200C-\u200D\u203F-\u2040\u2054\u2071\u207F\u2090-\u209C\u20D0-\u20DC\u20E1\u20E5-\u20F0\u2102\u2107\u210A-\u2113\u2115\u2118-\u211D\u2124\u2126\u2128\u212A-\u2139\u213C-\u213F\u2145-\u2149\u214E\u2160-\u2188\u2C00-\u2C2E\u2C30-\u2C5E\u2C60-\u2CE4\u2CEB-\u2CEE\u2CEF-\u2CF1\u2CF2-\u2CF3\u2D00-\u2D25\u2D27\u2D2D\u2D30-\u2D67\u2D6F\u2D7F\u2D80-\u2D96\u2DA0-\u2DA6\u2DA8-\u2DAE\u2DB0-\u2DB6\u2DB8-\u2DBE\u2DC0-\u2DC6\u2DC8-\u2DCE\u2DD0-\u2DD6\u2DD8-\u2DDE\u2DE0-\u2DFF\u3005-\u3007\u3021-\u3029\u302A-\u302F\u3031-\u3035\u3038-\u303C\u3041-\u3096\u3099-\u309A\u309B-\u309F\u30A1-\u30FA\u30FC-\u30FF\u3105-\u312D\u3131-\u318E\u31A0-\u31BA\u31F0-\u31FF\u3400-\u4DB5\u4E00-\u9FCC\uA000-\uA48C\uA4D0-\uA4FD\uA500-\uA60C\uA610-\uA61F\uA620-\uA629\uA62A-\uA62B\uA640-\uA66E\uA66F\uA674-\uA67D\uA67F-\uA697\uA69F\uA6A0-\uA6EF\uA6F0-\uA6F1\uA717-\uA71F\uA722-\uA788\uA78B-\uA78E\uA790-\uA793\uA7A0-\uA7AA\uA7F8-\uA801\uA802\uA803-\uA805\uA806\uA807-\uA80A\uA80B\uA80C-\uA822\uA823-\uA827\uA840-\uA873\uA880-\uA881\uA882-\uA8B3\uA8B4-\uA8C4\uA8D0-\uA8D9\uA8E0-\uA8F1\uA8F2-\uA8F7\uA8FB\uA900-\uA909\uA90A-\uA925\uA926-\uA92D\uA930-\uA946\uA947-\uA953\uA960-\uA97C\uA980-\uA983\uA984-\uA9B2\uA9B3-\uA9C0\uA9CF\uA9D0-\uA9D9\uAA00-\uAA28\uAA29-\uAA36\uAA40-\uAA42\uAA43\uAA44-\uAA4B\uAA4C-\uAA4D\uAA50-\uAA59\uAA60-\uAA76\uAA7A\uAA7B\uAA80-\uAAAF\uAAB0\uAAB1\uAAB2-\uAAB4\uAAB5-\uAAB6\uAAB7-\uAAB8\uAAB9-\uAABD\uAABE-\uAABF\uAAC0\uAAC1\uAAC2\uAADB-\uAADD\uAAE0-\uAAEA\uAAEB-\uAAEF\uAAF2-\uAAF4\uAAF5-\uAAF6\uAB01-\uAB06\uAB09-\uAB0E\uAB11-\uAB16\uAB20-\uAB26\uAB28-\uAB2E\uABC0-\uABE2\uABE3-\uABEA\uABEC-\uABED\uABF0-\uABF9\uAC00-\uD7A3\uD7B0-\uD7C6\uD7CB-\uD7FB\uF900-\uFA6D\uFA70-\uFAD9\uFB00-\uFB06\uFB13-\uFB17\uFB1D\uFB1E\uFB1F-\uFB28\uFB2A-\uFB36\uFB38-\uFB3C\uFB3E\uFB40-\uFB41\uFB43-\uFB44\uFB46-\uFBB1\uFBD3-\uFD3D\uFD50-\uFD8F\uFD92-\uFDC7\uFDF0-\uFDFB\uFE00-\uFE0F\uFE20-\uFE26\uFE33-\uFE34\uFE4D-\uFE4F\uFE70-\uFE74\uFE76-\uFEFC\uFF10-\uFF19\uFF21-\uFF3A\uFF3F\uFF41-\uFF5A\uFF66-\uFFBE\uFFC2-\uFFC7\uFFCA-\uFFCF\uFFD2-\uFFD7\uFFDA-\uFFDC]/,
-    whitespaceChars = /[\x09\x0B-\x0C\x20\xA0\u1680\u180E\u2000-\u200A\u202F\u205F\u3000\uFEFF]/;
+exports.Parser = Parser; return exports; }).call(this, {});
 
-var identifierEscape = /\\u([0-9a-fA-F]{4})/g,
-    newlineSequence = /\r\n?|[\n\u2028\u2029]/g;
+var es6parse = (function(exports) {
 
-// === Reserved Words ===
-var reservedWord = new RegExp("^(?:" +
-    "break|case|catch|class|const|continue|debugger|default|delete|do|" +
-    "else|enum|export|extends|false|finally|for|function|if|import|in|" +
-    "instanceof|new|null|return|super|switch|this|throw|true|try|typeof|" +
-    "var|void|while|with" +
-")$");
+var Node = TreeNode;
 
-var strictReservedWord = new RegExp("^(?:" +
-    "implements|private|public|interface|package|let|protected|static|yield" +
-")$");
+var Parser = Parser_.Parser;
+var Scanner = Scanner_.Scanner;
 
-// === Punctuators ===
-var multiCharPunctuator = new RegExp("^(?:" +
-    "[-+]{2}|" +
-    "[&|]{2}|" +
-    "<<=?|" +
-    ">>>?=?|" +
-    "[!=]==|" +
-    "=>|" +
-    "[\.]{2,3}|" +
-    "[-+&|<>!=*&\^%\/]=" +
-")$");
 
-var ASSIGNMENT = 1,
-    UNARY = 2,
-    INCREMENT = 4;
 
-// === Miscellaneous Patterns ===
-var octalEscape = /^(?:[0-3][0-7]{0,2}|[4-7][0-7]?)/,
-    blockCommentPattern = /\r\n?|[\n\u2028\u2029]|\*\//g,
-    hexChar = /[0-9a-f]/i;
+function parseModule(input, options) {
 
-// === Character Types ===
-var WHITESPACE = 1,
-    NEWLINE = 2,
-    DECIMAL_DIGIT = 3,
-    PUNCTUATOR = 4,
-    PUNCTUATOR_CHAR = 5,
-    STRING = 6,
-    TEMPLATE = 7,
-    IDENTIFIER = 8,
-    ZERO = 9,
-    DOT = 10,
-    SLASH = 11,
-    LBRACE = 12;
-
-// === Character Type Lookup Table ===
-var LookupTable = (function(exports) {
-
-    var charTable = new Array(128), i;
-    
-    add(WHITESPACE, "\t\v\f ");
-    add(NEWLINE, "\r\n");
-    add(DECIMAL_DIGIT, "123456789");
-    add(PUNCTUATOR_CHAR, "{[]();,?:");
-    add(PUNCTUATOR, "<>+-*%&|^!~=");
-    add(DOT, ".");
-    add(SLASH, "/");
-    add(LBRACE, "}");
-    add(ZERO, "0");
-    add(STRING, "'\"");
-    add(TEMPLATE, "`");
-    
-    add(IDENTIFIER, "$_\\");
-    for (i = 65; i <= 90; ++i) charTable[i] = IDENTIFIER;
-    for (i = 97; i <= 122; ++i) charTable[i] = IDENTIFIER;
-    
-    function add(type, string) {
-    
-        string.split("").forEach((function(c) { return charTable[c.charCodeAt(0)] = type; }));
-    }
-exports.charTable = charTable; exports.i = i; return exports; }).call(this, {});
-
-var charTable = LookupTable.charTable;
-
-// Performs a binary search on an array
-function binarySearch(array, val) {
-
-    var right = array.length - 1,
-        left = 0,
-        mid,
-        test;
-    
-    while (left <= right) {
-        
-        mid = (left + right) >> 1;
-        test = array[mid];
-        
-        if (val > test) left = mid + 1;
-        else if (val < test) right = mid - 1;
-        else return mid;
-    }
-    
-    return left;
+    return new Parser(input, options).parseModule();
 }
 
-// Returns true if the character is a valid identifier part
-function isIdentifierPart(c) {
+function parseScript(input, options) {
 
-    if (c === void 0)
-        return false;
-    
-    var code = c.charCodeAt(0);
-    
-    return  code > 64 && code < 91 || 
-            code > 96 && code < 123 ||
-            code > 47 && code < 58 ||
-            code === 36 ||
-            code === 95 ||
-            code === 92 ||
-            code > 123 && identifierPart.test(c);
+    return new Parser(input, options).parseScript();
 }
 
-// Returns true if the specified character is a newline
-function isNewlineChar(c) {
+function forEachChild(node, fn) {
 
-    switch (c) {
+    var keys = Object.keys(node), val, i, j;
     
-        case "\r":
-        case "\n":
-        case "\u2028":
-        case "\u2029":
-            return true;
-    }
+    for (i = 0; i < keys.length; ++i) {
     
-    return false;
-}
-
-// Returns true if the specified character can exist in a non-starting position
-function isPunctuatorNext(c) {
-
-    switch (c) {
-    
-        case "+":
-        case "-":
-        case "&":
-        case "|":
-        case "<":
-        case ">":
-        case "=":
-        case ".":
-            return true;
-    }
-    
-    return false;
-}
-
-// Returns true if the specified character is a valid numeric following character
-function isNumberFollow(c) {
-
-    if (c === void 0)
-        return true;
-    
-    var code = c.charCodeAt(0);
-    
-    return !(
-        code > 64 && code < 91 || 
-        code > 96 && code < 123 ||
-        code > 47 && code < 58 ||
-        code === 36 ||
-        code === 95 ||
-        code === 92 ||
-        code > 123 && identifierStart.test(c)
-    );
-}
-
-var Scanner = es6now.Class(function(__super) { return {
-
-    constructor: function(input, offset) {
-
-        this.input = input || "";
-        this.offset = offset || 0;
-        this.length = this.input.length;
-        this.lines = [-1];
-        
-        this.strict = false;
-        
-        this.type = "";
-        this.start = 0;
-        this.end = 0;
-        this.value = "";
-        this.number = 0;
-        this.templateEnd = false;
-        this.regExpFlags = null;
-        this.newlineBefore = false;
-        this.flags = 0;
-        this.error = "";
-    },
-    
-    next: function(context) {
-
-        if (this.type !== "COMMENT")
-            this.newlineBefore = false;
-        
-        this.error = "";
-        this.value = null;
-        this.flags = 0;
-        
-        var type = null, 
-            start;
-        
-        while (type === null) {
-        
-            start = this.offset;
-            type = start >= this.length ? "EOF" : this.Start(context);
-        }
-        
-        this.type = type;
-        this.start = start;
-        this.end = this.offset;
-        
-        return type;
-    },
-    
-    raw: function(token) {
-    
-        token || (token = this);
-        return this.input.slice(this.start, this.end);
-    },
-    
-    position: function(token) {
-    
-        token || (token = this);
-        
-        var offset = token.start,
-            i = binarySearch(this.lines, offset);
-        
-        return { 
-        
-            offset: offset, 
-            line: i, 
-            column: offset - this.lines[i - 1]
-        };
-    },
-    
-    addLineBreak: function(offset) {
-    
-        this.lines.push(offset);
-    },
-    
-    readIdentifierEscape: function() {
-    
-        if (this.input[this.offset++] !== "u")
-            return null;
-        
-        var hex;
-        
-        if (this.input[this.offset] === "{") {
-        
-            this.offset++;
-            hex = this.readHex(0);
+        if (keys[i] === "parentNode")
+            continue;
             
-            if (this.input[this.offset++] !== "}")
-                return null;
+        val = node[keys[i]];
+        
+        // Skip non-objects
+        if (!val || typeof val !== "object") 
+            continue;
+        
+        if (typeof val.type === "string") {
+        
+            // Nodes have a "type" property
+            fn(val);
         
         } else {
         
-            hex = this.readHex(4);
-        
-            if (hex.length < 4)
-                return null;
+            // Iterate arrays
+            for (j = 0; j < (val.length >>> 0); ++j)
+                if (val[j] && typeof val[j].type === "string")
+                    fn(val[j]);
         }
-        
-        return String.fromCharCode(parseInt(hex, 16));
-    },
-    
-    readOctalEscape: function() {
-    
-        var m = octalEscape.exec(this.input.slice(this.offset, this.offset + 3)),
-            val = m ? m[0] : "";
-        
-        this.offset += val.length;
-        
-        return val;
-    },
-    
-    readStringEscape: function() {
-    
-        this.offset++;
-        
-        var chr, esc;
-        
-        switch (chr = this.input[this.offset++]) {
-        
-            case "t": return "\t";
-            case "b": return "\b";
-            case "v": return "\v";
-            case "f": return "\f";
-            case "r": return "\r";
-            case "n": return "\n";
-    
-            case "\r":
-            
-                this.addLineBreak(this.offset - 1);
-                
-                if (this.input[this.offset] === "\n")
-                    this.offset++;
-                
-                return "";
-            
-            case "\n":
-            case "\u2028":
-            case "\u2029":
-            
-                this.addLineBreak(this.offset - 1);
-                return "";
-
-            case "0":
-            case "1":
-            case "2":
-            case "3":
-            case "4":
-            case "5":
-            case "6":
-            case "7":
-            
-                this.offset--;
-                esc = this.readOctalEscape();
-                
-                if (esc === "0") {
-                
-                    return String.fromCharCode(0);
-                
-                } else if (this.strict) {
-                
-                    this.error = "Octal literals are not allowed in strict mode";
-                    return null;
-                    
-                } else {
-                
-                    return String.fromCharCode(parseInt(esc, 8));
-                }
-            
-            case "x":
-            
-                esc = this.readHex(2);
-                return (esc.length < 2) ? null : String.fromCharCode(parseInt(esc, 16));
-            
-            case "u":
-            
-                if (this.input[this.offset] === "{") {
-                
-                    this.offset++;
-                    esc = this.readHex(0);
-                    
-                    if (this.input[this.offset++] !== "}")
-                        return null;
-                    
-                } else {
-                
-                    esc = this.readHex(4);
-                    if (esc.length < 4) return null;
-                }
-                
-                return String.fromCharCode(parseInt(esc, 16));
-            
-            default: 
-            
-                return chr;
-        }
-    },
-    
-    readRange: function(low, high) {
-    
-        var start = this.offset,
-            code;
-        
-        while (code = this.input.charCodeAt(this.offset)) {
-        
-            if (code >= low && code <= high) this.offset++;
-            else break;
-        }
-        
-        return this.input.slice(start, this.offset);
-    },
-    
-    readInteger: function() {
-    
-        var start = this.offset,
-            code;
-        
-        while (code = this.input.charCodeAt(this.offset)) {
-        
-            if (code >= 48 && code <= 57) this.offset++;
-            else break;
-        }
-        
-        return this.input.slice(start, this.offset);
-    },
-    
-    readHex: function(maxLen) {
-        
-        var str = "", 
-            chr;
-        
-        while (chr = this.input[this.offset]) {
-        
-            if (!hexChar.test(chr))
-                break;
-            
-            str += chr;
-            this.offset++;
-            
-            if (str.length === maxLen)
-                break;
-        }
-        
-        return str;
-    },
-    
-    Start: function(context) {
-    
-        var code = this.input.charCodeAt(this.offset),
-            next;
-            
-        switch (charTable[code]) {
-        
-            case PUNCTUATOR_CHAR: return this.PunctuatorChar(code);
-            
-            case WHITESPACE: return this.Whitespace(code);
-            
-            case IDENTIFIER: 
-            
-                return context === "name" ? 
-                    this.IdentifierName(code) : 
-                    this.Identifier(code);
-            
-            case LBRACE:
-            
-                if (context === "template") return this.Template(code);
-                else return this.PunctuatorChar(code);
-            
-            case PUNCTUATOR: return this.Punctuator(code);
-            
-            case NEWLINE: return this.Newline(code);
-            
-            case DECIMAL_DIGIT: return this.Number(code);
-            
-            case TEMPLATE: return this.Template(code);
-            
-            case STRING: return this.String(code);
-            
-            case ZERO: 
-            
-                switch (next = this.input.charCodeAt(this.offset + 1)) {
-                
-                    case 88: case 120: return this.HexNumber(code);   // x
-                    case 66: case 98: return this.BinaryNumber(code); // b
-                    case 79: case 111: return this.OctalNumber(code); // o
-                }
-                
-                return next >= 48 && next <= 55 ?
-                    this.LegacyOctalNumber(code) :
-                    this.Number(code);
-            
-            case DOT: 
-            
-                next = this.input.charCodeAt(this.offset + 1);
-                
-                if (next >= 48 && next <= 57) return this.Number(code);
-                else return this.Punctuator(code);
-            
-            case SLASH:
-            
-                next = this.input.charCodeAt(this.offset + 1);
-
-                if (next === 47) return this.LineComment(code);       // /
-                else if (next === 42) return this.BlockComment(code); // *
-                else if (context === "div") return this.Punctuator(code);
-                else return this.RegularExpression(code);
-            
-        }
-        
-        var chr = this.input[this.offset];
-        
-        // Unicode newlines
-        if (isNewlineChar(chr))
-            return this.Newline(code);
-        
-        // Unicode whitespace
-        if (whitespaceChars.test(chr))
-            return this.UnicodeWhitespace(code);
-        
-        // Unicode identifier chars
-        if (identifierStart.test(chr))
-            return context === "name" ? this.IdentifierName(code) : this.Identifier(code);
-        
-        return this.Error();
-    },
-    
-    Whitespace: function(code) {
-    
-        this.offset++;
-        
-        while (code = this.input.charCodeAt(this.offset)) {
-        
-            // ASCII Whitespace:  [\t] [\v] [\f] [ ] 
-            if (code === 9 || code === 11 || code === 12 || code ===32)
-                this.offset++;
-            else
-                break;
-        }
-        
-        return null;
-    },
-    
-    UnicodeWhitespace: function() {
-    
-        this.offset++;
-        
-        // General unicode whitespace
-        while (whitespaceChars.test(this.input[this.offset]))
-            this.offset++;
-        
-        return null;
-    },
-    
-    Newline: function(code) {
-        
-        this.addLineBreak(this.offset++);
-        
-        // Treat /r/n as a single newline
-        if (code === 13 && this.input.charCodeAt(this.offset) === 10)
-            this.offset++;
-        
-        this.newlineBefore = true;
-        
-        return null;
-    },
-    
-    PunctuatorChar: function() {
-    
-        return this.input[this.offset++];
-    },
-    
-    Punctuator: function() {
-        
-        var op = this.input[this.offset++], 
-            chr,
-            next;
-        
-        while (
-            isPunctuatorNext(chr = this.input[this.offset]) &&
-            multiCharPunctuator.test(next = op + chr)) {
-    
-            this.offset++;
-            op = next;
-        }
-        
-        // ".." is not a valid token
-        if (op === "..") {
-        
-            this.offset--;
-            op = ".";
-        }
-        
-        return op;
-    },
-    
-    Template: function() {
-    
-        var first = this.input[this.offset++],
-            end = false, 
-            val = "", 
-            esc,
-            chr;
-        
-        while (chr = this.input[this.offset]) {
-            
-            if (chr === "`") {
-            
-                end = true;
-                break;
-            }
-            
-            if (chr === "$" && this.input[this.offset + 1] === "{") {
-            
-                this.offset++;
-                break;
-            }
-            
-            if (chr === "\\") {
-            
-                esc = this.readStringEscape();
-                
-                if (!esc) 
-                    return this.Error();
-                
-                val += esc;
-                
-            } else {
-            
-                val += chr;
-                this.offset++;
-            }
-        }
-        
-        if (!chr)
-            return this.Error();
-        
-        this.offset++;
-        
-        this.value = val;
-        this.templateEnd = end;
-        
-        return "TEMPLATE";
-    },
-    
-    String: function() {
-    
-        var delim = this.input[this.offset++],
-            val = "",
-            esc,
-            chr;
-        
-        while (chr = this.input[this.offset]) {
-        
-            if (chr === delim)
-                break;
-            
-            if (isNewlineChar(chr))
-                return this.Error();
-            
-            if (chr === "\\") {
-            
-                esc = this.readStringEscape();
-                
-                if (esc === null)
-                    return this.Error();
-                
-                val += esc;
-                
-            } else {
-            
-                val += chr;
-                this.offset++;
-            }
-        }
-        
-        if (!chr)
-            return this.Error();
-        
-        this.offset++;
-        this.value = val;
-        
-        return "STRING";
-    },
-    
-    RegularExpression: function() {
-    
-        this.offset++;
-        
-        var backslash = false, 
-            inClass = false,
-            flags = null,
-            val = "", 
-            chr;
-        
-        while (chr = this.input[this.offset++]) {
-        
-            if (isNewlineChar(chr))
-                return this.Error();
-            
-            if (backslash) {
-            
-                val += "\\" + chr;
-                backslash = false;
-            
-            } else if (chr === "[") {
-            
-                inClass = true;
-                val += chr;
-            
-            } else if (chr === "]" && inClass) {
-            
-                inClass = false;
-                val += chr;
-            
-            } else if (chr === "/" && !inClass) {
-            
-                break;
-            
-            } else if (chr === "\\") {
-            
-                backslash = true;
-                
-            } else {
-            
-                val += chr;
-            }
-        }
-        
-        if (!chr)
-            return this.Error();
-        
-        if (isIdentifierPart(this.input[this.offset]))
-            flags = this.IdentifierName().value;
-        
-        this.value = val;
-        this.regExpFlags = flags;
-        
-        return "REGEX";
-    },
-    
-    LegacyOctalNumber: function() {
-    
-        this.offset++;
-        
-        var start = this.offset,
-            code;
-        
-        while (code = this.input.charCodeAt(this.offset)) {
-        
-            if (code >= 48 && code <= 55)
-                this.offset++;
-            else
-                break;
-        }
-        
-        if (this.strict)
-            return this.Error("Octal literals are not allowed in strict mode");
-        
-        this.number = parseInt(this.input.slice(start, this.offset), 8);
-        
-        return isNumberFollow(this.input[this.offset]) ? "NUMBER" : this.Error();
-    },
-    
-    Number: function() {
-    
-        var start = this.offset,
-            next;
-        
-        this.readInteger();
-        
-        if (this.input[this.offset] === ".") {
-        
-            this.offset++;
-            this.readInteger();
-        }
-        
-        next = this.input[this.offset];
-        
-        if (next === "e" || next === "E") {
-        
-            this.offset++;
-            
-            next = this.input[this.offset];
-            
-            if (next === "+" || next === "-")
-                this.offset++;
-            
-            if (!this.readInteger())
-                return this.Error();
-        }
-        
-        this.number = parseFloat(this.input.slice(start, this.offset));
-        
-        return isNumberFollow(this.input[this.offset]) ? "NUMBER" : this.Error();
-    },
-    
-    BinaryNumber: function() {
-    
-        this.offset += 2;
-        this.number = parseInt(this.readRange(48, 49), 2);
-        
-        return isNumberFollow(this.input[this.offset]) ? "NUMBER" : this.Error();
-    },
-    
-    OctalNumber: function() {
-    
-        this.offset += 2;
-        this.number = parseInt(this.readRange(48, 55), 8);
-        
-        return isNumberFollow(this.input[this.offset]) ? "NUMBER" : this.Error();
-    },
-    
-    HexNumber: function() {
-    
-        this.offset += 2;
-        this.number = parseInt(this.readHex(0), 16);
-        
-        return isNumberFollow(this.input[this.offset]) ? "NUMBER" : this.Error();
-    },
-    
-    Identifier: function() {
-    
-        var start = this.offset,
-            id = "",
-            chr,
-            esc;
-
-        while (isIdentifierPart(chr = this.input[this.offset])) {
-        
-            if (chr === "\\") {
-            
-                id += this.input.slice(start, this.offset++);
-                esc = this.readIdentifierEscape();
-                
-                if (esc === null)
-                    return this.Error();
-                
-                id += esc;
-                start = this.offset;
-                
-            } else {
-            
-                this.offset++;
-            }
-        }
-        
-        id += this.input.slice(start, this.offset);
-        
-        if (reservedWord.test(id) || this.strict && strictReservedWord.test(id))
-            return id;
-        
-        this.value = id;
-        
-        return "IDENTIFIER";
-    },
-    
-    IdentifierName: function() {
-    
-        var start = this.offset,
-            id = "",
-            chr,
-            esc;
-
-        while (isIdentifierPart(chr = this.input[this.offset])) {
-        
-            if (chr === "\\") {
-            
-                id += this.input.slice(start, this.offset++);
-                esc = this.readIdentifierEscape();
-                
-                if (esc === null)
-                    return this.Error();
-                
-                id += esc;
-                start = this.offset;
-                
-            } else {
-            
-                this.offset++;
-            }
-        }
-        
-        this.value = id + this.input.slice(start, this.offset);
-        
-        return "IDENTIFIER";
-    },
-    
-    LineComment: function() {
-    
-        this.offset += 2;
-        
-        var start = this.offset,
-            chr;
-        
-        while (chr = this.input[this.offset]) {
-        
-            if (isNewlineChar(chr))
-                break;
-            
-            this.offset++;
-        }
-        
-        this.value = this.input.slice(start, this.offset);
-        
-        return "COMMENT";
-    },
-    
-    BlockComment: function() {
-    
-        this.offset += 2;
-        
-        var pattern = blockCommentPattern,
-            start = this.offset,
-            m;
-        
-        while (true) {
-        
-            pattern.lastIndex = this.offset;
-            
-            m = pattern.exec(this.input);
-            if (!m) return this.Error();
-            
-            this.offset = m.index + m[0].length;
-            
-            if (m[0] === "*/")
-                break;
-            
-            this.newlineBefore = true;
-            this.addLineBreak(m.index);
-        }
-        
-        this.value = this.input.slice(start, this.offset - 2);
-        
-        return "COMMENT";
-    },
-    
-    Error: function(msg) {
-    
-        this.offset++;
-        
-        if (msg)
-            this.error = msg;
-        
-        return "ILLEGAL";
     }
-    
-}});
+}
 
-exports.Scanner = Scanner;
-};
 
-__modules[21] = function(exports) {
-var Transform = es6now.Class(function(__super) { return {
 
-    // Transform an expression into a formal parameter list
-    transformFormals: function(expr) {
-    
-        if (expr === null)
-            return [];
-            
-        var list = (expr.type === "SequenceExpression") ? expr.expressions : [expr],
-            params = [],
-            param,
-            node,
-            i;
-    
-        for (i = 0; i < list.length; ++i) {
-        
-            node = list[i];
-            
-            params.push(param = {
-            
-                type: "FormalParameter",
-                pattern: node,
-                init: null,
-                start: node.start,
-                end: node.end
-            });
-            
-            this.transformPatternElement(param, true);
-        }
-        
-        return params;
-    },
-    
-    transformArrayPattern: function(node, binding) {
-    
-        node.type = "ArrayPattern";
-        
-        var elems = node.elements,
-            elem,
-            rest,
-            i;
-        
-        for (i = 0; i < elems.length; ++i) {
-        
-            elem = elems[i];
-            
-            if (!elem) 
-                continue;
-            
-            if (elem.type !== "PatternElement") {
-            
-                rest = (elem.type === "SpreadExpression");
-                
-                elem = elems[i] = {
-                
-                    type: "PatternElement",
-                    pattern: rest ? elem.expression : elem,
-                    init: null,
-                    rest: rest,
-                    start: elem.start,
-                    end: elem.end
-                };
-                
-                // No trailing comma allowed after rest
-                if (rest && (node.trailingComma || i < elems.length - 1))
-                    this.fail("Invalid destructuring pattern", elem);
-            }
-            
-            if (elem.rest) this.transformPattern(elem.pattern, binding);
-            else this.transformPatternElement(elem, binding);
-        }
-    },
-    
-    transformObjectPattern: function(node, binding) {
+exports.Parser = Parser; exports.Scanner = Scanner; exports.Node = Node; exports.parseModule = parseModule; exports.parseScript = parseScript; exports.forEachChild = forEachChild; return exports; }).call(this, {});
 
-        node.type = "ObjectPattern";
-        
-        var props = node.properties, 
-            prop,
-            i;
-        
-        for (i = 0; i < props.length; ++i) {
-        
-            prop = props[i];
-            
-            switch (prop.type) {
-            
-                case "PatternProperty":
-                
-                    break;
-                
-                case "CoveredPatternProperty":
-                    
-                    prop.type = "PatternProperty";
-                    break;
-                    
-                case "PropertyDefinition":
-                    
-                    prop.type = "PatternProperty";
-                    prop.pattern = prop.expression;
-                    prop.init = null;
-                    
-                    delete prop.expression;
-                    break;
-                
-                default:
-                
-                    this.fail("Invalid pattern", prop);
-            }
-            
-            // Clear error flags
-            if (prop.error)
-                delete prop.error;
-            
-            if (prop.pattern) this.transformPatternElement(prop, binding);
-            else this.transformPattern(prop.name, binding);
-        }
-    },
-    
-    transformPatternElement: function(elem, binding) {
-    
-        var node = elem.pattern;
-        
-        // Split assignment into pattern and initializer
-        if (node.type === "AssignmentExpression" && node.operator === "=") {
-        
-            elem.pattern = node.left;
-            elem.init = node.right;
-        }
-        
-        this.transformPattern(elem.pattern, binding);
-    },
-    
-    // Transforms an expression into a pattern
-    transformPattern: function(node, binding) {
+var Parser = (function(exports) {
 
+Object.keys(es6parse).forEach(function(k) { exports[k] = es6parse[k]; });
+
+return exports; }).call(this, {});
+
+var Analyzer = (function(exports) {
+
+var parseModule = Parser.parseModule, forEachChild = Parser.forEachChild;
+var StringSet = StringSet_.StringSet;
+var StringMap = StringMap_.StringMap;
+
+function parse(code) { 
+
+    return parseModule(code);
+}
+
+function analyze(ast, resolve) {
+
+    if (typeof ast === "string")
+        ast = parseModule(ast);
+    
+    if (!resolve)
+        resolve = (function(x) { return x; });
+    
+    var edges = new StringMap,
+        identifiers = new StringSet;
+    
+    visit(ast, true);
+    
+    return { edges: edges, identifiers: identifiers };
+    
+    function visit(node, topLevel) {
+        
         switch (node.type) {
         
+            case "ExportSpecifierSet":
+            case "ImportDeclaration":
+            case "ModuleFromDeclaration":
+                
+                addEdge(node.from);
+                break;
+            
             case "Identifier":
             
-                if (binding) this.checkBindingIdent(node, true);
-                else this.checkAssignTarget(node, true);
+                if (node.context === "declaration" && topLevel)
+                    identifiers.add(node.value);
                 
                 break;
             
-            case "MemberExpression":
-            case "CallExpression":
-                if (binding) this.fail("Invalid left-hand-side in binding pattern", node);
-                break;
+            case "ClassExpression":
+            case "ClassBody":
+            case "FunctionExpression":
+            case "FormalParameter":
+            case "FunctionBody":
             
-            case "ObjectExpression":
-            case "ObjectPattern":
-                this.transformObjectPattern(node, binding);
-                break;
-            
-            case "ArrayExpression":
-            case "ArrayPattern":
-                this.transformArrayPattern(node, binding);
+                topLevel = false;
                 break;
                 
-            default:
-                this.fail("Invalid expression in pattern", node);
-                break;
         }
         
-        return node;
+        forEachChild(node, (function(node) { return visit(node, topLevel); }));
     }
     
+    function addEdge(spec) {
+    
+        if (!spec || spec.type !== "String")
+            return;
+        
+        var path = resolve(spec.value);
+        
+        if (path) {
+        
+            if (edges.has(path))
+                edges.get(path).push(spec);
+            else
+                edges.set(path, [spec]);
+        }
+    }
+}
+
+exports.parse = parse; exports.analyze = analyze; return exports; }).call(this, {});
+
+var Bundler_ = (function(exports) {
+
+var AFS = AsyncFS__;
+var Path = _M1;
+
+var Promise = Promise__.Promise, forEachPromise = Promise__.forEach;
+var StringMap = StringMap_.StringMap;
+var StringSet = StringSet_.StringSet;
+var analyze = Analyzer.analyze;
+
+var EXTERNAL_URL = /[a-z][a-z]+:/i;
+
+function identFromPath(path) {
+
+    // TODO: Make this unicode friendly.  Can we export some
+    // functions or patterns from the parser to help?
+    
+    var name = Path.basename(path);
+    
+    // Remove the file extension
+    name = name.replace(/\..*$/i, "");
+    
+    // Replace dashes
+    name = name.replace(/-(\S?)/g, (function(m, m1) { return m1 ? m1.toUpperCase() : ""; }));
+    
+    // Replace any other non-ident chars with _
+    name = name.replace(/[^a-z0-9$_]+/ig, "_");
+    
+    // Make sure the name doesn't start with a number
+    name = name.replace(/^[0-9]+/, "");
+    
+    return name;
+}
+
+function bundle(rootPath) {
+    
+    rootPath = Path.resolve(rootPath);
+    
+    var nodes = new StringMap,
+        nodeNames = new StringSet,
+        sort = [];
+    
+    function visit(path) {
+
+        if (nodes.has(path))
+            return Promise.resolve(null);
+        
+        var dir = Path.dirname(path);
+        
+        return AFS.readFile(path, { encoding: "utf8" }).then((function(code) {
+    
+            var node = analyze(code, (function(p) { return EXTERNAL_URL.test(p) ? null : Path.resolve(dir, p); }));
+            
+            node.path = path;
+            node.source = code;
+            node.visited = false;
+            node.inEdges = new StringSet;
+            node.name = "";
+            
+            nodes.set(path, node);
+            
+            return forEachPromise(node.edges.keys(), visit);
+        }));
+    }
+    
+    function traverse(path, from) {
+    
+        var node = nodes.get(path);
+        
+        if (from)
+            node.inEdges.add(from);
+        
+        if (node.visited)
+            return;
+        
+        node.visited = true;
+        node.edges.forEach((function(val, key) { return traverse(key, path); }));   
+        sort.push(path);
+    }
+    
+    function assignNames() {
+    
+        nodes.forEach((function(node) {
+        
+            var name = identFromPath(node.path),
+                identifiers = new StringSet;
+            
+            // Build list of top-level identifiers in
+            // referencing modules
+            node.inEdges.forEach((function(key) {
+            
+                nodes.get(key).identifiers.forEach((function(k) { return identifiers.add(k); }));
+            }));
+        
+            // Resolve naming conflicts IMPROVE
+            while (identifiers.has(name) || nodeNames.has(name))
+                name += "_";
+        
+            nodeNames.add(node.name = name);
+        }));
+    }
+    
+    function getModifiedSource(node) {
+    
+        var offset = 0,
+            source = "",
+            ranges = [];
+        
+        // Build list of ranges to replace
+        node.edges.forEach((function(val, key) {
+        
+            var ref = nodes.get(key);
+            
+            val.forEach((function(range) {
+            
+                ranges.push({ start: range.start, end: range.end, name: ref.name });
+            }));
+        }));
+        
+        // Sort the list of ranges in order of appearance
+        ranges.sort((function(a, b) { return a.start - b.start; }));
+        
+        // Build modified source with replace subranges
+        ranges.forEach((function(range) {
+        
+            source += node.source.slice(offset, range.start);
+            source += range.name;
+            
+            offset = range.end;
+        }));
+        
+        source += node.source.slice(offset);
+        
+        return source;
+    }
+    
+    return visit(rootPath).then((function($) {
+    
+        traverse(rootPath, null);
+        assignNames();
+        
+        var out = "";
+        
+        sort.forEach((function(path) {
+        
+            var node = nodes.get(path);
+            
+            out += "module " + node.name + " {\n\n";
+            out += getModifiedSource(node);
+            out += "\n\n}\n\n";
+        }));
+        
+        out += "export * from " + nodes.get(rootPath).name + ";\n";
+        
+        return out;
+    }));
+}
+
+exports.bundle = bundle; return exports; }).call(this, {});
+
+var Bundler = (function(exports) {
+
+Object.keys(Bundler_).forEach(function(k) { exports[k] = Bundler_[k]; });
+
+return exports; }).call(this, {});
+
+var Parser__ = (function(exports) {
+
+Object.keys(es6parse).forEach(function(k) { exports[k] = es6parse[k]; });
+
+return exports; }).call(this, {});
+
+var Replacer_ = (function(exports) {
+
+/*
+
+== Notes ==
+
+- With this approach, we can't have cyclic dependencies.  But there are
+  many other restrictions as well.  They may be lifted at some point in
+  the future.
+
+*/
+
+var Parser = Parser__;
+
+var HAS_SCHEMA = /^[a-z]+:/i,
+    NODE_SCHEMA = /^(?:npm|node):/i;
+
+var Replacer = __class(function(__super) { return {
+
+    constructor: function(options) {
+        
+        options || (options = {});
+        
+        this.loadCall = options.loadCall || (function(url) { return "__load(" + JSON.stringify(url) + ")"; });
+        this.mapURI = options.mapURI || (function(uri) { return uri; });
+    },
+    
+    replace: function(input) { var __this = this; 
+    
+        this.exportStack = [this.exports = {}];
+        this.imports = {};
+        this.dependencies = [];
+        this.uid = 0;
+        this.input = input;
+
+        var root = Parser.parseModule(input);
+        
+        var visit = (function(node) {
+        
+            // Call pre-order traversal method
+            if (__this[node.type + "Begin"])
+                __this[node.type + "Begin"](node);
+            
+            // Perform a depth-first traversal
+            Parser.forEachChild(node, (function(child) {
+            
+                child.parentNode = node;
+                visit(child);
+            }));
+            
+            node.text = __this.stringify(node);
+            
+            // Call replacer
+            if (__this[node.type]) {
+            
+                var replaced = __this[node.type](node);
+                
+                node.text = (replaced === undefined || replaced === null) ?
+                    __this.stringify(node) :
+                    replaced;
+            }
+            
+            return node.text;
+        });
+        
+        var output = visit({ 
+        
+            type: "$", 
+            root: root, 
+            start: 0, 
+            end: input.length
+        });
+        
+        var head = "";
+        
+        this.dependencies.forEach((function(url) {
+        
+            if (head) head += ", ";
+            else head = "var ";
+            
+            head += __this.imports[url] + " = " + __this.loadCall(url);
+        }));
+        
+        if (head) 
+            head += "; ";
+        
+        output = head + output;
+        
+        Object.keys(this.exports).forEach((function(k) {
+    
+            output += "\nexports." + k + " = " + __this.exports[k] + ";";
+        }));
+        
+        return output;
+    },
+
+    DoWhileStatement: function(node) {
+    
+        if (node.text.slice(-1) !== ";")
+            return node.text + ";";
+    },
+    
+    Module: function(node) {
+    
+        if (node.createThisBinding)
+            return "var __this = this; " + node.text;
+    },
+    
+    Script: function(node) {
+    
+        if (node.createThisBinding)
+            return "var __this = this; " + node.text;
+    },
+    
+    FunctionBody: function(node) {
+    
+        if (node.parentNode.createThisBinding)
+            return "{ var __this = this; " + node.text.slice(1);
+    },
+    
+    MethodDefinition: function(node) {
+    
+        // TODO: Generator methods
+        
+        // TODO: will fail if name is a string:  static "name"() {}
+        if (node.parentNode.type === "ClassElement" && 
+            node.parentNode.static) {
+            
+            node.name.text = "__static_" + node.name.text;
+        }
+        
+        if (!node.modifier)
+            return node.name.text + ": function(" + this.joinList(node.params) + ") " + node.body.text;
+    },
+    
+    PropertyDefinition: function(node) {
+    
+        if (node.expression === null)
+            return node.name.text + ": " + node.name.text;
+    },
+    
+    ModuleFromDeclaration: function(node) {
+    
+        return "var " + node.ident.text + " = " + this.modulePath(node.from) + ";";
+    },
+    
+    ModuleDeclarationBegin: function(node) {
+    
+        this.exportStack.push(this.exports = {});
+    },
+    
+    ModuleDeclaration: function(node) { var __this = this; 
+    
+        var out = "var " + node.ident.text + " = (function(exports) ";
+        
+        out += node.body.text.replace(/\}$/, "");
+        
+        Object.keys(this.exports).forEach((function(k) {
+    
+            out += "exports." + k + " = " + __this.exports[k] + "; ";
+        }));
+        
+        this.exportStack.pop();
+        this.exports = this.exportStack[this.exportStack.length - 1];
+        
+        out += "return exports; }).call(this, {});";
+        
+        return out;
+    },
+    
+    ImportDeclaration: function(node) {
+    
+        var moduleSpec = this.modulePath(node.from),
+            out = "";
+        
+        node.specifiers.forEach((function(spec) {
+        
+            var remote = spec.remote,
+                local = spec.local || remote;
+            
+            if (out) out += ", ";
+            else out = "var ";
+            
+            out += local.text + " = " + moduleSpec + "." + remote.text;
+        }));
+        
+        out += ";";
+        
+        return out;
+    },
+    
+    ExportDeclaration: function(node) {
+    
+        var binding = node.binding,
+            bindingType = binding ? binding.type : "*",
+            exports = this.exports,
+            ident;
+        
+        // Exported declarations
+        switch (binding.type) {
+        
+            case "VariableDeclaration":
+            
+                binding.declarations.forEach((function(decl) {
+            
+                    // TODO: Destructuring!
+                    ident = decl.pattern.text;
+                    exports[ident] = ident;
+                }));
+                
+                return binding.text + ";";
+            
+            case "FunctionDeclaration":
+            case "ClassDeclaration":
+            case "ModuleDeclaration":
+            
+                ident = binding.ident.text;
+                exports[ident] = ident;
+                return binding.text;
+        }
+        
+        var from = binding.from,
+            fromPath = from ? this.modulePath(from) : "",
+            out = "";
+        
+        if (!binding.specifiers) {
+        
+            if (from) {
+            
+                out += "Object.keys(" + fromPath + ").forEach(function(k) { exports[k] = " + fromPath + "[k]; });";
+                
+            } else {
+            
+                // TODO:
+                throw new Error("`export *;` is not implemented.");
+            }
+        
+        } else {
+        
+            binding.specifiers.forEach((function(spec) {
+            
+                var local = spec.local.text,
+                    remote = spec.remote ? spec.remote.text : local;
+            
+                exports[remote] = from ? 
+                    fromPath + "." + local :
+                    local;
+            }));        
+        }
+        
+        return out;
+    },
+    
+    CallExpression: function(node) {
+    
+        var callee = node.callee,
+            args = node.arguments;
+        
+        /*
+        // Translate CommonJS require calls
+        if (callee.type === "Identifier" && 
+            callee.value === "require" &&
+            args.length === 1 &&
+            args[0].type === "String") {
+        
+            return this.loadCall(this.requirePath(args[0].value));
+        }
+        */
+        
+        if (node.isSuperCall) {
+        
+            var argText = "this";
+            
+            if (args.length > 0)
+                argText += ", " + this.joinList(args);
+            
+            // TODO: what if callee is of the form super["abc"]?
+            return callee.text + ".call(" + argText + ")";
+        }
+    },
+    
+    SuperExpression: function(node) {
+    
+        var p = node.parentNode;
+        
+        if (p.type === "CallExpression") {
+        
+            p.isSuperCall = true;
+            
+            var m = this.parentFunction(p),
+                name = (m.type === "MethodDefinition" ? m.name.text : "constructor");
+            
+            // TODO: what if method name is not an identifier?
+            return "__super." + name;
+        }
+        
+        p = p.parentNode;
+        
+        if (p.type === "CallExpression")
+            p.isSuperCall = true;
+        
+        return "__super";
+    },
+    
+    ArrowFunction: function(node) {
+    
+        var head, body, expr;
+        
+        head = "function(" + this.joinList(node.params) + ")";
+        
+        if (node.body.type === "FunctionBody") {
+        
+            body = node.body.text;
+        
+        } else {
+        
+            body = "{ return " + node.body.text + "; }";
+        }
+
+        return "(" + head + " " + body + ")";
+    },
+    
+    ThisExpression: function(node) {
+    
+        var fn = this.parentFunction(node);
+        
+        if (fn.type === "ArrowFunction") {
+        
+            while (fn = this.parentFunction(fn))
+                if (fn.type !== "ArrowFunction")
+                    fn.createThisBinding = true;
+            
+            return "__this";
+        }
+    },
+    
+    ClassDeclaration: function(node) {
+    
+        return "var " + node.ident.text + " = __class(" + 
+            (node.base ? (node.base.text + ", ") : "") +
+            "function(__super) { return " +
+            node.body.text + "});";
+    },
+    
+    ClassExpression: function(node) {
+    
+        var before = "", 
+            after = "";
+        
+        if (node.ident) {
+        
+            before = "(function() { var " + node.ident.text + " = ";
+            after = "; return " + node.ident.text + "; })()";
+        }
+        
+        return before + 
+            "__class(" + 
+            (node.base ? (node.base.text + ", ") : "") +
+            "function(__super) { return" +
+            node.body.text + "})" +
+            after;
+    },
+    
+    ClassBody: function(node) {
+    
+        var elems = node.elements, 
+            e,
+            i;
+        
+        for (i = elems.length; i--;) {
+        
+            e = elems[i];
+            
+            if (e.static)
+                e.text = e.text.replace(/^static\s+/, "");
+            
+            if (i < elems.length - 1)
+                e.text += ",";
+        }
+    },
+    
+    TemplateExpression: function(node) {
+    
+        var lit = node.literals,
+            sub = node.substitutions,
+            out = "",
+            i;
+        
+        for (i = 0; i < lit.length; ++i) {
+        
+            if (i > 0)
+                out += " + (" + sub[i - 1].text + ") + ";
+            
+            out += JSON.stringify(lit[i].value);
+        }
+        
+        return out;
+    },
+    
+    parentFunction: function(node) {
+    
+        for (var p = node.parentNode; p; p = p.parentNode) {
+        
+            switch (p.type) {
+            
+                case "ArrowFunction":
+                case "FunctionDeclaration":
+                case "FunctionExpression":
+                case "MethodDefinition":
+                case "Script":
+                case "Module":
+                    return p;
+            }
+        }
+        
+        return null;
+    },
+    
+    hasThisRef: function(node) {
+    
+        var hasThis = {};
+        
+        try { 
+        
+            visit(node);
+        
+        } catch (err) { 
+        
+            if (err === hasThis) return true; 
+            else throw err;
+        }
+        
+        return false;
+        
+        function visit(node) {
+        
+            if (node.type === "FunctionExpression" || 
+                node.type === "FunctionDeclaration")
+                return;
+            
+            if (node.type === "ThisExpression")
+                throw hasThis;
+            
+            Parser.forEachChild(node, visit);
+        }
+    },
+    
+    modulePath: function(node) {
+    
+        return node.type === "String" ?
+            this.moduleIdent(node.value) :
+            node.text;
+    },
+    
+    moduleIdent: function(url) {
+    
+        url = this.mapURI(url.trim());
+        
+        if (NODE_SCHEMA.test(url))
+            url = url.replace(NODE_SCHEMA, "");
+        else if (!HAS_SCHEMA.test(url) && url.charAt(0) !== "/")
+            url = "./" + url;
+        
+        if (typeof this.imports[url] !== "string") {
+        
+            this.imports[url] = "_M" + (this.uid++);
+            this.dependencies.push(url);
+        }
+        
+        return this.imports[url];
+    },
+    
+    stringify: function(node) {
+        
+        var offset = node.start,
+            input = this.input,
+            text = "";
+        
+        // Build text from child nodes
+        Parser.forEachChild(node, (function(child) {
+        
+            if (offset < child.start)
+                text += input.slice(offset, child.start);
+            
+            text += child.text;
+            offset = child.end;
+        }));
+        
+        if (offset < node.end)
+            text += input.slice(offset, node.end);
+        
+        return text;
+    },
+    
+    joinList: function(list) {
+    
+        var input = this.input,
+            offset = -1, 
+            text = "";
+        
+        list.forEach((function(child) {
+        
+            if (offset >= 0 && offset < child.start)
+                text += input.slice(offset, child.start);
+            
+            text += child.text;
+            offset = child.end;
+        }));
+        
+        return text;
+    }
+
 }});
 
 
-exports.Transform = Transform;
-};
+exports.Replacer = Replacer; return exports; }).call(this, {});
 
-__modules[22] = function(exports) {
-// Object literal property name flags
-var PROP_NORMAL = 1,
-    PROP_ASSIGN = 2,
-    PROP_GET = 4,
-    PROP_SET = 8;
+var Translator = (function(exports) {
 
-// Returns true if the specified name is a restricted identifier in strict mode
-function isPoisonIdent(name) {
+var Replacer = Replacer_.Replacer;
 
-    return name === "eval" || name === "arguments";
+var SIGNATURE = "/*=es6now=*/";
+
+var WRAP_CALLEE = "(function(fn, deps, name) { " +
+
+    // Node.js:
+    "if (typeof exports !== 'undefined') " +
+        "fn.call(typeof global === 'object' ? global : this, require, exports); " +
+        
+    // Sane module transport:
+    "else if (typeof __MODULE === 'function') " +
+        "__MODULE(fn, deps); " +
+        
+    // Insane module transport:
+    "else if (typeof define === 'function' && define.amd) " +
+        "define(['require', 'exports'].concat(deps), fn); " +
+        
+    // DOM global module:
+    "else if (typeof window !== 'undefined' && name) " +
+        "fn.call(window, null, window[name] = {}); " +
+    
+    // Hail Mary:
+    "else " +
+        "fn.call(window || this, null, {}); " +
+
+"})";
+
+var WRAP_HEADER = "function(require, exports) { " +
+    "'use strict'; " +
+    "function __load(p) { " +
+        "var e = require(p); " +
+        "return typeof e === 'object' ? e : { module: e }; " +
+    "} ";
+
+var WRAP_FOOTER = "\n\n}";
+
+function sanitize(text) {
+
+    // From node/lib/module.js/Module.prototype._compile
+    text = text.replace(/^\#\!.*/, '');
+    
+    // From node/lib/module.js/stripBOM
+    if (text.charCodeAt(0) === 0xFEFF)
+        text = text.slice(1);
+    
+    return text;
 }
 
-var Validate = es6now.Class(function(__super) { return {
+function translate(input, options) {
 
-    // Checks an assignment target for strict mode restrictions
-    checkAssignTarget: function(node, strict) {
+    options || (options = {});
     
-        if (node.type !== "Identifier")
-            return;
-        
-        // Mark identifier node as a variable
-        node.context = "variable";
-        
-        if (!strict && !this.context.strict)
-            return;
-        
-        if (isPoisonIdent(node.value))
-            this.fail("Cannot modify " + node.value + " in strict mode", node);
+    var replacer = new Replacer(options),
+        output;
+    
+    input = sanitize(input);
+    output = replacer.replace(input);
+    
+    if (options.wrap !== false)
+        output = wrap(output, replacer.dependencies, options.global);
+    
+    return output;
+}
+
+function wrap(text, dep, global) {
+
+    return SIGNATURE + WRAP_CALLEE + "(" + 
+        WRAP_HEADER + text + WRAP_FOOTER + ", " + 
+        JSON.stringify(dep || []) + ", " + 
+        JSON.stringify(global || "") +
+    ");";
+}
+
+function isWrapped(text) {
+
+    return text.indexOf(SIGNATURE) === 0;
+}
+
+
+
+exports.translate = translate; exports.wrap = wrap; exports.isWrapped = isWrapped; return exports; }).call(this, {});
+
+var Promise___ = (function(exports) {
+
+Object.keys(Promise_).forEach(function(k) { exports[k] = Promise_[k]; });
+Object.keys(PromiseFlow).forEach(function(k) { exports[k] = PromiseFlow[k]; });
+
+return exports; }).call(this, {});
+
+var ServerMime = (function(exports) {
+
+var mimeTypes = {
+
+    "aiff": "audio/x-aiff",
+    "arj": "application/x-arj-compressed",
+    "asf": "video/x-ms-asf",
+    "asx": "video/x-ms-asx",
+    "au": "audio/ulaw",
+    "avi": "video/x-msvideo",
+    "bcpio": "application/x-bcpio",
+    "ccad": "application/clariscad",
+    "cod": "application/vnd.rim.cod",
+    "com": "application/x-msdos-program",
+    "cpio": "application/x-cpio",
+    "cpt": "application/mac-compactpro",
+    "csh": "application/x-csh",
+    "css": "text/css",
+    "deb": "application/x-debian-package",
+    "dl": "video/dl",
+    "doc": "application/msword",
+    "drw": "application/drafting",
+    "dvi": "application/x-dvi",
+    "dwg": "application/acad",
+    "dxf": "application/dxf",
+    "dxr": "application/x-director",
+    "etx": "text/x-setext",
+    "ez": "application/andrew-inset",
+    "fli": "video/x-fli",
+    "flv": "video/x-flv",
+    "gif": "image/gif",
+    "gl": "video/gl",
+    "gtar": "application/x-gtar",
+    "gz": "application/x-gzip",
+    "hdf": "application/x-hdf",
+    "hqx": "application/mac-binhex40",
+    "htm": "text/html",
+    "html": "text/html",
+    "ice": "x-conference/x-cooltalk",
+    "ico": "image/x-icon",
+    "ief": "image/ief",
+    "igs": "model/iges",
+    "ips": "application/x-ipscript",
+    "ipx": "application/x-ipix",
+    "jad": "text/vnd.sun.j2me.app-descriptor",
+    "jar": "application/java-archive",
+    "jpeg": "image/jpeg",
+    "jpg": "image/jpeg",
+    "js": "text/javascript",
+    "json": "application/json",
+    "latex": "application/x-latex",
+    "less": "text/css",
+    "lsp": "application/x-lisp",
+    "lzh": "application/octet-stream",
+    "m": "text/plain",
+    "m3u": "audio/x-mpegurl",
+    "man": "application/x-troff-man",
+    "manifest": "text/cache-manifest",
+    "me": "application/x-troff-me",
+    "midi": "audio/midi",
+    "mif": "application/x-mif",
+    "mime": "www/mime",
+    "movie": "video/x-sgi-movie",
+    "mp4": "video/mp4",
+    "mpg": "video/mpeg",
+    "mpga": "audio/mpeg",
+    "ms": "application/x-troff-ms",
+    "nc": "application/x-netcdf",
+    "oda": "application/oda",
+    "ogm": "application/ogg",
+    "pbm": "image/x-portable-bitmap",
+    "pdf": "application/pdf",
+    "pgm": "image/x-portable-graymap",
+    "pgn": "application/x-chess-pgn",
+    "pgp": "application/pgp",
+    "pm": "application/x-perl",
+    "png": "image/png",
+    "pnm": "image/x-portable-anymap",
+    "ppm": "image/x-portable-pixmap",
+    "ppz": "application/vnd.ms-powerpoint",
+    "pre": "application/x-freelance",
+    "prt": "application/pro_eng",
+    "ps": "application/postscript",
+    "qt": "video/quicktime",
+    "ra": "audio/x-realaudio",
+    "rar": "application/x-rar-compressed",
+    "ras": "image/x-cmu-raster",
+    "rgb": "image/x-rgb",
+    "rm": "audio/x-pn-realaudio",
+    "rpm": "audio/x-pn-realaudio-plugin",
+    "rtf": "text/rtf",
+    "rtx": "text/richtext",
+    "scm": "application/x-lotusscreencam",
+    "set": "application/set",
+    "sgml": "text/sgml",
+    "sh": "application/x-sh",
+    "shar": "application/x-shar",
+    "silo": "model/mesh",
+    "sit": "application/x-stuffit",
+    "skt": "application/x-koan",
+    "smil": "application/smil",
+    "snd": "audio/basic",
+    "sol": "application/solids",
+    "spl": "application/x-futuresplash",
+    "src": "application/x-wais-source",
+    "stl": "application/SLA",
+    "stp": "application/STEP",
+    "sv4cpio": "application/x-sv4cpio",
+    "sv4crc": "application/x-sv4crc",
+    "svg": "image/svg+xml",
+    "swf": "application/x-shockwave-flash",
+    "tar": "application/x-tar",
+    "tcl": "application/x-tcl",
+    "tex": "application/x-tex",
+    "texinfo": "application/x-texinfo",
+    "tgz": "application/x-tar-gz",
+    "tiff": "image/tiff",
+    "tr": "application/x-troff",
+    "tsi": "audio/TSP-audio",
+    "tsp": "application/dsptype",
+    "tsv": "text/tab-separated-values",
+    "txt": "text/plain",
+    "unv": "application/i-deas",
+    "ustar": "application/x-ustar",
+    "vcd": "application/x-cdlink",
+    "vda": "application/vda",
+    "vivo": "video/vnd.vivo",
+    "vrm": "x-world/x-vrml",
+    "wav": "audio/x-wav",
+    "wax": "audio/x-ms-wax",
+    "wma": "audio/x-ms-wma",
+    "wmv": "video/x-ms-wmv",
+    "wmx": "video/x-ms-wmx",
+    "wrl": "model/vrml",
+    "wvx": "video/x-ms-wvx",
+    "xbm": "image/x-xbitmap",
+    "xlw": "application/vnd.ms-excel",
+    "xml": "text/xml",
+    "xpm": "image/x-xpixmap",
+    "xwd": "image/x-xwindowdump",
+    "xyz": "chemical/x-pdb",
+    "zip": "application/zip",
+    "*": "application/octect-stream"
+};
+
+
+exports.mimeTypes = mimeTypes; return exports; }).call(this, {});
+
+var Server_ = (function(exports) {
+
+var FS = _M0;
+var HTTP = _M2;
+var Path = _M1;
+var URL = _M3;
+
+var AsyncFS = AsyncFS_;
+
+var Promise = Promise___.Promise;
+var translate = Translator.translate, isWrapped = Translator.isWrapped;
+var mimeTypes = ServerMime.mimeTypes;
+
+var DEFAULT_PORT = 80,
+    DEFAULT_ROOT = ".",
+    JS_FILE = /\.js$/i;
+
+var Server = __class(function(__super) { return {
+
+    constructor: function(options) { var __this = this; 
+    
+        options || (options = {});
+    
+        this.root = Path.resolve(options.root || DEFAULT_ROOT);
+        this.port = options.port || DEFAULT_PORT;
+        this.hostname = options.hostname || null;
+        this.server = HTTP.createServer((function(request, response) { return __this.onRequest(request, response); }));
+        this.active = false;
     },
     
-    // Checks a binding identifier for strict mode restrictions
-    checkBindingIdent: function(node, strict) {
+    start: function(port, hostname) { var __this = this; 
     
-        // Mark identifier node as a declaration
-        node.context = "declaration";
+        if (this.active)
+            throw new Error("Server is already listening");
         
-        if (!strict && !this.context.strict)
-            return;
-            
-        var name = node.value;
+        if (port)
+            this.port = port;
         
-        if (isPoisonIdent(name))
-            this.fail("Binding cannot be created for '" + name + "' in strict mode", node);
+        if (hostname)
+            this.hostname = hostname;
+        
+        var promise = new Promise((function(resolver) {
+        
+            __this.server.listen(__this.port, __this.hostname, (function(ok) { return resolver.resolve(null); }));
+            __this.active = true;
+        }));
+        
+        return promise;
     },
     
-    // Checks function formal parameters for strict mode restrictions
-    checkParameters: function(params) {
+    stop: function() { var __this = this; 
     
-        if (!this.context.strict)
-            return;
+        return new Promise((function(resolver) {
         
-        var names = {}, 
-            name,
-            node,
-            i;
+            if (__this.active) {
         
-        for (i = 0; i < params.length; ++i) {
+                __this.active = false;
+                __this.server.close((function(ok) { return resolver.resolve(null); }));
         
-            node = params[i];
-            
-            if (node.type !== "FormalParameter" || node.pattern.type !== "Identifier")
-                continue;
-            
-            name = node.pattern.value;
-            
-            if (isPoisonIdent(name))
-                this.fail("Parameter name " + name + " is not allowed in strict mode", node);
-            
-            if (names[name] === 1)
-                this.fail("Strict mode function may not have duplicate parameter names", node);
-            
-            names[name] = 1;
-        }
+            } else {
+        
+                resolver.resolve(null);
+            }
+        }));
     },
     
-    // Performs validation on the init portion of a for-in or for-of statement
-    checkForInit: function(init, type) {
+    onRequest: function(request, response) { var __this = this; 
     
-        if (init.type === "VariableDeclaration") {
+        if (request.method !== "GET" && request.method !== "HEAD")
+            return this.error(405, response);
         
-            // For-in/of may only have one variable declaration
+        var path = URL.parse(request.url).pathname;
+        
+        path = Path.join(this.root, path);
+        
+        if (path.indexOf(this.root) !== 0)
+            return this.error(403, response);
+        
+        AsyncFS.stat(path).then((function(stat) {
+        
+            if (stat.isDirectory())
+                return __this.streamDefault(path, response);
             
-            if (init.declarations.length !== 1)
-                this.fail("for-" + type + " statement may not have more than one variable declaration", init);
+            if (stat.isFile()) {
             
-            // A variable initializer is only allowed in for-in where 
-            // variable type is "var" and it is not a pattern
+                return JS_FILE.test(path) ? 
+                    __this.streamJS(path, response) : 
+                    __this.streamFile(path, stat.size, response);
+            }
+            
+            return __this.error(404, response);
+            
+        }), (function(err) {
+        
+            return __this.error(404, response);
+            
+        }));
+    },
+    
+    error: function(code, response) {
+    
+        response.writeHead(code, { "Content-Type": "text/plain" });
+        response.write(HTTP.STATUS_CODES[code] + "\n")
+        response.end();
+    },
+    
+    streamDefault: function(path, response) { var __this = this; 
+    
+        var files = [ "index.html", "index.htm", "default.html", "default.htm" ];
+        
+        var next = (function() {
+        
+            if (files.length === 0)
+                return __this.error(404, response);
+            
+            var file = files.shift(),
+                search = Path.join(path, file);
+            
+            AsyncFS.stat(search).then((function(stat) {
+            
+                if (!stat.isFile())
+                    return next();
                 
-            var decl = init.declarations[0];
-            
-            if (decl.init && (
-                type === "of" ||
-                init.keyword !== "var" ||
-                decl.pattern.type !== "Identifier")) {
+                path = search;
+                __this.streamFile(path, stat.size, response);
                 
-                this.fail("Invalid initializer in for-" + type + " statement", init);
+            }), (function(err) {
+            
+                return next();
+            }));
+        });
+        
+        next();
+    },
+    
+    streamJS: function(path, response) { var __this = this; 
+        
+        AsyncFS.readFile(path, "utf8").then((function(source) {
+        
+            if (!isWrapped(source)) {
+            
+                // TODO:  A better way to report errors?
+                try { source = translate(source); } 
+                catch (x) { source += "\n\n// " + x.message; }
+            }
+            
+            response.writeHead(200, { "Content-Type": "text/javascript; charset=UTF-8" });
+            response.end(source, "utf8");
+        
+        }), (function(err) {
+        
+            __this.error(500, err);
+        }));
+    },
+    
+    streamFile: function(path, size, response) { var __this = this; 
+            
+        var ext = Path.extname(path).slice(1).toLowerCase();
+            
+        var headers = { 
+    
+            // TODO: we should only append charset to certain types
+            "Content-Type": (mimeTypes[ext] || mimeTypes["*"]) + "; charset=UTF-8",
+            "Content-Length": size
+        };
+            
+        var stream = FS.createReadStream(path, { 
+        
+            flags: "r", 
+            mode: 438
+        });
+        
+        stream.on("error", (function(err) {
+        
+            __this.error(500, response);
+        }));
+        
+        stream.on("data", (function(data) {
+        
+            if (headers) {
+            
+                response.writeHead(200, headers);
+                headers = null;
+            }
+        }));
+        
+        stream.pipe(response);
+    }
+}});
+
+exports.Server = Server; return exports; }).call(this, {});
+
+var ConsoleCommand = (function(exports) {
+
+var HAS = Object.prototype.hasOwnProperty;
+
+var Style = (function(exports) {
+
+    function green(msg) {
+    
+        return "\u001b[32m" + (msg) + "\u001b[39m";
+    }
+    
+    function red(msg) {
+    
+        return "\u001b[31m" + (msg) + "\u001b[39m";
+    }
+    
+    function gray(msg) {
+    
+        return "\u001b[90m" + (msg) + "\u001b[39m";
+    }
+    
+    function bold(msg) {
+    
+        return "\u001b[1m" + (msg) + "\u001b[22m";
+    }
+exports.green = green; exports.red = red; exports.gray = gray; exports.bold = bold; return exports; }).call(this, {});
+
+function parse(argv, params) {
+
+    params || (params = {});
+    
+    var pos = Object.keys(params),
+        values = {},
+        shorts = {},
+        required = [],
+        param,
+        value,
+        name,
+        i,
+        a;
+    
+    // Create short-to-long mapping
+    pos.forEach((function(name) {
+    
+        var p = params[name];
+        
+        if (p.short)
+            shorts[p.short] = name;
+        
+        if (p.required)
+            required.push(name);
+    }));
+    
+    // For each command line arg...
+    for (i = 0; i < argv.length; ++i) {
+    
+        a = argv[i];
+        param = null;
+        value = null;
+        name = "";
+        
+        if (a[0] === "-") {
+        
+            if (a.slice(0, 2) === "--") {
+            
+                // Long named parameter
+                param = params[name = a.slice(2)];
+            
+            } else {
+            
+                // Short named parameter
+                param = params[name = shorts[a.slice(1)]];
+            }
+            
+            // Verify parameter exists
+            if (!param)
+                throw new Error("Invalid command line option: " + a);
+            
+            if (param.flag) {
+            
+                value = true;
+            
+            } else {
+            
+                // Get parameter value
+                value = argv[++i] || "";
+                
+                if (typeof value !== "string" || value[0] === "-")
+                    throw new Error("No value provided for option " + a);
             }
             
         } else {
         
-            // Transform object and array patterns
-            this.transformPattern(init, false);
-        }
-    },
-    
-    // Returns true if the specified name type is a duplicate for a given set of flags
-    isDuplicateName: function(type, flags) {
-    
-        if (!flags)
-            return false;
-        
-        switch (type) {
-        
-            case PROP_ASSIGN: return (this.context.strict || flags !== PROP_ASSIGN);
-            case PROP_GET: return (flags !== PROP_SET);
-            case PROP_SET: return (flags !== PROP_GET);
-            default: return !!flags;
-        }
-    },
-    
-    // Checks for duplicate property names in object literals or classes
-    checkInvalidNodes: function() {
-    
-        var context = this.context,
-            list = context.invalidNodes,
-            node,
-            i;
-        
-        if (list === null)
-            return;
-        
-        for (i = 0; i < list.length; ++i) {
-        
-            node = list[i];
+            // Positional parameter
+            do { param = params[name = pos.shift()]; } 
+            while (param && !param.positional);;
             
-            if (node.error)
-                this.fail(node.error, node);
+            value = a;
         }
         
-        context.invalidNodes = null;
+        if (param)
+            values[name] = value;
     }
     
-}});
-exports.Validate = Validate;
-};
+    required.forEach((function(name) {
+    
+        if (values[name] === void 0)
+            throw new Error("Missing required option: --" + name);
+    }));
+    
+    return values;
+}
 
-__init(0, exports);
+var ConsoleCommand = __class(function(__super) { return {
+
+    constructor: function(cmd) {
+    
+        this.fallback = cmd;
+        this.commands = {};
+    },
+    
+    add: function(name, cmd) {
+    
+        this.commands[name] = cmd;
+        return this;
+    },
+    
+    run: function(args) {
+    
+        // Peel off the "node" and main module args
+        args || (args = process.argv.slice(2));
+        
+        var name = args[0] || "",
+            cmd = this.fallback;
+        
+        if (name && HAS.call(this.commands, name)) {
+        
+            cmd = this.commands[name];
+            args = args.slice(1);
+        }
+        
+        if (!cmd)
+            throw new Error("Invalid command");
+        
+        return cmd.execute(parse(args, cmd.params));
+    }
+}});
+
+/*
+
+Example: 
+
+parse(process.argv.slice(2), {
+
+    "verbose": {
+    
+        short: "v",
+        flag: true
+    },
+    
+    "input": {
+    
+        short: "i",
+        positional: true,
+        required: true
+    },
+    
+    "output": {
+    
+        short: "o",
+        positional: true
+    },
+    
+    "recursive": {
+    
+        short: "r",
+        flag: false
+    }
+});
+
+*/
+
+
+exports.Style = Style; exports.ConsoleCommand = ConsoleCommand; return exports; }).call(this, {});
+
+var ConsoleCommand_ = (function(exports) {
+
+Object.keys(ConsoleCommand).forEach(function(k) { exports[k] = ConsoleCommand[k]; });
+
+return exports; }).call(this, {});
+
+var Program_ = (function(exports) {
+
+var FS = _M0;
+var Path = _M1;
+var AsyncFS = AsyncFS_;
+
+var bundle = Bundler.bundle;
+var translate = Translator.translate;
+var Server = Server_.Server;
+var ConsoleCommand = ConsoleCommand_.ConsoleCommand, Style = ConsoleCommand_.Style;
+
+var ES6_GUESS = /(?:^|\n)\s*(?:import|export|class)\s/;
+
+function absPath(path) {
+
+    return Path.resolve(process.cwd(), path);
+}
+
+function getOutPath(inPath, outPath) {
+
+    var stat;
+    
+    outPath = absPath(outPath);
+    
+    try { stat = FS.statSync(outPath); } catch (e) {}
+    
+    if (stat && stat.isDirectory())
+        return Path.resolve(outPath, Path.basename(inPath));
+    
+    return outPath;
+}
+
+function overrideCompilation() {
+
+    // Compile ES6 js files
+    require.extensions[".js"] = (function(module, filename) {
+    
+        var text, source;
+        
+        try {
+        
+            text = source = FS.readFileSync(filename, "utf8");
+            
+            if (ES6_GUESS.test(text))
+                text = translate(text);
+        
+        } catch (e) {
+        
+            if (e instanceof SyntaxError) {
+            
+                var desc = e.message + "\n" +
+                    "    at " + filename + ":" + e.line + "\n\n" + 
+                    source.slice(e.lineOffset, e.startOffset) +
+                    Style.bold(Style.red(source.slice(e.startOffset, e.endOffset))) + 
+                    source.slice(e.endOffset, source.indexOf("\n", e.endOffset)) +
+                    "\n";
+                
+                e = new SyntaxError(desc);
+            }
+            
+            throw e;
+        }
+        
+        return module._compile(text, filename);
+    });
+}
+
+function run() {
+
+    new ConsoleCommand({
+
+        params: {
+        
+            "target": {
+            
+                positional: true,
+                required: true
+            }
+        },
+        
+        execute: function(params) {
+        
+            params.debug = true;
+            overrideCompilation();
+            process.argv.splice(1, 1);
+            require(absPath(params.target));
+        }
+        
+    }).add("translate", {
+    
+        params: {
+                
+            "input": {
+    
+                short: "i",
+                positional: true,
+                required: true
+            },
+            
+            "output": {
+                
+                short: "o",
+                positional: true,
+                required: false
+            },
+            
+            "global": { short: "g" },
+            
+            "bundle": { short: "b", flag: true }
+        },
+        
+        execute: function(params) {
+            
+            var promise = params.bundle ?
+                bundle(params.input) :
+                AsyncFS.readFile(params.input, { encoding: "utf8" });
+            
+            promise.then((function(text) {
+            
+                return translate(text, { global: params.global });
+            
+            })).then((function(text) {
+                
+                if (params.output) {
+                
+                    var outPath = getOutPath(params.input, params.output);
+                    FS.writeFileSync(outPath, text, "utf8");
+                
+                } else {
+                
+                    console.log(text);
+                }
+                
+            }));
+        }
+    
+    }).add("serve", {
+    
+        params: {
+        
+            "root": { short: "r", positional: true },
+            "port": { short: "p", positional: true }
+        },
+        
+        execute: function(params) {
+        
+            var server = new Server(params);
+            server.start();
+            
+            console.log("Listening on port " + server.port + ".  Press Enter to exit.");
+            
+            var stdin = process.stdin;
+            
+            stdin.resume();
+            stdin.setEncoding('utf8');
+            
+            stdin.on("data", (function() { 
+            
+                server.stop().then((function(val) { process.exit(0); }));
+            }));
+        }
+        
+    }).run();
+    
+}
+
+exports.run = run; return exports; }).call(this, {});
+
+var es6now = (function(exports) {
+
+var Runtime = Runtime_;
+var Program = Program_;
+
+if (typeof require === "function" && 
+    typeof module !== "undefined" && 
+    module === require.main) {
+    
+    Program.run();
+}
+
+return exports; }).call(this, {});
+
+Object.keys(es6now).forEach(function(k) { exports[k] = es6now[k]; });
 
 
 }, ["fs","path","http","url"], "");

@@ -1,4 +1,4 @@
-var A = es6now.Class(B, function(__super) { return {
+var A = __class(B, function(__super) { return {
 
     constructor: function() {
     
@@ -21,4 +21,4 @@ var A = es6now.Class(B, function(__super) { return {
     get __static_T() {}
 }});
 
-((function() { var C = es6now.Class(function(__super) { return{}}); return C; })());
+((function() { var C = __class(function(__super) { return{}}); return C; })());

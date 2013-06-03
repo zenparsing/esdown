@@ -8,21 +8,19 @@
 
 */
 
-import "Parser.js" as Parser;
+module Parser from "Parser.js";
 
 var HAS_SCHEMA = /^[a-z]+:/i,
     NODE_SCHEMA = /^(?:npm|node):/i;
 
-function loadCall(url) {
-
-    return "__load(" + JSON.stringify(url) + ")";
-}
-
 export class Replacer {
 
-    constructor() {
+    constructor(options) {
         
-        this.loadCall = loadCall;
+        options || (options = {});
+        
+        this.loadCall = options.loadCall || url => "__load(" + JSON.stringify(url) + ")";
+        this.mapURI = options.mapURI || uri => uri;
     }
     
     replace(input) {
@@ -139,9 +137,9 @@ export class Replacer {
             return node.name.text + ": " + node.name.text;
     }
     
-    ImportAsDeclaration(node) {
+    ModuleFromDeclaration(node) {
     
-        return "var " + node.ident.text + " = " + this.moduleIdent(node.from.value) + ";";
+        return "var " + node.ident.text + " = " + this.modulePath(node.from) + ";";
     }
     
     ModuleDeclarationBegin(node) {
@@ -170,11 +168,8 @@ export class Replacer {
     
     ImportDeclaration(node) {
     
-        var out = "";
-        
-        var moduleSpec = node.from.type === "String" ?
-            this.moduleIdent(node.from.value) :
-            node.from.text;
+        var moduleSpec = this.modulePath(node.from),
+            out = "";
         
         node.specifiers.forEach(spec => {
         
@@ -223,15 +218,8 @@ export class Replacer {
         }
         
         var from = binding.from,
-            fromPath = "",
+            fromPath = from ? this.modulePath(from) : "",
             out = "";
-        
-        if (from) {
-        
-            fromPath = from.type === "String" ?
-                this.moduleIdent(from.value) :
-                from.text;
-        }
         
         if (!binding.specifiers) {
         
@@ -346,7 +334,7 @@ export class Replacer {
     
     ClassDeclaration(node) {
     
-        return "var " + node.ident.text + " = es6now.Class(" + 
+        return "var " + node.ident.text + " = __class(" + 
             (node.base ? (node.base.text + ", ") : "") +
             "function(__super) { return " +
             node.body.text + "});";
@@ -364,7 +352,7 @@ export class Replacer {
         }
         
         return before + 
-            "es6now.Class(" + 
+            "__class(" + 
             (node.base ? (node.base.text + ", ") : "") +
             "function(__super) { return" +
             node.body.text + "})" +
@@ -455,9 +443,16 @@ export class Replacer {
         }
     }
     
+    modulePath(node) {
+    
+        return node.type === "String" ?
+            this.moduleIdent(node.value) :
+            node.text;
+    }
+    
     moduleIdent(url) {
     
-        url = url.trim();
+        url = this.mapURI(url.trim());
         
         if (NODE_SCHEMA.test(url))
             url = url.replace(NODE_SCHEMA, "");

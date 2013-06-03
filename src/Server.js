@@ -1,13 +1,13 @@
-import "node:fs" as FS;
-import "node:http" as HTTP;
-import "node:path" as Path;
-import "node:url" as URL;
+module FS from "node:fs";
+module HTTP from "node:http";
+module Path from "node:path";
+module URL from "node:url";
 
-import "FutureFS.js" as FFS;
+module AsyncFS from "AsyncFS.js";
 
-import Promise from "Promise.js";
-import translate, isWrapped from "Translator.js";
-import mimeTypes from "ServerMime.js";
+import { Promise } from "Promise.js";
+import { translate, isWrapped } from "Translator.js";
+import { mimeTypes } from "ServerMime.js";
 
 var DEFAULT_PORT = 80,
     DEFAULT_ROOT = ".",
@@ -37,29 +37,29 @@ export class Server {
         if (hostname)
             this.hostname = hostname;
         
-        var promise = new Promise;
-        this.server.listen(this.port, this.hostname, ok => promise.resolve(null));
+        var promise = new Promise(resolver => {
         
-        this.active = true;
+            this.server.listen(this.port, this.hostname, ok => resolver.resolve(null));
+            this.active = true;
+        });
         
-        return promise.future;
+        return promise;
     }
     
     stop() {
     
-        var promise = new Promise;
+        return new Promise(resolver => {
         
-        if (this.active) {
+            if (this.active) {
         
-            this.active = false;
-            this.server.close(ok => promise.resolve(null));
+                this.active = false;
+                this.server.close(ok => resolver.resolve(null));
         
-        } else {
+            } else {
         
-            promise.resolve(null);
-        }
-        
-        return promise.future;
+                resolver.resolve(null);
+            }
+        });
     }
     
     onRequest(request, response) {
@@ -74,7 +74,7 @@ export class Server {
         if (path.indexOf(this.root) !== 0)
             return this.error(403, response);
         
-        FFS.stat(path).then(stat => {
+        AsyncFS.stat(path).then(stat => {
         
             if (stat.isDirectory())
                 return this.streamDefault(path, response);
@@ -114,7 +114,7 @@ export class Server {
             var file = files.shift(),
                 search = Path.join(path, file);
             
-            FFS.stat(search).then(stat => {
+            AsyncFS.stat(search).then(stat => {
             
                 if (!stat.isFile())
                     return next();
@@ -133,7 +133,7 @@ export class Server {
     
     streamJS(path, response) {
         
-        FFS.readFile(path, "utf8").then(source => {
+        AsyncFS.readFile(path, "utf8").then(source => {
         
             if (!isWrapped(source)) {
             

@@ -1,4 +1,4 @@
-import Replacer from "Replacer.js";
+import { Replacer } from "Replacer.js";
 
 var SIGNATURE = "/*=es6now=*/";
 
@@ -51,11 +51,8 @@ export function translate(input, options) {
 
     options || (options = {});
     
-    var replacer = new Replacer(),
+    var replacer = new Replacer(options),
         output;
-    
-    if (options.loadCall)
-        replacer.loadCall = options.loadCall;
     
     input = sanitize(input);
     output = replacer.replace(input);
