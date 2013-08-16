@@ -30,7 +30,7 @@ var WRAP_HEADER = "function(require, exports) { " +
     "'use strict'; " +
     "function __load(p) { " +
         "var e = require(p); " +
-        "return typeof e === 'object' ? e : { module: e }; " +
+        "return typeof e === 'object' ? e : { 'default': e }; " +
     "} ";
 
 var WRAP_FOOTER = "\n\n}";

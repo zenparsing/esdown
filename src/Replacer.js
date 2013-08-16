@@ -169,22 +169,24 @@ export class Replacer {
     ImportDeclaration(node) {
     
         var moduleSpec = this.modulePath(node.from),
-            out = "";
+            list = [];
         
         node.specifiers.forEach(spec => {
         
             var remote = spec.remote,
                 local = spec.local || remote;
             
-            if (out) out += ", ";
-            else out = "var ";
-            
-            out += local.text + " = " + moduleSpec + "." + remote.text;
+            list.push({
+                start: spec.start,
+                end: spec.end,
+                text: local.text + " = " + moduleSpec + "." + remote.text
+            });
         });
         
-        out += ";";
+        if (list.length === 0)
+            return "";
         
-        return out;
+        return "var " + this.joinList(list) + ";";
     }
     
     ExportDeclaration(node) {

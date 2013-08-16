@@ -1,1 +1,1 @@
-export * from "../../bundler/src/Bundler.js";
+export * from "../../js-bundle/src/Bundler.js";

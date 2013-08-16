@@ -5,3 +5,7 @@ import { A } from X;
 import { A } from X.Y;
 import { A, B } from X.Y;
 module B from "B.js";
+import {
+  A,
+  B,
+} from X;

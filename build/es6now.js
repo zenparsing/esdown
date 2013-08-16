@@ -1,4 +1,6 @@
-/*=es6now=*/(function(fn, deps, name) { if (typeof exports !== 'undefined') fn.call(typeof global === 'object' ? global : this, require, exports); else if (typeof __MODULE === 'function') __MODULE(fn, deps); else if (typeof define === 'function' && define.amd) define(['require', 'exports'].concat(deps), fn); else if (typeof window !== 'undefined' && name) fn.call(window, null, window[name] = {}); else fn.call(window || this, null, {}); })(function(require, exports) { 'use strict'; function __load(p) { var e = require(p); return typeof e === 'object' ? e : { module: e }; } var _M0 = __load("fs"), _M1 = __load("path"), _M2 = __load("http"), _M3 = __load("url"); var __this = this; var Class_ = (function(exports) {
+/*=es6now=*/(function(fn, deps, name) { if (typeof exports !== 'undefined') fn.call(typeof global === 'object' ? global : this, require, exports); else if (typeof __MODULE === 'function') __MODULE(fn, deps); else if (typeof define === 'function' && define.amd) define(['require', 'exports'].concat(deps), fn); else if (typeof window !== 'undefined' && name) fn.call(window, null, window[name] = {}); else fn.call(window || this, null, {}); })(function(require, exports) { 'use strict'; function __load(p) { var e = require(p); return typeof e === 'object' ? e : { 'default': e }; } var _M0 = __load("fs"), _M1 = __load("path"), _M2 = __load("url"), _M3 = __load("http"), _M4 = __load("os"), _M5 = __load("crypto"); 
+
+var __this = this; (function() {
 
 var HOP = Object.prototype.hasOwnProperty,
     STATIC = /^__static_/;
@@ -124,12 +126,12 @@ function Class(base, def) {
     return constructor;
 }
 
+this.__class = Class;
 
 
+}).call(this);
 
-exports.Class = Class; return exports; }).call(this, {});
-
-var ES5_ = (function(exports) {
+(function() {
 
 /*
 
@@ -145,8 +147,8 @@ var global = this,
     OP = Object.prototype,
     HOP = OP.hasOwnProperty,
     slice = Array.prototype.slice,
-    TRIM_S = /^\s+/,
-    TRIM_E = /\s+$/,
+    TRIM_S = /^s+/,
+    TRIM_E = /s+$/,
     FALSE = function() { return false; },
     TRUE = function() { return true; },
     identity = function(o) { return o; },
@@ -195,384 +197,378 @@ function addKeys(o, p) {
     return o;
 }
 
-// Emulates an ES5 environment
-function emulate() {
 
-    // In IE8, defineProperty and getOwnPropertyDescriptor only work on DOM objects
-    // and are therefore useless - so bury them.
-    try { (Object.defineProperty || FALSE)({}, "-", { value: 0 }); }
-    catch (x) { Object.defineProperty = undefined; };
+// In IE8, defineProperty and getOwnPropertyDescriptor only work on DOM objects
+// and are therefore useless - so bury them.
+try { (Object.defineProperty || FALSE)({}, "-", { value: 0 }); }
+catch (x) { Object.defineProperty = undefined; };
+
+try { (Object.getOwnPropertyDescriptor || FALSE)({}, "-"); }
+catch (x) { Object.getOwnPropertyDescriptor = undefined; }
+
+// In IE < 9 [].slice does not work properly when the start or end arguments are undefined.
+try { [0].slice(0, undefined)[0][0]; }
+catch (x) {
+
+    Array.prototype.slice = function(s, e) {
     
-    try { (Object.getOwnPropertyDescriptor || FALSE)({}, "-"); }
-    catch (x) { Object.getOwnPropertyDescriptor = undefined; }
-    
-    // In IE < 9 [].slice does not work properly when the start or end arguments are undefined.
-    try { [0].slice(0, undefined)[0][0]; }
-    catch (x) {
-    
-        Array.prototype.slice = function(s, e) {
-        
-            s = s || 0;
-            return (e === undefined ? slice.call(this, s) : slice.call(this, s, e));
-        };
-    }
-    
-    // ES5 Object functions
-    addKeys(Object, {
-    
-        create: function(o, p) {
-        
-            var n;
-            
-            if (o === null) {
-            
-                n = { "__proto__": o };
-            
-            } else {
-            
-                var f = function() {};
-                f.prototype = o;
-                n = new f;
-            }
-            
-            if (p !== undefined)
-                Object.defineProperties(n, p);
-            
-            return n;
-        },
-        
-        keys: keys,
-        
-        getOwnPropertyDescriptor: function(o, p) {
-        
-            if (!HOP.call(o, p))
-                return undefined;
-            
-            return { 
-                value: o[p], 
-                writable: true, 
-                configurable: true, 
-                enumerable: OP.propertyIsEnumerable.call(o, p)
-            };
-        },
-        
-        defineProperty: function(o, n, p) {
-        
-            var msg = "Accessor properties are not supported.";
-            
-            if ("get" in p) {
-            
-                if (defGet) defGet(n, p.get);
-                else throw new Error(msg);
-            }
-            
-            if ("set" in p) {
-            
-                if (defSet) defSet(n, p.set);
-                else throw new Error(msg);
-            }
-            
-            if ("value" in p)
-                o[n] = p.value;
-            
-            return o;
-        },
-        
-        defineProperties: function(o, d) {
-        
-            Object.keys(d).forEach(function(k) { Object.defineProperty(o, k, d[k]); });
-            return o;
-        },
-        
-        getPrototypeOf: function(o) {
-        
-            var p = o.__proto__ || o.constructor.prototype;
-            return p;
-        },
-        
-        /*
-        
-        getOwnPropertyNames is buggy since there is no way to get non-enumerable 
-        ES3 properties.
-        
-        */
-        
-        getOwnProperyNames: keys,
-        
-        freeze: identity,
-        seal: identity,
-        preventExtensions: identity,
-        isFrozen: FALSE,
-        isSealed: FALSE,
-        isExtensible: TRUE
-        
-    });
-    
-    
-    // Add ES5 String extras
-    addKeys(String.prototype, {
-    
-        trim: function() { return this.replace(TRIM_S, "").replace(TRIM_E, ""); }
-    });
-    
-    
-    // Add ES5 Array extras
-    addKeys(Array, {
-    
-        isArray: function(obj) { return getClass(obj) === "Array"; }
-    });
-    
-    
-    addKeys(Array.prototype, {
-    
-        indexOf: function(v, i) {
-        
-            var len = this.length >>> 0;
-            
-            i = i || 0;
-            if (i < 0) i = Math.max(len + i, 0);
-            
-            for (; i < len; ++i)
-                if (this[i] === v)
-                    return i;
-            
-            return -1;
-        },
-        
-        lastIndexOf: function(v, i) {
-        
-            var len = this.length >>> 0;
-            
-            i = Math.min(i || 0, len - 1);
-            if (i < 0) i = len + i;
-            
-            for (; i >= 0; --i)
-                if (this[i] === v)
-                    return i;
-            
-            return -1;
-        },
-        
-        every: function(fn, self) {
-        
-            var r = true;
-            
-            for (var i = 0, len = this.length >>> 0; i < len; ++i)
-                if (i in this && !(r = fn.call(self, this[i], i, this)))
-                    break;
-            
-            return !!r;
-        },
-        
-        some: function(fn, self) {
-        
-            var r = false;
-            
-            for (var i = 0, len = this.length >>> 0; i < len; ++i)
-                if (i in this && (r = fn.call(self, this[i], i, this)))
-                    break;
-            
-            return !!r;
-        },
-        
-        forEach: function(fn, self) {
-        
-            for (var i = 0, len = this.length >>> 0; i < len; ++i)
-                if (i in this)
-                    fn.call(self, this[i], i, this);
-        },
-        
-        map: function(fn, self) {
-        
-            var a = [];
-            
-            for (var i = 0, len = this.length >>> 0; i < len; ++i)
-                if (i in this)
-                    a[i] = fn.call(self, this[i], i, this);
-            
-            return a;
-        },
-        
-        filter: function(fn, self) {
-        
-            var a = [];
-            
-            for (var i = 0, len = this.length >>> 0; i < len; ++i)
-                if (i in this && fn.call(self, this[i], i, this))
-                    a.push(this[i]);
-            
-            return a;
-        },
-        
-        reduce: function(fn) {
-        
-            var len = this.length >>> 0,
-                i = 0, 
-                some = false,
-                ini = (arguments.length > 1),
-                val = (ini ? arguments[1] : this[i++]);
-            
-            for (; i < len; ++i) {
-            
-                if (i in this) {
-                
-                    some = true;
-                    val = fn(val, this[i], i, this);
-                }
-            }
-            
-            if (!some && !ini)
-                throw new TypeError(ERR_REDUCE);
-            
-            return val;
-        },
-        
-        reduceRight: function(fn) {
-        
-            var len = this.length >>> 0,
-                i = len - 1,
-                some = false,
-                ini = (arguments.length > 1),
-                val = (ini || i < 0  ? arguments[1] : this[i--]);
-            
-            for (; i >= 0; --i) {
-            
-                if (i in this) {
-                
-                    some = true;
-                    val = fn(val, this[i], i, this);
-                }
-            }
-            
-            if (!some && !ini)
-                throw new TypeError(ERR_REDUCE);
-            
-            return val;
-        }
-    });
-    
-    // Add ES5 Function extras
-    addKeys(Function.prototype, {
-    
-        bind: function(self) {
-        
-            var f = this,
-                args = slice.call(arguments, 1),
-                noargs = (args.length === 0);
-            
-            bound.prototype = f.prototype;
-            return bound;
-            
-            function bound() {
-            
-                return f.apply(
-                    this instanceof bound ? this : self, 
-                    noargs ? arguments : args.concat(slice.call(arguments, 0)));
-            }
-        }
-    });
-    
-    // Add ES5 Date extras
-    addKeys(Date, {
-    
-        now: function() { return (new Date()).getTime(); }
-    });
-    
-    // Add ES5 Date extras
-    addKeys(Date.prototype, {
-    
-        toISOString: function() {
-        
-            function pad(s) {
-            
-                if ((s = "" + s).length === 1) s = "0" + s;
-                return s;
-            }
-            
-            return this.getUTCFullYear() + "-" +
-                pad(this.getUTCMonth() + 1, 2) + "-" +
-                pad(this.getUTCDate(), 2) + "T" +
-                pad(this.getUTCHours(), 2) + ":" +
-                pad(this.getUTCMinutes(), 2) + ":" +
-                pad(this.getUTCSeconds(), 2) + "Z";
-        },
-        
-        toJSON: function() {
-        
-            return this.toISOString();
-        }
-    });
-    
-    // Add ISO support to Date.parse
-    if (Date.parse(new Date(0).toISOString()) !== 0) !function() {
-    
-        /*
-        
-        In ES5 the Date constructor will also parse ISO dates, but overwritting 
-        the Date function itself is too far.  Note that new Date(isoDateString)
-        is not backward-compatible.  Use the following instead:
-        
-        new Date(Date.parse(dateString));
-        
-        1: +/- year
-        2: month
-        3: day
-        4: hour
-        5: minute
-        6: second
-        7: fraction
-        8: +/- tz hour
-        9: tz minute
-        
-        */
-        
-        var isoRE = /^(?:((?:[+-]\d{2})?\d{4})(?:-(\d{2})(?:-(\d{2}))?)?)?(?:T(\d{2}):(\d{2})(?::(\d{2})(?:\.\d{3})?)?)?(?:Z|([-+]\d{2}):(\d{2}))?$/,
-            dateParse = Date.parse;
-    
-        Date.parse = function(s) {
-        
-            var t, m, hasDate, i, offset;
-            
-            if (!isNaN(t = dateParse(s)))
-                return t;
-            
-            if (s && (m = isoRE.exec(s))) {
-            
-                hasDate = m[1] !== undefined;
-                
-                // Convert matches to numbers (month and day default to 1)
-                for (i = 1; i <= 9; ++i)
-                    m[i] = Number(m[i] || (i <= 3 ? 1 : 0));
-                
-                // Calculate ms directly if no date is provided
-                if (!hasDate)
-                    return ((m[4] * 60 + m[5]) * 60 + m[6]) * 1000 + m[7];
-                
-                // Convert month to zero-indexed
-                m[2] -= 1;
-                
-                // Get TZ offset
-                offset = (m[8] * 60 + m[9]) * 60 * 1000;
-                
-                // Remove full match from array
-                m.shift();
-                
-                t = Date.UTC.apply(this, m) + offset;
-            }
-            
-            return t;
-        };
-                
-    }();
-    
+        s = s || 0;
+        return (e === undefined ? slice.call(this, s) : slice.call(this, s, e));
+    };
 }
 
+// ES5 Object functions
+addKeys(Object, {
 
-exports.addKeys = addKeys; exports.emulate = emulate; return exports; }).call(this, {});
+    create: function(o, p) {
+    
+        var n;
+        
+        if (o === null) {
+        
+            n = { "__proto__": o };
+        
+        } else {
+        
+            var f = function() {};
+            f.prototype = o;
+            n = new f;
+        }
+        
+        if (p !== undefined)
+            Object.defineProperties(n, p);
+        
+        return n;
+    },
+    
+    keys: keys,
+    
+    getOwnPropertyDescriptor: function(o, p) {
+    
+        if (!HOP.call(o, p))
+            return undefined;
+        
+        return { 
+            value: o[p], 
+            writable: true, 
+            configurable: true, 
+            enumerable: OP.propertyIsEnumerable.call(o, p)
+        };
+    },
+    
+    defineProperty: function(o, n, p) {
+    
+        var msg = "Accessor properties are not supported.";
+        
+        if ("get" in p) {
+        
+            if (defGet) defGet(n, p.get);
+            else throw new Error(msg);
+        }
+        
+        if ("set" in p) {
+        
+            if (defSet) defSet(n, p.set);
+            else throw new Error(msg);
+        }
+        
+        if ("value" in p)
+            o[n] = p.value;
+        
+        return o;
+    },
+    
+    defineProperties: function(o, d) {
+    
+        Object.keys(d).forEach(function(k) { Object.defineProperty(o, k, d[k]); });
+        return o;
+    },
+    
+    getPrototypeOf: function(o) {
+    
+        var p = o.__proto__ || o.constructor.prototype;
+        return p;
+    },
+    
+    /*
+    
+    getOwnPropertyNames is buggy since there is no way to get non-enumerable 
+    ES3 properties.
+    
+    */
+    
+    getOwnProperyNames: keys,
+    
+    freeze: identity,
+    seal: identity,
+    preventExtensions: identity,
+    isFrozen: FALSE,
+    isSealed: FALSE,
+    isExtensible: TRUE
+    
+});
 
-var ES6 = (function(exports) {
 
-var ES5 = ES5_;
+// Add ES5 String extras
+addKeys(String.prototype, {
+
+    trim: function() { return this.replace(TRIM_S, "").replace(TRIM_E, ""); }
+});
+
+
+// Add ES5 Array extras
+addKeys(Array, {
+
+    isArray: function(obj) { return getClass(obj) === "Array"; }
+});
+
+
+addKeys(Array.prototype, {
+
+    indexOf: function(v, i) {
+    
+        var len = this.length >>> 0;
+        
+        i = i || 0;
+        if (i < 0) i = Math.max(len + i, 0);
+        
+        for (; i < len; ++i)
+            if (this[i] === v)
+                return i;
+        
+        return -1;
+    },
+    
+    lastIndexOf: function(v, i) {
+    
+        var len = this.length >>> 0;
+        
+        i = Math.min(i || 0, len - 1);
+        if (i < 0) i = len + i;
+        
+        for (; i >= 0; --i)
+            if (this[i] === v)
+                return i;
+        
+        return -1;
+    },
+    
+    every: function(fn, self) {
+    
+        var r = true;
+        
+        for (var i = 0, len = this.length >>> 0; i < len; ++i)
+            if (i in this && !(r = fn.call(self, this[i], i, this)))
+                break;
+        
+        return !!r;
+    },
+    
+    some: function(fn, self) {
+    
+        var r = false;
+        
+        for (var i = 0, len = this.length >>> 0; i < len; ++i)
+            if (i in this && (r = fn.call(self, this[i], i, this)))
+                break;
+        
+        return !!r;
+    },
+    
+    forEach: function(fn, self) {
+    
+        for (var i = 0, len = this.length >>> 0; i < len; ++i)
+            if (i in this)
+                fn.call(self, this[i], i, this);
+    },
+    
+    map: function(fn, self) {
+    
+        var a = [];
+        
+        for (var i = 0, len = this.length >>> 0; i < len; ++i)
+            if (i in this)
+                a[i] = fn.call(self, this[i], i, this);
+        
+        return a;
+    },
+    
+    filter: function(fn, self) {
+    
+        var a = [];
+        
+        for (var i = 0, len = this.length >>> 0; i < len; ++i)
+            if (i in this && fn.call(self, this[i], i, this))
+                a.push(this[i]);
+        
+        return a;
+    },
+    
+    reduce: function(fn) {
+    
+        var len = this.length >>> 0,
+            i = 0, 
+            some = false,
+            ini = (arguments.length > 1),
+            val = (ini ? arguments[1] : this[i++]);
+        
+        for (; i < len; ++i) {
+        
+            if (i in this) {
+            
+                some = true;
+                val = fn(val, this[i], i, this);
+            }
+        }
+        
+        if (!some && !ini)
+            throw new TypeError(ERR_REDUCE);
+        
+        return val;
+    },
+    
+    reduceRight: function(fn) {
+    
+        var len = this.length >>> 0,
+            i = len - 1,
+            some = false,
+            ini = (arguments.length > 1),
+            val = (ini || i < 0  ? arguments[1] : this[i--]);
+        
+        for (; i >= 0; --i) {
+        
+            if (i in this) {
+            
+                some = true;
+                val = fn(val, this[i], i, this);
+            }
+        }
+        
+        if (!some && !ini)
+            throw new TypeError(ERR_REDUCE);
+        
+        return val;
+    }
+});
+
+// Add ES5 Function extras
+addKeys(Function.prototype, {
+
+    bind: function(self) {
+    
+        var f = this,
+            args = slice.call(arguments, 1),
+            noargs = (args.length === 0);
+        
+        bound.prototype = f.prototype;
+        return bound;
+        
+        function bound() {
+        
+            return f.apply(
+                this instanceof bound ? this : self, 
+                noargs ? arguments : args.concat(slice.call(arguments, 0)));
+        }
+    }
+});
+
+// Add ES5 Date extras
+addKeys(Date, {
+
+    now: function() { return (new Date()).getTime(); }
+});
+
+// Add ES5 Date extras
+addKeys(Date.prototype, {
+
+    toISOString: function() {
+    
+        function pad(s) {
+        
+            if ((s = "" + s).length === 1) s = "0" + s;
+            return s;
+        }
+        
+        return this.getUTCFullYear() + "-" +
+            pad(this.getUTCMonth() + 1, 2) + "-" +
+            pad(this.getUTCDate(), 2) + "T" +
+            pad(this.getUTCHours(), 2) + ":" +
+            pad(this.getUTCMinutes(), 2) + ":" +
+            pad(this.getUTCSeconds(), 2) + "Z";
+    },
+    
+    toJSON: function() {
+    
+        return this.toISOString();
+    }
+});
+
+// Add ISO support to Date.parse
+if (Date.parse(new Date(0).toISOString()) !== 0) !function() {
+
+    /*
+    
+    In ES5 the Date constructor will also parse ISO dates, but overwritting 
+    the Date function itself is too far.  Note that new Date(isoDateString)
+    is not backward-compatible.  Use the following instead:
+    
+    new Date(Date.parse(dateString));
+    
+    1: +/- year
+    2: month
+    3: day
+    4: hour
+    5: minute
+    6: second
+    7: fraction
+    8: +/- tz hour
+    9: tz minute
+    
+    */
+    
+    var isoRE = /^(?:((?:[+-]d{2})?d{4})(?:-(d{2})(?:-(d{2}))?)?)?(?:T(d{2}):(d{2})(?::(d{2})(?:.d{3})?)?)?(?:Z|([-+]d{2}):(d{2}))?$/,
+        dateParse = Date.parse;
+
+    Date.parse = function(s) {
+    
+        var t, m, hasDate, i, offset;
+        
+        if (!isNaN(t = dateParse(s)))
+            return t;
+        
+        if (s && (m = isoRE.exec(s))) {
+        
+            hasDate = m[1] !== undefined;
+            
+            // Convert matches to numbers (month and day default to 1)
+            for (i = 1; i <= 9; ++i)
+                m[i] = Number(m[i] || (i <= 3 ? 1 : 0));
+            
+            // Calculate ms directly if no date is provided
+            if (!hasDate)
+                return ((m[4] * 60 + m[5]) * 60 + m[6]) * 1000 + m[7];
+            
+            // Convert month to zero-indexed
+            m[2] -= 1;
+            
+            // Get TZ offset
+            offset = (m[8] * 60 + m[9]) * 60 * 1000;
+            
+            // Remove full match from array
+            m.shift();
+            
+            t = Date.UTC.apply(this, m) + offset;
+        }
+        
+        return t;
+    };
+            
+}();
+
+
+}).call(this);
+
+(function() {
 
 var global = this,
     HAS_OWN = Object.prototype.hasOwnProperty;
@@ -594,156 +590,130 @@ function addProps(obj, props) {
     }));
 }
 
-function emulate() {
+addProps(Object, {
 
-    ES5.emulate();
-
-    addProps(Object, {
+    is: function(a, b) {
     
-        is: function(a, b) {
-        
-            // TODO
-        },
-        
-        assign: function(target, source) {
-        
-            Object.keys(source).forEach((function(k) { return target[k] = source[k]; }));
-            return target;
-        },
-        
-        mixin: function(target, source) {
-        
-            Object.getOwnPropertyNames(source).forEach((function(name) {
-            
-                var desc = Object.getOwnPropertyDescriptor(source, name);
-                Object.defineProperty(target, name, desc);
-            }));
-            
-            return target;
-        }
-    });
+        // TODO
+    },
     
-    addProps(Number, {
+    assign: function(target, source) {
     
-        EPSILON: Number.EPSILON || (function() {
-        
-            var next, result;
-            
-            for (next = 1; 1 + next !== 1; next = next / 2)
-                result = next;
-            
-            return result;
-        }()),
-        
-        MAX_INTEGER: 9007199254740992,
-        
-        isFinite: function(val) {
-            
-            return typeof val === "number" && isFinite(val);
-        },
-        
-        isNaN: function(val) {
-        
-            return typeof val === "number" && isNaN(val);
-        },
-        
-        isInteger: function(val) {
-        
-            typeof val === "number" && val | 0 === val;
-        },
-        
-        toInteger: function(val) {
-            
-            return val | 0;
-        }
-    });
+        Object.keys(source).forEach((function(k) { return target[k] = source[k]; }));
+        return target;
+    },
     
-    addProps(Array, {
+    mixin: function(target, source) {
     
-        from: function(arg) {
-            // TODO
-        },
+        Object.getOwnPropertyNames(source).forEach((function(name) {
         
-        of: function() {
-            // ?
-        }
+            var desc = Object.getOwnPropertyDescriptor(source, name);
+            Object.defineProperty(target, name, desc);
+        }));
+        
+        return target;
+    }
+});
+
+addProps(Number, {
+
+    EPSILON: Number.EPSILON || (function() {
     
-    });
+        var next, result;
+        
+        for (next = 1; 1 + next !== 1; next = next / 2)
+            result = next;
+        
+        return result;
+    }()),
     
-    addProps(String.prototype, {
-        
-        repeat: function(count) {
-        
-            return new Array(count + 1).join(this);
-        },
-        
-        startsWith: function(search, start) {
-        
-            return this.indexOf(search, start) === start;
-        },
-        
-        endsWith: function(search, end) {
-        
-            return this.slice(-search.length) === search;
-        },
-        
-        contains: function(search, pos) {
-        
-            return this.indexOf(search, pos) !== -1;
-        }
-    });
+    MAX_INTEGER: 9007199254740992,
     
-    if (typeof Map === "undefined") global.Map = (function() {
-    
-        function Map() {
+    isFinite: function(val) {
         
-        }
-        
-        return Map;
-        
-    })();
+        return typeof val === "number" && isFinite(val);
+    },
     
-    if (typeof Set === "undefined") global.Set = (function() {
+    isNaN: function(val) {
     
-        function Set() {
+        return typeof val === "number" && isNaN(val);
+    },
+    
+    isInteger: function(val) {
+    
+        typeof val === "number" && val | 0 === val;
+    },
+    
+    toInteger: function(val) {
         
-        }
-        
-        return Set;
-        
-    })();
+        return val | 0;
+    }
+});
+
+addProps(Array, {
+
+    from: function(arg) {
+        // TODO
+    },
     
-    if (typeof Reflect === "undefined") global.Reflect = {
+    of: function() {
+        // ?
+    }
+
+});
+
+addProps(String.prototype, {
     
-        hasOwn: function(obj, name) { return HAS_OWN.call(obj, name); }
-    };
+    repeat: function(count) {
     
-}
+        return new Array(count + 1).join(this);
+    },
+    
+    startsWith: function(search, start) {
+    
+        return this.indexOf(search, start) === start;
+    },
+    
+    endsWith: function(search, end) {
+    
+        return this.slice(-search.length) === search;
+    },
+    
+    contains: function(search, pos) {
+    
+        return this.indexOf(search, pos) !== -1;
+    }
+});
+
+if (typeof Map === "undefined") global.Map = (function() {
+
+    function Map() {
+    
+    }
+    
+    return Map;
+    
+})();
+
+if (typeof Set === "undefined") global.Set = (function() {
+
+    function Set() {
+    
+    }
+    
+    return Set;
+    
+})();
+
+if (typeof Reflect === "undefined") global.Reflect = {
+
+    hasOwn: function(obj, name) { return HAS_OWN.call(obj, name); }
+};
 
 
+}).call(this);
 
-
-exports.emulate = emulate; return exports; }).call(this, {});
-
-var es6nowRuntime = (function(exports) {
-
-var Class = Class_.Class;
-var emulate = ES6.emulate;
-
-this.__class = Class;
-
-emulate();
-
-
-return exports; }).call(this, {});
-
-var Runtime_ = (function(exports) {
-
-Object.keys(es6nowRuntime).forEach(function(k) { exports[k] = es6nowRuntime[k]; });
-
-return exports; }).call(this, {});
-
-var Promise_ = (function(exports) {
+var Promise__ = (function(exports) {
 
 var EventLoop = (function(exports) {
 
@@ -1028,34 +998,38 @@ var AsyncFS = (function(exports) {
 
 var FS = _M0;
 
-var Promise = Promise_.Promise;
+var Promise = Promise__.Promise;
 
 // Wraps a standard Node async function with a promise
 // generating function
-function wrap(obj, name) {
+function wrap(fn) {
 
 	return function() {
 	
-		var a = [].slice.call(arguments, 0);
-		
-		var promise = new Promise((function(resolver) {
-		
+	    var a = [].slice.call(arguments, 0);
+	    
+		return new Promise((function(resolver) {
+		    
             a.push((function(err, data) {
         
                 if (err) resolver.reject(err);
                 else resolver.resolve(data);
             }));
+            
+            fn.apply(null, a);
         }));
-		
-		if (name) obj[name].apply(obj, a);
-    	else obj.apply(null, a);
-		
-		return promise;
 	};
 }
 
+function exists(path) {
+
+    return new Promise((function(resolver) {
+    
+        FS.exists(path, (function(result) { return resolver.resolve(result); }));
+    }));
+}
+
 var 
-    exists = wrap(FS.exists),
     readFile = wrap(FS.readFile),
     close = wrap(FS.close),
     open = wrap(FS.open),
@@ -1096,15 +1070,149 @@ Object.keys(AsyncFS).forEach(function(k) { exports[k] = AsyncFS[k]; });
 
 return exports; }).call(this, {});
 
+var Runtime_ = (function(exports) {
+
+var Class = 
+
+"var HOP = Object.prototype.hasOwnProperty,\n    STATIC = /^__static_/;\n\n// Returns true if the object has the specified property\nfunction hasOwn(obj, name) {\n\n    return HOP.call(obj, name);\n}\n\n// Returns true if the object has the specified property in\n// its prototype chain\nfunction has(obj, name) {\n\n    for (; obj; obj = Object.getPrototypeOf(obj))\n        if (HOP.call(obj, name))\n            return true;\n    \n    return false;\n}\n\n// Iterates over the descriptors for each own property of an object\nfunction forEachDesc(obj, fn) {\n\n    var names = Object.getOwnPropertyNames(obj);\n    \n    for (var i = 0, name; i < names.length; ++i)\n        fn(names[i], Object.getOwnPropertyDescriptor(obj, names[i]));\n    \n    return obj;\n}\n\n// Performs copy-based inheritance\nfunction inherit(to, from) {\n\n    for (; from; from = Object.getPrototypeOf(from)) {\n    \n        forEachDesc(from, (name, desc) => {\n        \n            if (!has(to, name))\n                Object.defineProperty(to, name, desc);\n        });\n    }\n    \n    return to;\n}\n\nfunction defineMethods(to, from, classMethods) {\n\n    forEachDesc(from, (name, desc) => {\n    \n        if (STATIC.test(name) === classMethods)\n            Object.defineProperty(to, classMethods ? name.replace(STATIC, \"\") : name, desc);\n    });\n    \n    return to;\n}\n\nfunction Class(base, def) {\n\n    function constructor() { \n    \n        if (parent && parent.constructor)\n            parent.constructor.apply(this, arguments);\n    }\n    \n    var parent;\n    \n    if (def === void 0) {\n    \n        // If no base class is specified, then Object.prototype\n        // is the parent prototype\n        def = base;\n        base = null;\n        parent = Object.prototype;\n    \n    } else if (base === null) {\n    \n        // If the base is null, then then then the parent prototype is null\n        parent = null;\n        \n    } else if (typeof base === \"function\") {\n    \n        parent = base.prototype;\n        \n        // Prototype must be null or an object\n        if (parent !== null && Object(parent) !== parent)\n            parent = void 0;\n    }\n    \n    if (parent === void 0)\n        throw new TypeError();\n    \n    // Generate the method collection, closing over \"super\"\n    var props = def(parent);\n    \n    // Get constructor\n    if (hasOwn(props, \"constructor\"))\n        constructor = props.constructor;\n    \n    // Make constructor non-enumerable and assign a default\n    // if none is provided\n    Object.defineProperty(props, \"constructor\", {\n    \n        enumerable: false,\n        writable: true,\n        configurable: true,\n        value: constructor\n    });\n    \n    // Create prototype object\n    var proto = defineMethods(Object.create(parent), props, false);\n    \n    // Set constructor's prototype\n    constructor.prototype = proto;\n    \n    // Set class \"static\" methods\n    defineMethods(constructor, props, true);\n    \n    // \"Inherit\" from base constructor\n    if (base) inherit(constructor, base);\n    \n    return constructor;\n}\n\nthis.__class = Class;\n";
+
+var ES5 = 
+
+"/*\n\nProvides basic support for methods added in EcmaScript 5 for EcmaScript 4 browsers.\nThe intent is not to create 100% spec-compatible replacements, but to allow the use\nof basic ES5 functionality with predictable results.  There are features in ES5 that\nrequire an ES5 engine (freezing an object, for instance).  If you plan to write for \nlegacy engines, then don't rely on those features.\n\n*/\n\nvar global = this,\n    OP = Object.prototype,\n    HOP = OP.hasOwnProperty,\n    slice = Array.prototype.slice,\n    TRIM_S = /^s+/,\n    TRIM_E = /s+$/,\n    FALSE = function() { return false; },\n    TRUE = function() { return true; },\n    identity = function(o) { return o; },\n    defGet = OP.__defineGetter__,\n    defSet = OP.__defineSetter__,\n    keys = Object.keys || es4Keys,\n    ENUM_BUG = !function() { var o = { constructor: 1 }; for (var i in o) return i = true; }(),\n    ENUM_BUG_KEYS = [ \"toString\", \"toLocaleString\", \"valueOf\", \"hasOwnProperty\", \"isPrototypeOf\", \"propertyIsEnumerable\", \"constructor\" ],\n    ERR_REDUCE = \"Reduce of empty array with no initial value\";\n\n// Returns the internal class of an object\nfunction getClass(o) {\n\n    if (o === null || o === undefined) return \"Object\";\n    return OP.toString.call(o).slice(\"[object \".length, -1);\n}\n\n// Returns an array of keys defined on the object\nfunction es4Keys(o) {\n\n    var a = [], i;\n    \n    for (i in o)\n        if (HOP.call(o, i))\n            a.push(i);\n    \n    if (ENUM_BUG) \n        for (i = 0; i < ENUM_BUG_KEYS.length; ++i)\n            if (HOP.call(o, ENUM_BUG_KEYS[i]))\n                a.push(ENUM_BUG_KEYS[i]);\n    \n    return a;\n}\n\n// Sets a collection of keys, if the property is not already set\nfunction addKeys(o, p) {\n\n    for (var i = 0, a = keys(p), k; i < a.length; ++i) {\n    \n        k = a[i];\n        \n        if (o[k] === undefined) \n            o[k] = p[k];\n    }\n    \n    return o;\n}\n\n\n// In IE8, defineProperty and getOwnPropertyDescriptor only work on DOM objects\n// and are therefore useless - so bury them.\ntry { (Object.defineProperty || FALSE)({}, \"-\", { value: 0 }); }\ncatch (x) { Object.defineProperty = undefined; };\n\ntry { (Object.getOwnPropertyDescriptor || FALSE)({}, \"-\"); }\ncatch (x) { Object.getOwnPropertyDescriptor = undefined; }\n\n// In IE < 9 [].slice does not work properly when the start or end arguments are undefined.\ntry { [0].slice(0, undefined)[0][0]; }\ncatch (x) {\n\n    Array.prototype.slice = function(s, e) {\n    \n        s = s || 0;\n        return (e === undefined ? slice.call(this, s) : slice.call(this, s, e));\n    };\n}\n\n// ES5 Object functions\naddKeys(Object, {\n\n    create(o, p) {\n    \n        var n;\n        \n        if (o === null) {\n        \n            n = { \"__proto__\": o };\n        \n        } else {\n        \n            var f = function() {};\n            f.prototype = o;\n            n = new f;\n        }\n        \n        if (p !== undefined)\n            Object.defineProperties(n, p);\n        \n        return n;\n    },\n    \n    keys: keys,\n    \n    getOwnPropertyDescriptor(o, p) {\n    \n        if (!HOP.call(o, p))\n            return undefined;\n        \n        return { \n            value: o[p], \n            writable: true, \n            configurable: true, \n            enumerable: OP.propertyIsEnumerable.call(o, p)\n        };\n    },\n    \n    defineProperty(o, n, p) {\n    \n        var msg = \"Accessor properties are not supported.\";\n        \n        if (\"get\" in p) {\n        \n            if (defGet) defGet(n, p.get);\n            else throw new Error(msg);\n        }\n        \n        if (\"set\" in p) {\n        \n            if (defSet) defSet(n, p.set);\n            else throw new Error(msg);\n        }\n        \n        if (\"value\" in p)\n            o[n] = p.value;\n        \n        return o;\n    },\n    \n    defineProperties(o, d) {\n    \n        Object.keys(d).forEach(function(k) { Object.defineProperty(o, k, d[k]); });\n        return o;\n    },\n    \n    getPrototypeOf(o) {\n    \n        var p = o.__proto__ || o.constructor.prototype;\n        return p;\n    },\n    \n    /*\n    \n    getOwnPropertyNames is buggy since there is no way to get non-enumerable \n    ES3 properties.\n    \n    */\n    \n    getOwnProperyNames: keys,\n    \n    freeze: identity,\n    seal: identity,\n    preventExtensions: identity,\n    isFrozen: FALSE,\n    isSealed: FALSE,\n    isExtensible: TRUE\n    \n});\n\n\n// Add ES5 String extras\naddKeys(String.prototype, {\n\n    trim() { return this.replace(TRIM_S, \"\").replace(TRIM_E, \"\"); }\n});\n\n\n// Add ES5 Array extras\naddKeys(Array, {\n\n    isArray(obj) { return getClass(obj) === \"Array\"; }\n});\n\n\naddKeys(Array.prototype, {\n\n    indexOf(v, i) {\n    \n        var len = this.length >>> 0;\n        \n        i = i || 0;\n        if (i < 0) i = Math.max(len + i, 0);\n        \n        for (; i < len; ++i)\n            if (this[i] === v)\n                return i;\n        \n        return -1;\n    },\n    \n    lastIndexOf(v, i) {\n    \n        var len = this.length >>> 0;\n        \n        i = Math.min(i || 0, len - 1);\n        if (i < 0) i = len + i;\n        \n        for (; i >= 0; --i)\n            if (this[i] === v)\n                return i;\n        \n        return -1;\n    },\n    \n    every(fn, self) {\n    \n        var r = true;\n        \n        for (var i = 0, len = this.length >>> 0; i < len; ++i)\n            if (i in this && !(r = fn.call(self, this[i], i, this)))\n                break;\n        \n        return !!r;\n    },\n    \n    some(fn, self) {\n    \n        var r = false;\n        \n        for (var i = 0, len = this.length >>> 0; i < len; ++i)\n            if (i in this && (r = fn.call(self, this[i], i, this)))\n                break;\n        \n        return !!r;\n    },\n    \n    forEach(fn, self) {\n    \n        for (var i = 0, len = this.length >>> 0; i < len; ++i)\n            if (i in this)\n                fn.call(self, this[i], i, this);\n    },\n    \n    map(fn, self) {\n    \n        var a = [];\n        \n        for (var i = 0, len = this.length >>> 0; i < len; ++i)\n            if (i in this)\n                a[i] = fn.call(self, this[i], i, this);\n        \n        return a;\n    },\n    \n    filter(fn, self) {\n    \n        var a = [];\n        \n        for (var i = 0, len = this.length >>> 0; i < len; ++i)\n            if (i in this && fn.call(self, this[i], i, this))\n                a.push(this[i]);\n        \n        return a;\n    },\n    \n    reduce(fn) {\n    \n        var len = this.length >>> 0,\n            i = 0, \n            some = false,\n            ini = (arguments.length > 1),\n            val = (ini ? arguments[1] : this[i++]);\n        \n        for (; i < len; ++i) {\n        \n            if (i in this) {\n            \n                some = true;\n                val = fn(val, this[i], i, this);\n            }\n        }\n        \n        if (!some && !ini)\n            throw new TypeError(ERR_REDUCE);\n        \n        return val;\n    },\n    \n    reduceRight(fn) {\n    \n        var len = this.length >>> 0,\n            i = len - 1,\n            some = false,\n            ini = (arguments.length > 1),\n            val = (ini || i < 0  ? arguments[1] : this[i--]);\n        \n        for (; i >= 0; --i) {\n        \n            if (i in this) {\n            \n                some = true;\n                val = fn(val, this[i], i, this);\n            }\n        }\n        \n        if (!some && !ini)\n            throw new TypeError(ERR_REDUCE);\n        \n        return val;\n    }\n});\n\n// Add ES5 Function extras\naddKeys(Function.prototype, {\n\n    bind(self) {\n    \n        var f = this,\n            args = slice.call(arguments, 1),\n            noargs = (args.length === 0);\n        \n        bound.prototype = f.prototype;\n        return bound;\n        \n        function bound() {\n        \n            return f.apply(\n                this instanceof bound ? this : self, \n                noargs ? arguments : args.concat(slice.call(arguments, 0)));\n        }\n    }\n});\n\n// Add ES5 Date extras\naddKeys(Date, {\n\n    now() { return (new Date()).getTime(); }\n});\n\n// Add ES5 Date extras\naddKeys(Date.prototype, {\n\n    toISOString() {\n    \n        function pad(s) {\n        \n            if ((s = \"\" + s).length === 1) s = \"0\" + s;\n            return s;\n        }\n        \n        return this.getUTCFullYear() + \"-\" +\n            pad(this.getUTCMonth() + 1, 2) + \"-\" +\n            pad(this.getUTCDate(), 2) + \"T\" +\n            pad(this.getUTCHours(), 2) + \":\" +\n            pad(this.getUTCMinutes(), 2) + \":\" +\n            pad(this.getUTCSeconds(), 2) + \"Z\";\n    },\n    \n    toJSON() {\n    \n        return this.toISOString();\n    }\n});\n\n// Add ISO support to Date.parse\nif (Date.parse(new Date(0).toISOString()) !== 0) !function() {\n\n    /*\n    \n    In ES5 the Date constructor will also parse ISO dates, but overwritting \n    the Date function itself is too far.  Note that new Date(isoDateString)\n    is not backward-compatible.  Use the following instead:\n    \n    new Date(Date.parse(dateString));\n    \n    1: +/- year\n    2: month\n    3: day\n    4: hour\n    5: minute\n    6: second\n    7: fraction\n    8: +/- tz hour\n    9: tz minute\n    \n    */\n    \n    var isoRE = /^(?:((?:[+-]d{2})?d{4})(?:-(d{2})(?:-(d{2}))?)?)?(?:T(d{2}):(d{2})(?::(d{2})(?:.d{3})?)?)?(?:Z|([-+]d{2}):(d{2}))?$/,\n        dateParse = Date.parse;\n\n    Date.parse = function(s) {\n    \n        var t, m, hasDate, i, offset;\n        \n        if (!isNaN(t = dateParse(s)))\n            return t;\n        \n        if (s && (m = isoRE.exec(s))) {\n        \n            hasDate = m[1] !== undefined;\n            \n            // Convert matches to numbers (month and day default to 1)\n            for (i = 1; i <= 9; ++i)\n                m[i] = Number(m[i] || (i <= 3 ? 1 : 0));\n            \n            // Calculate ms directly if no date is provided\n            if (!hasDate)\n                return ((m[4] * 60 + m[5]) * 60 + m[6]) * 1000 + m[7];\n            \n            // Convert month to zero-indexed\n            m[2] -= 1;\n            \n            // Get TZ offset\n            offset = (m[8] * 60 + m[9]) * 60 * 1000;\n            \n            // Remove full match from array\n            m.shift();\n            \n            t = Date.UTC.apply(this, m) + offset;\n        }\n        \n        return t;\n    };\n            \n}();\n";
+
+var ES6 = 
+
+"var global = this,\n    HAS_OWN = Object.prototype.hasOwnProperty;\n\nfunction addProps(obj, props) {\n\n    Object.keys(props).forEach(k => {\n    \n        if (typeof obj[k] !== \"undefined\")\n            return;\n        \n        Object.defineProperty(obj, k, {\n        \n            value: props[k],\n            configurable: true,\n            enumerable: false,\n            writable: true\n        });\n    });\n}\n\naddProps(Object, {\n\n    is(a, b) {\n    \n        // TODO\n    },\n    \n    assign(target, source) {\n    \n        Object.keys(source).forEach(k => target[k] = source[k]);\n        return target;\n    },\n    \n    mixin(target, source) {\n    \n        Object.getOwnPropertyNames(source).forEach(name => {\n        \n            var desc = Object.getOwnPropertyDescriptor(source, name);\n            Object.defineProperty(target, name, desc);\n        });\n        \n        return target;\n    }\n});\n\naddProps(Number, {\n\n    EPSILON: Number.EPSILON || (function() {\n    \n        var next, result;\n        \n        for (next = 1; 1 + next !== 1; next = next / 2)\n            result = next;\n        \n        return result;\n    }()),\n    \n    MAX_INTEGER: 9007199254740992,\n    \n    isFinite(val) {\n        \n        return typeof val === \"number\" && isFinite(val);\n    },\n    \n    isNaN(val) {\n    \n        return typeof val === \"number\" && isNaN(val);\n    },\n    \n    isInteger(val) {\n    \n        typeof val === \"number\" && val | 0 === val;\n    },\n    \n    toInteger(val) {\n        \n        return val | 0;\n    }\n});\n\naddProps(Array, {\n\n    from(arg) {\n        // TODO\n    },\n    \n    of() {\n        // ?\n    }\n\n});\n\naddProps(String.prototype, {\n    \n    repeat(count) {\n    \n        return new Array(count + 1).join(this);\n    },\n    \n    startsWith(search, start) {\n    \n        return this.indexOf(search, start) === start;\n    },\n    \n    endsWith(search, end) {\n    \n        return this.slice(-search.length) === search;\n    },\n    \n    contains(search, pos) {\n    \n        return this.indexOf(search, pos) !== -1;\n    }\n});\n\nif (typeof Map === \"undefined\") global.Map = () => {\n\n    function Map() {\n    \n    }\n    \n    return Map;\n    \n}();\n\nif (typeof Set === \"undefined\") global.Set = () => {\n\n    function Set() {\n    \n    }\n    \n    return Set;\n    \n}();\n\nif (typeof Reflect === \"undefined\") global.Reflect = {\n\n    hasOwn(obj, name) { return HAS_OWN.call(obj, name); }\n};\n";
+
+
+
+exports.Class = Class; exports.ES5 = ES5; exports.ES6 = ES6; return exports; }).call(this, {});
+
 var AsyncFS__ = (function(exports) {
 
 Object.keys(AsyncFS).forEach(function(k) { exports[k] = AsyncFS[k]; });
 
 return exports; }).call(this, {});
 
+var CachePath = (function(exports) {
+
+var FS = _M0;
+var Path = _M1;
+
+
+var basePath = process.env.HOME,
+    dotPrefix = true;
+
+function initPath() {
+
+    /* Windows */ tryPath(process.env.LOCALAPPDATA) ||
+    /* OSX     */ tryPath("Library/Application Support");
+    
+    function tryPath(path) {
+    
+        if (!path)
+            return false;
+        
+        path = Path.resolve(basePath, path);
+        
+        if (FS.existsSync(path)) {
+        
+            basePath = path;
+            dotPrefix = false;
+            
+            return true;
+        }
+        
+        return false;
+    }
+}
+
+initPath();
+
+
+function urlToPath(url) {
+
+    // TODO: Replace invalid characters in path
+    
+    // Remove the protocol and leading slashes
+    return url.replace(/^(https?):\/\//i, "");
+}
+
+
+function getCacheFolder(appName) {
+
+    if (dotPrefix) 
+        appName = "." + appName;
+    
+    return Path.join(basePath, appName);
+}
+
+exports.urlToPath = urlToPath; exports.getCacheFolder = getCacheFolder; return exports; }).call(this, {});
+
+var Action_ = (function(exports) {
+
+
+var Action = __class(function(__super) { return {
+
+    constructor: function(parent) {
+    
+        this.cancelled = false;
+        this.children = [];
+        this.parentAction = null;
+        
+        if (parent)
+            parent.addChild(this);
+    },
+    
+    addChild: function(child) {
+    
+        if (child.parentAction === this)
+            return;
+        
+        child.parentAction = this;
+        this.children.push(child);
+    },
+    
+    cancel: function() {
+    
+        if (this.cancelled)
+            return;
+        
+        this.cancelled = true;
+        this.children.forEach((function(child) { return child.cancel(); }));
+    }
+}});
+
+exports.Action = Action; return exports; }).call(this, {});
+
+var FileFetch_ = (function(exports) {
+
+var URL = _M2;
+var Path = _M1;
+var AFS = AsyncFS__;
+
+var Action = Action_.Action;
+
+
+function urlToPath(url) {
+
+    return Path.normalize(URL.parse(url).path);
+}
+
+var FileFetch = __class(Action, function(__super) { return {
+    
+    begin: function(url) {
+    
+        return AFS.readFile(urlToPath(url), { encoding: "utf8" });
+    }
+}});
+
+
+exports.FileFetch = FileFetch; return exports; }).call(this, {});
+
 var PromiseFlow = (function(exports) {
 
-var Promise = Promise_.Promise;
+var Promise = Promise__.Promise;
 
 function iterate(fn) {
 
@@ -1124,127 +1232,83 @@ function forEach(list, fn) {
 
 exports.iterate = iterate; exports.forEach = forEach; return exports; }).call(this, {});
 
-var Promise__ = (function(exports) {
+var Promise___ = (function(exports) {
 
-Object.keys(Promise_).forEach(function(k) { exports[k] = Promise_[k]; });
+Object.keys(Promise__).forEach(function(k) { exports[k] = Promise__[k]; });
 Object.keys(PromiseFlow).forEach(function(k) { exports[k] = PromiseFlow[k]; });
 
 return exports; }).call(this, {});
 
-var StringMap__ = (function(exports) {
+var HttpFetch_ = (function(exports) {
 
-var HAS = Object.prototype.hasOwnProperty;
+var HTTP = _M3;
 
-var StringMap = __class(function(__super) { return {
+var Promise = Promise___.Promise;
+var Action = Action_.Action;
 
-    constructor: function() {
+/*
+
+TODO:
+
+- https
+- redirects?
+- timeouts?
+- progress events
+
+*/
+
+var HttpFetch = __class(Action, function(__super) { return {
     
-        this._map = {};
-    },
+    begin: function(url) { var __this = this; 
     
-    get: function(key) {
+        return new Promise((function(resolver) {
     
-        if (HAS.call(this._map, key))
-            return this._map[key];
-    },
-    
-    set: function(key, value) {
-    
-        this._map[key] = value;
-        return this;
-    },
-    
-    has: function(key) {
-    
-        return HAS.call(this._map, key);
-    },
-    
-    delete: function(key) {
-    
-        if (!HAS.call(this._map, key))
-            return false;
+            var output = "";
         
-        delete this.map[key];
-        return true;
-    },
+            var request = HTTP.request(url, (function(response) {
     
-    clear: function() {
+                response.setEncoding("utf8");
+                
+                response.on("data", (function(data) {
+                
+                    output += data;
+                    
+                    if (__this.cancelled)
+                        request.abort(); 
+                }));
+                
+                response.on("end", (function(val) {
+                
+                    if (__this.cancelled) resolver.reject(new Error("HTTP request aborted."));
+                    else resolver.resolve(output)
+                }));
+            }));
     
-        this._map = {};
-    },
+            request.on("error", (function(err) { return resolver.reject(err); }));
+            request.end();
+        }));
     
-    keys: function() {
-    
-        return Object.keys(this._map);
-    },
-    
-    forEach: function(fn, thisArg) {
-    
-        var keys = this.keys(), i;
-        
-        for (i = 0; i < keys.length; ++i)
-            fn.call(thisArg, this._map[keys[i]], keys[i], this);
     }
 }});
 
-exports.StringMap = StringMap; return exports; }).call(this, {});
 
-var StringMap_ = (function(exports) {
+exports.HttpFetch = HttpFetch; return exports; }).call(this, {});
 
-Object.keys(StringMap__).forEach(function(k) { exports[k] = StringMap__[k]; });
+var NullFetch_ = (function(exports) {
 
-return exports; }).call(this, {});
+var Action = Action_.Action;
+var Promise = Promise___.Promise;
 
-var StringSet = (function(exports) {
 
-var StringMap = StringMap__.StringMap;
+var NullFetch = __class(Action, function(__super) { return {
 
-var StringSet = __class(function(__super) { return {
-
-    constructor: function() {
+    begin: function() { 
     
-        this._map = new StringMap;
-    },
-    
-    has: function(key) {
-    
-        return this._map.has(key);
-    },
-    
-    add: function(key) {
-    
-        this._map.set(key, key);
-        return this;
-    },
-    
-    delete: function(key) {
-    
-        return this._map.delete(key);
-    },
-    
-    clear: function() {
-    
-        this._map.clear();
-    },
-    
-    keys: function() {
-    
-        return this._map.keys();
-    },
-    
-    forEach: function(fn, thisArg) { var __this = this; 
-    
-        this._map.forEach((function(value, key) { return fn.call(thisArg, value, key, __this); }));
+        return Promise.resolve("");
     }
 }});
 
-exports.StringSet = StringSet; return exports; }).call(this, {});
-
-var StringSet_ = (function(exports) {
-
-Object.keys(StringSet).forEach(function(k) { exports[k] = StringSet[k]; });
-
-return exports; }).call(this, {});
+exports.NullFetch = NullFetch; return exports; }).call(this, {});
 
 var TreeNode = (function(exports) {
 
@@ -1993,6 +2057,18 @@ var ModuleDeclaration = __class(function(__super) { return {
     }
 }});
 
+var ModuleRegistration = __class(function(__super) { return {
+
+    constructor: function(name, body, start, end) {
+    
+        this.type = "ModuleRegistration";
+        this.name = name;
+        this.body = body;
+        this.start = start;
+        this.end = end;
+    }
+}});
+
 var ModuleBody = __class(function(__super) { return {
 
     constructor: function(statements, start, end) {
@@ -2011,6 +2087,18 @@ var ModuleFromDeclaration = __class(function(__super) { return {
         this.type = "ModuleFromDeclaration";
         this.ident = ident;
         this.from = from;
+        this.start = start;
+        this.end = end;
+    }
+}});
+
+var ModuleAlias = __class(function(__super) { return {
+
+    constructor: function(ident, path, start, end) {
+    
+        this.type = "ModuleAlias";
+        this.ident = ident;
+        this.path = path;
         this.start = start;
         this.end = end;
     }
@@ -2136,7 +2224,7 @@ var ClassElement = __class(function(__super) { return {
 }});
 
 
-exports.Script = Script; exports.Module = Module; exports.Identifier = Identifier; exports.Number = Number; exports.String = String; exports.Template = Template; exports.RegularExpression = RegularExpression; exports.Null = Null; exports.Boolean = Boolean; exports.ThisExpression = ThisExpression; exports.SuperExpression = SuperExpression; exports.SequenceExpression = SequenceExpression; exports.AssignmentExpression = AssignmentExpression; exports.SpreadExpression = SpreadExpression; exports.YieldExpression = YieldExpression; exports.ConditionalExpression = ConditionalExpression; exports.BinaryExpression = BinaryExpression; exports.UpdateExpression = UpdateExpression; exports.UnaryExpression = UnaryExpression; exports.MemberExpression = MemberExpression; exports.CallExpression = CallExpression; exports.TaggedTemplateExpression = TaggedTemplateExpression; exports.NewExpression = NewExpression; exports.ParenExpression = ParenExpression; exports.ObjectExpression = ObjectExpression; exports.PropertyDefinition = PropertyDefinition; exports.CoveredPatternProperty = CoveredPatternProperty; exports.MethodDefinition = MethodDefinition; exports.ArrayExpression = ArrayExpression; exports.ArrayComprehension = ArrayComprehension; exports.GeneratorComprehension = GeneratorComprehension; exports.ComprehensionFor = ComprehensionFor; exports.ComprehensionIf = ComprehensionIf; exports.TemplateExpression = TemplateExpression; exports.Block = Block; exports.LabelledStatement = LabelledStatement; exports.ExpressionStatement = ExpressionStatement; exports.EmptyStatement = EmptyStatement; exports.VariableDeclaration = VariableDeclaration; exports.VariableDeclarator = VariableDeclarator; exports.ReturnStatement = ReturnStatement; exports.BreakStatement = BreakStatement; exports.ContinueStatement = ContinueStatement; exports.ThrowStatement = ThrowStatement; exports.DebuggerStatement = DebuggerStatement; exports.IfStatement = IfStatement; exports.DoWhileStatement = DoWhileStatement; exports.WhileStatement = WhileStatement; exports.ForStatement = ForStatement; exports.ForInStatement = ForInStatement; exports.ForOfStatement = ForOfStatement; exports.WithStatement = WithStatement; exports.SwitchStatement = SwitchStatement; exports.SwitchCase = SwitchCase; exports.TryStatement = TryStatement; exports.CatchClause = CatchClause; exports.FunctionDeclaration = FunctionDeclaration; exports.FunctionExpression = FunctionExpression; exports.FormalParameter = FormalParameter; exports.RestParameter = RestParameter; exports.FunctionBody = FunctionBody; exports.ArrowFunction = ArrowFunction; exports.ModuleDeclaration = ModuleDeclaration; exports.ModuleBody = ModuleBody; exports.ModuleFromDeclaration = ModuleFromDeclaration; exports.ImportDeclaration = ImportDeclaration; exports.ImportSpecifier = ImportSpecifier; exports.ExportDeclaration = ExportDeclaration; exports.ExportSpecifierSet = ExportSpecifierSet; exports.ExportSpecifier = ExportSpecifier; exports.ModulePath = ModulePath; exports.ClassDeclaration = ClassDeclaration; exports.ClassExpression = ClassExpression; exports.ClassBody = ClassBody; exports.ClassElement = ClassElement; return exports; }).call(this, {});
+exports.Script = Script; exports.Module = Module; exports.Identifier = Identifier; exports.Number = Number; exports.String = String; exports.Template = Template; exports.RegularExpression = RegularExpression; exports.Null = Null; exports.Boolean = Boolean; exports.ThisExpression = ThisExpression; exports.SuperExpression = SuperExpression; exports.SequenceExpression = SequenceExpression; exports.AssignmentExpression = AssignmentExpression; exports.SpreadExpression = SpreadExpression; exports.YieldExpression = YieldExpression; exports.ConditionalExpression = ConditionalExpression; exports.BinaryExpression = BinaryExpression; exports.UpdateExpression = UpdateExpression; exports.UnaryExpression = UnaryExpression; exports.MemberExpression = MemberExpression; exports.CallExpression = CallExpression; exports.TaggedTemplateExpression = TaggedTemplateExpression; exports.NewExpression = NewExpression; exports.ParenExpression = ParenExpression; exports.ObjectExpression = ObjectExpression; exports.PropertyDefinition = PropertyDefinition; exports.CoveredPatternProperty = CoveredPatternProperty; exports.MethodDefinition = MethodDefinition; exports.ArrayExpression = ArrayExpression; exports.ArrayComprehension = ArrayComprehension; exports.GeneratorComprehension = GeneratorComprehension; exports.ComprehensionFor = ComprehensionFor; exports.ComprehensionIf = ComprehensionIf; exports.TemplateExpression = TemplateExpression; exports.Block = Block; exports.LabelledStatement = LabelledStatement; exports.ExpressionStatement = ExpressionStatement; exports.EmptyStatement = EmptyStatement; exports.VariableDeclaration = VariableDeclaration; exports.VariableDeclarator = VariableDeclarator; exports.ReturnStatement = ReturnStatement; exports.BreakStatement = BreakStatement; exports.ContinueStatement = ContinueStatement; exports.ThrowStatement = ThrowStatement; exports.DebuggerStatement = DebuggerStatement; exports.IfStatement = IfStatement; exports.DoWhileStatement = DoWhileStatement; exports.WhileStatement = WhileStatement; exports.ForStatement = ForStatement; exports.ForInStatement = ForInStatement; exports.ForOfStatement = ForOfStatement; exports.WithStatement = WithStatement; exports.SwitchStatement = SwitchStatement; exports.SwitchCase = SwitchCase; exports.TryStatement = TryStatement; exports.CatchClause = CatchClause; exports.FunctionDeclaration = FunctionDeclaration; exports.FunctionExpression = FunctionExpression; exports.FormalParameter = FormalParameter; exports.RestParameter = RestParameter; exports.FunctionBody = FunctionBody; exports.ArrowFunction = ArrowFunction; exports.ModuleDeclaration = ModuleDeclaration; exports.ModuleRegistration = ModuleRegistration; exports.ModuleBody = ModuleBody; exports.ModuleFromDeclaration = ModuleFromDeclaration; exports.ModuleAlias = ModuleAlias; exports.ImportDeclaration = ImportDeclaration; exports.ImportSpecifier = ImportSpecifier; exports.ExportDeclaration = ExportDeclaration; exports.ExportSpecifierSet = ExportSpecifierSet; exports.ExportSpecifier = ExportSpecifier; exports.ModulePath = ModulePath; exports.ClassDeclaration = ClassDeclaration; exports.ClassExpression = ClassExpression; exports.ClassBody = ClassBody; exports.ClassElement = ClassElement; return exports; }).call(this, {});
 
 var Scanner_ = (function(exports) {
 
@@ -2198,7 +2286,7 @@ var WHITESPACE = 1,
 // === Character Type Lookup Table ===
 var LookupTable = (function(exports) {
 
-    var charTable = new Array(128), i;
+    var charTable = new Array(128);
     
     add(WHITESPACE, "\t\v\f ");
     add(NEWLINE, "\r\n");
@@ -2211,8 +2299,10 @@ var LookupTable = (function(exports) {
     add(ZERO, "0");
     add(STRING, "'\"");
     add(TEMPLATE, "`");
-    
     add(IDENTIFIER, "$_\\");
+    
+    var i;
+    
     for (i = 65; i <= 90; ++i) charTable[i] = IDENTIFIER;
     for (i = 97; i <= 122; ++i) charTable[i] = IDENTIFIER;
     
@@ -2220,7 +2310,7 @@ var LookupTable = (function(exports) {
     
         string.split("").forEach((function(c) { return charTable[c.charCodeAt(0)] = type; }));
     }
-exports.charTable = charTable; exports.i = i; return exports; }).call(this, {});
+exports.charTable = charTable; return exports; }).call(this, {});
 
 var charTable = LookupTable.charTable;
 
@@ -3390,7 +3480,7 @@ var Validate = __class(function(__super) { return {
 
 exports.Validate = Validate; return exports; }).call(this, {});
 
-var Parser_ = (function(exports) {
+var Parser___ = (function(exports) {
 
 var Node = TreeNode;
 
@@ -3694,7 +3784,7 @@ var Parser = __class(function(__super) { return {
             var p = this.peekToken("div", 1);
             
             // If a module identifier follows...
-            if (!p.newlineBefore && p.type === "IDENTIFIER")
+            if (!p.newlineBefore && (p.type === "IDENTIFIER" || p.type === "STRING"))
                 return true;
         }
         
@@ -4709,7 +4799,6 @@ var Parser = __class(function(__super) { return {
         
         } else {
         
-            // TODO: token may be mutated!
             if (!labelSet[""] && !(keyword === "break" && this.context.switchDepth > 0))
                 this.fail("Invalid " + keyword + " statement", token);
         }
@@ -5065,7 +5154,7 @@ var Parser = __class(function(__super) { return {
             case "IDENTIFIER":
                 
                 if (this.peekModule())
-                    return this.ModuleDeclaration();
+                    return this.ModuleNode();
                 
                 break;
         }
@@ -5230,30 +5319,65 @@ var Parser = __class(function(__super) { return {
     
     // === Modules ===
     
-    ModuleDeclaration: function() {
-        
+    ModuleNode: function() {
+    
         var start = this.startOffset,
-            ident;
+            ident,
+            target;
         
         this.readKeyword("module");
         
+        if (this.peek() === "STRING") {
+        
+            return new Node.ModuleRegistration(
+                this.String(),
+                this.ModuleBody(),
+                start,
+                this.endOffset);
+        }
+        
         ident = this.BindingIdentifier();
         
-        if (this.peekKeyword("from")) {
-        
+        if (this.peek() === "=") {
+    
             this.read();
-            var from = this.peek() === "STRING" ? this.String() : this.ModulePath();
+            target = this.ModulePath();
             this.Semicolon();
+        
+            return new Node.ModuleAlias(
+                ident,
+                target,
+                start,
+                this.endOffset);
             
+        } else if (this.peekKeyword("from")) {
+    
+            this.read();
+            target = this.peek() === "STRING" ? this.String() : this.ModulePath();
+            this.Semicolon();
+        
             return new Node.ModuleFromDeclaration(
                 ident,
-                from,
+                target,
                 start,
                 this.endOffset);
         }
         
         return new Node.ModuleDeclaration(
             ident,
+            this.ModuleBody(),
+            start,
+            this.endOffset);
+    },
+    
+    ModuleDeclaration: function() {
+        
+        var start = this.startOffset;
+        
+        this.readKeyword("module");
+        
+        return new Node.ModuleDeclaration(
+            this.BindingIdentifier(),
             this.ModuleBody(),
             start,
             this.endOffset);
@@ -5282,16 +5406,17 @@ var Parser = __class(function(__super) { return {
             from;
         
         this.read("import");
+        
         this.read("{");
-        
+    
         while (this.peekUntil("}")) {
-        
+    
             list.push(this.ImportSpecifier());
-            
+        
             if (this.peek() === ",") 
                 this.read();
         }
-        
+    
         this.read("}");
         
         this.readKeyword("from");
@@ -5554,7 +5679,7 @@ var es6parse = (function(exports) {
 
 var Node = TreeNode;
 
-var Parser = Parser_.Parser;
+var Parser = Parser___.Parser;
 var Scanner = Scanner_.Scanner;
 
 
@@ -5603,6 +5728,748 @@ function forEachChild(node, fn) {
 
 exports.Parser = Parser; exports.Scanner = Scanner; exports.Node = Node; exports.parseModule = parseModule; exports.parseScript = parseScript; exports.forEachChild = forEachChild; return exports; }).call(this, {});
 
+var Parser__ = (function(exports) {
+
+Object.keys(es6parse).forEach(function(k) { exports[k] = es6parse[k]; });
+
+return exports; }).call(this, {});
+
+var StringMap___ = (function(exports) {
+
+var HAS = Object.prototype.hasOwnProperty;
+
+var StringMap = __class(function(__super) { return {
+
+    constructor: function() {
+    
+        this._map = {};
+    },
+    
+    get: function(key) {
+    
+        if (HAS.call(this._map, key))
+            return this._map[key];
+    },
+    
+    set: function(key, value) {
+    
+        this._map[key] = value;
+        return this;
+    },
+    
+    has: function(key) {
+    
+        return HAS.call(this._map, key);
+    },
+    
+    delete: function(key) {
+    
+        if (!HAS.call(this._map, key))
+            return false;
+        
+        delete this.map[key];
+        return true;
+    },
+    
+    clear: function() {
+    
+        this._map = {};
+    },
+    
+    keys: function() {
+    
+        return Object.keys(this._map);
+    },
+    
+    values: function() { var __this = this; 
+    
+        return Object.keys(this._map).map((function(key) { return __this._map[key]; }));
+    },
+    
+    forEach: function(fn, thisArg) {
+    
+        var keys = this.keys(), i;
+        
+        for (i = 0; i < keys.length; ++i)
+            fn.call(thisArg, this._map[keys[i]], keys[i], this);
+    }
+}});
+
+exports.StringMap = StringMap; return exports; }).call(this, {});
+
+var StringSet = (function(exports) {
+
+var StringMap = StringMap___.StringMap;
+
+var StringSet = __class(function(__super) { return {
+
+    constructor: function() {
+    
+        this._map = new StringMap;
+    },
+    
+    has: function(key) {
+    
+        return this._map.has(key);
+    },
+    
+    add: function(key) {
+    
+        this._map.set(key, key);
+        return this;
+    },
+    
+    delete: function(key) {
+    
+        return this._map.delete(key);
+    },
+    
+    clear: function() {
+    
+        this._map.clear();
+    },
+    
+    keys: function() {
+    
+        return this._map.keys();
+    },
+    
+    values: function() {
+    
+        return this._map.keys();
+    },
+    
+    forEach: function(fn, thisArg) { var __this = this; 
+    
+        this._map.forEach((function(value, key) { return fn.call(thisArg, value, key, __this); }));
+    }
+}});
+
+exports.StringSet = StringSet; return exports; }).call(this, {});
+
+var StringSet__ = (function(exports) {
+
+Object.keys(StringSet).forEach(function(k) { exports[k] = StringSet[k]; });
+
+return exports; }).call(this, {});
+
+var Analyzer_ = (function(exports) {
+
+var parseModule = Parser__.parseModule, forEachChild = Parser__.forEachChild;
+var StringSet = StringSet__.StringSet;
+
+function parse(code) { 
+
+    return parseModule(code);
+}
+
+function extractDependencies(ast, resolvePath) {
+
+    if (typeof ast === "string")
+        ast = parseModule(ast);
+    
+    if (!resolvePath)
+        resolvePath = (function(x) { return x; });
+    
+    var edges = new StringSet;
+    
+    visit(ast, true);
+    
+    return edges.keys();
+    
+    function visit(node, topLevel) {
+        
+        switch (node.type) {
+        
+            case "ExportSpecifierSet":
+            case "ImportDeclaration":
+            case "ModuleFromDeclaration":
+                
+                addEdge(node.from);
+                break;
+            
+            case "ClassExpression":
+            case "ClassBody":
+            case "FunctionExpression":
+            case "FormalParameter":
+            case "FunctionBody":
+            
+                topLevel = false;
+                break;
+                
+        }
+        
+        forEachChild(node, (function(node) { return visit(node, topLevel); }));
+    }
+    
+    function addEdge(spec) {
+    
+        if (!spec || spec.type !== "String")
+            return;
+        
+        var path = resolvePath(spec.value);
+        
+        if (path && !edges.has(path))
+            edges.add(path);
+    }
+}
+
+exports.parse = parse; exports.extractDependencies = extractDependencies; return exports; }).call(this, {});
+
+var TempFile_ = (function(exports) {
+
+var OS = _M4;
+var Path = _M1;
+var AFS = AsyncFS__;
+
+var Promise = Promise___.Promise, iterate = Promise___.iterate;
+var randomBytes = _M5.randomBytes;
+
+function tempPath() {
+
+    return Path.resolve(OS.tmpdir(), randomBytes(8).toString("hex"));
+}
+
+var TempFile = __class(function(__super) { return {
+
+    constructor: function() {
+    
+        this.url = "";
+        this.path = null;
+    },
+
+    write: function(data, options) { var __this = this; 
+    
+        if (this.path)
+            throw new Error("Already written.");
+        
+        return iterate((function(stop) {
+        
+            var path = tempPath();
+            return AFS.exists(path).then((function(exists) { return exists ? null : stop(path); }));
+            
+        })).then((function(path) {
+        
+            __this.path = path;
+            return AFS.writeFile(path, data, options).then((function(val) { return path; }));
+            
+        }));
+    },
+    
+    move: function(dest) { var __this = this; 
+    
+        return AFS.rename(this._filePath(), dest).then((function(val) { return __this._clearPath(); }));
+    },
+    
+    delete: function() { var __this = this; 
+    
+        return AFS.unlink(this._filePath()).then((function(val) { return __this._clearPath(); }));
+    },
+    
+    _filePath: function() {
+    
+        var p = this.path;
+        
+        if (!p)
+            throw new Error("Temp file does not exist.");
+        
+        return p;
+    },
+    
+    _clearPath: function() {
+    
+        this.path = null;
+        return this;
+    },
+    
+    __static_of: function(data, options) {
+    
+        var tmp = new TempFile();
+        return tmp.write(data, options).then((function(val) { return tmp; }));
+    }
+}});
+
+exports.TempFile = TempFile; return exports; }).call(this, {});
+
+var StringMap__ = (function(exports) {
+
+Object.keys(StringMap___).forEach(function(k) { exports[k] = StringMap___[k]; });
+
+return exports; }).call(this, {});
+
+var Download_ = (function(exports) {
+
+var URL = _M2;
+
+var Action = Action_.Action;
+var FileFetch = FileFetch_.FileFetch;
+var HttpFetch = HttpFetch_.HttpFetch;
+var NullFetch = NullFetch_.NullFetch;
+var extractDependencies = Analyzer_.extractDependencies;
+var TempFile = TempFile_.TempFile;
+var StringMap = StringMap__.StringMap;
+var StringSet = StringSet__.StringSet;
+var Promise = Promise___.Promise;
+
+
+function getProtocol(url) {
+
+    return URL.parse(url).protocol || "file:";
+}
+
+function getFetcher(protocol) {
+
+    switch (protocol) {
+    
+        case "file:": 
+            return FileFetch;
+        
+        case "http:":
+        case "https:": 
+            return HttpFetch;
+        
+        default:
+            return NullFetch;
+    }
+}
+
+
+var Download = __class(Action, function(__super) { return {
+
+    begin: function(startURL, dispatch) { var __this = this; 
+    
+        var visited = new StringSet,
+            downloads = new StringMap,
+            pending = 0,
+            resolver,
+            error = null,
+            allFetched = new Promise((function(r) { return resolver = r; }));
+    
+        var visit = (function(url) {
+
+            if (visited.has(url))
+                return;
+        
+            visited.add(url);
+            pending += 1;
+        
+            var protocol = getProtocol(url),
+                Fetch = getFetcher(protocol),
+                fetch = new Fetch(__this);
+        
+            dispatch({ type: "fetch-begin", url: url });
+        
+            fetch.begin(url, dispatch).then((function(code) {
+    
+                if (error)
+                    return;
+                
+                dispatch({ type: "fetch-complete", url: url });
+            
+                if (protocol === "file:")
+                    return code;
+            
+                dispatch({ type: "write-file", url: url });
+            
+                return TempFile.of(code).then((function(tmp) {
+            
+                    tmp.url = url;
+                    downloads.set(url, tmp);
+                    return code;
+                }));
+        
+            })).then((function(code) {
+            
+                if (error)
+                    return;
+            
+                dispatch({ type: "analyze", url: url });
+            
+                extractDependencies(code, (function(target) { return URL.resolve(url, target); })).forEach(visit);
+            
+                pending -= 1;
+            
+                if (pending === 0)
+                    resolver.resolve(downloads.values());
+        
+            })).catch((function(err) {
+        
+                resolver.reject(error = err);
+                downloads.forEach((function(tmp) { return tmp.delete(); }));
+                downloads.clear();
+            }));
+        });
+    
+        Promise.resolve(startURL).then(visit);
+    
+        return allFetched;
+    }
+}});
+
+
+exports.Download = Download; return exports; }).call(this, {});
+
+var EventTarget_ = (function(exports) {
+
+var CAPTURING = 1,
+	AT_TARGET = 2,
+	BUBBLING = 3;
+
+function add(type, handler, capture) {
+
+	if (!isHandler(handler))
+		throw new Error("Listener is not a function or EventListener object.");
+	
+	var a = list(this, type, capture), i = a.indexOf(handler);
+	if (i === -1) a.push(handler);
+}
+
+function remove(type, handler, capture) {
+
+	var a = list(this, type, capture), i = a.indexOf(handler);
+	if (i !== -1) a.splice(i, 1);
+}
+
+function list(obj, type, capture) {
+
+	var e = obj.eventListeners[type];
+	if (!e) e = obj.eventListeners[type] = { capture: [], bubble: [] };
+	
+	return e[capture ? "capture" : "bubble"];
+}
+
+function isHandler(h) {
+
+	return typeof h === "function" || h && typeof h.handleEvent === "function";
+}
+
+function fire(obj, type, evt, capture) {
+
+	var a = list(obj, type, capture).slice(0), i, h;
+	
+	// Add property handler if defined
+	if (typeof obj["on" + type] === "function")
+		a.unshift(obj["on" + type]);
+	
+	for (i = 0; i < a.length; ++i) {
+	
+		h = a[i];
+		
+		if (h.handleEvent) h.handleEvent(evt);
+		else h.call(obj, evt);
+	}
+}
+
+function dispatch(evt) {
+
+	var cancel = false,
+		stop = false,
+		action = evt.defaultAction,
+		bubble = (typeof evt.bubbles === "boolean" ? evt.bubbles : true),
+		path = [],
+		i;
+	
+	evt.target = this;
+	evt.timeStamp = Date.now();
+	evt.preventDefault = (function() { cancel = true; });
+	evt.stopPropagation = (function() { stop = true; });
+	
+	// Build event bubble path
+	for (i = this.parentTarget; i; i = i.parentTarget)
+		path.push(i);
+	
+	// Capture phase
+	for (evt.eventPhase = CAPTURING, i = path.length; i-- && !stop;)
+		fire(evt.currentTarget = path[i], evt.type, evt, true);
+	
+	if (!stop) {
+	
+		// At target phase
+		evt.eventPhase = AT_TARGET;
+		fire(evt.currentTarget = this, evt.type, evt, false);
+		if (!bubble) stop = true;
+	}
+	
+	// Bubble phase
+	for (evt.eventPhase = BUBBLING, i = 0; i < path.length && !stop; ++i)
+		fire(evt.currentTarget = path[i], evt.type, evt, false);
+	
+	// Call default action
+	if (!(cancel && evt.cancelable) && typeof action === "function")
+		action.call(evt.currentTarget = this, evt);
+	
+	// Return defaultPrevented
+	return cancel;
+}
+
+var EventTarget = __class(function(__super) { return {
+
+	constructor: function(parent) {
+	
+		this.eventListeners = {};
+		this.parentTarget = parent || null;
+	},
+	
+	// EventTarget interface
+	addEventListener: function(type, handler, capture) { 
+	
+	    return add.call(this, type, handler, capture); 
+	},
+	
+	removeEventListener: function(type, handler, capture) { 
+	
+	    return remove.call(this, type, handler, capture);
+	},
+	
+	dispatchEvent: function(evt) {
+	
+	    return dispatch.call(this, evt);
+	},
+	
+	// Aliases
+	on: function(type, handler, capture) {
+	
+	    add.call(this, type, handler, capture);
+	    return this;
+	}
+
+}});
+
+
+exports.EventTarget = EventTarget; return exports; }).call(this, {});
+
+var CreateFolder_ = (function(exports) {
+
+var Path = _M1;
+var AFS = AsyncFS__;
+
+var Action = Action_.Action;
+var forEachPromise = Promise___.forEach;
+
+
+var CreateFolder = __class(Action, function(__super) { return {
+
+    constructor: function(parent, basePath, createBase) {
+    
+        __super.constructor.call(this, parent);
+        
+        this.basePath = basePath;
+        this.createBase = createBase;
+    },
+    
+    begin: function(path, dispatch) { var __this = this; 
+
+        var fullPath = Path.join(this.basePath, path),
+            fullDir = Path.dirname(fullPath);
+    
+        return AFS.exists(fullDir).then((function(exists) {
+    
+            if (exists)
+                return null;
+        
+            dispatch({ type: "create-path", path: fullDir });
+        
+            var dirs = Path.dirname(Path.normalize(path)).split(Path.sep),
+                dirPath = __this.basePath;
+        
+            if (__this.createBase) {
+        
+                // BUG:  dirname(dirPath) === ""
+                dirs.unshift(Path.basename(dirPath));
+                dirPath = Path.dirname(dirPath);
+            }
+        
+            return forEachPromise(dirs, (function(dir) {
+        
+                if (!dir)
+                    return null;
+        
+                dirPath = Path.join(dirPath, dir);
+        
+                return AFS.exists(dirPath).then((function(exists) {
+        
+                    return exists ? null : AFS.mkdir(dirPath);
+                }));
+        
+            }));
+        
+        })).then((function(val) { return fullPath; }));
+    }
+}});
+
+exports.CreateFolder = CreateFolder; return exports; }).call(this, {});
+
+var ModuleInstaller = (function(exports) {
+
+var Path = _M1;
+var AFS = AsyncFS__;
+
+var getCacheFolder = CachePath.getCacheFolder, urlToPath = CachePath.urlToPath;
+var Action = Action_.Action;
+var Download = Download_.Download;
+var EventTarget = EventTarget_.EventTarget;
+var CreateFolder = CreateFolder_.CreateFolder;
+var Promise = Promise___.Promise, forEachPromise = Promise___.forEach;
+
+
+var ModuleInstaller = __class(EventTarget, function(__super) { return {
+
+    constructor: function(folder) {
+    
+        __super.constructor.call(this);
+        
+        this.folder = Path.resolve(folder || getCacheFolder("js-modules"));
+        this.createFolder = true;
+        this.action = null;
+    },
+
+    localPath: function(url) {
+    
+        return Path.join(this.folder, urlToPath(url));
+    },
+
+    install: function(url) { var __this = this; 
+        
+        if (this.action)
+            throw new Error("Already installing.");
+        
+        this.action = new Action;
+        
+        var createFolder = new CreateFolder(
+            this.action, 
+            this.folder, 
+            this.createFolder);
+        
+        var cancel = (function(err) {
+        
+            __this.action.cancel(err);
+            throw err;
+        });
+        
+        var dispatch = (function(event) {
+        
+            event.cancel = cancel;
+            __this.dispatchEvent(event);
+        });
+        
+        return new Download(this.action).begin(url, dispatch).then((function(files) {
+        
+            return forEachPromise(files, (function(file) {
+            
+                return createFolder.begin(
+                
+                    urlToPath(file.url), 
+                    dispatch
+                    
+                ).then((function(path) {
+                
+                    return AFS.exists(path).then((function(exists) {
+                    
+                        if (!exists)
+                            return true;
+                        
+                        var evt = { 
+                        
+                            type: "overwrite", 
+                            url: file.url, 
+                            path: path, 
+                            overwrite: true
+                        };
+                        
+                        dispatch(evt);
+                        
+                        return Promise.resolve(evt.overwrite).then((function(overwrite) {
+                        
+                            if (overwrite)
+                                return AFS.unlink(path).then((function(val) { return true; }));
+                            else
+                                return false;
+                        }));
+                            
+                    })).then((function(move) {
+                    
+                        if (!move)
+                            return file.delete();
+                        
+                        dispatch({ type: "move-begin", url: file.url });
+                    
+                        return file.move(path).then((function(val) {
+                        
+                            dispatch({ type: "move-complete", url: file.url })
+                        }));
+                        
+                    }));
+                }));
+                
+            })).catch((function(err) {
+            
+                return forEachPromise(files, (function(file) {
+                
+                    return file.path ? file.delete() : null;
+                    
+                })).then((function(val) {
+                
+                    throw err;
+                }));
+                
+            }));
+        
+        })).catch((function(err) {
+        
+            __this.action = null;
+            throw err;
+        
+        })).then((function(val) {
+        
+            __this.action = null;
+            return __this;
+        }));
+    },
+
+    __static_appFolder: function(appName) {
+    
+        return getCacheFolder(appName);
+    },
+    
+    __static_forApp: function(appName) {
+    
+        return new ModuleInstaller(ModuleInstaller.appFolder(appName));
+    }
+}});
+
+exports.ModuleInstaller = ModuleInstaller; return exports; }).call(this, {});
+
+var ModuleInstaller_ = (function(exports) {
+
+Object.keys(ModuleInstaller).forEach(function(k) { exports[k] = ModuleInstaller[k]; });
+
+return exports; }).call(this, {});
+
+var AsyncFS___ = (function(exports) {
+
+Object.keys(AsyncFS).forEach(function(k) { exports[k] = AsyncFS[k]; });
+
+return exports; }).call(this, {});
+
+var Promise____ = (function(exports) {
+
+Object.keys(Promise__).forEach(function(k) { exports[k] = Promise__[k]; });
+Object.keys(PromiseFlow).forEach(function(k) { exports[k] = PromiseFlow[k]; });
+
+return exports; }).call(this, {});
+
+var StringMap_ = (function(exports) {
+
+Object.keys(StringMap___).forEach(function(k) { exports[k] = StringMap___[k]; });
+
+return exports; }).call(this, {});
+
+var StringSet_ = (function(exports) {
+
+Object.keys(StringSet).forEach(function(k) { exports[k] = StringSet[k]; });
+
+return exports; }).call(this, {});
+
 var Parser = (function(exports) {
 
 Object.keys(es6parse).forEach(function(k) { exports[k] = es6parse[k]; });
@@ -5620,13 +6487,13 @@ function parse(code) {
     return parseModule(code);
 }
 
-function analyze(ast, resolve) {
+function analyze(ast, resolvePath) {
 
     if (typeof ast === "string")
         ast = parseModule(ast);
     
-    if (!resolve)
-        resolve = (function(x) { return x; });
+    if (!resolvePath)
+        resolvePath = (function(x) { return x; });
     
     var edges = new StringMap,
         identifiers = new StringSet;
@@ -5672,7 +6539,7 @@ function analyze(ast, resolve) {
         if (!spec || spec.type !== "String")
             return;
         
-        var path = resolve(spec.value);
+        var path = resolvePath(spec.value);
         
         if (path) {
         
@@ -5688,10 +6555,10 @@ exports.parse = parse; exports.analyze = analyze; return exports; }).call(this, 
 
 var Bundler_ = (function(exports) {
 
-var AFS = AsyncFS__;
+var AFS = AsyncFS___;
 var Path = _M1;
 
-var Promise = Promise__.Promise, forEachPromise = Promise__.forEach;
+var Promise = Promise____.Promise, forEachPromise = Promise____.forEach;
 var StringMap = StringMap_.StringMap;
 var StringSet = StringSet_.StringSet;
 var analyze = Analyzer.analyze;
@@ -5726,28 +6593,43 @@ function bundle(rootPath) {
     
     var nodes = new StringMap,
         nodeNames = new StringSet,
-        sort = [];
+        sort = [],
+        pending = 0,
+        resolver,
+        allFetched = new Promise((function(r) { return resolver = r; }));
     
     function visit(path) {
 
         if (nodes.has(path))
-            return Promise.resolve(null);
+            return;
+        
+        nodes.set(path, null);
+        pending += 1;
         
         var dir = Path.dirname(path);
         
-        return AFS.readFile(path, { encoding: "utf8" }).then((function(code) {
+        AFS.readFile(path, { encoding: "utf8" }).then((function(code) {
     
             var node = analyze(code, (function(p) { return EXTERNAL_URL.test(p) ? null : Path.resolve(dir, p); }));
             
+            nodes.set(path, node);
             node.path = path;
             node.source = code;
             node.visited = false;
             node.inEdges = new StringSet;
             node.name = "";
             
-            nodes.set(path, node);
+            node.edges.keys().forEach(visit);
             
-            return forEachPromise(node.edges.keys(), visit);
+            pending -= 1;
+            
+            if (pending === 0)
+                resolver.resolve(null);
+        
+        })).catch((function(err) {
+        
+            resolver.reject(err);
+            
         }));
     }
     
@@ -5822,7 +6704,9 @@ function bundle(rootPath) {
         return source;
     }
     
-    return visit(rootPath).then((function($) {
+    visit(rootPath);
+    
+    return allFetched.then((function($) {
     
         traverse(rootPath, null);
         assignNames();
@@ -5852,7 +6736,7 @@ Object.keys(Bundler_).forEach(function(k) { exports[k] = Bundler_[k]; });
 
 return exports; }).call(this, {});
 
-var Parser__ = (function(exports) {
+var Parser_ = (function(exports) {
 
 Object.keys(es6parse).forEach(function(k) { exports[k] = es6parse[k]; });
 
@@ -5870,7 +6754,7 @@ var Replacer_ = (function(exports) {
 
 */
 
-var Parser = Parser__;
+var Parser = Parser_;
 
 var HAS_SCHEMA = /^[a-z]+:/i,
     NODE_SCHEMA = /^(?:npm|node):/i;
@@ -6031,22 +6915,24 @@ var Replacer = __class(function(__super) { return {
     ImportDeclaration: function(node) {
     
         var moduleSpec = this.modulePath(node.from),
-            out = "";
+            list = [];
         
         node.specifiers.forEach((function(spec) {
         
             var remote = spec.remote,
                 local = spec.local || remote;
             
-            if (out) out += ", ";
-            else out = "var ";
-            
-            out += local.text + " = " + moduleSpec + "." + remote.text;
+            list.push({
+                start: spec.start,
+                end: spec.end,
+                text: local.text + " = " + moduleSpec + "." + remote.text
+            });
         }));
         
-        out += ";";
+        if (list.length === 0)
+            return "";
         
-        return out;
+        return "var " + this.joinList(list) + ";";
     },
     
     ExportDeclaration: function(node) {
@@ -6409,7 +7295,7 @@ var WRAP_HEADER = "function(require, exports) { " +
     "'use strict'; " +
     "function __load(p) { " +
         "var e = require(p); " +
-        "return typeof e === 'object' ? e : { module: e }; " +
+        "return typeof e === 'object' ? e : { 'default': e }; " +
     "} ";
 
 var WRAP_FOOTER = "\n\n}";
@@ -6460,9 +7346,9 @@ function isWrapped(text) {
 
 exports.translate = translate; exports.wrap = wrap; exports.isWrapped = isWrapped; return exports; }).call(this, {});
 
-var Promise___ = (function(exports) {
+var Promise_ = (function(exports) {
 
-Object.keys(Promise_).forEach(function(k) { exports[k] = Promise_[k]; });
+Object.keys(Promise__).forEach(function(k) { exports[k] = Promise__[k]; });
 Object.keys(PromiseFlow).forEach(function(k) { exports[k] = PromiseFlow[k]; });
 
 return exports; }).call(this, {});
@@ -6618,13 +7504,13 @@ exports.mimeTypes = mimeTypes; return exports; }).call(this, {});
 var Server_ = (function(exports) {
 
 var FS = _M0;
-var HTTP = _M2;
+var HTTP = _M3;
 var Path = _M1;
-var URL = _M3;
+var URL = _M2;
 
 var AsyncFS = AsyncFS_;
 
-var Promise = Promise___.Promise;
+var Promise = Promise_.Promise;
 var translate = Translator.translate, isWrapped = Translator.isWrapped;
 var mimeTypes = ServerMime.mimeTypes;
 
@@ -6807,6 +7693,113 @@ var Server = __class(function(__super) { return {
 
 exports.Server = Server; return exports; }).call(this, {});
 
+var Proxy_ = (function(exports) {
+
+var HTTP = _M3;
+var URL = _M2;
+var AFS = AsyncFS_;
+
+var ModuleInstaller = ModuleInstaller_.ModuleInstaller;
+var translate = Translator.translate, isWrapped = Translator.isWrapped;
+var Promise = Promise_.Promise;
+
+
+var Proxy = __class(function(__super) { return {
+
+    constructor: function(options) { var __this = this; 
+    
+        options || (options = {});
+    
+        this.port = options.port || DEFAULT_PORT;
+        this.hostname = options.hostname || null;
+        this.server = HTTP.createServer((function(request, response) { return __this.onRequest(request, response); }));
+        this.installer = new ModuleInstaller();
+        this.active = false;
+    },
+    
+    start: function(port, hostname) { var __this = this; 
+    
+        if (this.active)
+            throw new Error("Server is already listening");
+        
+        if (port)
+            this.port = port;
+        
+        if (hostname)
+            this.hostname = hostname;
+        
+        var promise = new Promise((function(resolver) {
+        
+            __this.server.listen(__this.port, __this.hostname, (function(ok) { return resolver.resolve(null); }));
+            __this.active = true;
+        }));
+        
+        return promise;
+    },
+    
+    stop: function() { var __this = this; 
+    
+        if (!this.active)
+            throw new Error("Server is not currently listening.");
+        
+        return new Promise((function(resolver) {
+        
+            __this.active = false;
+            __this.server.close((function(ok) { return resolver.resolve(null); }));
+        }));
+    },
+    
+    onRequest: function(request, response) { var __this = this; 
+    
+        if (request.method !== "GET" && request.method !== "HEAD")
+            return this.error(405, response);
+        
+        var installer = this.installer,
+            query = URL.parse(request.url, true).query,
+            target = query.url,
+            path;
+        
+        if (!target)
+            return this.error(405, response);
+        
+        path = installer.localPath(target);
+        
+        AFS.exists(path).then((function(exists) {
+        
+            return exists ? null : installer.install(target);
+            
+        })).then((function(val) {
+        
+            return AFS.readFile(path, "utf8").then((function(source) {
+        
+                if (!isWrapped(source)) {
+            
+                    // TODO:  A better way to report errors?
+                    try { source = translate(source); } 
+                    catch (x) { source += "\n\n// " + x.message; }
+                }
+            
+                response.writeHead(200, { "Content-Type": "text/javascript; charset=UTF-8" });
+                response.end(source, "utf8");
+        
+            }));
+            
+        })).catch((function(err) {
+        
+            __this.error(500, response);
+        }));
+    },
+    
+    error: function(code, response) {
+    
+        response.writeHead(code, { "Content-Type": "text/plain" });
+        response.write(HTTP.STATUS_CODES[code] + "\n")
+        response.end();
+    }
+}});
+
+exports.Proxy = Proxy; return exports; }).call(this, {});
+
 var ConsoleCommand = (function(exports) {
 
 var HAS = Object.prototype.hasOwnProperty;
@@ -6953,6 +7946,7 @@ var ConsoleCommand = __class(function(__super) { return {
         
         return cmd.execute(parse(args, cmd.params));
     }
+    
 }});
 
 /*
@@ -6998,18 +7992,121 @@ Object.keys(ConsoleCommand).forEach(function(k) { exports[k] = ConsoleCommand[k]
 
 return exports; }).call(this, {});
 
+var ConsoleIO = (function(exports) {
+
+var Promise = Promise__.Promise;
+
+var Style = (function(exports) {
+
+    function green(msg) {
+    
+        return "\u001b[32m" + (msg) + "\u001b[39m";
+    }
+    
+    function red(msg) {
+    
+        return "\u001b[31m" + (msg) + "\u001b[39m";
+    }
+    
+    function gray(msg) {
+    
+        return "\u001b[90m" + (msg) + "\u001b[39m";
+    }
+    
+    function bold(msg) {
+    
+        return "\u001b[1m" + (msg) + "\u001b[22m";
+    }
+exports.green = green; exports.red = red; exports.gray = gray; exports.bold = bold; return exports; }).call(this, {});
+
+var ConsoleIO = __class(function(__super) { return {
+
+    constructor: function() {
+    
+        this._inStream = process.stdin;
+        this._outStream = process.stdout;
+        
+        this._outEnc = "utf8";
+        this._inEnc = "utf8";
+        
+        this.inputEncoding = "utf8";
+        this.outputEncoding = "utf8";
+    },
+    
+    get inputEncoding() { 
+    
+        return this._inEnc;
+    },
+    
+    set inputEncoding(enc) {
+    
+        this._inStream.setEncoding(this._inEnc = enc);
+    },
+    
+    get outputEncoding() {
+    
+        return this._outEnc;
+    },
+    
+    set outputEncoding(enc) {
+    
+        this._outStream.setEncoding(this._outEnc = enc);
+    },
+    
+    readLine: function() { var __this = this; 
+    
+        return new Promise((function(resolver) {
+        
+            var listener = (function(data) {
+            
+                resolver.resolve(data);
+                __this._inStream.removeListener("data", listener);
+                __this._inStream.pause();
+            });
+            
+            __this._inStream.resume();
+            __this._inStream.on("data", listener);
+        }));
+    },
+    
+    writeLine: function(msg) {
+    
+        console.log(msg);
+    },
+    
+    write: function(msg) {
+    
+        process.stdout.write(msg);
+    }
+    
+}});
+
+
+exports.Style = Style; exports.ConsoleIO = ConsoleIO; return exports; }).call(this, {});
+
+var ConsoleIO_ = (function(exports) {
+
+Object.keys(ConsoleIO).forEach(function(k) { exports[k] = ConsoleIO[k]; });
+
+return exports; }).call(this, {});
+
 var Program_ = (function(exports) {
 
 var FS = _M0;
 var Path = _M1;
 var AsyncFS = AsyncFS_;
+var Runtime = Runtime_;
 
+var ModuleInstaller = ModuleInstaller_.ModuleInstaller;
 var bundle = Bundler.bundle;
 var translate = Translator.translate;
 var Server = Server_.Server;
-var ConsoleCommand = ConsoleCommand_.ConsoleCommand, Style = ConsoleCommand_.Style;
+var Proxy = Proxy_.Proxy;
+var ConsoleCommand = ConsoleCommand_.ConsoleCommand;
+var ConsoleIO = ConsoleIO_.ConsoleIO, Style = ConsoleIO_.Style;
 
-var ES6_GUESS = /(?:^|\n)\s*(?:import|export|class)\s/;
+var ES6_GUESS = /(?:^|\n)\s*(?:import|export|class)\s/,
+    WEB_URL = /^https?:\/\//i;
 
 function absPath(path) {
 
@@ -7032,6 +8129,18 @@ function getOutPath(inPath, outPath) {
 
 function overrideCompilation() {
 
+    var Module = module.constructor,
+        resolveFilename = Module._resolveFilename,
+        installer = new ModuleInstaller;
+    
+    Module._resolveFilename = function(filename, parent) {
+    
+        if (WEB_URL.test(filename))
+            filename = installer.localPath(filename);
+        
+        return resolveFilename(filename, parent);
+    };
+    
     // Compile ES6 js files
     require.extensions[".js"] = (function(module, filename) {
     
@@ -7063,6 +8172,11 @@ function overrideCompilation() {
         
         return module._compile(text, filename);
     });
+}
+
+function wrapRuntimeModule(text) {
+
+    return "(function() {\n\n" + text + "\n\n}).call(this);\n\n";
 }
 
 function run() {
@@ -7106,7 +8220,9 @@ function run() {
             
             "global": { short: "g" },
             
-            "bundle": { short: "b", flag: true }
+            "bundle": { short: "b", flag: true },
+            
+            "runtime": { short: "r", flag: true }
         },
         
         execute: function(params) {
@@ -7117,6 +8233,15 @@ function run() {
             
             promise.then((function(text) {
             
+                if (params.runtime) {
+                
+                    text = "\n\n" +
+                        wrapRuntimeModule(Runtime.Class) + 
+                        wrapRuntimeModule(Runtime.ES5) +
+                        wrapRuntimeModule(Runtime.ES6) +
+                        text;
+                }
+                
                 return translate(text, { global: params.global });
             
             })).then((function(text) {
@@ -7130,6 +8255,82 @@ function run() {
                 
                     console.log(text);
                 }
+                
+            }));
+        }
+    
+    }).add("install", {
+    
+        params: {
+        
+            "input": { short: "i", positional: true }
+        },
+        
+        execute: function(params) {
+        
+            var installer = new ModuleInstaller(),
+                io = new ConsoleIO;
+
+            installer.on("fetch-begin", (function(evt) {
+
+                io.writeLine('Fetching "' + evt.url + '"');
+            
+            })).on("fetch-complete", (function(evt) {
+
+                io.writeLine('Received "' + evt.url + '"');
+            
+            })).on("create-path", (function(evt) {
+
+                io.writeLine('Creating path "' + evt.path + '"');
+            
+            })).on("overwrite", (function(evt) {
+
+                io.write('Overwrite "' + evt.url + '"? [n]: ');
+                
+                evt.overwrite = io.readLine().then((function(val) {
+                
+                    val = val.trim().toLowerCase() || "n";
+                    return val === "y" || val === "yes";
+                }));
+                
+            })).on("move-begin", (function(evt) {
+            
+                io.writeLine('Installing "' + evt.url + '"');
+            }));
+
+            installer.install(params.input);
+        }
+        
+    }).add("proxy", {
+    
+        params: {
+        
+            "port": { short: "p", positional: true }
+        },
+        
+        execute: function(params) {
+        
+            var proxy = new Proxy(params),
+                io = new ConsoleIO,
+                stopped = false;
+                
+            proxy.start();
+            
+            io.write("Listening on port " + proxy.port + ".  Press Enter to exit.");
+            
+            io.readLine().then((function(data) {
+            
+                if (stopped)
+                    return;
+                
+                stopped = true;
+                
+                io.write("Waiting for connections to close...");
+                
+                proxy.stop().then((function(val) {
+                
+                    io.writeLine("OK");
+                }));
                 
             }));
         }
@@ -7168,7 +8369,6 @@ exports.run = run; return exports; }).call(this, {});
 
 var es6now = (function(exports) {
 
-var Runtime = Runtime_;
 var Program = Program_;
 
 if (typeof require === "function" && 
@@ -7183,4 +8383,4 @@ return exports; }).call(this, {});
 Object.keys(es6now).forEach(function(k) { exports[k] = es6now[k]; });
 
 
-}, ["fs","path","http","url"], "");
+}, ["fs","path","url","http","os","crypto"], "");
