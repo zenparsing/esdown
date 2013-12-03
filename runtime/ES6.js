@@ -113,26 +113,6 @@ addProps(String.prototype, {
     }
 });
 
-if (typeof Map === "undefined") global.Map = () => {
-
-    function Map() {
-    
-    }
-    
-    return Map;
-    
-}();
-
-if (typeof Set === "undefined") global.Set = () => {
-
-    function Set() {
-    
-    }
-    
-    return Set;
-    
-}();
-
 if (typeof Reflect === "undefined") global.Reflect = {
 
     hasOwn(obj, name) { return HAS_OWN.call(obj, name); }

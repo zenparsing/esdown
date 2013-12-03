@@ -1,6 +1,6 @@
 var A = __class(B, function(__super) { return {
 
-    constructor: function() {
+    constructor: function A() {
     
         __super.constructor.call(this);
     },
@@ -21,4 +21,4 @@ var A = __class(B, function(__super) { return {
     get __static_T() {}
 }});
 
-((function() { var C = __class(function(__super) { return{}}); return C; })());
+(((function() { var C = __class(function(__super) { return {} }); return C; })()));

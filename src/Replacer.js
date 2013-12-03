@@ -19,8 +19,8 @@ export class Replacer {
         
         options || (options = {});
         
-        this.loadCall = options.loadCall || url => "__load(" + JSON.stringify(url) + ")";
-        this.mapURI = options.mapURI || uri => uri;
+        this.loadCall = options.loadCall || (url => "__load(" + JSON.stringify(url) + ")");
+        this.mapURI = options.mapURI || (uri => uri);
     }
     
     replace(input) {
@@ -127,7 +127,7 @@ export class Replacer {
             node.name.text = "__static_" + node.name.text;
         }
         
-        if (!node.modifier)
+        if (!node.kind)
             return node.name.text + ": function(" + this.joinList(node.params) + ") " + node.body.text;
     }
     
@@ -137,9 +137,9 @@ export class Replacer {
             return node.name.text + ": " + node.name.text;
     }
     
-    ModuleFromDeclaration(node) {
+    ModuleImport(node) {
     
-        return "var " + node.ident.text + " = " + this.modulePath(node.from) + ";";
+        return "var " + node.identifier.text + " = " + this.modulePath(node.from) + ";";
     }
     
     ModuleDeclarationBegin(node) {
@@ -149,7 +149,7 @@ export class Replacer {
     
     ModuleDeclaration(node) {
     
-        var out = "var " + node.ident.text + " = (function(exports) ";
+        var out = "var " + node.identifier.text + " = (function(exports) ";
         
         out += node.body.text.replace(/\}$/, "");
         
@@ -214,7 +214,7 @@ export class Replacer {
             case "ClassDeclaration":
             case "ModuleDeclaration":
             
-                ident = binding.ident.text;
+                ident = binding.identifier.text;
                 exports[ident] = ident;
                 return binding.text;
         }
@@ -225,15 +225,7 @@ export class Replacer {
         
         if (!binding.specifiers) {
         
-            if (from) {
-            
-                out += "Object.keys(" + fromPath + ").forEach(function(k) { exports[k] = " + fromPath + "[k]; });";
-                
-            } else {
-            
-                // TODO:
-                throw new Error("`export *;` is not implemented.");
-            }
+            out += "Object.keys(" + fromPath + ").forEach(function(k) { exports[k] = " + fromPath + "[k]; });";
         
         } else {
         
@@ -336,7 +328,7 @@ export class Replacer {
     
     ClassDeclaration(node) {
     
-        return "var " + node.ident.text + " = __class(" + 
+        return "var " + node.identifier.text + " = __class(" + 
             (node.base ? (node.base.text + ", ") : "") +
             "function(__super) { return " +
             node.body.text + "});";
@@ -347,23 +339,24 @@ export class Replacer {
         var before = "", 
             after = "";
         
-        if (node.ident) {
+        if (node.identifier) {
         
-            before = "(function() { var " + node.ident.text + " = ";
-            after = "; return " + node.ident.text + "; })()";
+            before = "(function() { var " + node.identifier.text + " = ";
+            after = "; return " + node.identifier.text + "; })()";
         }
         
-        return before + 
+        return "(" + before + 
             "__class(" + 
             (node.base ? (node.base.text + ", ") : "") +
-            "function(__super) { return" +
-            node.body.text + "})" +
-            after;
+            "function(__super) { return " +
+            node.body.text + " })" +
+            after + ")";
     }
     
     ClassBody(node) {
     
-        var elems = node.elements, 
+        var classIdent = node.parentNode.identifier,
+            elems = node.elements, 
             e,
             i;
         
@@ -371,11 +364,20 @@ export class Replacer {
         
             e = elems[i];
             
-            if (e.static)
+            if (e.static) {
+            
                 e.text = e.text.replace(/^static\s+/, "");
+                
+            } else if (e.method.name.value === "constructor" && classIdent) {
+            
+                e.text = e.text.replace(/function/, "function " + classIdent.value);
+            }
             
             if (i < elems.length - 1)
                 e.text += ",";
+            
+            // TODO: fix so that classes without a constructor still
+            // have the right "name"
         }
     }
     

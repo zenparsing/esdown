@@ -685,26 +685,6 @@ addProps(String.prototype, {
     }
 });
 
-if (typeof Map === "undefined") global.Map = (function() {
-
-    function Map() {
-    
-    }
-    
-    return Map;
-    
-})();
-
-if (typeof Set === "undefined") global.Set = (function() {
-
-    function Set() {
-    
-    }
-    
-    return Set;
-    
-})();
-
 if (typeof Reflect === "undefined") global.Reflect = {
 
     hasOwn: function(obj, name) { return HAS_OWN.call(obj, name); }
@@ -803,6 +783,12 @@ function checkpoint() {
     }
 }
 
+// Returns true if the object is a promise
+function isPromise(value) {
+    
+    return value && typeof value.then === "function";
+}
+
 // Promise class
 function Promise(init) {
 
@@ -845,7 +831,7 @@ function Promise(init) {
 
         if (state) return;
         
-        if (value && typeof value.then === "function") {
+        if (isPromise(value)) {
         
             try { value.then(fulfill, reject); }
             catch (ex) { reject(ex); }
@@ -931,6 +917,14 @@ Promise.resolve = (function(value) { return new Promise((function(r) { return r.
 Promise.fulfill = (function(value) { return new Promise((function(r) { return r.fulfill(value); })); });
 
 Promise.reject = (function(value) { return new Promise((function(r) { return r.reject(value); })); });
+
+// Recursively unwraps a promise
+function unwrap(value) {
+
+    return Promise.resolve(value).then((function(v) { return isPromise(v) ? unwrap(v) : v; }));
+}
+
+Promise.when = (function(value) { return unwrap(value); });
 
 Promise.any = (function(values) { return new Promise((function(resolver) {
 
@@ -1082,7 +1076,7 @@ var ES5 =
 
 var ES6 = 
 
-"var global = this,\n    HAS_OWN = Object.prototype.hasOwnProperty;\n\nfunction addProps(obj, props) {\n\n    Object.keys(props).forEach(k => {\n    \n        if (typeof obj[k] !== \"undefined\")\n            return;\n        \n        Object.defineProperty(obj, k, {\n        \n            value: props[k],\n            configurable: true,\n            enumerable: false,\n            writable: true\n        });\n    });\n}\n\naddProps(Object, {\n\n    is(a, b) {\n    \n        // TODO\n    },\n    \n    assign(target, source) {\n    \n        Object.keys(source).forEach(k => target[k] = source[k]);\n        return target;\n    },\n    \n    mixin(target, source) {\n    \n        Object.getOwnPropertyNames(source).forEach(name => {\n        \n            var desc = Object.getOwnPropertyDescriptor(source, name);\n            Object.defineProperty(target, name, desc);\n        });\n        \n        return target;\n    }\n});\n\naddProps(Number, {\n\n    EPSILON: Number.EPSILON || (function() {\n    \n        var next, result;\n        \n        for (next = 1; 1 + next !== 1; next = next / 2)\n            result = next;\n        \n        return result;\n    }()),\n    \n    MAX_INTEGER: 9007199254740992,\n    \n    isFinite(val) {\n        \n        return typeof val === \"number\" && isFinite(val);\n    },\n    \n    isNaN(val) {\n    \n        return typeof val === \"number\" && isNaN(val);\n    },\n    \n    isInteger(val) {\n    \n        typeof val === \"number\" && val | 0 === val;\n    },\n    \n    toInteger(val) {\n        \n        return val | 0;\n    }\n});\n\naddProps(Array, {\n\n    from(arg) {\n        // TODO\n    },\n    \n    of() {\n        // ?\n    }\n\n});\n\naddProps(String.prototype, {\n    \n    repeat(count) {\n    \n        return new Array(count + 1).join(this);\n    },\n    \n    startsWith(search, start) {\n    \n        return this.indexOf(search, start) === start;\n    },\n    \n    endsWith(search, end) {\n    \n        return this.slice(-search.length) === search;\n    },\n    \n    contains(search, pos) {\n    \n        return this.indexOf(search, pos) !== -1;\n    }\n});\n\nif (typeof Map === \"undefined\") global.Map = () => {\n\n    function Map() {\n    \n    }\n    \n    return Map;\n    \n}();\n\nif (typeof Set === \"undefined\") global.Set = () => {\n\n    function Set() {\n    \n    }\n    \n    return Set;\n    \n}();\n\nif (typeof Reflect === \"undefined\") global.Reflect = {\n\n    hasOwn(obj, name) { return HAS_OWN.call(obj, name); }\n};\n";
+"var global = this,\n    HAS_OWN = Object.prototype.hasOwnProperty;\n\nfunction addProps(obj, props) {\n\n    Object.keys(props).forEach(k => {\n    \n        if (typeof obj[k] !== \"undefined\")\n            return;\n        \n        Object.defineProperty(obj, k, {\n        \n            value: props[k],\n            configurable: true,\n            enumerable: false,\n            writable: true\n        });\n    });\n}\n\naddProps(Object, {\n\n    is(a, b) {\n    \n        // TODO\n    },\n    \n    assign(target, source) {\n    \n        Object.keys(source).forEach(k => target[k] = source[k]);\n        return target;\n    },\n    \n    mixin(target, source) {\n    \n        Object.getOwnPropertyNames(source).forEach(name => {\n        \n            var desc = Object.getOwnPropertyDescriptor(source, name);\n            Object.defineProperty(target, name, desc);\n        });\n        \n        return target;\n    }\n});\n\naddProps(Number, {\n\n    EPSILON: Number.EPSILON || (function() {\n    \n        var next, result;\n        \n        for (next = 1; 1 + next !== 1; next = next / 2)\n            result = next;\n        \n        return result;\n    }()),\n    \n    MAX_INTEGER: 9007199254740992,\n    \n    isFinite(val) {\n        \n        return typeof val === \"number\" && isFinite(val);\n    },\n    \n    isNaN(val) {\n    \n        return typeof val === \"number\" && isNaN(val);\n    },\n    \n    isInteger(val) {\n    \n        typeof val === \"number\" && val | 0 === val;\n    },\n    \n    toInteger(val) {\n        \n        return val | 0;\n    }\n});\n\naddProps(Array, {\n\n    from(arg) {\n        // TODO\n    },\n    \n    of() {\n        // ?\n    }\n\n});\n\naddProps(String.prototype, {\n    \n    repeat(count) {\n    \n        return new Array(count + 1).join(this);\n    },\n    \n    startsWith(search, start) {\n    \n        return this.indexOf(search, start) === start;\n    },\n    \n    endsWith(search, end) {\n    \n        return this.slice(-search.length) === search;\n    },\n    \n    contains(search, pos) {\n    \n        return this.indexOf(search, pos) !== -1;\n    }\n});\n\nif (typeof Reflect === \"undefined\") global.Reflect = {\n\n    hasOwn(obj, name) { return HAS_OWN.call(obj, name); }\n};\n";
 
 
 
@@ -1154,7 +1148,7 @@ var Action_ = (function(exports) {
 
 var Action = __class(function(__super) { return {
 
-    constructor: function(parent) {
+    constructor: function Action(parent) {
     
         this.cancelled = false;
         this.children = [];
@@ -1313,918 +1307,791 @@ exports.NullFetch = NullFetch; return exports; }).call(this, {});
 var TreeNode = (function(exports) {
 
 
-var Script = __class(function(__super) { return {
+var Node = __class(function(__super) { return {
 
-    constructor: function(statements, start, end) {
+    constructor: function Node(start, end) {
     
-        this.type = "Script";
-        this.statements = statements;
+        this.type = this.constructor.name;
         this.start = start;
         this.end = end;
+        this.error = "";
     }
 }});
 
-var Module = __class(function(__super) { return {
+var Script = __class(Node, function(__super) { return {
 
-    constructor: function(statements, start, end) {
+    constructor: function Script(statements, start, end) {
     
-        this.type = "Module";
+        __super.constructor.call(this, start, end);
         this.statements = statements;
-        this.start = start;
-        this.end = end;
     }
 }});
 
-var Identifier = __class(function(__super) { return {
+var Module = __class(Node, function(__super) { return {
 
-    constructor: function(value, context, start, end) {
+    constructor: function Module(statements, start, end) {
     
-        this.type = "Identifier";
+        __super.constructor.call(this, start, end);
+        this.statements = statements;
+    }
+}});
+
+var Identifier = __class(Node, function(__super) { return {
+
+    constructor: function Identifier(value, context, start, end) {
+    
+        __super.constructor.call(this, start, end);
         this.value = value;
         this.context = context;
-        this.start = start;
-        this.end = end;
     }
 }});
 
-var Number = __class(function(__super) { return {
+var Number = __class(Node, function(__super) { return {
 
-    constructor: function(value, start, end) {
+    constructor: function Number(value, start, end) {
     
-        this.type = "Number";
+        __super.constructor.call(this, start, end);
         this.value = value;
-        this.start = start;
-        this.end = end;
     }
 }});
 
-var String = __class(function(__super) { return {
+var String = __class(Node, function(__super) { return {
 
-    constructor: function(value, start, end) {
+    constructor: function String(value, start, end) {
     
-        this.type = "String";
+        __super.constructor.call(this, start, end);
         this.value = value;
-        this.start = start;
-        this.end = end;
     }
 }});
 
-var Template = __class(function(__super) { return {
+var Template = __class(Node, function(__super) { return {
 
-    constructor: function(value, isEnd, start, end) {
+    constructor: function Template(value, isEnd, start, end) {
     
-        this.type = "Template";
+        __super.constructor.call(this, start, end);
         this.value = value;
         this.templateEnd = isEnd;
-        this.start = start;
-        this.end = end;
     }
 }});
 
-var RegularExpression = __class(function(__super) { return {
+var RegularExpression = __class(Node, function(__super) { return {
 
-    constructor: function(value, flags, start, end) {
+    constructor: function RegularExpression(value, flags, start, end) {
     
-        this.type = "RegularExpression";
+        __super.constructor.call(this, start, end);
         this.value = value;
         this.flags = flags;
-        this.start = start;
-        this.end = end;
     }
 }});
 
-var Null = __class(function(__super) { return {
+var Null = __class(Node, function(__super) { return {
 
-    constructor: function(start, end) {
-    
-        this.type = "Null";
-        this.start = start;
-        this.end = end;
-    }
+    constructor: function Null(start, end) { __super.constructor.call(this, start, end) }
 }});
 
-var Boolean = __class(function(__super) { return {
+var Boolean = __class(Node, function(__super) { return {
 
-    constructor: function(value, start, end) {
+    constructor: function Boolean(value, start, end) {
     
-        this.type = "Boolean";
+        __super.constructor.call(this, start, end);
         this.value = value;
-        this.start = start;
-        this.end = end;
     }
 }});
 
-var ThisExpression = __class(function(__super) { return {
+var ThisExpression = __class(Node, function(__super) { return {
 
-    constructor: function(start, end) {
-    
-        this.type = "ThisExpression";
-        this.start = start;
-        this.end = end;
-    }
+    constructor: function ThisExpression(start, end) { __super.constructor.call(this, start, end) }
 }});
 
-var SuperExpression = __class(function(__super) { return {
+var SuperExpression = __class(Node, function(__super) { return {
 
-    constructor: function(start, end) {
-    
-        this.type = "SuperExpression";
-        this.start = start;
-        this.end = end;
-    }
+    constructor: function SuperExpression(start, end) { __super.constructor.call(this, start, end) }
 }});
 
-var SequenceExpression = __class(function(__super) { return {
+var SequenceExpression = __class(Node, function(__super) { return {
 
-    constructor: function(list, start, end) {
+    constructor: function SequenceExpression(list, start, end) {
     
-        this.type = "SequenceExpression";
+        __super.constructor.call(this, start, end);
         this.expressions = list;
-        this.start = start;
-        this.end = end;
     }
 }});
 
-var AssignmentExpression = __class(function(__super) { return {
+var AssignmentExpression = __class(Node, function(__super) { return {
 
-    constructor: function(op, left, right, start, end) {
+    constructor: function AssignmentExpression(op, left, right, start, end) {
     
-        this.type = "AssignmentExpression";
+        __super.constructor.call(this, start, end);
         this.operator = op;
         this.left = left;
         this.right = right;
-        this.start = start;
-        this.end = end;
     }
 }});
 
-var SpreadExpression = __class(function(__super) { return {
+var SpreadExpression = __class(Node, function(__super) { return {
 
-    constructor: function(expr, start, end) {
+    constructor: function SpreadExpression(expr, start, end) {
     
-        this.type = "SpreadExpression";
+        __super.constructor.call(this, start, end);
         this.expression = expr;
-        this.start = start;
-        this.end = end;
     }
 }});
 
-var YieldExpression = __class(function(__super) { return {
+var YieldExpression = __class(Node, function(__super) { return {
 
-    constructor: function(expr, delegate, start, end) {
+    constructor: function YieldExpression(expr, delegate, start, end) {
     
-        this.type = "YieldExpression";
+        __super.constructor.call(this, start, end);
         this.delegate = delegate;
         this.expression = expr;
-        this.start = start;
-        this.end = end;
     }
 }});
 
-var ConditionalExpression = __class(function(__super) { return {
+var ConditionalExpression = __class(Node, function(__super) { return {
 
-    constructor: function(test, cons, alt, start, end) {
+    constructor: function ConditionalExpression(test, cons, alt, start, end) {
     
-        this.type = "ConditionalExpression";
+        __super.constructor.call(this, start, end);
         this.test = test;
         this.consequent = cons;
         this.alternate = alt;
-        this.start = start;
-        this.end = end;
     }
 }});
 
-var BinaryExpression = __class(function(__super) { return {
+var BinaryExpression = __class(Node, function(__super) { return {
 
-    constructor: function(op, left, right, start, end) {
+    constructor: function BinaryExpression(op, left, right, start, end) {
     
-        this.type = "BinaryExpression";
+        __super.constructor.call(this, start, end);
         this.operator = op;
         this.left = left;
         this.right = right;
-        this.start = start;
-        this.end = end;
     }
 }});
 
-var UpdateExpression = __class(function(__super) { return {
+var UpdateExpression = __class(Node, function(__super) { return {
 
-    constructor: function(op, expr, prefix, start, end) {
+    constructor: function UpdateExpression(op, expr, prefix, start, end) {
     
-        this.type = "UpdateExpression";
+        __super.constructor.call(this, start, end);
         this.operator = op;
         this.expression = expr;
         this.prefix = prefix;
-        this.start = start;
-        this.end = end;
     }
 }});
 
-var UnaryExpression = __class(function(__super) { return {
+var UnaryExpression = __class(Node, function(__super) { return {
 
-    constructor: function(op, expr, start, end) {
+    constructor: function UnaryExpression(op, expr, start, end) {
     
-        this.type = "UnaryExpression";
+        __super.constructor.call(this, start, end);
         this.operator = op;
         this.expression = expr;
-        this.start = start;
-        this.end = end;
     }
 }});
 
-var MemberExpression = __class(function(__super) { return {
+var MemberExpression = __class(Node, function(__super) { return {
 
-    constructor: function(obj, prop, computed, start, end) {
+    constructor: function MemberExpression(obj, prop, computed, start, end) {
     
-        this.type = "MemberExpression";
+        __super.constructor.call(this, start, end);
         this.object = obj;
         this.property = prop;
         this.computed = computed;
-        this.start = start;
-        this.end = end;
     }
 }});
 
-var CallExpression = __class(function(__super) { return {
+var CallExpression = __class(Node, function(__super) { return {
 
-    constructor: function(callee, args, start, end) {
+    constructor: function CallExpression(callee, args, start, end) {
     
-        this.type = "CallExpression";
+        __super.constructor.call(this, start, end);
         this.callee = callee;
         this.arguments = args;
-        this.start = start;
-        this.end = end;
     }
 }});
 
-var TaggedTemplateExpression = __class(function(__super) { return {
+var TaggedTemplateExpression = __class(Node, function(__super) { return {
 
-    constructor: function(tag, template, start, end) {
+    constructor: function TaggedTemplateExpression(tag, template, start, end) {
     
-        this.type = "TaggedTemplateExpression";
+        __super.constructor.call(this, start, end);
         this.tag = tag;
         this.template = template;
-        this.start = start;
-        this.end = end;
     }
 }});
 
-var NewExpression = __class(function(__super) { return {
+var NewExpression = __class(Node, function(__super) { return {
 
-    constructor: function(callee, args, start, end) {
+    constructor: function NewExpression(callee, args, start, end) {
     
-        this.type = "NewExpression";
+        __super.constructor.call(this, start, end);
         this.callee = callee;
         this.arguments = args;
-        this.start = start;
-        this.end = end;
     }
 }});
 
-var ParenExpression = __class(function(__super) { return {
+var ParenExpression = __class(Node, function(__super) { return {
     
-    constructor: function(expr, start, end) {
+    constructor: function ParenExpression(expr, start, end) {
     
-        this.type = "ParenExpression";
+        __super.constructor.call(this, start, end);
         this.expression = expr;
-        this.start = start;
-        this.end = end;
     }
 }});
 
-var ObjectExpression = __class(function(__super) { return {
+var ObjectLiteral = __class(Node, function(__super) { return {
 
-    constructor: function(props, start, end) {
+    constructor: function ObjectLiteral(props, start, end) {
     
-        this.type = "ObjectExpression";
+        __super.constructor.call(this, start, end);
         this.properties = props;
-        this.start = start;
-        this.end = end;
     }
 }});
 
-var PropertyDefinition = __class(function(__super) { return {
+var ComputedPropertyName = __class(Node, function(__super) { return {
 
-    constructor: function(name, expr, start, end) {
+    constructor: function ComputedPropertyName(expr, start, end) {
     
-        this.type = "PropertyDefinition";
+        __super.constructor.call(this, start, end);
+        this.expression = expr;
+    }
+}});
+
+var PropertyDefinition = __class(Node, function(__super) { return {
+
+    constructor: function PropertyDefinition(name, expr, start, end) {
+    
+        __super.constructor.call(this, start, end);
         this.name = name;
         this.expression = expr;
-        this.start = start;
-        this.end = end;
     }
 }});
 
-var CoveredPatternProperty = __class(function(__super) { return {
+var PatternProperty = __class(Node, function(__super) { return {
 
-    constructor: function(name, pattern, init, start, end) {
+    constructor: function PatternProperty(name, pattern, initializer, start, end) {
     
-        this.type = "CoveredPatternProperty";
+        __super.constructor.call(this, start, end);
         this.name = name;
         this.pattern = pattern;
-        this.init = init;
-        this.start = start;
-        this.end = end;
+        this.initializer = initializer;
     }
 }});
 
-var MethodDefinition = __class(function(__super) { return {
+var PatternElement = __class(Node, function(__super) { return {
 
-    constructor: function(modifier, name, params, body, start, end) {
+    constructor: function PatternElement(pattern, initializer, rest, start, end) {
     
-        this.type = "MethodDefinition";
-        this.modifier = modifier;
+        __super.constructor.call(this, start, end);
+        this.pattern = pattern;
+        this.initializer = initializer;
+        this.rest = rest;
+    }
+}});
+
+var MethodDefinition = __class(Node, function(__super) { return {
+
+    constructor: function MethodDefinition(kind, name, params, body, start, end) {
+    
+        __super.constructor.call(this, start, end);
+        this.kind = kind;
         this.name = name;
         this.params = params;
         this.body = body;
-        this.start = start;
-        this.end = end;
     }
 }});
 
-var ArrayExpression = __class(function(__super) { return {
+var ArrayLiteral = __class(Node, function(__super) { return {
 
-    constructor: function(elements, start, end) {
+    constructor: function ArrayLiteral(elements, start, end) {
     
-        this.type = "ArrayExpression";
+        __super.constructor.call(this, start, end);
         this.elements = elements;
-        this.start = start;
-        this.end = end;
     }
 }});
 
-var ArrayComprehension = __class(function(__super) { return {
+var ArrayComprehension = __class(Node, function(__super) { return {
 
-    constructor: function(qualifiers, expr, start, end) {
+    constructor: function ArrayComprehension(qualifiers, expr, start, end) {
     
-        this.type = "ArrayComprehension";
+        __super.constructor.call(this, start, end);
         this.qualifiers = qualifiers;
         this.expression = expr;
-        this.start = start;
-        this.end = end;
     }
 }});
 
-var GeneratorComprehension = __class(function(__super) { return {
+var GeneratorComprehension = __class(Node, function(__super) { return {
 
-    constructor: function(qualifiers, expr, start, end) {
+    constructor: function GeneratorComprehension(qualifiers, expr, start, end) {
     
-        this.type = "GeneratorComprehension";
+        __super.constructor.call(this, start, end);
         this.qualifiers = qualifiers;
         this.expression = expr;
-        this.start = start;
-        this.end = end;
     }
 }});
 
-var ComprehensionFor = __class(function(__super) { return {
+var ComprehensionFor = __class(Node, function(__super) { return {
 
-    constructor: function(left, right, start, end) {
+    constructor: function ComprehensionFor(left, right, start, end) {
     
-        this.type = "ComprehensionFor";
+        __super.constructor.call(this, start, end);
         this.left = left;
         this.right = right;
-        this.start = start;
-        this.end = end;
     }
 }});
 
-var ComprehensionIf = __class(function(__super) { return {
+var ComprehensionIf = __class(Node, function(__super) { return {
 
-    constructor: function(test, start, end) {
+    constructor: function ComprehensionIf(test, start, end) {
     
-        this.type = "ComprehensionIf";
+        __super.constructor.call(this, start, end);
         this.test = test;
-        this.start = start;
-        this.end = end;
     }
 }});
 
-var TemplateExpression = __class(function(__super) { return {
+var TemplateExpression = __class(Node, function(__super) { return {
 
-    constructor: function(lits, subs, start, end) {
+    constructor: function TemplateExpression(lits, subs, start, end) {
     
-        this.type = "TemplateExpression";
+        __super.constructor.call(this, start, end);
         this.literals = lits;
         this.substitutions = subs;
-        this.start = start;
-        this.end = end;
     }
 }});
 
-var Block = __class(function(__super) { return {
+var Block = __class(Node, function(__super) { return {
 
-    constructor: function(statements, start, end) {
+    constructor: function Block(statements, start, end) {
     
-        this.type = "Block";
+        __super.constructor.call(this, start, end);
         this.statements = statements;
-        this.start = start;
-        this.end = end;
     }
 }});
 
-var LabelledStatement = __class(function(__super) { return {
+var LabelledStatement = __class(Node, function(__super) { return {
 
-    constructor: function(label, statement, start, end) {
+    constructor: function LabelledStatement(label, statement, start, end) {
     
-        this.type = "LabelledStatement";
+        __super.constructor.call(this, start, end);
         this.label = label;
         this.statement = statement;
-        this.start = start;
-        this.end = end;
     }
 }});
 
-var ExpressionStatement = __class(function(__super) { return {
+var ExpressionStatement = __class(Node, function(__super) { return {
 
-    constructor: function(expr, start, end) {
+    constructor: function ExpressionStatement(expr, start, end) {
     
-        this.type = "ExpressionStatement";
+        __super.constructor.call(this, start, end);
         this.expression = expr;
         this.directive = null;
-        this.start = start;
-        this.end = end;
     }
 }});
 
-var EmptyStatement = __class(function(__super) { return {
+var EmptyStatement = __class(Node, function(__super) { return {
 
-    constructor: function(start, end) {
-    
-        this.type = "EmptyStatement";
-        this.start = start;
-        this.end = end;
-    }
+    constructor: function EmptyStatement(start, end) { __super.constructor.call(this, start, end) }
 }});
 
-var VariableDeclaration = __class(function(__super) { return {
+var VariableDeclaration = __class(Node, function(__super) { return {
 
-    constructor: function(keyword, list, start, end) {
+    constructor: function VariableDeclaration(kind, list, start, end) {
     
-        this.type = "VariableDeclaration";
-        this.keyword = keyword;
+        __super.constructor.call(this, start, end);
+        this.kind = kind;
         this.declarations = list;
-        this.start = start;
-        this.end = end;
     }
 }});
 
-var VariableDeclarator = __class(function(__super) { return {
+var VariableDeclarator = __class(Node, function(__super) { return {
 
-    constructor: function(pattern, init, start, end) {
+    constructor: function VariableDeclarator(pattern, initializer, start, end) {
     
-        this.type = "VariableDeclarator";
+        __super.constructor.call(this, start, end);
         this.pattern = pattern;
-        this.init = init;
-        this.start = start;
-        this.end = end;
+        this.initializer = initializer;
     }
 }});
 
-var ReturnStatement = __class(function(__super) { return {
+var ReturnStatement = __class(Node, function(__super) { return {
 
-    constructor: function(arg, start, end) {
+    constructor: function ReturnStatement(arg, start, end) {
     
-        this.type = "ReturnStatement";
+        __super.constructor.call(this, start, end);
         this.argument = arg;
-        this.start = start;
-        this.end = end;
     }
 }});
 
-var BreakStatement = __class(function(__super) { return {
+var BreakStatement = __class(Node, function(__super) { return {
 
-    constructor: function(label, start, end) {
+    constructor: function BreakStatement(label, start, end) {
     
-        this.type = "BreakStatement";
-        this.start = start;
-        this.end = end;
+        __super.constructor.call(this, start, end);
+        this.label = label;
     }
 }});
 
-var ContinueStatement = __class(function(__super) { return {
+var ContinueStatement = __class(Node, function(__super) { return {
 
-    constructor: function(label, start, end) {
+    constructor: function ContinueStatement(label, start, end) {
     
-        this.type = "ContinueStatement";
-        this.start = start;
-        this.end = end;
+        __super.constructor.call(this, start, end);
+        this.label = label;
     }
 }});
 
-var ThrowStatement = __class(function(__super) { return {
+var ThrowStatement = __class(Node, function(__super) { return {
 
-    constructor: function(expr, start, end) {
+    constructor: function ThrowStatement(expr, start, end) {
     
-        this.type = "ThrowStatement";
+        __super.constructor.call(this, start, end);
         this.expression = expr;
-        this.start = start;
-        this.end = end;
     }
 }});
 
-var DebuggerStatement = __class(function(__super) { return {
+var DebuggerStatement = __class(Node, function(__super) { return {
 
-    constructor: function(start, end) {
-    
-        this.type = "DebuggerStatement";
-        this.start = start;
-        this.end = end;
-    }
+    constructor: function DebuggerStatement(start, end) { __super.constructor.call(this, start, end) }
 }});
 
-var IfStatement = __class(function(__super) { return {
+var IfStatement = __class(Node, function(__super) { return {
 
-    constructor: function(test, cons, alt, start, end) {
+    constructor: function IfStatement(test, cons, alt, start, end) {
     
-        this.type = "IfStatement";
+        __super.constructor.call(this, start, end);
         this.test = test;
         this.consequent = cons;
         this.alternate = alt;
-        this.start = start;
-        this.end = end;
     }
 }});
 
-var DoWhileStatement = __class(function(__super) { return {
+var DoWhileStatement = __class(Node, function(__super) { return {
 
-    constructor: function(body, test, start, end) {
+    constructor: function DoWhileStatement(body, test, start, end) {
     
-        this.type = "DoWhileStatement";
+        __super.constructor.call(this, start, end);
         this.body = body;
         this.test = test;
-        this.start = start;
-        this.end = end;
     }
 }});
 
-var WhileStatement = __class(function(__super) { return {
+var WhileStatement = __class(Node, function(__super) { return {
 
-    constructor: function(test, body, start, end) {
+    constructor: function WhileStatement(test, body, start, end) {
     
-        this.type = "WhileStatement";
+        __super.constructor.call(this, start, end);
         this.test = test;
         this.body = body;
-        this.start = start;
-        this.end = end;
     }
 }});
 
-var ForStatement = __class(function(__super) { return {
+var ForStatement = __class(Node, function(__super) { return {
 
-    constructor: function(init, test, update, body, start, end) {
+    constructor: function ForStatement(initializer, test, update, body, start, end) {
     
-        this.type = "ForStatement";
-        this.init = init;
+        __super.constructor.call(this, start, end);
+        this.initializer = initializer;
         this.test = test;
         this.update = update;
         this.body = body;
-        this.start = start;
-        this.end = end;
     }
 }});
 
-var ForInStatement = __class(function(__super) { return {
+var ForInStatement = __class(Node, function(__super) { return {
 
-    constructor: function(left, right, body, start, end) {
+    constructor: function ForInStatement(left, right, body, start, end) {
     
-        this.type = "ForInStatement";
+        __super.constructor.call(this, start, end);
         this.left = left;
         this.right = right;
         this.body = body;
-        this.start = start;
-        this.end = end;
     }
 }});
 
-var ForOfStatement = __class(function(__super) { return {
+var ForOfStatement = __class(Node, function(__super) { return {
 
-    constructor: function(left, right, body, start, end) {
+    constructor: function ForOfStatement(left, right, body, start, end) {
     
-        this.type = "ForOfStatement";
+        __super.constructor.call(this, start, end);
         this.left = left;
         this.right = right;
         this.body = body;
-        this.start = start;
-        this.end = end;
     }
 }});
 
-var WithStatement = __class(function(__super) { return {
+var WithStatement = __class(Node, function(__super) { return {
 
-    constructor: function(object, body, start, end) {
+    constructor: function WithStatement(object, body, start, end) {
     
-        this.type = "WithStatement";
+        __super.constructor.call(this, start, end);
         this.object = object;
         this.body = body;
-        this.start = start;
-        this.end = end;
     }
 }});
 
-var SwitchStatement = __class(function(__super) { return {
+var SwitchStatement = __class(Node, function(__super) { return {
 
-    constructor: function(desc, cases, start, end) {
+    constructor: function SwitchStatement(desc, cases, start, end) {
     
-        this.type = "SwitchStatement";
+        __super.constructor.call(this, start, end);
         this.descriminant = desc;
         this.cases = cases;
-        this.start = start;
-        this.end = end;
     }
 }});
 
-var SwitchCase = __class(function(__super) { return {
+var SwitchCase = __class(Node, function(__super) { return {
 
-    constructor: function(test, cons, start, end) {
+    constructor: function SwitchCase(test, cons, start, end) {
     
-        this.type = "SwitchCase";
+        __super.constructor.call(this, start, end);
         this.test = test;
         this.consequent = cons;
-        this.start = start;
-        this.end = end;
     }
 }});
 
-var TryStatement = __class(function(__super) { return {
+var TryStatement = __class(Node, function(__super) { return {
 
-    constructor: function(block, handler, fin, start, end) {
+    constructor: function TryStatement(block, handler, fin, start, end) {
     
-        this.type = "TryStatement";
+        __super.constructor.call(this, start, end);
         this.block = block;
         this.handler = handler;
         this.finalizer = fin;
-        this.start = start;
-        this.end = end;
     }
 }});
 
-var CatchClause = __class(function(__super) { return {
+var CatchClause = __class(Node, function(__super) { return {
 
-    constructor: function(param, body, start, end) {
+    constructor: function CatchClause(param, body, start, end) {
     
-        this.type = "CatchClause";
+        __super.constructor.call(this, start, end);
         this.param = param;
         this.body = body;
-        this.start = start;
-        this.end = end;
     }
 }});
 
-var FunctionDeclaration = __class(function(__super) { return {
+var FunctionDeclaration = __class(Node, function(__super) { return {
 
-    constructor: function(gen, ident, params, body, start, end) {
+    constructor: function FunctionDeclaration(kind, identifier, params, body, start, end) {
     
-        this.type = "FunctionDeclaration";
-        this.generator = gen;
-        this.ident = ident;
+        __super.constructor.call(this, start, end);
+        this.kind = kind;
+        this.identifier = identifier;
         this.params = params;
         this.body = body;
-        this.start = start;
-        this.end = end;
     }
 }});
 
-var FunctionExpression = __class(function(__super) { return {
+var FunctionExpression = __class(Node, function(__super) { return {
 
-    constructor: function(gen, ident, params, body, start, end) {
+    constructor: function FunctionExpression(kind, identifier, params, body, start, end) {
     
-        this.type = "FunctionExpression";
-        this.generator = gen;
-        this.ident = ident;
+        __super.constructor.call(this, start, end);
+        this.kind = kind;
+        this.identifier = identifier;
         this.params = params;
         this.body = body;
-        this.start = start;
-        this.end = end;
     }
 }});
 
-var FormalParameter = __class(function(__super) { return {
+var FormalParameter = __class(Node, function(__super) { return {
 
-    constructor: function(pattern, init, start, end) {
+    constructor: function FormalParameter(pattern, initializer, start, end) {
     
-        this.type = "FormalParameter";
+        __super.constructor.call(this, start, end);
         this.pattern = pattern;
-        this.init = init;
-        this.start = start;
-        this.end = end;
+        this.initializer = initializer;
     }
 }});
 
-var RestParameter = __class(function(__super) { return {
+var RestParameter = __class(Node, function(__super) { return {
 
-    constructor: function(ident, start, end) {
+    constructor: function RestParameter(identifier, start, end) {
     
-        this.type = "RestParameter";
-        this.ident = ident;
-        this.start = start;
-        this.end = end;
+        __super.constructor.call(this, start, end);
+        this.identifier = identifier;
     }
 }});
 
-var FunctionBody = __class(function(__super) { return {
+var FunctionBody = __class(Node, function(__super) { return {
 
-    constructor: function(statements, start, end) {
+    constructor: function FunctionBody(statements, start, end) {
     
-        this.type = "FunctionBody";
+        __super.constructor.call(this, start, end);
         this.statements = statements;
-        this.start = start;
-        this.end = end;
     }
 }});
 
-var ArrowFunction = __class(function(__super) { return {
+var ArrowFunctionHead = __class(Node, function(__super) { return {
 
-    constructor: function(params, body, start, end) {
+    constructor: function ArrowFunctionHead(params, start, end) {
     
-        this.type = "ArrowFunction";
+        __super.constructor.call(this, start, end);
+        this.parameters = params;
+    }
+}});
+
+var ArrowFunction = __class(Node, function(__super) { return {
+
+    constructor: function ArrowFunction(params, body, start, end) {
+    
+        __super.constructor.call(this, start, end);
         this.params = params;
         this.body = body;
-        this.start = start;
-        this.end = end;
     }
 }});
 
-var ModuleDeclaration = __class(function(__super) { return {
+var ModuleDeclaration = __class(Node, function(__super) { return {
 
-    constructor: function(ident, body, start, end) {
+    constructor: function ModuleDeclaration(identifier, body, start, end) {
     
-        this.type = "ModuleDeclaration";
-        this.ident = ident;
+        __super.constructor.call(this, start, end);
+        this.identifier = identifier;
         this.body = body;
-        this.start = start;
-        this.end = end;
     }
 }});
 
-var ModuleRegistration = __class(function(__super) { return {
+var ModuleBody = __class(Node, function(__super) { return {
 
-    constructor: function(name, body, start, end) {
+    constructor: function ModuleBody(statements, start, end) {
     
-        this.type = "ModuleRegistration";
-        this.name = name;
-        this.body = body;
-        this.start = start;
-        this.end = end;
-    }
-}});
-
-var ModuleBody = __class(function(__super) { return {
-
-    constructor: function(statements, start, end) {
-    
-        this.type = "ModuleBody";
+        __super.constructor.call(this, start, end);
         this.statements = statements;
-        this.start = start;
-        this.end = end;
     }
 }});
 
-var ModuleFromDeclaration = __class(function(__super) { return {
+var ModuleImport = __class(Node, function(__super) { return {
 
-    constructor: function(ident, from, start, end) {
+    constructor: function ModuleImport(identifier, from, start, end) {
     
-        this.type = "ModuleFromDeclaration";
-        this.ident = ident;
+        __super.constructor.call(this, start, end);
+        this.identifier = identifier;
         this.from = from;
-        this.start = start;
-        this.end = end;
     }
 }});
 
-var ModuleAlias = __class(function(__super) { return {
+var ModuleAlias = __class(Node, function(__super) { return {
 
-    constructor: function(ident, path, start, end) {
+    constructor: function ModuleAlias(identifier, path, start, end) {
     
-        this.type = "ModuleAlias";
-        this.ident = ident;
+        __super.constructor.call(this, start, end);
+        this.identifier = identifier;
         this.path = path;
-        this.start = start;
-        this.end = end;
     }
 }});
 
-var ImportDeclaration = __class(function(__super) { return {
+var ImportDefaultDeclaration = __class(Node, function(__super) { return {
 
-    constructor: function(specifiers, from, start, end) {
+    constructor: function ImportDefaultDeclaration(ident, from, start, end) {
     
-        this.type = "ImportDeclaration";
+        __super.constructor.call(this, start, end);
+        this.identifier = ident;
+        this.from = from;
+    }
+}});
+
+var ImportDeclaration = __class(Node, function(__super) { return {
+
+    constructor: function ImportDeclaration(specifiers, from, start, end) {
+    
+        __super.constructor.call(this, start, end);
         this.specifiers = specifiers;
         this.from = from;
-        this.start = start;
-        this.end = end;
     }
 }});
 
-var ImportSpecifier = __class(function(__super) { return {
+var ImportSpecifier = __class(Node, function(__super) { return {
 
-    constructor: function(remote, local, start, end) {
+    constructor: function ImportSpecifier(remote, local, start, end) {
     
-        this.type = "ImportSpecifier";
+        __super.constructor.call(this, start, end);
         this.remote = remote;
         this.local = local;
-        this.start = start;
-        this.end = end;
     }
 }});
 
-var ExportDeclaration = __class(function(__super) { return {
+var ExportDeclaration = __class(Node, function(__super) { return {
 
-    constructor: function(binding, start, end) {
+    constructor: function ExportDeclaration(binding, start, end) {
     
-        this.type = "ExportDeclaration";
+        __super.constructor.call(this, start, end);
         this.binding = binding;
-        this.start = start;
-        this.end = end;
     }
 }});
 
-var ExportSpecifierSet = __class(function(__super) { return {
+var ExportsList = __class(Node, function(__super) { return {
 
-    constructor: function(list, from, start, end) {
+    constructor: function ExportsList(list, from, start, end) {
     
-        this.type = "ExportSpecifierSet";
+        __super.constructor.call(this, start, end);
         this.specifiers = list;
         this.from = from;
-        this.start = start;
-        this.end = end;
     }
 }});
 
-var ExportSpecifier = __class(function(__super) { return {
+var ExportSpecifier = __class(Node, function(__super) { return {
 
-    constructor: function(local, remote, start, end) {
+    constructor: function ExportSpecifier(local, remote, start, end) {
     
-        this.type = "ExportSpecifier";
+        __super.constructor.call(this, start, end);
         this.local = local;
         this.remote = remote;
-        this.start = start;
-        this.end = end;
     }
 }});
 
-var ModulePath = __class(function(__super) { return {
+var ModulePath = __class(Node, function(__super) { return {
     
-    constructor: function(list, start, end) {
+    constructor: function ModulePath(list, start, end) {
     
-        this.type = "ModulePath";
+        __super.constructor.call(this, start, end);
         this.elements = list;
-        this.start = start;
-        this.end = end;
     }
 }});
 
-var ClassDeclaration = __class(function(__super) { return {
+var ClassDeclaration = __class(Node, function(__super) { return {
 
-    constructor: function(ident, base, body, start, end) {
+    constructor: function ClassDeclaration(identifier, base, body, start, end) {
     
-        this.type = "ClassDeclaration";
-        this.ident = ident;
+        __super.constructor.call(this, start, end);
+        this.identifier = identifier;
         this.base = base;
         this.body = body;
-        this.start = start;
-        this.end = end;
     }
 }});
 
-var ClassExpression = __class(function(__super) { return {
+var ClassExpression = __class(Node, function(__super) { return {
 
-    constructor: function(ident, base, body, start, end) {
+    constructor: function ClassExpression(identifier, base, body, start, end) {
     
-        this.type = "ClassExpression";
-        this.ident = ident;
+        __super.constructor.call(this, start, end);
+        this.identifier = identifier;
         this.base = base;
         this.body = body;
-        this.start = start;
-        this.end = end;
     }
 }});
 
-var ClassBody = __class(function(__super) { return {
+var ClassBody = __class(Node, function(__super) { return {
 
-    constructor: function(elems, start, end) {
+    constructor: function ClassBody(elems, start, end) {
     
-        this.type = "ClassBody";
+        __super.constructor.call(this, start, end);
         this.elements = elems;
-        this.start = start;
-        this.end = end;
     }
 }});
 
-var ClassElement = __class(function(__super) { return {
+var ClassElement = __class(Node, function(__super) { return {
 
-    constructor: function(isStatic, method, start, end) {
+    constructor: function ClassElement(isStatic, method, start, end) {
     
-        this.type = "ClassElement";
+        __super.constructor.call(this, start, end);
         this.static = isStatic;
         this.method = method;
-        this.start = start;
-        this.end = end;
     }
 }});
 
 
-exports.Script = Script; exports.Module = Module; exports.Identifier = Identifier; exports.Number = Number; exports.String = String; exports.Template = Template; exports.RegularExpression = RegularExpression; exports.Null = Null; exports.Boolean = Boolean; exports.ThisExpression = ThisExpression; exports.SuperExpression = SuperExpression; exports.SequenceExpression = SequenceExpression; exports.AssignmentExpression = AssignmentExpression; exports.SpreadExpression = SpreadExpression; exports.YieldExpression = YieldExpression; exports.ConditionalExpression = ConditionalExpression; exports.BinaryExpression = BinaryExpression; exports.UpdateExpression = UpdateExpression; exports.UnaryExpression = UnaryExpression; exports.MemberExpression = MemberExpression; exports.CallExpression = CallExpression; exports.TaggedTemplateExpression = TaggedTemplateExpression; exports.NewExpression = NewExpression; exports.ParenExpression = ParenExpression; exports.ObjectExpression = ObjectExpression; exports.PropertyDefinition = PropertyDefinition; exports.CoveredPatternProperty = CoveredPatternProperty; exports.MethodDefinition = MethodDefinition; exports.ArrayExpression = ArrayExpression; exports.ArrayComprehension = ArrayComprehension; exports.GeneratorComprehension = GeneratorComprehension; exports.ComprehensionFor = ComprehensionFor; exports.ComprehensionIf = ComprehensionIf; exports.TemplateExpression = TemplateExpression; exports.Block = Block; exports.LabelledStatement = LabelledStatement; exports.ExpressionStatement = ExpressionStatement; exports.EmptyStatement = EmptyStatement; exports.VariableDeclaration = VariableDeclaration; exports.VariableDeclarator = VariableDeclarator; exports.ReturnStatement = ReturnStatement; exports.BreakStatement = BreakStatement; exports.ContinueStatement = ContinueStatement; exports.ThrowStatement = ThrowStatement; exports.DebuggerStatement = DebuggerStatement; exports.IfStatement = IfStatement; exports.DoWhileStatement = DoWhileStatement; exports.WhileStatement = WhileStatement; exports.ForStatement = ForStatement; exports.ForInStatement = ForInStatement; exports.ForOfStatement = ForOfStatement; exports.WithStatement = WithStatement; exports.SwitchStatement = SwitchStatement; exports.SwitchCase = SwitchCase; exports.TryStatement = TryStatement; exports.CatchClause = CatchClause; exports.FunctionDeclaration = FunctionDeclaration; exports.FunctionExpression = FunctionExpression; exports.FormalParameter = FormalParameter; exports.RestParameter = RestParameter; exports.FunctionBody = FunctionBody; exports.ArrowFunction = ArrowFunction; exports.ModuleDeclaration = ModuleDeclaration; exports.ModuleRegistration = ModuleRegistration; exports.ModuleBody = ModuleBody; exports.ModuleFromDeclaration = ModuleFromDeclaration; exports.ModuleAlias = ModuleAlias; exports.ImportDeclaration = ImportDeclaration; exports.ImportSpecifier = ImportSpecifier; exports.ExportDeclaration = ExportDeclaration; exports.ExportSpecifierSet = ExportSpecifierSet; exports.ExportSpecifier = ExportSpecifier; exports.ModulePath = ModulePath; exports.ClassDeclaration = ClassDeclaration; exports.ClassExpression = ClassExpression; exports.ClassBody = ClassBody; exports.ClassElement = ClassElement; return exports; }).call(this, {});
+exports.Script = Script; exports.Module = Module; exports.Identifier = Identifier; exports.Number = Number; exports.String = String; exports.Template = Template; exports.RegularExpression = RegularExpression; exports.Null = Null; exports.Boolean = Boolean; exports.ThisExpression = ThisExpression; exports.SuperExpression = SuperExpression; exports.SequenceExpression = SequenceExpression; exports.AssignmentExpression = AssignmentExpression; exports.SpreadExpression = SpreadExpression; exports.YieldExpression = YieldExpression; exports.ConditionalExpression = ConditionalExpression; exports.BinaryExpression = BinaryExpression; exports.UpdateExpression = UpdateExpression; exports.UnaryExpression = UnaryExpression; exports.MemberExpression = MemberExpression; exports.CallExpression = CallExpression; exports.TaggedTemplateExpression = TaggedTemplateExpression; exports.NewExpression = NewExpression; exports.ParenExpression = ParenExpression; exports.ObjectLiteral = ObjectLiteral; exports.ComputedPropertyName = ComputedPropertyName; exports.PropertyDefinition = PropertyDefinition; exports.PatternProperty = PatternProperty; exports.PatternElement = PatternElement; exports.MethodDefinition = MethodDefinition; exports.ArrayLiteral = ArrayLiteral; exports.ArrayComprehension = ArrayComprehension; exports.GeneratorComprehension = GeneratorComprehension; exports.ComprehensionFor = ComprehensionFor; exports.ComprehensionIf = ComprehensionIf; exports.TemplateExpression = TemplateExpression; exports.Block = Block; exports.LabelledStatement = LabelledStatement; exports.ExpressionStatement = ExpressionStatement; exports.EmptyStatement = EmptyStatement; exports.VariableDeclaration = VariableDeclaration; exports.VariableDeclarator = VariableDeclarator; exports.ReturnStatement = ReturnStatement; exports.BreakStatement = BreakStatement; exports.ContinueStatement = ContinueStatement; exports.ThrowStatement = ThrowStatement; exports.DebuggerStatement = DebuggerStatement; exports.IfStatement = IfStatement; exports.DoWhileStatement = DoWhileStatement; exports.WhileStatement = WhileStatement; exports.ForStatement = ForStatement; exports.ForInStatement = ForInStatement; exports.ForOfStatement = ForOfStatement; exports.WithStatement = WithStatement; exports.SwitchStatement = SwitchStatement; exports.SwitchCase = SwitchCase; exports.TryStatement = TryStatement; exports.CatchClause = CatchClause; exports.FunctionDeclaration = FunctionDeclaration; exports.FunctionExpression = FunctionExpression; exports.FormalParameter = FormalParameter; exports.RestParameter = RestParameter; exports.FunctionBody = FunctionBody; exports.ArrowFunctionHead = ArrowFunctionHead; exports.ArrowFunction = ArrowFunction; exports.ModuleDeclaration = ModuleDeclaration; exports.ModuleBody = ModuleBody; exports.ModuleImport = ModuleImport; exports.ModuleAlias = ModuleAlias; exports.ImportDefaultDeclaration = ImportDefaultDeclaration; exports.ImportDeclaration = ImportDeclaration; exports.ImportSpecifier = ImportSpecifier; exports.ExportDeclaration = ExportDeclaration; exports.ExportsList = ExportsList; exports.ExportSpecifier = ExportSpecifier; exports.ModulePath = ModulePath; exports.ClassDeclaration = ClassDeclaration; exports.ClassExpression = ClassExpression; exports.ClassBody = ClassBody; exports.ClassElement = ClassElement; return exports; }).call(this, {});
 
 var Scanner_ = (function(exports) {
 
@@ -2242,10 +2109,6 @@ var reservedWord = new RegExp("^(?:" +
     "else|enum|export|extends|false|finally|for|function|if|import|in|" +
     "instanceof|new|null|return|super|switch|this|throw|true|try|typeof|" +
     "var|void|while|with" +
-")$");
-
-var strictReservedWord = new RegExp("^(?:" +
-    "implements|private|public|interface|package|let|protected|static|yield" +
 ")$");
 
 // === Punctuators ===
@@ -2284,7 +2147,7 @@ var WHITESPACE = 1,
     LBRACE = 12;
 
 // === Character Type Lookup Table ===
-var LookupTable = (function(exports) {
+var charTable = ((function(_) {
 
     var charTable = new Array(128);
     
@@ -2306,13 +2169,14 @@ var LookupTable = (function(exports) {
     for (i = 65; i <= 90; ++i) charTable[i] = IDENTIFIER;
     for (i = 97; i <= 122; ++i) charTable[i] = IDENTIFIER;
     
+    return charTable;
+    
     function add(type, string) {
     
         string.split("").forEach((function(c) { return charTable[c.charCodeAt(0)] = type; }));
     }
-exports.charTable = charTable; return exports; }).call(this, {});
-
-var charTable = LookupTable.charTable;
+    
+}))();
 
 // Performs a binary search on an array
 function binarySearch(array, val) {
@@ -2407,14 +2271,12 @@ function isNumberFollow(c) {
 
 var Scanner = __class(function(__super) { return {
 
-    constructor: function(input, offset) {
+    constructor: function Scanner(input, offset) {
 
         this.input = input || "";
         this.offset = offset || 0;
         this.length = this.input.length;
         this.lines = [-1];
-        
-        this.strict = false;
         
         this.type = "";
         this.start = 0;
@@ -2424,7 +2286,7 @@ var Scanner = __class(function(__super) { return {
         this.templateEnd = false;
         this.regExpFlags = null;
         this.newlineBefore = false;
-        this.error = "";
+        this.strictError = "";
     },
     
     next: function(context) {
@@ -2432,7 +2294,7 @@ var Scanner = __class(function(__super) { return {
         if (this.type !== "COMMENT")
             this.newlineBefore = false;
         
-        this.error = "";
+        this.strictError = "";
         this.value = null;
         
         var type = null, 
@@ -2564,13 +2426,9 @@ var Scanner = __class(function(__super) { return {
                 
                     return String.fromCharCode(0);
                 
-                } else if (this.strict) {
-                
-                    this.error = "Octal literals are not allowed in strict mode";
-                    return null;
-                    
                 } else {
                 
+                    this.strictError = "Octal literals are not allowed in strict mode";
                     return String.fromCharCode(parseInt(esc, 8));
                 }
             
@@ -2960,9 +2818,7 @@ var Scanner = __class(function(__super) { return {
                 break;
         }
         
-        if (this.strict)
-            return this.Error("Octal literals are not allowed in strict mode");
-        
+        this.strictError = "Octal literals are not allowed in strict mode";
         this.number = parseInt(this.input.slice(start, this.offset), 8);
         
         return isNumberFollow(this.input[this.offset]) ? "NUMBER" : this.Error();
@@ -3053,7 +2909,7 @@ var Scanner = __class(function(__super) { return {
         
         id += this.input.slice(start, this.offset);
         
-        if (reservedWord.test(id) || this.strict && strictReservedWord.test(id))
+        if (reservedWord.test(id))
             return id;
         
         this.value = id;
@@ -3144,10 +3000,6 @@ var Scanner = __class(function(__super) { return {
     Error: function(msg) {
     
         this.offset++;
-        
-        if (msg)
-            this.error = msg;
-        
         return "ILLEGAL";
     }
     
@@ -3158,10 +3010,12 @@ exports.Scanner = Scanner; return exports; }).call(this, {});
 
 var Transform_ = (function(exports) {
 
+var Node = TreeNode;
+
 var Transform = __class(function(__super) { return {
 
     // Transform an expression into a formal parameter list
-    transformFormals: function(expr) {
+    transformFormals: function(expr, rest) {
     
         if (expr === null)
             return [];
@@ -3175,18 +3029,12 @@ var Transform = __class(function(__super) { return {
         for (i = 0; i < list.length; ++i) {
         
             node = list[i];
-            
-            params.push(param = {
-            
-                type: "FormalParameter",
-                pattern: node,
-                init: null,
-                start: node.start,
-                end: node.end
-            });
-            
+            params.push(param = new Node.FormalParameter(node, null, node.start, node.end));
             this.transformPatternElement(param, true);
         }
+        
+        if (rest)
+            params.push(rest);
         
         return params;
     },
@@ -3211,15 +3059,12 @@ var Transform = __class(function(__super) { return {
             
                 rest = (elem.type === "SpreadExpression");
                 
-                elem = elems[i] = {
-                
-                    type: "PatternElement",
-                    pattern: rest ? elem.expression : elem,
-                    init: null,
-                    rest: rest,
-                    start: elem.start,
-                    end: elem.end
-                };
+                elem = elems[i] = new Node.PatternElement(
+                    rest ? elem.expression : elem,
+                    null,
+                    rest,
+                    elem.start,
+                    elem.end);
                 
                 // No trailing comma allowed after rest
                 if (rest && (node.trailingComma || i < elems.length - 1))
@@ -3243,34 +3088,33 @@ var Transform = __class(function(__super) { return {
         
             prop = props[i];
             
+            // Clear the error flag
+            prop.error = "";
+            
             switch (prop.type) {
             
                 case "PatternProperty":
                 
                     break;
-                
-                case "CoveredPatternProperty":
-                    
-                    prop.type = "PatternProperty";
-                    break;
                     
                 case "PropertyDefinition":
                     
-                    prop.type = "PatternProperty";
-                    prop.pattern = prop.expression;
-                    prop.init = null;
+                    // Replace node
+                    prop = new Node.PatternProperty(
+                        prop.name,
+                        prop.expression,
+                        null,
+                        prop.start,
+                        prop.end);
                     
-                    delete prop.expression;
+                    props[i] = prop;
+                    
                     break;
                 
                 default:
                 
                     this.fail("Invalid pattern", prop);
             }
-            
-            // Clear error flags
-            if (prop.error)
-                delete prop.error;
             
             if (prop.pattern) this.transformPatternElement(prop, binding);
             else this.transformPattern(prop.name, binding);
@@ -3285,7 +3129,7 @@ var Transform = __class(function(__super) { return {
         if (node.type === "AssignmentExpression" && node.operator === "=") {
         
             elem.pattern = node.left;
-            elem.init = node.right;
+            elem.initializer = node.right;
         }
         
         this.transformPattern(elem.pattern, binding);
@@ -3297,9 +3141,8 @@ var Transform = __class(function(__super) { return {
         switch (node.type) {
         
             case "Identifier":
-            
                 if (binding) this.checkBindingIdent(node, true);
-                else this.checkAssignTarget(node, true);
+                else this.checkAssignTarget(node);
                 
                 break;
             
@@ -3308,12 +3151,12 @@ var Transform = __class(function(__super) { return {
                 if (binding) this.fail("Invalid left-hand-side in binding pattern", node);
                 break;
             
-            case "ObjectExpression":
+            case "ObjectLiteral":
             case "ObjectPattern":
                 this.transformObjectPattern(node, binding);
                 break;
             
-            case "ArrayExpression":
+            case "ArrayLiteral":
             case "ArrayPattern":
                 this.transformArrayPattern(node, binding);
                 break;
@@ -3336,9 +3179,17 @@ var Validate_ = (function(exports) {
 
 // Object literal property name flags
 var PROP_NORMAL = 1,
-    PROP_ASSIGN = 2,
+    PROP_DATA = 2,
     PROP_GET = 4,
     PROP_SET = 8;
+
+// Identifiers which are reserved in strict mode    
+var strictReservedWord = new RegExp("^(?:" +
+    "implements|private|public|interface|package|let|protected|static|yield" +
+")$");
+
+// Encodes a string as a map key for use in regular object
+function mapKey(name) { return "." + (name || "") }
 
 // Returns true if the specified name is a restricted identifier in strict mode
 function isPoisonIdent(name) {
@@ -3349,19 +3200,49 @@ function isPoisonIdent(name) {
 var Validate = __class(function(__super) { return {
 
     // Checks an assignment target for strict mode restrictions
-    checkAssignTarget: function(node, strict) {
+    checkAssignTarget: function(node, simple) {
     
-        if (node.type !== "Identifier")
-            return;
+        // Remove any parenthesis surrounding the target
+        for (; node.type === "ParenExpression"; node = node.expression);
         
-        // Mark identifier node as a variable
-        node.context = "variable";
+        switch (node.type) {
         
-        if (!strict && !this.context.strict)
-            return;
+            case "Identifier":
+            
+                // Mark identifier node as a variable
+                node.context = "variable";
+
+                if (isPoisonIdent(node.value))
+                    this.addStrictError("Cannot modify " + node.value + " in strict mode", node);
         
-        if (isPoisonIdent(node.value))
-            this.fail("Cannot modify " + node.value + " in strict mode", node);
+                break;
+            
+            case "MemberExpression":
+                break;
+                    
+            case "ObjectLiteral":
+            case "ArrayLiteral":
+            
+                if (!simple) {
+                
+                    this.transformPattern(node, false);
+                    break;
+                }
+            
+            default:
+                this.fail("Invalid left-hand side in assignment", node);
+        }
+    },
+    
+    // Checks an identifier for strict mode reserved words
+    checkIdentifier: function(node) {
+    
+        var ident = node.value;
+        
+        if (ident === "yield" && this.context.isGenerator)
+            this.fail("yield cannot be an identifier inside of a generator function", node);
+        else if (strictReservedWord.test(ident))
+            this.addStrictError(ident + " cannot be used as an identifier in strict mode", node);
     },
     
     // Checks a binding identifier for strict mode restrictions
@@ -3369,24 +3250,24 @@ var Validate = __class(function(__super) { return {
     
         // Mark identifier node as a declaration
         node.context = "declaration";
-        
-        if (!strict && !this.context.strict)
-            return;
             
         var name = node.value;
         
-        if (isPoisonIdent(name))
-            this.fail("Binding cannot be created for '" + name + "' in strict mode", node);
+        if (isPoisonIdent(name)) {
+        
+            var msg = "Binding cannot be created for '" + name + "' in strict mode";
+            
+            if (strict) this.fail(msg, node);
+            else this.addStrictError(msg, node);
+        }
     },
     
     // Checks function formal parameters for strict mode restrictions
     checkParameters: function(params) {
     
-        if (!this.context.strict)
-            return;
-        
         var names = {}, 
             name,
+            key,
             node,
             i;
         
@@ -3398,14 +3279,15 @@ var Validate = __class(function(__super) { return {
                 continue;
             
             name = node.pattern.value;
+            key = mapKey(name);
             
             if (isPoisonIdent(name))
-                this.fail("Parameter name " + name + " is not allowed in strict mode", node);
+                this.addStrictError("Parameter name " + name + " is not allowed in strict mode", node);
             
-            if (names[name] === 1)
-                this.fail("Strict mode function may not have duplicate parameter names", node);
+            if (names[key])
+                this.addStrictError("Strict mode function may not have duplicate parameter names", node);
             
-            names[name] = 1;
+            names[key] = 1;
         }
     },
     
@@ -3413,52 +3295,109 @@ var Validate = __class(function(__super) { return {
     checkForInit: function(init, type) {
     
         if (init.type === "VariableDeclaration") {
-        
-            // For-in/of may only have one variable declaration
             
+            // For-in/of may only have one variable declaration
             if (init.declarations.length !== 1)
                 this.fail("for-" + type + " statement may not have more than one variable declaration", init);
-            
+        
             // A variable initializer is only allowed in for-in where 
             // variable type is "var" and it is not a pattern
-                
-            var decl = init.declarations[0];
             
-            if (decl.init && (
+            var decl = init.declarations[0];
+        
+            if (decl.initializer && (
                 type === "of" ||
-                init.keyword !== "var" ||
+                init.kind !== "var" ||
                 decl.pattern.type !== "Identifier")) {
-                
+            
                 this.fail("Invalid initializer in for-" + type + " statement", init);
             }
             
         } else {
         
-            // Transform object and array patterns
-            this.transformPattern(init, false);
+            this.checkAssignTarget(init);
         }
     },
     
+    // Checks for duplicate object literal property names
+    checkPropertyName: function(node, nameSet) {
+    
+        if (node.name.type !== "Identifier")
+            return;
+        
+        var flag = PROP_NORMAL,
+            name;
+        
+        switch (node.type) {
+
+            case "PropertyDefinition": flag = PROP_DATA; break;
+    
+            case "MethodDefinition":
+        
+                switch (node.kind) {
+
+                    case "get": flag = PROP_GET; break;
+                    case "set": flag = PROP_SET; break;
+                }
+        }
+
+        // Check for duplicate names
+        name = mapKey(node.name.value);
+
+        if (this.isDuplicateName(flag, nameSet[name], false))
+            this.addInvalidNode("Duplicate property names in object literal not allowed", node, false);
+        else if (this.isDuplicateName(flag, nameSet[name], true))
+            this.addInvalidNode("Duplicate data property names in object literal not allowed in strict mode", node, true);
+
+        // Set name flag
+        nameSet[name] |= flag;
+    },
+    
+    // Checks for duplicate class element names
+    checkClassElementName: function(node, nameSet) {
+    
+        if (node.name.type !== "Identifier")
+            return;
+        
+        var flag = PROP_NORMAL,
+            name;
+        
+        switch (node.kind) {
+
+            case "get": flag = PROP_GET; break;
+            case "set": flag = PROP_SET; break;
+        }
+
+        // Check for duplicate names
+        name = mapKey(node.name.value);
+
+        if (this.isDuplicateName(flag, nameSet[name], false))
+            this.addInvalidNode("Duplicate method names in class not allowed", node, false);
+
+        // Set name flag
+        nameSet[name] |= flag;
+    },
+    
     // Returns true if the specified name type is a duplicate for a given set of flags
-    isDuplicateName: function(type, flags) {
+    isDuplicateName: function(type, flags, strict) {
     
         if (!flags)
             return false;
         
         switch (type) {
         
-            case PROP_ASSIGN: return (this.context.strict || flags !== PROP_ASSIGN);
-            case PROP_GET: return (flags !== PROP_SET);
-            case PROP_SET: return (flags !== PROP_GET);
+            case PROP_DATA: return strict || flags !== PROP_DATA;
+            case PROP_GET: return flags !== PROP_SET;
+            case PROP_SET: return flags !== PROP_GET;
             default: return !!flags;
         }
     },
     
-    // Checks for duplicate property names in object literals or classes
     checkInvalidNodes: function() {
     
         var context = this.context,
             list = context.invalidNodes,
+            item,
             node,
             i;
         
@@ -3467,10 +3406,14 @@ var Validate = __class(function(__super) { return {
         
         for (i = 0; i < list.length; ++i) {
         
-            node = list[i];
+            item = list[i];
+            node = item.node;
             
-            if (node.error)
-                this.fail(node.error, node);
+            if (node.error) {
+            
+                if (item.strict) this.addStrictError(node.error, node);
+                else this.fail(node.error, node);
+            }
         }
         
         context.invalidNodes = null;
@@ -3490,7 +3433,7 @@ var Validate = Validate_.Validate;
 
 // Object literal property name flags
 var PROP_NORMAL = 1,
-    PROP_ASSIGN = 2,
+    PROP_DATA = 2,
     PROP_GET = 4,
     PROP_SET = 8;
 
@@ -3576,9 +3519,12 @@ function isUnary(op) {
     return false;
 }
 
+// Encodes a string as a map key for use in regular object
+function mapKey(name) { return "." + (name || "") }
+
 var Token = __class(function(__super) { return {
 
-    constructor: function(s) {
+    constructor: function Token(s) {
     
         this.type = s.type;
         this.start = s.start;
@@ -3588,13 +3534,30 @@ var Token = __class(function(__super) { return {
         this.templateEnd = s.templateEnd;
         this.regExpFlags = s.regExpFlags;
         this.newlineBefore = s.newlineBefore;
-        this.error = s.error;
+        this.strictError = s.strictError;
+    }
+}});
+
+var Context = __class(function(__super) { return {
+
+    constructor: function Context(parent, isStrict, isFunction) {
+    
+        this.parent = parent;
+        this.strict = isStrict;
+        this.isFunction = isFunction;
+        this.isFunctionBody = false;
+        this.isGenerator = false;
+        this.isClass = false;
+        this.labelSet = {};
+        this.switchDepth = 0;
+        this.invalidNodes = null;
+        this.strictError = null;
     }
 }});
 
 var Parser = __class(function(__super) { return {
 
-    constructor: function(input, offset) {
+    constructor: function Parser(input, offset) {
 
         var scanner = new Scanner(input, offset);
         
@@ -3606,7 +3569,7 @@ var Parser = __class(function(__super) { return {
         this.peek1 = null;
         this.endOffset = scanner.offset;
         
-        this.contextStack = [];
+        this.context = null;
         this.pushContext(false);
     },
 
@@ -3724,36 +3687,114 @@ var Parser = __class(function(__super) { return {
     peekKeyword: function(word) {
     
         var token = this.peekToken();
-        return token.type === word || token.type === "IDENTIFIER" && token.value === word;
+        return token.type === "IDENTIFIER" && token.value === word;
     },
     
-    // Context management
+    peekLet: function() {
+    
+        if (this.peekKeyword("let")) {
+        
+            switch (this.peek("div", 1)) {
+            
+                case "{":
+                case "[":
+                case "IDENTIFIER": return true;
+            }
+        }
+        
+        return false;
+    },
+    
+    peekModule: function() {
+    
+        if (this.peekKeyword("module")) {
+        
+            var token = this.peekToken("div", 1);
+            return (!token.newlineBefore && token.type === "IDENTIFIER");
+        }
+        
+        return false;
+    },
+    
+    peekYield: function() {
+    
+        return this.peekKeyword("yield") && this.context.isGenerator && this.context.isFunctionBody;
+    },
+    
+    // == Context Management ==
+    
     pushContext: function(isFunction, isStrict) {
     
-        this.context = { 
-            
-            strict: isStrict || (this.context ? this.context.strict : false),
-            isFunction: isFunction,
-            labelSet: {},
-            switchDepth: 0,
-            invalidNodes: null
-        };
+        isStrict = isStrict || (this.context ? this.context.strict : null);
+        this.context = new Context(this.context, isStrict, isFunction);
+    },
+    
+    popContext: function(collapse) {
+    
+        var context = this.context,
+            parent = context.parent;
         
-        this.contextStack.push(this.context);
-        this.scanner.strict = this.context.strict;
+        if (context.strict !== true)
+            this.setStrict(false);
+        
+        // If collapsing into parent context, copy invalid nodes into parent
+        if (collapse && parent && context.invalidNodes) {
+
+            if (!parent.invalidNodes) {
+            
+                parent.invalidNodes = context.invalidNodes;
+                
+            } else {
+                
+                for (var i = 0; i < context.invalidNodes.length; ++i)
+                    parent.invalidNodes.push(context.invalidNodes[i]);
+            }
+            
+            context.invalidNodes = null;
+        }
+        
+        this.checkInvalidNodes();
+        
+        this.context = this.context.parent;
     },
     
-    popContext: function() {
+    setStrict: function(strict) {
     
-        this.contextStack.pop();
-        this.context = this.contextStack[this.contextStack.length - 1];
-        this.scanner.strict = this.context ? this.context.strict : false;
+        var context = this.context,
+            parent = this.context.parent;
+        
+        if (context.strict === true)
+            return;
+        
+        context.strict = strict;
+        
+        var node = context.strictError;
+        if (!node) return;
+        
+        if (strict) {
+        
+            if (node.error)
+                this.fail(node.error, node);
+            
+        } else if (parent) {
+        
+            if (parent.strict === null && !parent.strictError)
+                parent.strictError = node;
+        }
+        
+        context.strictError = null;
     },
     
-    setStrict: function() {
+    addStrictError: function(error, node) {
     
-        this.context.strict = true;
-        this.scanner.strict = true;
+        var c = this.context;
+        
+        node.error = error;
+        
+        if (c.strict === true)
+            this.fail(error, node);
+        else if (c.strict === null && !c.strictError)
+            c.strictError = node;
     },
     
     maybeEnd: function() {
@@ -3770,55 +3811,49 @@ var Parser = __class(function(__super) { return {
                     break;
                 
                 default:
-                    return true;
+                    return false;
             }
         }
         
-        return false;
+        return true;
     },
     
-    peekModule: function() {
-    
-        if (this.peekToken().value === "module") {
-        
-            var p = this.peekToken("div", 1);
-            
-            // If a module identifier follows...
-            if (!p.newlineBefore && (p.type === "IDENTIFIER" || p.type === "STRING"))
-                return true;
-        }
-        
-        return false;
-    },
-    
-    addInvalidNode: function(node, error) {
+    addInvalidNode: function(error, node, strict) {
     
         var context = this.context,
-            list = context.invalidNodes;
+            list = context.invalidNodes,
+            item = { node: node, strict: strict };
         
         node.error = error;
         
-        if (!list) context.invalidNodes = [node];
-        else list.push(node);
+        if (!list) context.invalidNodes = [item];
+        else list.push(item);
     },
     
     // === Top Level ===
     
     Script: function() {
     
-        var start = this.startOffset;
+        this.pushContext(false);
         
-        return new Node.Script(this.StatementList(true, false), start, this.endOffset);
+        var start = this.startOffset,
+            statements = this.StatementList(true, false);
+        
+        this.popContext();
+        
+        return new Node.Script(statements, start, this.endOffset);
     },
     
     Module: function() {
     
-        var start = this.startOffset;
+        this.pushContext(false, true);
         
-        // Modules are always strict
-        this.setStrict();
+        var start = this.startOffset,
+            statements = this.StatementList(true, true);
         
-        return new Node.Module(this.StatementList(true, true), start, this.endOffset);
+        this.popContext();
+        
+        return new Node.Module(statements, start, this.endOffset);
     },
     
     // === Expressions ===
@@ -3859,33 +3894,19 @@ var Parser = __class(function(__super) { return {
             left,
             lhs;
         
-        if (this.peek() === "yield")
+        if (this.peekYield())
             return this.YieldExpression();
         
         left = this.ConditionalExpression(noIn);
+        
+        if (left.type === "ArrowFunctionHead")
+            return this.ArrowFunctionBody(left, noIn);
         
         // Check for assignment operator
         if (!isAssignment(this.peek("div")))
             return left;
         
-        // Binding forms can be contained within parens
-        for (lhs = left; lhs.type === "ParenExpression"; lhs = lhs.expression);
-        
-        // Make sure that left hand side is assignable
-        switch (lhs.type) {
-        
-            case "MemberExpression":
-            case "CallExpression":
-                break;
-                
-            case "Identifier":
-                this.checkAssignTarget(lhs);
-                break;
-        
-            default:
-                this.transformPattern(lhs, false);
-                break;
-        }
+        this.checkAssignTarget(left);
         
         return new Node.AssignmentExpression(
             this.read(),
@@ -3915,9 +3936,10 @@ var Parser = __class(function(__super) { return {
     YieldExpression: function() {
     
         var start = this.startOffset,
-            delegate = false;
+            delegate = false,
+            expr = null;
             
-        this.read("yield");
+        this.readKeyword("yield");
         
         if (this.peek() === "*") {
         
@@ -3925,8 +3947,11 @@ var Parser = __class(function(__super) { return {
             delegate = true;
         }
         
+        if (delegate || !this.maybeEnd())
+            expr = this.AssignmentExpression();
+        
         return new Node.YieldExpression(
-            this.AssignmentExpression(), 
+            expr, 
             delegate, 
             start, 
             this.endOffset);
@@ -4009,7 +4034,7 @@ var Parser = __class(function(__super) { return {
         
             this.read();
             expr = this.MemberExpression(true);
-            this.checkAssignTarget(expr);
+            this.checkAssignTarget(expr, true);
             
             return new Node.UpdateExpression(type, expr, true, start, this.endOffset);
         }
@@ -4019,8 +4044,8 @@ var Parser = __class(function(__super) { return {
             this.read();
             expr = this.UnaryExpression();
             
-            if (type === "delete" && this.context.strict && expr.type === "Identifier")
-                this.fail("Cannot delete unqualified property in strict mode", expr);
+            if (type === "delete" && expr.type === "Identifier")
+                this.addStrictError("Cannot delete unqualified property in strict mode", expr);
             
             return new Node.UnaryExpression(type, expr, start, this.endOffset);
         }
@@ -4033,7 +4058,7 @@ var Parser = __class(function(__super) { return {
         if (isIncrement(type) && !token.newlineBefore) {
         
             this.read();
-            this.checkAssignTarget(expr);
+            this.checkAssignTarget(expr, true);
             
             return new Node.UpdateExpression(type, expr, false, start, this.endOffset);
         }
@@ -4131,8 +4156,11 @@ var Parser = __class(function(__super) { return {
         
         this.read("new");
         
-        var expr = this.MemberExpression(false),
-            args = this.peek("div") === "(" ? this.ArgumentList() : null;
+        var expr = this.peek() === "super" ?
+            this.SuperExpression() :
+            this.MemberExpression(false);
+        
+        var args = this.peek("div") === "(" ? this.ArgumentList() : null;
         
         return new Node.NewExpression(expr, args, start, this.endOffset);
     },
@@ -4177,7 +4205,7 @@ var Parser = __class(function(__super) { return {
             case "TEMPLATE": return this.TemplateExpression();
             case "NUMBER": return this.Number();
             case "STRING": return this.String();
-            case "{": return this.ObjectExpression();
+            case "{": return this.ObjectLiteral();
             
             case "(": return this.peek(null, 1) === "for" ? 
                 this.GeneratorComprehension() :
@@ -4185,13 +4213,17 @@ var Parser = __class(function(__super) { return {
             
             case "[": return this.peek(null, 1) === "for" ?
                 this.ArrayComprehension() :
-                this.ArrayExpression();
+                this.ArrayLiteral();
             
             case "IDENTIFIER":
             
-                return this.peek("div", 1) === "=>" ?
-                    this.ArrowFunction(this.BindingIdentifier(), null, start) :
-                    this.Identifier(true);
+                if (this.peek("div", 1) === "=>") {
+                
+                    this.pushContext(true);
+                    return this.ArrowFunctionHead(this.BindingIdentifier(), null, start);
+                }
+                    
+                return this.Identifier(true);
             
             case "REGEX":
                 this.read();
@@ -4217,9 +4249,14 @@ var Parser = __class(function(__super) { return {
     Identifier: function(isVar) {
     
         var token = this.readToken("IDENTIFIER"),
-            context = isVar ? "variable" : "";
+            context = isVar ? "variable" : "",
+            node;
+            
+        node = new Node.Identifier(token.value, context, token.start, token.end);
         
-        return new Node.Identifier(token.value, context, token.start, token.end);
+        this.checkIdentifier(node);
+        
+        return node;
     },
     
     IdentifierName: function() {
@@ -4231,18 +4268,33 @@ var Parser = __class(function(__super) { return {
     String: function() {
     
         var token = this.readToken("STRING");
+        
+        // Ocatal escapes are not allowed in strict mode
+        if (token.strictError)
+            this.addStrictError(token.strictError, token);
+            
         return new Node.String(token.value, token.start, token.end);
     },
     
     Number: function() {
     
         var token = this.readToken("NUMBER");
+        
+        // Legacy ocatals are not allowed in strict mode
+        if (token.strictError)
+            this.addStrictError(token.strictError, token);
+            
         return new Node.Number(token.number, token.start, token.end);
     },
     
     Template: function() {
     
         var token = this.readToken("TEMPLATE", "template");
+        
+        // Ocatal escapes are not allowed in strict mode
+        if (token.strictError)
+            this.addStrictError(token.strictError, token);
+            
         return new Node.Template(token.value, token.templateEnd, token.start, token.end);
     },
     
@@ -4261,11 +4313,11 @@ var Parser = __class(function(__super) { return {
         switch (this.peek()) { 
         
             case "{":
-                node = this.ObjectExpression();
+                node = this.ObjectLiteral();
                 break;
             
             case "[":
-                node = this.ArrayExpression();
+                node = this.ArrayLiteral();
                 break;
             
             default:
@@ -4285,6 +4337,9 @@ var Parser = __class(function(__super) { return {
         var start = this.startOffset,
             expr = null,
             rest = null;
+        
+        // Push a new context in case we are parsing an arrow function
+        this.pushContext(false);
         
         this.read("(");
         
@@ -4314,18 +4369,23 @@ var Parser = __class(function(__super) { return {
         
         this.read(")");
         
-        // Determine whether this is a paren expression or an arrow function
         if (expr === null || rest !== null || this.peek("div") === "=>")
-            return this.ArrowFunction(expr, rest, start);
+            return this.ArrowFunctionHead(expr, rest, start);
+        
+        // Collapse this context into its parent
+        this.popContext(true);
         
         return new Node.ParenExpression(expr, start, this.endOffset);
     },
     
-    ObjectExpression: function() {
+    ObjectLiteral: function() {
     
         var start = this.startOffset,
             list = [],
-            nameSet = {};
+            nameSet = {},
+            node,
+            flag,
+            key;
         
         this.read("{");
         
@@ -4334,92 +4394,69 @@ var Parser = __class(function(__super) { return {
             if (list.length > 0)
                 this.read(",");
             
-            if (this.peek("name") !== "}")
-                list.push(this.PropertyDefinition(nameSet));
+            if (this.peek("name") !== "}") {
+            
+                list.push(node = this.PropertyDefinition());
+                this.checkPropertyName(node, nameSet);
+            }
         }
         
         this.read("}");
         
-        return new Node.ObjectExpression(list, start, this.endOffset);
+        return new Node.ObjectLiteral(list, start, this.endOffset);
     },
     
-    PropertyDefinition: function(nameSet) {
-        
+    PropertyDefinition: function() {
+    
         var start = this.startOffset,
-            flag = PROP_NORMAL, 
             node,
             name;
         
+        if (this.peek("name") === "*")
+            return this.MethodDefinition();
+        
         switch (this.peek("name", 1)) {
         
-            case "IDENTIFIER":
-            case "STRING":
-            case "NUMBER":
-                
-                node = this.MethodDefinition();
-                
-                switch (node.modifier) {
-                
-                    case "get": flag = PROP_GET; break;
-                    case "set": flag = PROP_SET; break;
-                }
-                
-                break;
-            
-            case "(":
-            
-                node = this.MethodDefinition();
-                break;
-            
-            case ":":
-                
-                flag = PROP_ASSIGN;
-                
-                node = new Node.PropertyDefinition(
-                    this.PropertyName(),
-                    (this.read(), this.AssignmentExpression()),
-                    start,
-                    this.endOffset);
-                
-                break;
-            
             case "=":
-            
-                this.unpeek();
-                
-                node = new Node.CoveredPatternProperty(
-                    this.Identifier(),
-                    null,
-                    (this.read(), this.AssignmentExpression()),
-                    start,
-                    this.endOffset);
-                
-                this.addInvalidNode(node, "Invalid property definition in object literal");
-                
-                break;
-                
-            default:
-            
+        
                 // Re-read token as an identifier
                 this.unpeek();
             
-                node = new Node.PropertyDefinition(
+                node = new Node.PatternProperty(
+                    this.Identifier(),
+                    null,
+                    (this.read(), this.AssignmentExpression()),
+                    start,
+                    this.endOffset);
+        
+                this.addInvalidNode("Invalid property definition in object literal", node, false);
+                return node;
+            
+            case ",":
+            case "}":
+            
+                // Re-read token as an identifier
+                this.unpeek();
+        
+                return new Node.PropertyDefinition(
                     this.Identifier(),
                     null,
                     start,
                     this.endOffset);
-                
-                break;
+        }
+            
+        name = this.PropertyName();
+        
+        if (this.peek("name") === ":") {
+        
+            return new Node.PropertyDefinition(
+                name,
+                (this.read(), this.AssignmentExpression()),
+                start,
+                this.endOffset);
         }
         
-        // Check for duplicate names
-        if (this.isDuplicateName(flag, nameSet[name = "." + node.name.value]))
-            this.addInvalidNode(node, "Duplicate property names in object literal");
-        
-        // Set name flag
-        nameSet[name] |= flag;
-        
-        return node;
+        return this.MethodDefinition(name);
     },
     
     PropertyName: function() {
@@ -4431,48 +4468,71 @@ var Parser = __class(function(__super) { return {
             case "IDENTIFIER": return this.Identifier();
             case "STRING": return this.String();
             case "NUMBER": return this.Number();
+            case "[": return this.ComputedPropertyName();
         }
         
         this.fail("Unexpected token " + type);
     },
     
-    MethodDefinition: function() {
+    ComputedPropertyName: function() {
     
-        var start = this.startOffset,
-            modifier = null,
-            params,
-            name;
+        var start = this.startOffset;
         
-        if (this.peek("name") === "*") {
+        this.read("[");
+        var expr = this.AssignmentExpression();
+        this.read("]");
+        
+        return new Node.ComputedPropertyName(expr, start, this.endOffset);
+    },
+    
+    MethodDefinition: function(name) {
+    
+        var start = name ? name.start : this.startOffset,
+            kind = "";
+        
+        if (!name && this.peek("name") === "*") {
         
             this.read();
             
-            modifier = "*";
+            kind = "generator";
             name = this.PropertyName();
         
         } else {
         
-            name = this.PropertyName();
+            if (!name)
+                name = this.PropertyName();
             
             if (name.type === "Identifier" && 
                 this.peek("name") !== "(" &&
                 (name.value === "get" || name.value === "set")) {
             
-                modifier = name.value;
+                kind = name.value;
                 name = this.PropertyName();
             }
         }
         
+        this.pushContext(true);
+        
+        
+        if (kind === "generator")
+            this.context.isGenerator = true;
+        
+        var params = this.FormalParameters(),
+            body = this.FunctionBody();
+        
+        this.checkParameters(params);
+        this.popContext();
+        
         return new Node.MethodDefinition(
-            modifier,
+            kind,
             name,
-            params = this.FormalParameters(),
-            this.FunctionBody(null, params, false),
+            params,
+            body,
             start,
             this.endOffset);
     },
     
-    ArrayExpression: function() {
+    ArrayLiteral: function() {
     
         var start = this.startOffset,
             list = [],
@@ -4502,7 +4562,7 @@ var Parser = __class(function(__super) { return {
         
         this.read("]");
         
-        return new Node.ArrayExpression(list, start, this.endOffset);
+        return new Node.ArrayLiteral(list, start, this.endOffset);
     },
     
     ArrayComprehension: function() {
@@ -4634,11 +4694,11 @@ var Parser = __class(function(__super) { return {
     
     StatementWithLabel: function(label) {
     
-        var name = label && label.value || "",
+        var name = mapKey(label && label.value),
             labelSet = this.context.labelSet,
             stmt;
         
-        if (!labelSet[name]) labelSet[name] = 1;
+        if (!labelSet[name]) labelSet[name] = 0;
         else if (label) this.fail("Invalid label", label);
         
         labelSet[name] += 1;
@@ -4653,7 +4713,7 @@ var Parser = __class(function(__super) { return {
         var start = this.startOffset;
         
         this.read("{");
-        var list = this.StatementList(false);
+        var list = this.StatementList(false, false);
         this.read("}");
         
         return new Node.Block(list, start, this.endOffset);
@@ -4714,11 +4774,12 @@ var Parser = __class(function(__super) { return {
     VariableDeclaration: function(noIn) {
     
         var start = this.startOffset,
-            keyword = this.peek(),
+            token = this.peekToken(),
+            kind = token.type,
             isConst = false,
             list = [];
         
-        switch (keyword) {
+        switch (kind) {
         
             case "var":
                 break;
@@ -4726,8 +4787,13 @@ var Parser = __class(function(__super) { return {
             case "const":
                 isConst = true;
             
-            case "let":
-                break;
+            case "IDENTIFIER":
+            
+                if (token.value === "let") {
+                
+                    kind = "let";
+                    break;
+                }
                 
             default:
                 this.fail("Expected var, const, or let");
@@ -4743,7 +4809,7 @@ var Parser = __class(function(__super) { return {
             else break;
         }
         
-        return new Node.VariableDeclaration(keyword, list, start, this.endOffset);
+        return new Node.VariableDeclaration(kind, list, start, this.endOffset);
     },
     
     VariableDeclarator: function(noIn, isConst) {
@@ -4773,7 +4839,7 @@ var Parser = __class(function(__super) { return {
         var start = this.startOffset;
         
         this.read("return");
-        var value = this.maybeEnd() ? this.Expression() : null;
+        var value = this.maybeEnd() ? null : this.Expression();
         
         this.Semicolon();
         
@@ -4786,20 +4852,22 @@ var Parser = __class(function(__super) { return {
             token = this.readToken(),
             keyword = token.type,
             labelSet = this.context.labelSet,
-            label;
+            label,
+            name;
         
-        label = this.maybeEnd() ? this.Identifier() : null;
+        label = this.maybeEnd() ? null : this.Identifier();
+        name = mapKey(label && label.value);
         
         this.Semicolon();
         
         if (label) {
         
-            if (!labelSet[label.value])
+            if (!labelSet[name])
                 this.fail("Invalid label", label);
         
         } else {
         
-            if (!labelSet[""] && !(keyword === "break" && this.context.switchDepth > 0))
+            if (!labelSet[name] && !(keyword === "break" && this.context.switchDepth > 0))
                 this.fail("Invalid " + keyword + " statement", token);
         }
         
@@ -4814,7 +4882,7 @@ var Parser = __class(function(__super) { return {
         
         this.read("throw");
         
-        var expr = this.maybeEnd() ? this.Expression() : null;
+        var expr = this.maybeEnd() ? null : this.Expression();
         
         if (expr === null)
             this.fail("Missing throw expression");
@@ -4907,10 +4975,17 @@ var Parser = __class(function(__super) { return {
                 break;
                 
             case "var":
-            case "let":
             case "const":
                 init = this.VariableDeclaration(true);
                 break;
+            
+            case "IDENTIFIER":
+            
+                if (this.peekLet()) {
+                
+                    init = this.VariableDeclaration(true);
+                    break;
+                }
             
             default:
                 init = this.Expression(true);
@@ -4919,7 +4994,7 @@ var Parser = __class(function(__super) { return {
         
         if (init) {
         
-            if (this.peekKeyword("in"))
+            if (this.peek() === "in")
                 return this.ForInStatement(init, start);
         
             if (this.peekKeyword("of"))
@@ -4977,8 +5052,9 @@ var Parser = __class(function(__super) { return {
     
     WithStatement: function() {
     
-        if (this.context.strict)
-            this.fail("With statement is not allowed in strict mode");
+        var token = this.readToken("with");
+        
+        this.addStrictError("With statement is not allowed in strict mode", token);
     
         var start = this.startOffset;
         
@@ -5119,16 +5195,13 @@ var Parser = __class(function(__super) { return {
                 
                 // Check for strict mode
                 if (dir === "use strict")
-                    this.setStrict();
-                    
+                    this.setStrict(true);
+            
             } else {
             
                 prologue = false;
             }
         }
-        
-        // Check for invalid nodes
-        this.checkInvalidNodes();
         
         return list;
     },
@@ -5139,9 +5212,7 @@ var Parser = __class(function(__super) { return {
             
             case "function": return this.FunctionDeclaration();
             case "class": return this.ClassDeclaration();
-            case "let": 
             case "const": return this.LexicalDeclaration();
-            
             case "import": return this.ImportDeclaration();
             
             case "export":
@@ -5152,9 +5223,12 @@ var Parser = __class(function(__super) { return {
                 break;
             
             case "IDENTIFIER":
+            
+                if (this.peekLet())
+                    return this.LexicalDeclaration();
                 
                 if (this.peekModule())
-                    return this.ModuleNode();
+                    return this.ModuleDefinition();
                 
                 break;
         }
@@ -5177,23 +5251,35 @@ var Parser = __class(function(__super) { return {
     FunctionDeclaration: function() {
     
         var start = this.startOffset,
-            gen = false,
-            ident,
-            params;
+            kind = "";
         
         this.read("function");
         
         if (this.peek() === "*") {
             
             this.read();
-            gen = true;
+            kind = "generator";
         }
         
-        return new Node.FunctionDeclaration(
-            gen,
-            ident = this.Identifier(),
+        this.pushContext(true);
+        
+        if (kind === "generator")
+            this.context.isGenerator = true;
+        
+        var ident = this.Identifier(),
             params = this.FormalParameters(),
-            this.FunctionBody(ident, params, false),
+            body = this.FunctionBody();
+            
+        this.checkBindingIdent(ident);
+        this.checkParameters(params);
+        
+        this.popContext();
+        
+        return new Node.FunctionDeclaration(
+            kind,
+            ident,
+            params,
+            body,
             start,
             this.endOffset);
     },
@@ -5201,26 +5287,40 @@ var Parser = __class(function(__super) { return {
     FunctionExpression: function() {
     
         var start = this.startOffset,
-            gen = false,
-            ident = null,
-            params;
+            kind = "",
+            ident = null;
         
         this.read("function");
         
         if (this.peek() === "*") {
             
             this.read();
-            gen = true;
+            kind = "generator";
         }
         
-        if (this.peek() !== "(")
+        if (this.peek() !== "(") {
+        
             ident = this.Identifier();
+            this.checkBindingIdent(ident);
+        }
+        
+        this.pushContext(true);
+        
+        if (kind === "generator")
+            this.context.isGenerator = true;
+        
+        var params = this.FormalParameters(),
+            body = this.FunctionBody();
+        
+        this.checkParameters(params);
+        
+        this.popContext();
         
         return new Node.FunctionExpression(
-            gen,
+            kind,
             ident,
-            params = this.FormalParameters(),
-            this.FunctionBody(ident, params, false),
+            params,
+            body,
             start,
             this.endOffset);
     },
@@ -5275,66 +5375,55 @@ var Parser = __class(function(__super) { return {
         return new Node.RestParameter(this.BindingIdentifier(), start, this.endOffset);
     },
     
-    FunctionBody: function(ident, params, isStrict) {
-    
-        this.pushContext(true, isStrict);
+    FunctionBody: function() {
+        
+        this.context.isFunctionBody = true;
         
         var start = this.startOffset;
         
         this.read("{");
-        var statements = this.StatementList(true);
+        var statements = this.StatementList(true, false);
         this.read("}");
-        
-        if (ident) this.checkBindingIdent(ident);
-        this.checkParameters(params);
-        
-        this.popContext();
         
         return new Node.FunctionBody(statements, start, this.endOffset);
     },
     
-    ArrowFunction: function(formals, rest, start) {
+    ArrowFunctionHead: function(formals, rest, start) {
+    
+        // Context must have been pushed by caller
+        this.context.isFunction = true;
+        
+        var params = this.transformFormals(formals, rest);
+        this.checkParameters(params);
+        
+        return new Node.ArrowFunctionHead(params, start, this.endOffset);
+    },
+    
+    ArrowFunctionBody: function(head, noIn) {
     
         this.read("=>");
         
-        var params = this.transformFormals(formals), 
-            body;
+        var params = head.parameters,
+            start = head.start;
         
-        if (rest)
-            params.push(rest);
+        var body = this.peek() === "{" ?
+            this.FunctionBody() :
+            this.AssignmentExpression(noIn);
         
-        if (this.peek() === "{") {
-        
-            body = this.FunctionBody(null, params, true);
-            
-        } else {
-        
-            // Check parameters in the current context
-            this.checkParameters(params);
-            body = this.AssignmentExpression();
-        }
+        this.popContext();
         
         return new Node.ArrowFunction(params, body, start, this.endOffset);
     },
     
     // === Modules ===
     
-    ModuleNode: function() {
+    ModuleDefinition: function() {
     
         var start = this.startOffset,
             ident,
             target;
         
         this.readKeyword("module");
-        
-        if (this.peek() === "STRING") {
-        
-            return new Node.ModuleRegistration(
-                this.String(),
-                this.ModuleBody(),
-                start,
-                this.endOffset);
-        }
         
         ident = this.BindingIdentifier();
         
@@ -5352,11 +5441,10 @@ var Parser = __class(function(__super) { return {
             
         } else if (this.peekKeyword("from")) {
     
-            this.read();
-            target = this.peek() === "STRING" ? this.String() : this.ModulePath();
+            target = this.ModuleSpecifier();
             this.Semicolon();
         
-            return new Node.ModuleFromDeclaration(
+            return new Node.ModuleImport(
                 ident,
                 target,
                 start,
@@ -5398,6 +5486,12 @@ var Parser = __class(function(__super) { return {
         return new Node.ModuleBody(list, start, this.endOffset);
     },
     
+    ModuleSpecifier: function() {
+    
+        this.readKeyword("from");
+        return this.peek() === "STRING" ? this.String() : this.ModulePath();
+    },
+    
     ImportDeclaration: function() {
     
         var start = this.startOffset,
@@ -5406,6 +5500,15 @@ var Parser = __class(function(__super) { return {
             from;
         
         this.read("import");
+        
+        if (this.peek() === "IDENTIFIER") {
+        
+            ident = this.BindingIdentifier();
+            from = this.ModuleSpecifier();
+            this.Semicolon();
+            
+            return new Node.ImportDefaultDeclaration(ident, from, start, this.endOffset);
+        }
         
         this.read("{");
     
@@ -5418,9 +5521,7 @@ var Parser = __class(function(__super) { return {
         }
     
         this.read("}");
-        
-        this.readKeyword("from");
-        from = this.peek() === "STRING" ? this.String() : this.ModulePath();
+        from = this.ModuleSpecifier();
         this.Semicolon();
         
         return new Node.ImportDeclaration(list, from, start, this.endOffset);
@@ -5429,12 +5530,26 @@ var Parser = __class(function(__super) { return {
     ImportSpecifier: function() {
     
         var start = this.startOffset,
-            remote = this.Identifier(),
-            local = null;
+            hasLocal = false,
+            local = null,
+            remote;
         
-        if (this.peekKeyword("as")) {
+        if (this.peek() !== "IDENTIFIER") {
         
-            this.read();
+            // Re-scan token as an identifier name
+            this.unpeek();
+            remote = this.IdentifierName();
+            hasLocal = true;
+            
+        } else {
+        
+            remote = this.Identifier();
+            hasLocal = this.peekKeyword("as");
+        }
+        
+        if (hasLocal) {
+        
+            this.readKeyword("as");
             local = this.BindingIdentifier();
             
         } else {
@@ -5455,7 +5570,6 @@ var Parser = __class(function(__super) { return {
         switch (this.peek()) {
                 
             case "var":
-            case "let":
             case "const":
             
                 binding = this.VariableDeclaration(false);
@@ -5474,6 +5588,13 @@ var Parser = __class(function(__super) { return {
             
             case "IDENTIFIER":
             
+                if (this.peekLet()) {
+                
+                    binding = this.VariableDeclaration(false);
+                    this.Semicolon();
+                    break;
+                }
+            
                 if (this.peekModule()) {
                 
                     binding = this.ModuleDeclaration();
@@ -5482,7 +5603,7 @@ var Parser = __class(function(__super) { return {
                 
             default:
                 
-                binding = this.ExportSpecifierSet();
+                binding = this.ExportsList();
                 this.Semicolon();
                 break;
         }
@@ -5490,7 +5611,7 @@ var Parser = __class(function(__super) { return {
         return new Node.ExportDeclaration(binding, start, this.endOffset);
     },
     
-    ExportSpecifierSet: function() {
+    ExportsList: function() {
     
         var start = this.startOffset,
             list = null,
@@ -5499,12 +5620,7 @@ var Parser = __class(function(__super) { return {
         if (this.peek() === "*") {
         
             this.read();
-            
-            if (this.peekKeyword("from")) {
-            
-                this.read();
-                from = this.peek() === "STRING" ? this.String() : this.ModulePath();
-            }
+            from = this.ModuleSpecifier();
             
         } else {
         
@@ -5521,15 +5637,25 @@ var Parser = __class(function(__super) { return {
             }
             
             this.read("}");
+            
+            if (this.peekKeyword("from")) {
+            
+                from = this.ModuleSpecifier();
+            
+            } else {
+            
+                // TODO: Make sure that export specifiers do
+                // not reference reserved words!
+            }
         }
         
-        return new Node.ExportSpecifierSet(list, from, start, this.endOffset);
+        return new Node.ExportsList(list, from, start, this.endOffset);
     },
     
     ExportSpecifier: function() {
     
         var start = this.startOffset,
-            local = this.Identifier(),
+            local = this.IdentifierName(),
             remote = null;
         
         if (this.peekKeyword("as")) {
@@ -5572,7 +5698,7 @@ var Parser = __class(function(__super) { return {
         if (this.peek() === "extends") {
         
             this.read();
-            base = this.AssignmentExpression();
+            base = this.MemberExpression(true);
         }
         
         return new Node.ClassDeclaration(
@@ -5611,6 +5737,7 @@ var Parser = __class(function(__super) { return {
     ClassBody: function() {
     
         this.pushContext(false, true);
+        this.context.isClass = true;
         
         var start = this.startOffset,
             nameSet = {}, 
@@ -5647,35 +5774,29 @@ var Parser = __class(function(__super) { return {
         }
         
         method = this.MethodDefinition();
-        
-        switch (method.modifier) {
-        
-            case "get": flag = PROP_GET; break;
-            case "set": flag = PROP_SET; break;
-        }
-        
-        // Check for duplicate names
-        if (this.isDuplicateName(flag, nameSet[name = "." + method.name.value]))
-            this.fail("Duplicate element name in class definition.", method);
-        
-        // Set name flag
-        nameSet[name] |= flag;
+        this.checkClassElementName(method, nameSet);
         
         return new Node.ClassElement(isStatic, method, start, this.endOffset);
     }
     
-    
 }});
 
 
+function mixin(source) {
+
+    source = source.prototype;
+    Object.keys(source).forEach((function(key) { return Parser.prototype[key] = source[key]; }));
+}
+
 // Add externally defined methods
-Object.mixin(Parser.prototype, Transform.prototype);
-Object.mixin(Parser.prototype, Validate.prototype);
+mixin(Transform);
+mixin(Validate);
+
 
 
 exports.Parser = Parser; return exports; }).call(this, {});
 
-var es6parse = (function(exports) {
+var main_ = (function(exports) {
 
 var Node = TreeNode;
 
@@ -5730,7 +5851,7 @@ exports.Parser = Parser; exports.Scanner = Scanner; exports.Node = Node; exports
 
 var Parser__ = (function(exports) {
 
-Object.keys(es6parse).forEach(function(k) { exports[k] = es6parse[k]; });
+Object.keys(main_).forEach(function(k) { exports[k] = main_[k]; });
 
 return exports; }).call(this, {});
 
@@ -5740,7 +5861,7 @@ var HAS = Object.prototype.hasOwnProperty;
 
 var StringMap = __class(function(__super) { return {
 
-    constructor: function() {
+    constructor: function StringMap() {
     
         this._map = {};
     },
@@ -5803,7 +5924,7 @@ var StringMap = StringMap___.StringMap;
 
 var StringSet = __class(function(__super) { return {
 
-    constructor: function() {
+    constructor: function StringSet() {
     
         this._map = new StringMap;
     },
@@ -5932,7 +6053,7 @@ function tempPath() {
 
 var TempFile = __class(function(__super) { return {
 
-    constructor: function() {
+    constructor: function TempFile() {
     
         this.url = "";
         this.path = null;
@@ -6204,7 +6325,7 @@ function dispatch(evt) {
 
 var EventTarget = __class(function(__super) { return {
 
-	constructor: function(parent) {
+	constructor: function EventTarget(parent) {
 	
 		this.eventListeners = {};
 		this.parentTarget = parent || null;
@@ -6249,7 +6370,7 @@ var forEachPromise = Promise___.forEach;
 
 var CreateFolder = __class(Action, function(__super) { return {
 
-    constructor: function(parent, basePath, createBase) {
+    constructor: function CreateFolder(parent, basePath, createBase) {
     
         __super.constructor.call(this, parent);
         
@@ -6314,7 +6435,7 @@ var Promise = Promise___.Promise, forEachPromise = Promise___.forEach;
 
 var ModuleInstaller = __class(EventTarget, function(__super) { return {
 
-    constructor: function(folder) {
+    constructor: function ModuleInstaller(folder) {
     
         __super.constructor.call(this);
         
@@ -6472,7 +6593,7 @@ return exports; }).call(this, {});
 
 var Parser = (function(exports) {
 
-Object.keys(es6parse).forEach(function(k) { exports[k] = es6parse[k]; });
+Object.keys(main_).forEach(function(k) { exports[k] = main_[k]; });
 
 return exports; }).call(this, {});
 
@@ -6506,9 +6627,10 @@ function analyze(ast, resolvePath) {
         
         switch (node.type) {
         
-            case "ExportSpecifierSet":
+            case "ExportsList":
             case "ImportDeclaration":
-            case "ModuleFromDeclaration":
+            case "ImportDefaultDeclaration":
+            case "ModuleImport":
                 
                 addEdge(node.from);
                 break;
@@ -6520,6 +6642,7 @@ function analyze(ast, resolvePath) {
                 
                 break;
             
+            // TODO: Add generator, block (let, const, function in block)?
             case "ClassExpression":
             case "ClassBody":
             case "FunctionExpression":
@@ -6738,7 +6861,7 @@ return exports; }).call(this, {});
 
 var Parser_ = (function(exports) {
 
-Object.keys(es6parse).forEach(function(k) { exports[k] = es6parse[k]; });
+Object.keys(main_).forEach(function(k) { exports[k] = main_[k]; });
 
 return exports; }).call(this, {});
 
@@ -6761,12 +6884,12 @@ var HAS_SCHEMA = /^[a-z]+:/i,
 
 var Replacer = __class(function(__super) { return {
 
-    constructor: function(options) {
+    constructor: function Replacer(options) {
         
         options || (options = {});
         
-        this.loadCall = options.loadCall || (function(url) { return "__load(" + JSON.stringify(url) + ")"; });
-        this.mapURI = options.mapURI || (function(uri) { return uri; });
+        this.loadCall = options.loadCall || ((function(url) { return "__load(" + JSON.stringify(url) + ")"; }));
+        this.mapURI = options.mapURI || ((function(uri) { return uri; }));
     },
     
     replace: function(input) { var __this = this; 
@@ -6873,7 +6996,7 @@ var Replacer = __class(function(__super) { return {
             node.name.text = "__static_" + node.name.text;
         }
         
-        if (!node.modifier)
+        if (!node.kind)
             return node.name.text + ": function(" + this.joinList(node.params) + ") " + node.body.text;
     },
     
@@ -6883,9 +7006,9 @@ var Replacer = __class(function(__super) { return {
             return node.name.text + ": " + node.name.text;
     },
     
-    ModuleFromDeclaration: function(node) {
+    ModuleImport: function(node) {
     
-        return "var " + node.ident.text + " = " + this.modulePath(node.from) + ";";
+        return "var " + node.identifier.text + " = " + this.modulePath(node.from) + ";";
     },
     
     ModuleDeclarationBegin: function(node) {
@@ -6895,7 +7018,7 @@ var Replacer = __class(function(__super) { return {
     
     ModuleDeclaration: function(node) { var __this = this; 
     
-        var out = "var " + node.ident.text + " = (function(exports) ";
+        var out = "var " + node.identifier.text + " = (function(exports) ";
         
         out += node.body.text.replace(/\}$/, "");
         
@@ -6960,7 +7083,7 @@ var Replacer = __class(function(__super) { return {
             case "ClassDeclaration":
             case "ModuleDeclaration":
             
-                ident = binding.ident.text;
+                ident = binding.identifier.text;
                 exports[ident] = ident;
                 return binding.text;
         }
@@ -6971,15 +7094,7 @@ var Replacer = __class(function(__super) { return {
         
         if (!binding.specifiers) {
         
-            if (from) {
-            
-                out += "Object.keys(" + fromPath + ").forEach(function(k) { exports[k] = " + fromPath + "[k]; });";
-                
-            } else {
-            
-                // TODO:
-                throw new Error("`export *;` is not implemented.");
-            }
+            out += "Object.keys(" + fromPath + ").forEach(function(k) { exports[k] = " + fromPath + "[k]; });";
         
         } else {
         
@@ -7082,7 +7197,7 @@ var Replacer = __class(function(__super) { return {
     
     ClassDeclaration: function(node) {
     
-        return "var " + node.ident.text + " = __class(" + 
+        return "var " + node.identifier.text + " = __class(" + 
             (node.base ? (node.base.text + ", ") : "") +
             "function(__super) { return " +
             node.body.text + "});";
@@ -7093,23 +7208,24 @@ var Replacer = __class(function(__super) { return {
         var before = "", 
             after = "";
         
-        if (node.ident) {
+        if (node.identifier) {
         
-            before = "(function() { var " + node.ident.text + " = ";
-            after = "; return " + node.ident.text + "; })()";
+            before = "(function() { var " + node.identifier.text + " = ";
+            after = "; return " + node.identifier.text + "; })()";
         }
         
-        return before + 
+        return "(" + before + 
             "__class(" + 
             (node.base ? (node.base.text + ", ") : "") +
-            "function(__super) { return" +
-            node.body.text + "})" +
-            after;
+            "function(__super) { return " +
+            node.body.text + " })" +
+            after + ")";
     },
     
     ClassBody: function(node) {
     
-        var elems = node.elements, 
+        var classIdent = node.parentNode.identifier,
+            elems = node.elements, 
             e,
             i;
         
@@ -7117,11 +7233,20 @@ var Replacer = __class(function(__super) { return {
         
             e = elems[i];
             
-            if (e.static)
+            if (e.static) {
+            
                 e.text = e.text.replace(/^static\s+/, "");
+                
+            } else if (e.method.name.value === "constructor" && classIdent) {
+            
+                e.text = e.text.replace(/function/, "function " + classIdent.value);
+            }
             
             if (i < elems.length - 1)
                 e.text += ",";
+            
+            // TODO: fix so that classes without a constructor still
+            // have the right "name"
         }
     },
     
@@ -7520,7 +7645,7 @@ var DEFAULT_PORT = 80,
 
 var Server = __class(function(__super) { return {
 
-    constructor: function(options) { var __this = this; 
+    constructor: function Server(options) { var __this = this; 
     
         options || (options = {});
     
@@ -7706,7 +7831,7 @@ var Promise = Promise_.Promise;
 
 var Proxy = __class(function(__super) { return {
 
-    constructor: function(options) { var __this = this; 
+    constructor: function Proxy(options) { var __this = this; 
     
         options || (options = {});
     
@@ -7915,7 +8040,7 @@ function parse(argv, params) {
 
 var ConsoleCommand = __class(function(__super) { return {
 
-    constructor: function(cmd) {
+    constructor: function ConsoleCommand(cmd) {
     
         this.fallback = cmd;
         this.commands = {};
@@ -8021,7 +8146,7 @@ exports.green = green; exports.red = red; exports.gray = gray; exports.bold = bo
 
 var ConsoleIO = __class(function(__super) { return {
 
-    constructor: function() {
+    constructor: function ConsoleIO() {
     
         this._inStream = process.stdin;
         this._outStream = process.stdout;
@@ -8367,7 +8492,7 @@ function run() {
 
 exports.run = run; return exports; }).call(this, {});
 
-var es6now = (function(exports) {
+var main = (function(exports) {
 
 var Program = Program_;
 
@@ -8380,7 +8505,7 @@ if (typeof require === "function" &&
 
 return exports; }).call(this, {});
 
-Object.keys(es6now).forEach(function(k) { exports[k] = es6now[k]; });
+Object.keys(main).forEach(function(k) { exports[k] = main[k]; });
 
 
 }, ["fs","path","url","http","os","crypto"], "");
