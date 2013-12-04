@@ -3,16 +3,14 @@ module Path from "node:path";
 module AsyncFS from "AsyncFS.js";
 module Runtime from "Runtime.js";
 
-import { ModuleInstaller } from "ModuleInstaller.js";
 import { bundle } from "Bundler.js";
 import { translate } from "Translator.js";
 import { Server } from "Server.js";
-import { Proxy } from "Proxy.js";
 import { ConsoleCommand } from "ConsoleCommand.js";
 import { ConsoleIO, Style } from "ConsoleIO.js";
+import { isPackageURI, locatePackage } from "PackageLocator.js";
 
-var ES6_GUESS = /(?:^|\n)\s*(?:import|export|class)\s/,
-    WEB_URL = /^https?:\/\//i;
+var ES6_GUESS = /(?:^|\n)\s*(?:import|export|class)\s/;
 
 function absPath(path) {
 
@@ -36,13 +34,12 @@ function getOutPath(inPath, outPath) {
 function overrideCompilation() {
 
     var Module = module.constructor,
-        resolveFilename = Module._resolveFilename,
-        installer = new ModuleInstaller;
+        resolveFilename = Module._resolveFilename;
     
     Module._resolveFilename = function(filename, parent) {
     
-        if (WEB_URL.test(filename))
-            filename = installer.localPath(filename);
+        if (isPackageURI(filename))
+            filename = locatePackage(filename);
         
         return resolveFilename(filename, parent);
     };
@@ -161,82 +158,6 @@ export function run() {
                 
                     console.log(text);
                 }
-                
-            });
-        }
-    
-    }).add("install", {
-    
-        params: {
-        
-            "input": { short: "i", positional: true }
-        },
-        
-        execute(params) {
-        
-            var installer = new ModuleInstaller(),
-                io = new ConsoleIO;
-
-            installer.on("fetch-begin", evt => {
-
-                io.writeLine('Fetching "' + evt.url + '"');
-            
-            }).on("fetch-complete", evt => {
-
-                io.writeLine('Received "' + evt.url + '"');
-            
-            }).on("create-path", evt => {
-
-                io.writeLine('Creating path "' + evt.path + '"');
-            
-            }).on("overwrite", evt => {
-
-                io.write('Overwrite "' + evt.url + '"? [n]: ');
-                
-                evt.overwrite = io.readLine().then(val => {
-                
-                    val = val.trim().toLowerCase() || "n";
-                    return val === "y" || val === "yes";
-                });
-                
-            }).on("move-begin", evt => {
-            
-                io.writeLine('Installing "' + evt.url + '"');
-            });
-
-            installer.install(params.input);
-        }
-        
-    }).add("proxy", {
-    
-        params: {
-        
-            "port": { short: "p", positional: true }
-        },
-        
-        execute(params) {
-        
-            var proxy = new Proxy(params),
-                io = new ConsoleIO,
-                stopped = false;
-                
-            proxy.start();
-            
-            io.write("Listening on port " + proxy.port + ".  Press Enter to exit.");
-            
-            io.readLine().then(data => {
-            
-                if (stopped)
-                    return;
-                
-                stopped = true;
-                
-                io.write("Waiting for connections to close...");
-                
-                proxy.stop().then(val => {
-                
-                    io.writeLine("OK");
-                });
                 
             });
         }

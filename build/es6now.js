@@ -1,4 +1,4 @@
-/*=es6now=*/(function(fn, deps, name) { if (typeof exports !== 'undefined') fn.call(typeof global === 'object' ? global : this, require, exports); else if (typeof __MODULE === 'function') __MODULE(fn, deps); else if (typeof define === 'function' && define.amd) define(['require', 'exports'].concat(deps), fn); else if (typeof window !== 'undefined' && name) fn.call(window, null, window[name] = {}); else fn.call(window || this, null, {}); })(function(require, exports) { 'use strict'; function __load(p) { var e = require(p); return typeof e === 'object' ? e : { 'default': e }; } var _M0 = __load("fs"), _M1 = __load("path"), _M2 = __load("url"), _M3 = __load("http"), _M4 = __load("os"), _M5 = __load("crypto"); 
+/*=es6now=*/(function(fn, deps, name) { if (typeof exports !== 'undefined') fn.call(typeof global === 'object' ? global : this, require, exports); else if (typeof __MODULE === 'function') __MODULE(fn, deps); else if (typeof define === 'function' && define.amd) define(['require', 'exports'].concat(deps), fn); else if (typeof window !== 'undefined' && name) fn.call(window, null, window[name] = {}); else fn.call(window || this, null, {}); })(function(require, exports) { 'use strict'; function __load(p) { var e = require(p); return typeof e === 'object' ? e : { 'default': e }; } var _M0 = __load("fs"), _M1 = __load("path"), _M2 = __load("http"), _M3 = __load("url"); 
 
 var __this = this; (function() {
 
@@ -1088,122 +1088,6 @@ Object.keys(AsyncFS).forEach(function(k) { exports[k] = AsyncFS[k]; });
 
 return exports; }).call(this, {});
 
-var CachePath = (function(exports) {
-
-var FS = _M0;
-var Path = _M1;
-
-
-var basePath = process.env.HOME,
-    dotPrefix = true;
-
-function initPath() {
-
-    /* Windows */ tryPath(process.env.LOCALAPPDATA) ||
-    /* OSX     */ tryPath("Library/Application Support");
-    
-    function tryPath(path) {
-    
-        if (!path)
-            return false;
-        
-        path = Path.resolve(basePath, path);
-        
-        if (FS.existsSync(path)) {
-        
-            basePath = path;
-            dotPrefix = false;
-            
-            return true;
-        }
-        
-        return false;
-    }
-}
-
-initPath();
-
-
-function urlToPath(url) {
-
-    // TODO: Replace invalid characters in path
-    
-    // Remove the protocol and leading slashes
-    return url.replace(/^(https?):\/\//i, "");
-}
-
-
-function getCacheFolder(appName) {
-
-    if (dotPrefix) 
-        appName = "." + appName;
-    
-    return Path.join(basePath, appName);
-}
-
-exports.urlToPath = urlToPath; exports.getCacheFolder = getCacheFolder; return exports; }).call(this, {});
-
-var Action_ = (function(exports) {
-
-
-var Action = __class(function(__super) { return {
-
-    constructor: function Action(parent) {
-    
-        this.cancelled = false;
-        this.children = [];
-        this.parentAction = null;
-        
-        if (parent)
-            parent.addChild(this);
-    },
-    
-    addChild: function(child) {
-    
-        if (child.parentAction === this)
-            return;
-        
-        child.parentAction = this;
-        this.children.push(child);
-    },
-    
-    cancel: function() {
-    
-        if (this.cancelled)
-            return;
-        
-        this.cancelled = true;
-        this.children.forEach((function(child) { return child.cancel(); }));
-    }
-}});
-
-exports.Action = Action; return exports; }).call(this, {});
-
-var FileFetch_ = (function(exports) {
-
-var URL = _M2;
-var Path = _M1;
-var AFS = AsyncFS__;
-
-var Action = Action_.Action;
-
-
-function urlToPath(url) {
-
-    return Path.normalize(URL.parse(url).path);
-}
-
-var FileFetch = __class(Action, function(__super) { return {
-    
-    begin: function(url) {
-    
-        return AFS.readFile(urlToPath(url), { encoding: "utf8" });
-    }
-}});
-
-
-exports.FileFetch = FileFetch; return exports; }).call(this, {});
-
 var PromiseFlow = (function(exports) {
 
 var Promise = Promise__.Promise;
@@ -1233,76 +1117,130 @@ Object.keys(PromiseFlow).forEach(function(k) { exports[k] = PromiseFlow[k]; });
 
 return exports; }).call(this, {});
 
-var HttpFetch_ = (function(exports) {
+var StringMap__ = (function(exports) {
 
-var HTTP = _M3;
+var HAS = Object.prototype.hasOwnProperty;
 
-var Promise = Promise___.Promise;
-var Action = Action_.Action;
+var StringMap = __class(function(__super) { return {
 
-/*
-
-TODO:
-
-- https
-- redirects?
-- timeouts?
-- progress events
-
-*/
-
-var HttpFetch = __class(Action, function(__super) { return {
+    constructor: function StringMap() {
     
-    begin: function(url) { var __this = this; 
+        this._map = {};
+    },
     
-        return new Promise((function(resolver) {
+    get: function(key) {
     
-            var output = "";
+        if (HAS.call(this._map, key))
+            return this._map[key];
+    },
+    
+    set: function(key, value) {
+    
+        this._map[key] = value;
+        return this;
+    },
+    
+    has: function(key) {
+    
+        return HAS.call(this._map, key);
+    },
+    
+    delete: function(key) {
+    
+        if (!HAS.call(this._map, key))
+            return false;
         
-            var request = HTTP.request(url, (function(response) {
+        delete this.map[key];
+        return true;
+    },
     
-                response.setEncoding("utf8");
-                
-                response.on("data", (function(data) {
-                
-                    output += data;
-                    
-                    if (__this.cancelled)
-                        request.abort(); 
-                }));
-                
-                response.on("end", (function(val) {
-                
-                    if (__this.cancelled) resolver.reject(new Error("HTTP request aborted."));
-                    else resolver.resolve(output)
-                }));
-            }));
+    clear: function() {
     
-            request.on("error", (function(err) { return resolver.reject(err); }));
-            request.end();
-        }));
+        this._map = {};
+    },
     
+    keys: function() {
+    
+        return Object.keys(this._map);
+    },
+    
+    values: function() { var __this = this; 
+    
+        return Object.keys(this._map).map((function(key) { return __this._map[key]; }));
+    },
+    
+    forEach: function(fn, thisArg) {
+    
+        var keys = this.keys(), i;
+        
+        for (i = 0; i < keys.length; ++i)
+            fn.call(thisArg, this._map[keys[i]], keys[i], this);
     }
 }});
 
+exports.StringMap = StringMap; return exports; }).call(this, {});
 
-exports.HttpFetch = HttpFetch; return exports; }).call(this, {});
+var StringMap_ = (function(exports) {
 
-var NullFetch_ = (function(exports) {
+Object.keys(StringMap__).forEach(function(k) { exports[k] = StringMap__[k]; });
 
-var Action = Action_.Action;
-var Promise = Promise___.Promise;
+return exports; }).call(this, {});
 
+var StringSet = (function(exports) {
 
-var NullFetch = __class(Action, function(__super) { return {
+var StringMap = StringMap__.StringMap;
 
-    begin: function() { 
+var StringSet = __class(function(__super) { return {
+
+    constructor: function StringSet() {
     
-        return Promise.resolve("");
+        this._map = new StringMap;
+    },
+    
+    has: function(key) {
+    
+        return this._map.has(key);
+    },
+    
+    add: function(key) {
+    
+        this._map.set(key, key);
+        return this;
+    },
+    
+    delete: function(key) {
+    
+        return this._map.delete(key);
+    },
+    
+    clear: function() {
+    
+        this._map.clear();
+    },
+    
+    keys: function() {
+    
+        return this._map.keys();
+    },
+    
+    values: function() {
+    
+        return this._map.keys();
+    },
+    
+    forEach: function(fn, thisArg) { var __this = this; 
+    
+        this._map.forEach((function(value, key) { return fn.call(thisArg, value, key, __this); }));
     }
 }});
 
-exports.NullFetch = NullFetch; return exports; }).call(this, {});
+exports.StringSet = StringSet; return exports; }).call(this, {});
+
+var StringSet_ = (function(exports) {
+
+Object.keys(StringSet).forEach(function(k) { exports[k] = StringSet[k]; });
+
+return exports; }).call(this, {});
 
 var TreeNode = (function(exports) {
 
@@ -3423,7 +3361,7 @@ var Validate = __class(function(__super) { return {
 
 exports.Validate = Validate; return exports; }).call(this, {});
 
-var Parser___ = (function(exports) {
+var Parser__ = (function(exports) {
 
 var Node = TreeNode;
 
@@ -5800,7 +5738,7 @@ var main_ = (function(exports) {
 
 var Node = TreeNode;
 
-var Parser = Parser___.Parser;
+var Parser = Parser__.Parser;
 var Scanner = Scanner_.Scanner;
 
 
@@ -5848,748 +5786,6 @@ function forEachChild(node, fn) {
 
 
 exports.Parser = Parser; exports.Scanner = Scanner; exports.Node = Node; exports.parseModule = parseModule; exports.parseScript = parseScript; exports.forEachChild = forEachChild; return exports; }).call(this, {});
-
-var Parser__ = (function(exports) {
-
-Object.keys(main_).forEach(function(k) { exports[k] = main_[k]; });
-
-return exports; }).call(this, {});
-
-var StringMap___ = (function(exports) {
-
-var HAS = Object.prototype.hasOwnProperty;
-
-var StringMap = __class(function(__super) { return {
-
-    constructor: function StringMap() {
-    
-        this._map = {};
-    },
-    
-    get: function(key) {
-    
-        if (HAS.call(this._map, key))
-            return this._map[key];
-    },
-    
-    set: function(key, value) {
-    
-        this._map[key] = value;
-        return this;
-    },
-    
-    has: function(key) {
-    
-        return HAS.call(this._map, key);
-    },
-    
-    delete: function(key) {
-    
-        if (!HAS.call(this._map, key))
-            return false;
-        
-        delete this.map[key];
-        return true;
-    },
-    
-    clear: function() {
-    
-        this._map = {};
-    },
-    
-    keys: function() {
-    
-        return Object.keys(this._map);
-    },
-    
-    values: function() { var __this = this; 
-    
-        return Object.keys(this._map).map((function(key) { return __this._map[key]; }));
-    },
-    
-    forEach: function(fn, thisArg) {
-    
-        var keys = this.keys(), i;
-        
-        for (i = 0; i < keys.length; ++i)
-            fn.call(thisArg, this._map[keys[i]], keys[i], this);
-    }
-}});
-
-exports.StringMap = StringMap; return exports; }).call(this, {});
-
-var StringSet = (function(exports) {
-
-var StringMap = StringMap___.StringMap;
-
-var StringSet = __class(function(__super) { return {
-
-    constructor: function StringSet() {
-    
-        this._map = new StringMap;
-    },
-    
-    has: function(key) {
-    
-        return this._map.has(key);
-    },
-    
-    add: function(key) {
-    
-        this._map.set(key, key);
-        return this;
-    },
-    
-    delete: function(key) {
-    
-        return this._map.delete(key);
-    },
-    
-    clear: function() {
-    
-        this._map.clear();
-    },
-    
-    keys: function() {
-    
-        return this._map.keys();
-    },
-    
-    values: function() {
-    
-        return this._map.keys();
-    },
-    
-    forEach: function(fn, thisArg) { var __this = this; 
-    
-        this._map.forEach((function(value, key) { return fn.call(thisArg, value, key, __this); }));
-    }
-}});
-
-exports.StringSet = StringSet; return exports; }).call(this, {});
-
-var StringSet__ = (function(exports) {
-
-Object.keys(StringSet).forEach(function(k) { exports[k] = StringSet[k]; });
-
-return exports; }).call(this, {});
-
-var Analyzer_ = (function(exports) {
-
-var parseModule = Parser__.parseModule, forEachChild = Parser__.forEachChild;
-var StringSet = StringSet__.StringSet;
-
-function parse(code) { 
-
-    return parseModule(code);
-}
-
-function extractDependencies(ast, resolvePath) {
-
-    if (typeof ast === "string")
-        ast = parseModule(ast);
-    
-    if (!resolvePath)
-        resolvePath = (function(x) { return x; });
-    
-    var edges = new StringSet;
-    
-    visit(ast, true);
-    
-    return edges.keys();
-    
-    function visit(node, topLevel) {
-        
-        switch (node.type) {
-        
-            case "ExportSpecifierSet":
-            case "ImportDeclaration":
-            case "ModuleFromDeclaration":
-                
-                addEdge(node.from);
-                break;
-            
-            case "ClassExpression":
-            case "ClassBody":
-            case "FunctionExpression":
-            case "FormalParameter":
-            case "FunctionBody":
-            
-                topLevel = false;
-                break;
-                
-        }
-        
-        forEachChild(node, (function(node) { return visit(node, topLevel); }));
-    }
-    
-    function addEdge(spec) {
-    
-        if (!spec || spec.type !== "String")
-            return;
-        
-        var path = resolvePath(spec.value);
-        
-        if (path && !edges.has(path))
-            edges.add(path);
-    }
-}
-
-exports.parse = parse; exports.extractDependencies = extractDependencies; return exports; }).call(this, {});
-
-var TempFile_ = (function(exports) {
-
-var OS = _M4;
-var Path = _M1;
-var AFS = AsyncFS__;
-
-var Promise = Promise___.Promise, iterate = Promise___.iterate;
-var randomBytes = _M5.randomBytes;
-
-function tempPath() {
-
-    return Path.resolve(OS.tmpdir(), randomBytes(8).toString("hex"));
-}
-
-var TempFile = __class(function(__super) { return {
-
-    constructor: function TempFile() {
-    
-        this.url = "";
-        this.path = null;
-    },
-
-    write: function(data, options) { var __this = this; 
-    
-        if (this.path)
-            throw new Error("Already written.");
-        
-        return iterate((function(stop) {
-        
-            var path = tempPath();
-            return AFS.exists(path).then((function(exists) { return exists ? null : stop(path); }));
-            
-        })).then((function(path) {
-        
-            __this.path = path;
-            return AFS.writeFile(path, data, options).then((function(val) { return path; }));
-            
-        }));
-    },
-    
-    move: function(dest) { var __this = this; 
-    
-        return AFS.rename(this._filePath(), dest).then((function(val) { return __this._clearPath(); }));
-    },
-    
-    delete: function() { var __this = this; 
-    
-        return AFS.unlink(this._filePath()).then((function(val) { return __this._clearPath(); }));
-    },
-    
-    _filePath: function() {
-    
-        var p = this.path;
-        
-        if (!p)
-            throw new Error("Temp file does not exist.");
-        
-        return p;
-    },
-    
-    _clearPath: function() {
-    
-        this.path = null;
-        return this;
-    },
-    
-    __static_of: function(data, options) {
-    
-        var tmp = new TempFile();
-        return tmp.write(data, options).then((function(val) { return tmp; }));
-    }
-}});
-
-exports.TempFile = TempFile; return exports; }).call(this, {});
-
-var StringMap__ = (function(exports) {
-
-Object.keys(StringMap___).forEach(function(k) { exports[k] = StringMap___[k]; });
-
-return exports; }).call(this, {});
-
-var Download_ = (function(exports) {
-
-var URL = _M2;
-
-var Action = Action_.Action;
-var FileFetch = FileFetch_.FileFetch;
-var HttpFetch = HttpFetch_.HttpFetch;
-var NullFetch = NullFetch_.NullFetch;
-var extractDependencies = Analyzer_.extractDependencies;
-var TempFile = TempFile_.TempFile;
-var StringMap = StringMap__.StringMap;
-var StringSet = StringSet__.StringSet;
-var Promise = Promise___.Promise;
-
-
-function getProtocol(url) {
-
-    return URL.parse(url).protocol || "file:";
-}
-
-function getFetcher(protocol) {
-
-    switch (protocol) {
-    
-        case "file:": 
-            return FileFetch;
-        
-        case "http:":
-        case "https:": 
-            return HttpFetch;
-        
-        default:
-            return NullFetch;
-    }
-}
-
-
-var Download = __class(Action, function(__super) { return {
-
-    begin: function(startURL, dispatch) { var __this = this; 
-    
-        var visited = new StringSet,
-            downloads = new StringMap,
-            pending = 0,
-            resolver,
-            error = null,
-            allFetched = new Promise((function(r) { return resolver = r; }));
-    
-        var visit = (function(url) {
-
-            if (visited.has(url))
-                return;
-        
-            visited.add(url);
-            pending += 1;
-        
-            var protocol = getProtocol(url),
-                Fetch = getFetcher(protocol),
-                fetch = new Fetch(__this);
-        
-            dispatch({ type: "fetch-begin", url: url });
-        
-            fetch.begin(url, dispatch).then((function(code) {
-    
-                if (error)
-                    return;
-                
-                dispatch({ type: "fetch-complete", url: url });
-            
-                if (protocol === "file:")
-                    return code;
-            
-                dispatch({ type: "write-file", url: url });
-            
-                return TempFile.of(code).then((function(tmp) {
-            
-                    tmp.url = url;
-                    downloads.set(url, tmp);
-                    return code;
-                }));
-        
-            })).then((function(code) {
-            
-                if (error)
-                    return;
-            
-                dispatch({ type: "analyze", url: url });
-            
-                extractDependencies(code, (function(target) { return URL.resolve(url, target); })).forEach(visit);
-            
-                pending -= 1;
-            
-                if (pending === 0)
-                    resolver.resolve(downloads.values());
-        
-            })).catch((function(err) {
-        
-                resolver.reject(error = err);
-                downloads.forEach((function(tmp) { return tmp.delete(); }));
-                downloads.clear();
-            }));
-        });
-    
-        Promise.resolve(startURL).then(visit);
-    
-        return allFetched;
-    }
-}});
-
-
-exports.Download = Download; return exports; }).call(this, {});
-
-var EventTarget_ = (function(exports) {
-
-var CAPTURING = 1,
-	AT_TARGET = 2,
-	BUBBLING = 3;
-
-function add(type, handler, capture) {
-
-	if (!isHandler(handler))
-		throw new Error("Listener is not a function or EventListener object.");
-	
-	var a = list(this, type, capture), i = a.indexOf(handler);
-	if (i === -1) a.push(handler);
-}
-
-function remove(type, handler, capture) {
-
-	var a = list(this, type, capture), i = a.indexOf(handler);
-	if (i !== -1) a.splice(i, 1);
-}
-
-function list(obj, type, capture) {
-
-	var e = obj.eventListeners[type];
-	if (!e) e = obj.eventListeners[type] = { capture: [], bubble: [] };
-	
-	return e[capture ? "capture" : "bubble"];
-}
-
-function isHandler(h) {
-
-	return typeof h === "function" || h && typeof h.handleEvent === "function";
-}
-
-function fire(obj, type, evt, capture) {
-
-	var a = list(obj, type, capture).slice(0), i, h;
-	
-	// Add property handler if defined
-	if (typeof obj["on" + type] === "function")
-		a.unshift(obj["on" + type]);
-	
-	for (i = 0; i < a.length; ++i) {
-	
-		h = a[i];
-		
-		if (h.handleEvent) h.handleEvent(evt);
-		else h.call(obj, evt);
-	}
-}
-
-function dispatch(evt) {
-
-	var cancel = false,
-		stop = false,
-		action = evt.defaultAction,
-		bubble = (typeof evt.bubbles === "boolean" ? evt.bubbles : true),
-		path = [],
-		i;
-	
-	evt.target = this;
-	evt.timeStamp = Date.now();
-	evt.preventDefault = (function() { cancel = true; });
-	evt.stopPropagation = (function() { stop = true; });
-	
-	// Build event bubble path
-	for (i = this.parentTarget; i; i = i.parentTarget)
-		path.push(i);
-	
-	// Capture phase
-	for (evt.eventPhase = CAPTURING, i = path.length; i-- && !stop;)
-		fire(evt.currentTarget = path[i], evt.type, evt, true);
-	
-	if (!stop) {
-	
-		// At target phase
-		evt.eventPhase = AT_TARGET;
-		fire(evt.currentTarget = this, evt.type, evt, false);
-		if (!bubble) stop = true;
-	}
-	
-	// Bubble phase
-	for (evt.eventPhase = BUBBLING, i = 0; i < path.length && !stop; ++i)
-		fire(evt.currentTarget = path[i], evt.type, evt, false);
-	
-	// Call default action
-	if (!(cancel && evt.cancelable) && typeof action === "function")
-		action.call(evt.currentTarget = this, evt);
-	
-	// Return defaultPrevented
-	return cancel;
-}
-
-var EventTarget = __class(function(__super) { return {
-
-	constructor: function EventTarget(parent) {
-	
-		this.eventListeners = {};
-		this.parentTarget = parent || null;
-	},
-	
-	// EventTarget interface
-	addEventListener: function(type, handler, capture) { 
-	
-	    return add.call(this, type, handler, capture); 
-	},
-	
-	removeEventListener: function(type, handler, capture) { 
-	
-	    return remove.call(this, type, handler, capture);
-	},
-	
-	dispatchEvent: function(evt) {
-	
-	    return dispatch.call(this, evt);
-	},
-	
-	// Aliases
-	on: function(type, handler, capture) {
-	
-	    add.call(this, type, handler, capture);
-	    return this;
-	}
-
-}});
-
-
-exports.EventTarget = EventTarget; return exports; }).call(this, {});
-
-var CreateFolder_ = (function(exports) {
-
-var Path = _M1;
-var AFS = AsyncFS__;
-
-var Action = Action_.Action;
-var forEachPromise = Promise___.forEach;
-
-
-var CreateFolder = __class(Action, function(__super) { return {
-
-    constructor: function CreateFolder(parent, basePath, createBase) {
-    
-        __super.constructor.call(this, parent);
-        
-        this.basePath = basePath;
-        this.createBase = createBase;
-    },
-    
-    begin: function(path, dispatch) { var __this = this; 
-
-        var fullPath = Path.join(this.basePath, path),
-            fullDir = Path.dirname(fullPath);
-    
-        return AFS.exists(fullDir).then((function(exists) {
-    
-            if (exists)
-                return null;
-        
-            dispatch({ type: "create-path", path: fullDir });
-        
-            var dirs = Path.dirname(Path.normalize(path)).split(Path.sep),
-                dirPath = __this.basePath;
-        
-            if (__this.createBase) {
-        
-                // BUG:  dirname(dirPath) === ""
-                dirs.unshift(Path.basename(dirPath));
-                dirPath = Path.dirname(dirPath);
-            }
-        
-            return forEachPromise(dirs, (function(dir) {
-        
-                if (!dir)
-                    return null;
-        
-                dirPath = Path.join(dirPath, dir);
-        
-                return AFS.exists(dirPath).then((function(exists) {
-        
-                    return exists ? null : AFS.mkdir(dirPath);
-                }));
-        
-            }));
-        
-        })).then((function(val) { return fullPath; }));
-    }
-}});
-
-exports.CreateFolder = CreateFolder; return exports; }).call(this, {});
-
-var ModuleInstaller = (function(exports) {
-
-var Path = _M1;
-var AFS = AsyncFS__;
-
-var getCacheFolder = CachePath.getCacheFolder, urlToPath = CachePath.urlToPath;
-var Action = Action_.Action;
-var Download = Download_.Download;
-var EventTarget = EventTarget_.EventTarget;
-var CreateFolder = CreateFolder_.CreateFolder;
-var Promise = Promise___.Promise, forEachPromise = Promise___.forEach;
-
-
-var ModuleInstaller = __class(EventTarget, function(__super) { return {
-
-    constructor: function ModuleInstaller(folder) {
-    
-        __super.constructor.call(this);
-        
-        this.folder = Path.resolve(folder || getCacheFolder("js-modules"));
-        this.createFolder = true;
-        this.action = null;
-    },
-
-    localPath: function(url) {
-    
-        return Path.join(this.folder, urlToPath(url));
-    },
-
-    install: function(url) { var __this = this; 
-        
-        if (this.action)
-            throw new Error("Already installing.");
-        
-        this.action = new Action;
-        
-        var createFolder = new CreateFolder(
-            this.action, 
-            this.folder, 
-            this.createFolder);
-        
-        var cancel = (function(err) {
-        
-            __this.action.cancel(err);
-            throw err;
-        });
-        
-        var dispatch = (function(event) {
-        
-            event.cancel = cancel;
-            __this.dispatchEvent(event);
-        });
-        
-        return new Download(this.action).begin(url, dispatch).then((function(files) {
-        
-            return forEachPromise(files, (function(file) {
-            
-                return createFolder.begin(
-                
-                    urlToPath(file.url), 
-                    dispatch
-                    
-                ).then((function(path) {
-                
-                    return AFS.exists(path).then((function(exists) {
-                    
-                        if (!exists)
-                            return true;
-                        
-                        var evt = { 
-                        
-                            type: "overwrite", 
-                            url: file.url, 
-                            path: path, 
-                            overwrite: true
-                        };
-                        
-                        dispatch(evt);
-                        
-                        return Promise.resolve(evt.overwrite).then((function(overwrite) {
-                        
-                            if (overwrite)
-                                return AFS.unlink(path).then((function(val) { return true; }));
-                            else
-                                return false;
-                        }));
-                            
-                    })).then((function(move) {
-                    
-                        if (!move)
-                            return file.delete();
-                        
-                        dispatch({ type: "move-begin", url: file.url });
-                    
-                        return file.move(path).then((function(val) {
-                        
-                            dispatch({ type: "move-complete", url: file.url })
-                        }));
-                        
-                    }));
-                }));
-                
-            })).catch((function(err) {
-            
-                return forEachPromise(files, (function(file) {
-                
-                    return file.path ? file.delete() : null;
-                    
-                })).then((function(val) {
-                
-                    throw err;
-                }));
-                
-            }));
-        
-        })).catch((function(err) {
-        
-            __this.action = null;
-            throw err;
-        
-        })).then((function(val) {
-        
-            __this.action = null;
-            return __this;
-        }));
-    },
-
-    __static_appFolder: function(appName) {
-    
-        return getCacheFolder(appName);
-    },
-    
-    __static_forApp: function(appName) {
-    
-        return new ModuleInstaller(ModuleInstaller.appFolder(appName));
-    }
-}});
-
-exports.ModuleInstaller = ModuleInstaller; return exports; }).call(this, {});
-
-var ModuleInstaller_ = (function(exports) {
-
-Object.keys(ModuleInstaller).forEach(function(k) { exports[k] = ModuleInstaller[k]; });
-
-return exports; }).call(this, {});
-
-var AsyncFS___ = (function(exports) {
-
-Object.keys(AsyncFS).forEach(function(k) { exports[k] = AsyncFS[k]; });
-
-return exports; }).call(this, {});
-
-var Promise____ = (function(exports) {
-
-Object.keys(Promise__).forEach(function(k) { exports[k] = Promise__[k]; });
-Object.keys(PromiseFlow).forEach(function(k) { exports[k] = PromiseFlow[k]; });
-
-return exports; }).call(this, {});
-
-var StringMap_ = (function(exports) {
-
-Object.keys(StringMap___).forEach(function(k) { exports[k] = StringMap___[k]; });
-
-return exports; }).call(this, {});
-
-var StringSet_ = (function(exports) {
-
-Object.keys(StringSet).forEach(function(k) { exports[k] = StringSet[k]; });
-
-return exports; }).call(this, {});
 
 var Parser = (function(exports) {
 
@@ -6678,10 +5874,10 @@ exports.parse = parse; exports.analyze = analyze; return exports; }).call(this, 
 
 var Bundler_ = (function(exports) {
 
-var AFS = AsyncFS___;
+var AFS = AsyncFS__;
 var Path = _M1;
 
-var Promise = Promise____.Promise, forEachPromise = Promise____.forEach;
+var Promise = Promise___.Promise, forEachPromise = Promise___.forEach;
 var StringMap = StringMap_.StringMap;
 var StringSet = StringSet_.StringSet;
 var analyze = Analyzer.analyze;
@@ -7629,9 +6825,9 @@ exports.mimeTypes = mimeTypes; return exports; }).call(this, {});
 var Server_ = (function(exports) {
 
 var FS = _M0;
-var HTTP = _M3;
+var HTTP = _M2;
 var Path = _M1;
-var URL = _M2;
+var URL = _M3;
 
 var AsyncFS = AsyncFS_;
 
@@ -7817,113 +7013,6 @@ var Server = __class(function(__super) { return {
 }});
 
 exports.Server = Server; return exports; }).call(this, {});
-
-var Proxy_ = (function(exports) {
-
-var HTTP = _M3;
-var URL = _M2;
-var AFS = AsyncFS_;
-
-var ModuleInstaller = ModuleInstaller_.ModuleInstaller;
-var translate = Translator.translate, isWrapped = Translator.isWrapped;
-var Promise = Promise_.Promise;
-
-
-var Proxy = __class(function(__super) { return {
-
-    constructor: function Proxy(options) { var __this = this; 
-    
-        options || (options = {});
-    
-        this.port = options.port || DEFAULT_PORT;
-        this.hostname = options.hostname || null;
-        this.server = HTTP.createServer((function(request, response) { return __this.onRequest(request, response); }));
-        this.installer = new ModuleInstaller();
-        this.active = false;
-    },
-    
-    start: function(port, hostname) { var __this = this; 
-    
-        if (this.active)
-            throw new Error("Server is already listening");
-        
-        if (port)
-            this.port = port;
-        
-        if (hostname)
-            this.hostname = hostname;
-        
-        var promise = new Promise((function(resolver) {
-        
-            __this.server.listen(__this.port, __this.hostname, (function(ok) { return resolver.resolve(null); }));
-            __this.active = true;
-        }));
-        
-        return promise;
-    },
-    
-    stop: function() { var __this = this; 
-    
-        if (!this.active)
-            throw new Error("Server is not currently listening.");
-        
-        return new Promise((function(resolver) {
-        
-            __this.active = false;
-            __this.server.close((function(ok) { return resolver.resolve(null); }));
-        }));
-    },
-    
-    onRequest: function(request, response) { var __this = this; 
-    
-        if (request.method !== "GET" && request.method !== "HEAD")
-            return this.error(405, response);
-        
-        var installer = this.installer,
-            query = URL.parse(request.url, true).query,
-            target = query.url,
-            path;
-        
-        if (!target)
-            return this.error(405, response);
-        
-        path = installer.localPath(target);
-        
-        AFS.exists(path).then((function(exists) {
-        
-            return exists ? null : installer.install(target);
-            
-        })).then((function(val) {
-        
-            return AFS.readFile(path, "utf8").then((function(source) {
-        
-                if (!isWrapped(source)) {
-            
-                    // TODO:  A better way to report errors?
-                    try { source = translate(source); } 
-                    catch (x) { source += "\n\n// " + x.message; }
-                }
-            
-                response.writeHead(200, { "Content-Type": "text/javascript; charset=UTF-8" });
-                response.end(source, "utf8");
-        
-            }));
-            
-        })).catch((function(err) {
-        
-            __this.error(500, response);
-        }));
-    },
-    
-    error: function(code, response) {
-    
-        response.writeHead(code, { "Content-Type": "text/plain" });
-        response.write(HTTP.STATUS_CODES[code] + "\n")
-        response.end();
-    }
-}});
-
-exports.Proxy = Proxy; return exports; }).call(this, {});
 
 var ConsoleCommand = (function(exports) {
 
@@ -8215,6 +7304,51 @@ Object.keys(ConsoleIO).forEach(function(k) { exports[k] = ConsoleIO[k]; });
 
 return exports; }).call(this, {});
 
+var PackageLocator = (function(exports) {
+
+var Path = _M1;
+var FS = _M0;
+
+var PACKAGE_URI = /^package:/i,
+    JS_PACKAGE_ROOT = process.env["JS_PACKAGE_ROOT"] || "",
+    packageRoots;
+
+function isPackageURI(uri) {
+
+    return PACKAGE_URI.test(uri);
+}
+
+function locatePackage(uri) {
+    
+    var name = uri.replace(PACKAGE_URI, ""),
+        path;
+    
+    if (name === uri)
+        throw new Error("Not a package URI.");
+    
+    if (!packageRoots)
+        packageRoots = JS_PACKAGE_ROOT.split(/;/g).map((function(v) { return v.trim(); }));
+    
+    var found = packageRoots.some((function(root) {
+    
+        var stat = null;
+        
+        path = Path.join(Path.resolve(root, name), "main.js");
+        
+        try { stat = FS.statSync(path); }
+        catch (x) {}
+        
+        return stat && stat.isFile();
+    }));
+    
+    if (found)
+        return path;
+    
+    throw new Error("Package " + (name) + " could not be found.");
+}
+
+exports.isPackageURI = isPackageURI; exports.locatePackage = locatePackage; return exports; }).call(this, {});
+
 var Program_ = (function(exports) {
 
 var FS = _M0;
@@ -8222,16 +7356,14 @@ var Path = _M1;
 var AsyncFS = AsyncFS_;
 var Runtime = Runtime_;
 
-var ModuleInstaller = ModuleInstaller_.ModuleInstaller;
 var bundle = Bundler.bundle;
 var translate = Translator.translate;
 var Server = Server_.Server;
-var Proxy = Proxy_.Proxy;
 var ConsoleCommand = ConsoleCommand_.ConsoleCommand;
 var ConsoleIO = ConsoleIO_.ConsoleIO, Style = ConsoleIO_.Style;
+var isPackageURI = PackageLocator.isPackageURI, locatePackage = PackageLocator.locatePackage;
 
-var ES6_GUESS = /(?:^|\n)\s*(?:import|export|class)\s/,
-    WEB_URL = /^https?:\/\//i;
+var ES6_GUESS = /(?:^|\n)\s*(?:import|export|class)\s/;
 
 function absPath(path) {
 
@@ -8255,13 +7387,12 @@ function getOutPath(inPath, outPath) {
 function overrideCompilation() {
 
     var Module = module.constructor,
-        resolveFilename = Module._resolveFilename,
-        installer = new ModuleInstaller;
+        resolveFilename = Module._resolveFilename;
     
     Module._resolveFilename = function(filename, parent) {
     
-        if (WEB_URL.test(filename))
-            filename = installer.localPath(filename);
+        if (isPackageURI(filename))
+            filename = locatePackage(filename);
         
         return resolveFilename(filename, parent);
     };
@@ -8384,82 +7515,6 @@ function run() {
             }));
         }
     
-    }).add("install", {
-    
-        params: {
-        
-            "input": { short: "i", positional: true }
-        },
-        
-        execute: function(params) {
-        
-            var installer = new ModuleInstaller(),
-                io = new ConsoleIO;
-
-            installer.on("fetch-begin", (function(evt) {
-
-                io.writeLine('Fetching "' + evt.url + '"');
-            
-            })).on("fetch-complete", (function(evt) {
-
-                io.writeLine('Received "' + evt.url + '"');
-            
-            })).on("create-path", (function(evt) {
-
-                io.writeLine('Creating path "' + evt.path + '"');
-            
-            })).on("overwrite", (function(evt) {
-
-                io.write('Overwrite "' + evt.url + '"? [n]: ');
-                
-                evt.overwrite = io.readLine().then((function(val) {
-                
-                    val = val.trim().toLowerCase() || "n";
-                    return val === "y" || val === "yes";
-                }));
-                
-            })).on("move-begin", (function(evt) {
-            
-                io.writeLine('Installing "' + evt.url + '"');
-            }));
-
-            installer.install(params.input);
-        }
-        
-    }).add("proxy", {
-    
-        params: {
-        
-            "port": { short: "p", positional: true }
-        },
-        
-        execute: function(params) {
-        
-            var proxy = new Proxy(params),
-                io = new ConsoleIO,
-                stopped = false;
-                
-            proxy.start();
-            
-            io.write("Listening on port " + proxy.port + ".  Press Enter to exit.");
-            
-            io.readLine().then((function(data) {
-            
-                if (stopped)
-                    return;
-                
-                stopped = true;
-                
-                io.write("Waiting for connections to close...");
-                
-                proxy.stop().then((function(val) {
-                
-                    io.writeLine("OK");
-                }));
-                
-            }));
-        }
-    
     }).add("serve", {
     
         params: {
@@ -8508,4 +7563,4 @@ return exports; }).call(this, {});
 Object.keys(main).forEach(function(k) { exports[k] = main[k]; });
 
 
-}, ["fs","path","url","http","os","crypto"], "");
+}, ["fs","path","http","url"], "");
