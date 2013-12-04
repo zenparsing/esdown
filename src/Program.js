@@ -1,13 +1,19 @@
 module FS from "node:fs";
 module Path from "node:path";
-module AsyncFS from "AsyncFS.js";
 module Runtime from "Runtime.js";
 
-import { bundle } from "Bundler.js";
+import {
+    
+    AsyncFS,
+    ConsoleCommand,
+    ConsoleIO,
+    ConsoleStyle as Style
+    
+} from "package:zen-bits";
+
+import { createBundle } from "package:js-bundle";
 import { translate } from "Translator.js";
 import { Server } from "Server.js";
-import { ConsoleCommand } from "ConsoleCommand.js";
-import { ConsoleIO, Style } from "ConsoleIO.js";
 import { isPackageURI, locatePackage } from "PackageLocator.js";
 
 var ES6_GUESS = /(?:^|\n)\s*(?:import|export|class)\s/;
@@ -131,7 +137,7 @@ export function run() {
         execute(params) {
             
             var promise = params.bundle ?
-                bundle(params.input) :
+                createBundle(params.input, locatePackage) :
                 AsyncFS.readFile(params.input, { encoding: "utf8" });
             
             promise.then(text => {
@@ -142,6 +148,7 @@ export function run() {
                         wrapRuntimeModule(Runtime.Class) + 
                         wrapRuntimeModule(Runtime.ES5) +
                         wrapRuntimeModule(Runtime.ES6) +
+                        wrapRuntimeModule(Runtime.Promise) +
                         text;
                 }
                 

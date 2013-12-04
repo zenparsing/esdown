@@ -1,1 +1,0 @@
-export * from "../../es6parse/src/main.js";

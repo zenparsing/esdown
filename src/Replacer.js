@@ -8,7 +8,7 @@
 
 */
 
-module Parser from "Parser.js";
+module Parser from "package:es6parse";
 
 var HAS_SCHEMA = /^[a-z]+:/i,
     NODE_SCHEMA = /^(?:npm|node):/i;

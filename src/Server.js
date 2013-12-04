@@ -3,9 +3,7 @@ module HTTP from "node:http";
 module Path from "node:path";
 module URL from "node:url";
 
-module AsyncFS from "AsyncFS.js";
-
-import { Promise } from "Promise.js";
+import { AsyncFS } from "package:zen-bits";
 import { translate, isWrapped } from "Translator.js";
 import { mimeTypes } from "ServerMime.js";
 
@@ -37,9 +35,9 @@ export class Server {
         if (hostname)
             this.hostname = hostname;
         
-        var promise = new Promise(resolver => {
+        var promise = new Promise(resolve => {
         
-            this.server.listen(this.port, this.hostname, ok => resolver.resolve(null));
+            this.server.listen(this.port, this.hostname, ok => resolve(null));
             this.active = true;
         });
         
@@ -48,16 +46,16 @@ export class Server {
     
     stop() {
     
-        return new Promise(resolver => {
+        return new Promise(resolve => {
         
             if (this.active) {
         
                 this.active = false;
-                this.server.close(ok => resolver.resolve(null));
+                this.server.close(ok => resolve(null));
         
             } else {
         
-                resolver.resolve(null);
+                resolve(null);
             }
         });
     }

@@ -693,24 +693,22 @@ if (typeof Reflect === "undefined") global.Reflect = {
 
 }).call(this);
 
-var Promise__ = (function(exports) {
+(function() { var __this = this; 
 
-var EventLoop = (function(exports) {
+var queueTask = ((function($) {
 
-    var queueOuter;
-    
-    var process = this.process,
-        window = this.window,
+    var process = __this.process,
+        window = __this.window,
         msgChannel = null,
         list = [];
     
     if (process && typeof process.nextTick === "function") {
     
-        queueOuter = process.nextTick;
+        return process.nextTick;
         
     } else if (typeof setImmediate === "function") {
     
-        queueOuter = window ?
+        return window ?
             window.setImmediate.bind(window) :
             setImmediate;
    
@@ -719,350 +717,244 @@ var EventLoop = (function(exports) {
         msgChannel = new window.MessageChannel();
         msgChannel.port1.onmessage = (function($) { if (list.length) list.shift()(); });
     
-        queueOuter = (function(fn) {
+        return (function(fn) {
         
             list.push(fn);
             msgChannel.port2.postMessage(0);
         });
-    
-    } else {
-    
-        queueOuter = (function(fn) { return setTimeout(fn, 0); });
     }
-exports.queueOuter = queueOuter; return exports; }).call(this, {});
-
-var queueOuter = EventLoop.queueOuter;
-
-var queue = [],
-    throwList = [],
-    waiting = false;
-
-var PENDING = 0,
-    FULFILLED = 1,
-    REJECTED = 2;
-
-// Enqueues a future callback dispatch
-function enqueue(fn) {
-
-    queue.push(fn);
     
-    if (!waiting) {
+    return (function(fn) { return setTimeout(fn, 0); });
+
+}))();
+
+
+var $status = "Promise#status",
+    $value = "Promise#value",
+    $onResolve = "Promise#onResolve",
+    $onReject = "Promise#onReject",
+    $throwable = "Promise#throwable";
+
+function isPromise(x) { return x && $status in Object(x) }
+
+function Promise(init) { var __this = this; 
+
+    this[$status] = "pending";
+    this[$onResolve] = [];
+    this[$onReject] = [];
+    this[$throwable] = true;
     
-        waiting = true;
-        queueOuter(flush);
-    }
+    init((function(x) { return promiseResolve(__this, x); }), (function(r) { return promiseReject(__this, r); }));
 }
 
-// Flushes the message queue
-function flush() {
-
-    var count;
+function promiseResolve(promise, x) {
     
-    // Send each message in queue
-    while (queue.length > 0)
-        for (count = queue.length; count > 0; --count)
-            queue.shift()();
-    
-    waiting = false;
-    
-    checkpoint();
+    promiseDone(promise, "resolved", x, promise[$onResolve]);
 }
 
-// Forces a checkpoint on the future graph, throwing an error
-// if any rejected nodes do not have outgoing edges
-function checkpoint() {
-
-    var item;
-
-    while (throwList.length) {
+function promiseReject(promise, x) {
     
-        item = throwList.shift();
-        
-        if (item.resolver.throwable)
-            throw item.error;
-    }
+    promiseDone(promise, "rejected", x, promise[$onReject]);
+    
+    if (promise[$throwable]) queueTask((function($) {
+    
+        if (promise[$throwable])
+            throw promise[$value];
+    }));
 }
 
-// Returns true if the object is a promise
-function isPromise(value) {
+function promiseDone(promise, status, value, reactions) {
+
+    if (promise[$status] !== "pending") 
+        return;
     
-    return value && typeof value.then === "function";
+    for (var i in reactions) 
+        promiseReact(reactions[i][0], reactions[i][1], value);
+        
+    promise[$status] = status;
+    promise[$value] = value;
+    promise[$onResolve] = promise[$onReject] = void 0;
 }
 
-// Promise class
-function Promise(init) {
+function promiseReact(deferred, handler, x) {
 
-    var fulfillList = [],
-        rejectList = [],
-        value = null,
-        state = PENDING,
-        future = this,
-        resolver;
-
-    this.then = then;
-    this.catch = (function(onReject) { return then(null, onReject); });
+    queueTask((function($) {
     
-    init.call(this, resolver = { fulfill: fulfill, resolve: resolve, reject: reject, throwable: false });
-
-    // Dispatch function for future
-    function dispatch() {
-
-        var list = state === FULFILLED ? fulfillList : rejectList;
+        try {
         
-        while (list.length)
-            list.shift()(value);
+            var y = handler(x);
         
-        fulfillList = [];
-        rejectList = [];
+            if (y === deferred.promise)
+                throw new TypeError;
+            else if (isPromise(y))
+                y.chain(deferred.resolve, deferred.reject);
+            else
+                deferred.resolve(y);
+        
+        } catch(e) { deferred.reject(e) }
+    }));
+}
+
+Promise.resolve = function(x) {
+
+    return new this((function(resolve) { return resolve(x); }));
+};
+
+Promise.reject = function(r) {
+
+    return new this((function(resolve, reject) { return reject(r); }));
+};
+
+Promise.deferred = function() {
+
+    var result = {};
+    
+    result.promise = new this((function(resolve, reject) {
+        result.resolve = resolve;
+        result.reject = reject;
+    }));
+    
+    return result;
+};
+
+Promise.prototype.chain = function(onResolve, onReject) {
+
+    this[$throwable] = false;
+    
+    // [A+ compatibility]
+    // onResolve = onResolve || (x => x);
+    // onReject = onReject || (e => { throw e });
+    
+    if (typeof onResolve !== "function") onResolve = (function(x) { return x; });
+    if (typeof onReject !== "function") onReject = (function(e) { throw e });
+    
+    var deferred = Promise.deferred.call(this.constructor);
+    
+    switch (this[$status]) {
+    
+        case undefined:
+            throw new TypeError;
+            
+        case "pending":
+            this[$onResolve].push([deferred, onResolve]);
+            this[$onReject].push([deferred, onReject]);
+            break;
+        
+        case "resolved":
+            promiseReact(deferred, onResolve, this[$value]);
+            break;
+            
+        case "rejected":
+            promiseReact(deferred, onReject, this[$value]);
+            break;
     }
     
-    // Resolves the future with a value
-    function fulfill(val) {
+    return deferred.promise;
+};
+
+Promise.prototype.catch = function(onReject) {
+
+    // TODO: if !onReject, should it default to x => x?
+    return this.chain(undefined, onReject)
+};
+
+Promise.prototype.then = function(onResolve, onReject) { var __this = this; 
+
+    // [A+ compatibility]
+    // onResolve = onResolve || (x => x);
     
-        if (state) return;
-        
-        value = val;
-        state = FULFILLED;
-        enqueue(dispatch);
-    }
-
-    // Resolves the future
-    function resolve(value) {
-
-        if (state) return;
-        
-        if (isPromise(value)) {
-        
-            try { value.then(fulfill, reject); }
-            catch (ex) { reject(ex); }
-            
-        } else {
-        
-            fulfill(value);
-        }
-    }
-
-    // Resolves the future with an error
-    function reject(error) {
-
-        if (state) return;
-        
-        value = error;
-        state = REJECTED;
-        enqueue(dispatch);
-        
-        if (resolver.throwable)
-            throwList.push({ resolver: resolver, error: error });
-    }
+    if (typeof onResolve !== "function") onResolve = (function(x) { return x; });
     
-    // Chains a future
-    function then(onFulfill, onReject) {
+    var constructor = this.constructor;
     
-        if (typeof onFulfill !== "function") onFulfill = null;
-        if (typeof onReject !== "function") onReject = null;
+    return this.chain((function(x) {
+    
+        x = promiseCoerce(constructor, x);
+        
+        if (x === __this)
+            throw new TypeError;
+        
+        return isPromise(x) ?
+            x.then(onResolve, onReject) :
+            onResolve(x);
+        
+    }), onReject);
+};
+
+function promiseCoerce(constructor, x) {
+
+    if (isPromise(x))
+        return x;
+    
+    // [A+ compatibility]
+    // if (!(x && "then" in Object(x))
+    //    return x;
+        
+    if (!(x && "then" in Object(x) && typeof x.then === "function"))
+        return x;
+    
+    var deferred = constructor.deferred();
+      
+    try { x.then(deferred.resolve, deferred.reject) } 
+    catch(e) { deferred.reject(e) }
+    
+    return deferred.promise;
+}
+
+Promise.cast = function(x) {
+
+    if (x instanceof this)
+        return x;
+
+    if (!isPromise(x))
+        return this.resolve(x);
+    
+    var result = this.deferred();
+    x.chain(result.resolve, result.reject);
+    return result.promise;
+};
+
+Promise.all = function(values) {
+
+    var deferred = this.deferred(),
+        count = 0,
+        resolutions = [];
+        
+    for (var i in values) {
+    
+        ++count;
+        
+        this.cast(values[i]).chain(onResolve(i), (function(r) {
+        
+            if (count > 0) { 
             
-        var done = false,
-            resolveNext,
-            rejectNext;
-        
-        var next = new Promise((function(r) {
-        
-            // Nodes with incomming edges are throwable
-            r.throwable = true;
-            resolveNext = r.resolve;
-            rejectNext = r.reject;
-        }));
-        
-        // Nodes with outgoing edges are not throwable
-        resolver.throwable = false;
-        
-        // Add sucess and error handlers
-        fulfillList.push((function(value) { return transform(value, false); }));
-        rejectList.push((function(value) { return transform(value, true); }));
-        
-        // Dispatch handlers if future is resolved
-        if (state) enqueue(dispatch);
-        
-        return next;
-        
-        function transform(value, rejected) {
-        
-            if (done) return;
-            done = true;
-           
-            var fn = rejected ? onReject : onFulfill;
-            
-            if (fn) {
-            
-                try { 
-                
-                    value = fn.call(next, value);
-                    rejected = false;
-                
-                } catch (ex) { 
-                
-                    value = ex;
-                    rejected = true;
-                }
+                count = 0; 
+                deferred.reject(r);
             }
-            
-            if (rejected) rejectNext(value);
-            else resolveNext(value);
-        }
+        }));
     }
-}
-
-Promise.resolve = (function(value) { return new Promise((function(r) { return r.resolve(value); })); });
-
-Promise.fulfill = (function(value) { return new Promise((function(r) { return r.fulfill(value); })); });
-
-Promise.reject = (function(value) { return new Promise((function(r) { return r.reject(value); })); });
-
-// Recursively unwraps a promise
-function unwrap(value) {
-
-    return Promise.resolve(value).then((function(v) { return isPromise(v) ? unwrap(v) : v; }));
-}
-
-Promise.when = (function(value) { return unwrap(value); });
-
-Promise.any = (function(values) { return new Promise((function(resolver) {
-
-    var empty = true;
     
-    values.forEach((function(value) {
-    
-        empty = false;
-        Promise.resolve(value).then(resolver.resolve, resolver.reject);
-    }));
-    
-    if (empty) 
-        resolver.resolve(void 0);
-})); });
-
-Promise.all = (function(values) { return new Promise((function(resolver) {
-
-    var results = [],
-        remaining = 0;
-    
-    values.forEach((function(value, index) {
-    
-        ++remaining;
+    if (count === 0) 
+        deferred.resolve(resolutions);
         
-        Promise.resolve(value).then((function(v) {
+    return deferred.promise;
+    
+    function onResolve(i) {
+    
+        return (function(x) {
         
-            results[index] = v;
+            resolutions[i] = x;
             
-            if (--remaining === 0)
-                resolver.resolve(results);
-        
-        }), resolver.reject);
-    }));
-    
-    if (remaining === 0) 
-        resolver.resolve(void 0);
-})); });
+            if (--count === 0)
+                deferred.resolve(resolutions);
+        });
+    }
+};
 
-Promise.some = (function(values) { return new Promise((function(resolver) {
-
-    var errors = [],
-        remaining = 0;
-    
-    values.forEach((function(value, index) {
-    
-        ++remaining;
-        
-        Promise.resolve(value).then(resolver.resolve, (function(err) {
-        
-            errors[index] = err;
-            
-            if (--remaining === 0)
-                resolver.reject(errors);
-        }));
-    }));
-    
-    if (remaining === 0) 
-        resolver.resolve(void 0);
-})); });
+this.Promise = Promise;
 
 
-exports.Promise = Promise; return exports; }).call(this, {});
-
-var AsyncFS = (function(exports) {
-
-var FS = _M0;
-
-var Promise = Promise__.Promise;
-
-// Wraps a standard Node async function with a promise
-// generating function
-function wrap(fn) {
-
-	return function() {
-	
-	    var a = [].slice.call(arguments, 0);
-	    
-		return new Promise((function(resolver) {
-		    
-            a.push((function(err, data) {
-        
-                if (err) resolver.reject(err);
-                else resolver.resolve(data);
-            }));
-            
-            fn.apply(null, a);
-        }));
-	};
-}
-
-function exists(path) {
-
-    return new Promise((function(resolver) {
-    
-        FS.exists(path, (function(result) { return resolver.resolve(result); }));
-    }));
-}
-
-var 
-    readFile = wrap(FS.readFile),
-    close = wrap(FS.close),
-    open = wrap(FS.open),
-    read = wrap(FS.read),
-    write = wrap(FS.write),
-    rename = wrap(FS.rename),
-    truncate = wrap(FS.truncate),
-    rmdir = wrap(FS.rmdir),
-    fsync = wrap(FS.fsync),
-    mkdir = wrap(FS.mkdir),
-    sendfile = wrap(FS.sendfile),
-    readdir = wrap(FS.readdir),
-    fstat = wrap(FS.fstat),
-    lstat = wrap(FS.lstat),
-    stat = wrap(FS.stat),
-    readlink = wrap(FS.readlink),
-    symlink = wrap(FS.symlink),
-    link = wrap(FS.link),
-    unlink = wrap(FS.unlink),
-    fchmod = wrap(FS.fchmod),
-    lchmod = wrap(FS.lchmod),
-    chmod = wrap(FS.chmod),
-    lchown = wrap(FS.lchown),
-    fchown = wrap(FS.fchown),
-    chown = wrap(FS.chown),
-    utimes = wrap(FS.utimes),
-    futimes = wrap(FS.futimes),
-    writeFile = wrap(FS.writeFile),
-    appendFile = wrap(FS.appendFile),
-    realpath = wrap(FS.realpath);
-
-
-exports.exists = exists; exports.readFile = readFile; exports.close = close; exports.open = open; exports.read = read; exports.write = write; exports.rename = rename; exports.truncate = truncate; exports.rmdir = rmdir; exports.fsync = fsync; exports.mkdir = mkdir; exports.sendfile = sendfile; exports.readdir = readdir; exports.fstat = fstat; exports.lstat = lstat; exports.stat = stat; exports.readlink = readlink; exports.symlink = symlink; exports.link = link; exports.unlink = unlink; exports.fchmod = fchmod; exports.lchmod = lchmod; exports.chmod = chmod; exports.lchown = lchown; exports.fchown = fchown; exports.chown = chown; exports.utimes = utimes; exports.futimes = futimes; exports.writeFile = writeFile; exports.appendFile = appendFile; exports.realpath = realpath; return exports; }).call(this, {});
-
-var AsyncFS_ = (function(exports) {
-
-Object.keys(AsyncFS).forEach(function(k) { exports[k] = AsyncFS[k]; });
-
-return exports; }).call(this, {});
+}).call(this);
 
 var Runtime_ = (function(exports) {
 
@@ -1078,46 +970,273 @@ var ES6 =
 
 "var global = this,\n    HAS_OWN = Object.prototype.hasOwnProperty;\n\nfunction addProps(obj, props) {\n\n    Object.keys(props).forEach(k => {\n    \n        if (typeof obj[k] !== \"undefined\")\n            return;\n        \n        Object.defineProperty(obj, k, {\n        \n            value: props[k],\n            configurable: true,\n            enumerable: false,\n            writable: true\n        });\n    });\n}\n\naddProps(Object, {\n\n    is(a, b) {\n    \n        // TODO\n    },\n    \n    assign(target, source) {\n    \n        Object.keys(source).forEach(k => target[k] = source[k]);\n        return target;\n    },\n    \n    mixin(target, source) {\n    \n        Object.getOwnPropertyNames(source).forEach(name => {\n        \n            var desc = Object.getOwnPropertyDescriptor(source, name);\n            Object.defineProperty(target, name, desc);\n        });\n        \n        return target;\n    }\n});\n\naddProps(Number, {\n\n    EPSILON: Number.EPSILON || (function() {\n    \n        var next, result;\n        \n        for (next = 1; 1 + next !== 1; next = next / 2)\n            result = next;\n        \n        return result;\n    }()),\n    \n    MAX_INTEGER: 9007199254740992,\n    \n    isFinite(val) {\n        \n        return typeof val === \"number\" && isFinite(val);\n    },\n    \n    isNaN(val) {\n    \n        return typeof val === \"number\" && isNaN(val);\n    },\n    \n    isInteger(val) {\n    \n        typeof val === \"number\" && val | 0 === val;\n    },\n    \n    toInteger(val) {\n        \n        return val | 0;\n    }\n});\n\naddProps(Array, {\n\n    from(arg) {\n        // TODO\n    },\n    \n    of() {\n        // ?\n    }\n\n});\n\naddProps(String.prototype, {\n    \n    repeat(count) {\n    \n        return new Array(count + 1).join(this);\n    },\n    \n    startsWith(search, start) {\n    \n        return this.indexOf(search, start) === start;\n    },\n    \n    endsWith(search, end) {\n    \n        return this.slice(-search.length) === search;\n    },\n    \n    contains(search, pos) {\n    \n        return this.indexOf(search, pos) !== -1;\n    }\n});\n\nif (typeof Reflect === \"undefined\") global.Reflect = {\n\n    hasOwn(obj, name) { return HAS_OWN.call(obj, name); }\n};\n";
 
+var Promise = 
+
+"var queueTask = ($=> {\n\n    var process = this.process,\n        window = this.window,\n        msgChannel = null,\n        list = [];\n    \n    if (process && typeof process.nextTick === \"function\") {\n    \n        return process.nextTick;\n        \n    } else if (typeof setImmediate === \"function\") {\n    \n        return window ?\n            window.setImmediate.bind(window) :\n            setImmediate;\n   \n    } else if (window && window.MessageChannel) {\n        \n        msgChannel = new window.MessageChannel();\n        msgChannel.port1.onmessage = $=> { if (list.length) list.shift()(); };\n    \n        return fn => {\n        \n            list.push(fn);\n            msgChannel.port2.postMessage(0);\n        };\n    }\n    \n    return fn => setTimeout(fn, 0);\n\n})();\n\n\nvar $status = \"Promise#status\",\n    $value = \"Promise#value\",\n    $onResolve = \"Promise#onResolve\",\n    $onReject = \"Promise#onReject\",\n    $throwable = \"Promise#throwable\";\n\nfunction isPromise(x) { return x && $status in Object(x) }\n\nfunction Promise(init) {\n\n    this[$status] = \"pending\";\n    this[$onResolve] = [];\n    this[$onReject] = [];\n    this[$throwable] = true;\n    \n    init(x => promiseResolve(this, x), r => promiseReject(this, r));\n}\n\nfunction promiseResolve(promise, x) {\n    \n    promiseDone(promise, \"resolved\", x, promise[$onResolve]);\n}\n\nfunction promiseReject(promise, x) {\n    \n    promiseDone(promise, \"rejected\", x, promise[$onReject]);\n    \n    if (promise[$throwable]) queueTask($=> {\n    \n        if (promise[$throwable])\n            throw promise[$value];\n    });\n}\n\nfunction promiseDone(promise, status, value, reactions) {\n\n    if (promise[$status] !== \"pending\") \n        return;\n    \n    for (var i in reactions) \n        promiseReact(reactions[i][0], reactions[i][1], value);\n        \n    promise[$status] = status;\n    promise[$value] = value;\n    promise[$onResolve] = promise[$onReject] = void 0;\n}\n\nfunction promiseReact(deferred, handler, x) {\n\n    queueTask($=> {\n    \n        try {\n        \n            var y = handler(x);\n        \n            if (y === deferred.promise)\n                throw new TypeError;\n            else if (isPromise(y))\n                y.chain(deferred.resolve, deferred.reject);\n            else\n                deferred.resolve(y);\n        \n        } catch(e) { deferred.reject(e) }\n    });\n}\n\nPromise.resolve = function(x) {\n\n    return new this(resolve => resolve(x));\n};\n\nPromise.reject = function(r) {\n\n    return new this((resolve, reject) => reject(r));\n};\n\nPromise.deferred = function() {\n\n    var result = {};\n    \n    result.promise = new this((resolve, reject) => {\n        result.resolve = resolve;\n        result.reject = reject;\n    });\n    \n    return result;\n};\n\nPromise.prototype.chain = function(onResolve, onReject) {\n\n    this[$throwable] = false;\n    \n    // [A+ compatibility]\n    // onResolve = onResolve || (x => x);\n    // onReject = onReject || (e => { throw e });\n    \n    if (typeof onResolve !== \"function\") onResolve = x => x;\n    if (typeof onReject !== \"function\") onReject = e => { throw e };\n    \n    var deferred = Promise.deferred.call(this.constructor);\n    \n    switch (this[$status]) {\n    \n        case undefined:\n            throw new TypeError;\n            \n        case \"pending\":\n            this[$onResolve].push([deferred, onResolve]);\n            this[$onReject].push([deferred, onReject]);\n            break;\n        \n        case \"resolved\":\n            promiseReact(deferred, onResolve, this[$value]);\n            break;\n            \n        case \"rejected\":\n            promiseReact(deferred, onReject, this[$value]);\n            break;\n    }\n    \n    return deferred.promise;\n};\n\nPromise.prototype.catch = function(onReject) {\n\n    // TODO: if !onReject, should it default to x => x?\n    return this.chain(undefined, onReject)\n};\n\nPromise.prototype.then = function(onResolve, onReject) {\n\n    // [A+ compatibility]\n    // onResolve = onResolve || (x => x);\n    \n    if (typeof onResolve !== \"function\") onResolve = x => x;\n    \n    var constructor = this.constructor;\n    \n    return this.chain(x => {\n    \n        x = promiseCoerce(constructor, x);\n        \n        if (x === this)\n            throw new TypeError;\n        \n        return isPromise(x) ?\n            x.then(onResolve, onReject) :\n            onResolve(x);\n        \n    }, onReject);\n};\n\nfunction promiseCoerce(constructor, x) {\n\n    if (isPromise(x))\n        return x;\n    \n    // [A+ compatibility]\n    // if (!(x && \"then\" in Object(x))\n    //    return x;\n        \n    if (!(x && \"then\" in Object(x) && typeof x.then === \"function\"))\n        return x;\n    \n    var deferred = constructor.deferred();\n      \n    try { x.then(deferred.resolve, deferred.reject) } \n    catch(e) { deferred.reject(e) }\n    \n    return deferred.promise;\n}\n\nPromise.cast = function(x) {\n\n    if (x instanceof this)\n        return x;\n\n    if (!isPromise(x))\n        return this.resolve(x);\n    \n    var result = this.deferred();\n    x.chain(result.resolve, result.reject);\n    return result.promise;\n};\n\nPromise.all = function(values) {\n\n    var deferred = this.deferred(),\n        count = 0,\n        resolutions = [];\n        \n    for (var i in values) {\n    \n        ++count;\n        \n        this.cast(values[i]).chain(onResolve(i), r => {\n        \n            if (count > 0) { \n            \n                count = 0; \n                deferred.reject(r);\n            }\n        });\n    }\n    \n    if (count === 0) \n        deferred.resolve(resolutions);\n        \n    return deferred.promise;\n    \n    function onResolve(i) {\n    \n        return x => {\n        \n            resolutions[i] = x;\n            \n            if (--count === 0)\n                deferred.resolve(resolutions);\n        };\n    }\n};\n\nthis.Promise = Promise;\n";
 
 
-exports.Class = Class; exports.ES5 = ES5; exports.ES6 = ES6; return exports; }).call(this, {});
 
-var AsyncFS__ = (function(exports) {
+exports.Class = Class; exports.ES5 = ES5; exports.ES6 = ES6; exports.Promise = Promise; return exports; }).call(this, {});
 
-Object.keys(AsyncFS).forEach(function(k) { exports[k] = AsyncFS[k]; });
+var ConsoleStyle = (function(exports) {
 
-return exports; }).call(this, {});
+function green(msg) {
 
-var PromiseFlow = (function(exports) {
+    return "\u001b[32m" + (msg) + "\u001b[39m";
+}
 
-var Promise = Promise__.Promise;
+function red(msg) {
 
-function iterate(fn) {
+    return "\u001b[31m" + (msg) + "\u001b[39m";
+}
 
-    var done = false,
-        stop = (function(val) { done = true; return val; }),
-        next = (function(last) { return done ? last : Promise.resolve(fn(stop)).then(next); });
+function gray(msg) {
+
+    return "\u001b[90m" + (msg) + "\u001b[39m";
+}
+
+function bold(msg) {
+
+    return "\u001b[1m" + (msg) + "\u001b[22m";
+}
+
+exports.green = green; exports.red = red; exports.gray = gray; exports.bold = bold; return exports; }).call(this, {});
+
+var ConsoleCommand = (function(exports) {
+
+var Style = ConsoleStyle;
+
+var HAS = Object.prototype.hasOwnProperty;
+
+function parse(argv, params) {
+
+    params || (params = {});
     
-    return Promise.resolve().then(next);
+    var pos = Object.keys(params),
+        values = {},
+        shorts = {},
+        required = [],
+        param,
+        value,
+        name,
+        i,
+        a;
+    
+    // Create short-to-long mapping
+    pos.forEach((function(name) {
+    
+        var p = params[name];
+        
+        if (p.short)
+            shorts[p.short] = name;
+        
+        if (p.required)
+            required.push(name);
+    }));
+    
+    // For each command line arg...
+    for (i = 0; i < argv.length; ++i) {
+    
+        a = argv[i];
+        param = null;
+        value = null;
+        name = "";
+        
+        if (a[0] === "-") {
+        
+            if (a.slice(0, 2) === "--") {
+            
+                // Long named parameter
+                param = params[name = a.slice(2)];
+            
+            } else {
+            
+                // Short named parameter
+                param = params[name = shorts[a.slice(1)]];
+            }
+            
+            // Verify parameter exists
+            if (!param)
+                throw new Error("Invalid command line option: " + a);
+            
+            if (param.flag) {
+            
+                value = true;
+            
+            } else {
+            
+                // Get parameter value
+                value = argv[++i] || "";
+                
+                if (typeof value !== "string" || value[0] === "-")
+                    throw new Error("No value provided for option " + a);
+            }
+            
+        } else {
+        
+            // Positional parameter
+            do { param = params[name = pos.shift()]; } 
+            while (param && !param.positional);;
+            
+            value = a;
+        }
+        
+        if (param)
+            values[name] = value;
+    }
+    
+    required.forEach((function(name) {
+    
+        if (values[name] === void 0)
+            throw new Error("Missing required option: --" + name);
+    }));
+    
+    return values;
 }
 
-function forEach(list, fn) {
+var ConsoleCommand = __class(function(__super) { return {
 
-    var i = -1;
-    return iterate((function(stop) { return (++i >= list.length) ? stop() : fn(list[i], i, list); }));
-}
+    constructor: function ConsoleCommand(cmd) {
+    
+        this.fallback = cmd;
+        this.commands = {};
+    },
+    
+    add: function(name, cmd) {
+    
+        this.commands[name] = cmd;
+        return this;
+    },
+    
+    run: function(args) {
+    
+        // Peel off the "node" and main module args
+        args || (args = process.argv.slice(2));
+        
+        var name = args[0] || "",
+            cmd = this.fallback;
+        
+        if (name && HAS.call(this.commands, name)) {
+        
+            cmd = this.commands[name];
+            args = args.slice(1);
+        }
+        
+        if (!cmd)
+            throw new Error("Invalid command");
+        
+        return cmd.execute(parse(args, cmd.params));
+    }
+    
+}});
+
+/*
+
+Example: 
+
+parse(process.argv.slice(2), {
+
+    "verbose": {
+    
+        short: "v",
+        flag: true
+    },
+    
+    "input": {
+    
+        short: "i",
+        positional: true,
+        required: true
+    },
+    
+    "output": {
+    
+        short: "o",
+        positional: true
+    },
+    
+    "recursive": {
+    
+        short: "r",
+        flag: false
+    }
+});
+
+*/
 
 
-exports.iterate = iterate; exports.forEach = forEach; return exports; }).call(this, {});
+exports.ConsoleCommand = ConsoleCommand; return exports; }).call(this, {});
 
-var Promise___ = (function(exports) {
+var ConsoleIO = (function(exports) {
 
-Object.keys(Promise__).forEach(function(k) { exports[k] = Promise__[k]; });
-Object.keys(PromiseFlow).forEach(function(k) { exports[k] = PromiseFlow[k]; });
+var Style = ConsoleStyle;
 
-return exports; }).call(this, {});
+var ConsoleIO = __class(function(__super) { return {
 
-var StringMap__ = (function(exports) {
+    constructor: function ConsoleIO() {
+    
+        this._inStream = process.stdin;
+        this._outStream = process.stdout;
+        
+        this._outEnc = "utf8";
+        this._inEnc = "utf8";
+        
+        this.inputEncoding = "utf8";
+        this.outputEncoding = "utf8";
+    },
+    
+    get inputEncoding() { 
+    
+        return this._inEnc;
+    },
+    
+    set inputEncoding(enc) {
+    
+        this._inStream.setEncoding(this._inEnc = enc);
+    },
+    
+    get outputEncoding() {
+    
+        return this._outEnc;
+    },
+    
+    set outputEncoding(enc) {
+    
+        this._outStream.setEncoding(this._outEnc = enc);
+    },
+    
+    readLine: function() { var __this = this; 
+    
+        return new Promise((function(resolve) {
+        
+            var listener = (function(data) {
+            
+                resolve(data);
+                __this._inStream.removeListener("data", listener);
+                __this._inStream.pause();
+            });
+            
+            __this._inStream.resume();
+            __this._inStream.on("data", listener);
+        }));
+    },
+    
+    writeLine: function(msg) {
+    
+        console.log(msg);
+    },
+    
+    write: function(msg) {
+    
+        process.stdout.write(msg);
+    }
+    
+}});
+
+
+exports.ConsoleIO = ConsoleIO; return exports; }).call(this, {});
+
+var StringMap_ = (function(exports) {
 
 var HAS = Object.prototype.hasOwnProperty;
 
@@ -1180,15 +1299,9 @@ var StringMap = __class(function(__super) { return {
 
 exports.StringMap = StringMap; return exports; }).call(this, {});
 
-var StringMap_ = (function(exports) {
-
-Object.keys(StringMap__).forEach(function(k) { exports[k] = StringMap__[k]; });
-
-return exports; }).call(this, {});
-
 var StringSet = (function(exports) {
 
-var StringMap = StringMap__.StringMap;
+var StringMap = StringMap_.StringMap;
 
 var StringSet = __class(function(__super) { return {
 
@@ -1236,9 +1349,116 @@ var StringSet = __class(function(__super) { return {
 
 exports.StringSet = StringSet; return exports; }).call(this, {});
 
-var StringSet_ = (function(exports) {
+var PromiseExtensions = (function(exports) {
 
+var PromiseExtensions = __class(function(__super) { return {
+
+    __static_iterate: function(fn) {
+
+        var done = false,
+            stop = (function(val) { done = true; return val; }),
+            next = (function(last) { return done ? last : Promise.resolve(fn(stop)).then(next); });
+    
+        return Promise.resolve().then(next);
+    },
+
+    __static_forEach: function(list, fn) {
+
+        var i = -1;
+        return iterate((function(stop) { return (++i >= list.length) ? stop() : fn(list[i], i, list); }));
+    }
+
+}});
+
+exports.PromiseExtensions = PromiseExtensions; return exports; }).call(this, {});
+
+var AsyncFS_ = (function(exports) {
+
+var FS = _M0;
+
+// Wraps a standard Node async function with a promise
+// generating function
+function wrap(fn) {
+
+	return function() {
+	
+	    var a = [].slice.call(arguments, 0);
+	    
+		return new Promise((function(resolve, reject) {
+		    
+            a.push((function(err, data) {
+        
+                if (err) reject(err);
+                else resolve(data);
+            }));
+            
+            fn.apply(null, a);
+        }));
+	};
+}
+
+function exists(path) {
+
+    return new Promise((function(resolve) {
+    
+        FS.exists(path, (function(result) { return resolve(result); }));
+    }));
+}
+
+var 
+    readFile = wrap(FS.readFile),
+    close = wrap(FS.close),
+    open = wrap(FS.open),
+    read = wrap(FS.read),
+    write = wrap(FS.write),
+    rename = wrap(FS.rename),
+    truncate = wrap(FS.truncate),
+    rmdir = wrap(FS.rmdir),
+    fsync = wrap(FS.fsync),
+    mkdir = wrap(FS.mkdir),
+    sendfile = wrap(FS.sendfile),
+    readdir = wrap(FS.readdir),
+    fstat = wrap(FS.fstat),
+    lstat = wrap(FS.lstat),
+    stat = wrap(FS.stat),
+    readlink = wrap(FS.readlink),
+    symlink = wrap(FS.symlink),
+    link = wrap(FS.link),
+    unlink = wrap(FS.unlink),
+    fchmod = wrap(FS.fchmod),
+    lchmod = wrap(FS.lchmod),
+    chmod = wrap(FS.chmod),
+    lchown = wrap(FS.lchown),
+    fchown = wrap(FS.fchown),
+    chown = wrap(FS.chown),
+    utimes = wrap(FS.utimes),
+    futimes = wrap(FS.futimes),
+    writeFile = wrap(FS.writeFile),
+    appendFile = wrap(FS.appendFile),
+    realpath = wrap(FS.realpath);
+
+
+exports.exists = exists; exports.readFile = readFile; exports.close = close; exports.open = open; exports.read = read; exports.write = write; exports.rename = rename; exports.truncate = truncate; exports.rmdir = rmdir; exports.fsync = fsync; exports.mkdir = mkdir; exports.sendfile = sendfile; exports.readdir = readdir; exports.fstat = fstat; exports.lstat = lstat; exports.stat = stat; exports.readlink = readlink; exports.symlink = symlink; exports.link = link; exports.unlink = unlink; exports.fchmod = fchmod; exports.lchmod = lchmod; exports.chmod = chmod; exports.lchown = lchown; exports.fchown = fchown; exports.chown = chown; exports.utimes = utimes; exports.futimes = futimes; exports.writeFile = writeFile; exports.appendFile = appendFile; exports.realpath = realpath; return exports; }).call(this, {});
+
+var main___ = (function(exports) {
+
+Object.keys(ConsoleCommand).forEach(function(k) { exports[k] = ConsoleCommand[k]; });
+Object.keys(ConsoleIO).forEach(function(k) { exports[k] = ConsoleIO[k]; });
+Object.keys(ConsoleStyle).forEach(function(k) { exports[k] = ConsoleStyle[k]; });
 Object.keys(StringSet).forEach(function(k) { exports[k] = StringSet[k]; });
+Object.keys(StringMap_).forEach(function(k) { exports[k] = StringMap_[k]; });
+Object.keys(PromiseExtensions).forEach(function(k) { exports[k] = PromiseExtensions[k]; });
+
+var AsyncFS = AsyncFS_;
+
+
+
+
+exports.AsyncFS = AsyncFS; return exports; }).call(this, {});
+
+var main_ = (function(exports) {
+
+Object.keys(main___).forEach(function(k) { exports[k] = main___[k]; });
 
 return exports; }).call(this, {});
 
@@ -3361,7 +3581,7 @@ var Validate = __class(function(__super) { return {
 
 exports.Validate = Validate; return exports; }).call(this, {});
 
-var Parser__ = (function(exports) {
+var Parser_ = (function(exports) {
 
 var Node = TreeNode;
 
@@ -3514,16 +3734,6 @@ var Parser = __class(function(__super) { return {
     get startOffset() {
     
         return this.peekToken().start;
-    },
-    
-    parseScript: function() { 
-    
-        return this.Script();
-    },
-    
-    parseModule: function() {
-    
-        return this.Module();
     },
     
     nextToken: function(context) {
@@ -5734,23 +5944,23 @@ mixin(Validate);
 
 exports.Parser = Parser; return exports; }).call(this, {});
 
-var main_ = (function(exports) {
+var main______ = (function(exports) {
 
 var Node = TreeNode;
 
-var Parser = Parser__.Parser;
+var Parser = Parser_.Parser;
 var Scanner = Scanner_.Scanner;
 
 
 
 function parseModule(input, options) {
 
-    return new Parser(input, options).parseModule();
+    return new Parser(input, options).Module();
 }
 
 function parseScript(input, options) {
 
-    return new Parser(input, options).parseScript();
+    return new Parser(input, options).Script();
 }
 
 function forEachChild(node, fn) {
@@ -5787,17 +5997,16 @@ function forEachChild(node, fn) {
 
 exports.Parser = Parser; exports.Scanner = Scanner; exports.Node = Node; exports.parseModule = parseModule; exports.parseScript = parseScript; exports.forEachChild = forEachChild; return exports; }).call(this, {});
 
-var Parser = (function(exports) {
+var main_____ = (function(exports) {
 
-Object.keys(main_).forEach(function(k) { exports[k] = main_[k]; });
+Object.keys(main______).forEach(function(k) { exports[k] = main______[k]; });
 
 return exports; }).call(this, {});
 
 var Analyzer = (function(exports) {
 
-var parseModule = Parser.parseModule, forEachChild = Parser.forEachChild;
-var StringSet = StringSet_.StringSet;
-var StringMap = StringMap_.StringMap;
+var parseModule = main_____.parseModule, forEachChild = main_____.forEachChild;
+var StringSet = main_.StringSet, StringMap = main_.StringMap;
 
 function parse(code) { 
 
@@ -5872,14 +6081,11 @@ function analyze(ast, resolvePath) {
 
 exports.parse = parse; exports.analyze = analyze; return exports; }).call(this, {});
 
-var Bundler_ = (function(exports) {
+var Bundler = (function(exports) {
 
-var AFS = AsyncFS__;
 var Path = _M1;
 
-var Promise = Promise___.Promise, forEachPromise = Promise___.forEach;
-var StringMap = StringMap_.StringMap;
-var StringSet = StringSet_.StringSet;
+var AsyncFS = main_.AsyncFS, StringMap = main_.StringMap, StringSet = main_.StringSet;
 var analyze = Analyzer.analyze;
 
 var EXTERNAL_URL = /[a-z][a-z]+:/i;
@@ -5906,16 +6112,19 @@ function identFromPath(path) {
     return name;
 }
 
-function bundle(rootPath) {
+function createBundle(rootPath, locatePackage) {
     
     rootPath = Path.resolve(rootPath);
+    locatePackage = locatePackage || ((function(x) { return x; }));
     
     var nodes = new StringMap,
         nodeNames = new StringSet,
         sort = [],
         pending = 0,
         resolver,
-        allFetched = new Promise((function(r) { return resolver = r; }));
+        allFetched;
+    
+    allFetched = new Promise((function(resolve, reject) { return resolver = { resolve: resolve, reject: reject }; }));
     
     function visit(path) {
 
@@ -5927,9 +6136,15 @@ function bundle(rootPath) {
         
         var dir = Path.dirname(path);
         
-        AFS.readFile(path, { encoding: "utf8" }).then((function(code) {
+        AsyncFS.readFile(path, { encoding: "utf8" }).then((function(code) {
     
-            var node = analyze(code, (function(p) { return EXTERNAL_URL.test(p) ? null : Path.resolve(dir, p); }));
+            var node = analyze(code, (function(p) {
+            
+                try { p = locatePackage(p) }
+                catch (x) {}
+                
+                return EXTERNAL_URL.test(p) ? null : Path.resolve(dir, p);
+            }));
             
             nodes.set(path, node);
             node.path = path;
@@ -6047,17 +6262,43 @@ function bundle(rootPath) {
     }));
 }
 
-exports.bundle = bundle; return exports; }).call(this, {});
+exports.createBundle = createBundle; return exports; }).call(this, {});
 
-var Bundler = (function(exports) {
+var main____ = (function(exports) {
 
-Object.keys(Bundler_).forEach(function(k) { exports[k] = Bundler_[k]; });
+var createBundle = Bundler.createBundle;
+var AsyncFS = main_.AsyncFS, ConsoleCommand = main_.ConsoleCommand;
 
-return exports; }).call(this, {});
 
-var Parser_ = (function(exports) {
+/*
 
-Object.keys(main_).forEach(function(k) { exports[k] = main_[k]; });
+new ConsoleCommand({
+
+    params: {
+    
+        "input": { short: "i", positional: true, required: true },
+        "output": { short: "o", positional: true, required: false }
+    },
+    
+    execute(options) {
+
+        bundle(options.input).then(code => {
+        
+            return options.output ?
+                AsyncFS.writeFile(options.output, code) :
+                console.log(code);
+        });
+    }
+    
+}).run();
+
+*/
+
+exports.createBundle = createBundle; return exports; }).call(this, {});
+
+var main__ = (function(exports) {
+
+Object.keys(main____).forEach(function(k) { exports[k] = main____[k]; });
 
 return exports; }).call(this, {});
 
@@ -6073,7 +6314,7 @@ var Replacer_ = (function(exports) {
 
 */
 
-var Parser = Parser_;
+var Parser = main_____;
 
 var HAS_SCHEMA = /^[a-z]+:/i,
     NODE_SCHEMA = /^(?:npm|node):/i;
@@ -6667,13 +6908,6 @@ function isWrapped(text) {
 
 exports.translate = translate; exports.wrap = wrap; exports.isWrapped = isWrapped; return exports; }).call(this, {});
 
-var Promise_ = (function(exports) {
-
-Object.keys(Promise__).forEach(function(k) { exports[k] = Promise__[k]; });
-Object.keys(PromiseFlow).forEach(function(k) { exports[k] = PromiseFlow[k]; });
-
-return exports; }).call(this, {});
-
 var ServerMime = (function(exports) {
 
 var mimeTypes = {
@@ -6829,9 +7063,7 @@ var HTTP = _M2;
 var Path = _M1;
 var URL = _M3;
 
-var AsyncFS = AsyncFS_;
-
-var Promise = Promise_.Promise;
+var AsyncFS = main_.AsyncFS;
 var translate = Translator.translate, isWrapped = Translator.isWrapped;
 var mimeTypes = ServerMime.mimeTypes;
 
@@ -6863,9 +7095,9 @@ var Server = __class(function(__super) { return {
         if (hostname)
             this.hostname = hostname;
         
-        var promise = new Promise((function(resolver) {
+        var promise = new Promise((function(resolve) {
         
-            __this.server.listen(__this.port, __this.hostname, (function(ok) { return resolver.resolve(null); }));
+            __this.server.listen(__this.port, __this.hostname, (function(ok) { return resolve(null); }));
             __this.active = true;
         }));
         
@@ -6874,16 +7106,16 @@ var Server = __class(function(__super) { return {
     
     stop: function() { var __this = this; 
     
-        return new Promise((function(resolver) {
+        return new Promise((function(resolve) {
         
             if (__this.active) {
         
                 __this.active = false;
-                __this.server.close((function(ok) { return resolver.resolve(null); }));
+                __this.server.close((function(ok) { return resolve(null); }));
         
             } else {
         
-                resolver.resolve(null);
+                resolve(null);
             }
         }));
     },
@@ -7014,296 +7246,6 @@ var Server = __class(function(__super) { return {
 
 exports.Server = Server; return exports; }).call(this, {});
 
-var ConsoleCommand = (function(exports) {
-
-var HAS = Object.prototype.hasOwnProperty;
-
-var Style = (function(exports) {
-
-    function green(msg) {
-    
-        return "\u001b[32m" + (msg) + "\u001b[39m";
-    }
-    
-    function red(msg) {
-    
-        return "\u001b[31m" + (msg) + "\u001b[39m";
-    }
-    
-    function gray(msg) {
-    
-        return "\u001b[90m" + (msg) + "\u001b[39m";
-    }
-    
-    function bold(msg) {
-    
-        return "\u001b[1m" + (msg) + "\u001b[22m";
-    }
-exports.green = green; exports.red = red; exports.gray = gray; exports.bold = bold; return exports; }).call(this, {});
-
-function parse(argv, params) {
-
-    params || (params = {});
-    
-    var pos = Object.keys(params),
-        values = {},
-        shorts = {},
-        required = [],
-        param,
-        value,
-        name,
-        i,
-        a;
-    
-    // Create short-to-long mapping
-    pos.forEach((function(name) {
-    
-        var p = params[name];
-        
-        if (p.short)
-            shorts[p.short] = name;
-        
-        if (p.required)
-            required.push(name);
-    }));
-    
-    // For each command line arg...
-    for (i = 0; i < argv.length; ++i) {
-    
-        a = argv[i];
-        param = null;
-        value = null;
-        name = "";
-        
-        if (a[0] === "-") {
-        
-            if (a.slice(0, 2) === "--") {
-            
-                // Long named parameter
-                param = params[name = a.slice(2)];
-            
-            } else {
-            
-                // Short named parameter
-                param = params[name = shorts[a.slice(1)]];
-            }
-            
-            // Verify parameter exists
-            if (!param)
-                throw new Error("Invalid command line option: " + a);
-            
-            if (param.flag) {
-            
-                value = true;
-            
-            } else {
-            
-                // Get parameter value
-                value = argv[++i] || "";
-                
-                if (typeof value !== "string" || value[0] === "-")
-                    throw new Error("No value provided for option " + a);
-            }
-            
-        } else {
-        
-            // Positional parameter
-            do { param = params[name = pos.shift()]; } 
-            while (param && !param.positional);;
-            
-            value = a;
-        }
-        
-        if (param)
-            values[name] = value;
-    }
-    
-    required.forEach((function(name) {
-    
-        if (values[name] === void 0)
-            throw new Error("Missing required option: --" + name);
-    }));
-    
-    return values;
-}
-
-var ConsoleCommand = __class(function(__super) { return {
-
-    constructor: function ConsoleCommand(cmd) {
-    
-        this.fallback = cmd;
-        this.commands = {};
-    },
-    
-    add: function(name, cmd) {
-    
-        this.commands[name] = cmd;
-        return this;
-    },
-    
-    run: function(args) {
-    
-        // Peel off the "node" and main module args
-        args || (args = process.argv.slice(2));
-        
-        var name = args[0] || "",
-            cmd = this.fallback;
-        
-        if (name && HAS.call(this.commands, name)) {
-        
-            cmd = this.commands[name];
-            args = args.slice(1);
-        }
-        
-        if (!cmd)
-            throw new Error("Invalid command");
-        
-        return cmd.execute(parse(args, cmd.params));
-    }
-    
-}});
-
-/*
-
-Example: 
-
-parse(process.argv.slice(2), {
-
-    "verbose": {
-    
-        short: "v",
-        flag: true
-    },
-    
-    "input": {
-    
-        short: "i",
-        positional: true,
-        required: true
-    },
-    
-    "output": {
-    
-        short: "o",
-        positional: true
-    },
-    
-    "recursive": {
-    
-        short: "r",
-        flag: false
-    }
-});
-
-*/
-
-
-exports.Style = Style; exports.ConsoleCommand = ConsoleCommand; return exports; }).call(this, {});
-
-var ConsoleCommand_ = (function(exports) {
-
-Object.keys(ConsoleCommand).forEach(function(k) { exports[k] = ConsoleCommand[k]; });
-
-return exports; }).call(this, {});
-
-var ConsoleIO = (function(exports) {
-
-var Promise = Promise__.Promise;
-
-var Style = (function(exports) {
-
-    function green(msg) {
-    
-        return "\u001b[32m" + (msg) + "\u001b[39m";
-    }
-    
-    function red(msg) {
-    
-        return "\u001b[31m" + (msg) + "\u001b[39m";
-    }
-    
-    function gray(msg) {
-    
-        return "\u001b[90m" + (msg) + "\u001b[39m";
-    }
-    
-    function bold(msg) {
-    
-        return "\u001b[1m" + (msg) + "\u001b[22m";
-    }
-exports.green = green; exports.red = red; exports.gray = gray; exports.bold = bold; return exports; }).call(this, {});
-
-var ConsoleIO = __class(function(__super) { return {
-
-    constructor: function ConsoleIO() {
-    
-        this._inStream = process.stdin;
-        this._outStream = process.stdout;
-        
-        this._outEnc = "utf8";
-        this._inEnc = "utf8";
-        
-        this.inputEncoding = "utf8";
-        this.outputEncoding = "utf8";
-    },
-    
-    get inputEncoding() { 
-    
-        return this._inEnc;
-    },
-    
-    set inputEncoding(enc) {
-    
-        this._inStream.setEncoding(this._inEnc = enc);
-    },
-    
-    get outputEncoding() {
-    
-        return this._outEnc;
-    },
-    
-    set outputEncoding(enc) {
-    
-        this._outStream.setEncoding(this._outEnc = enc);
-    },
-    
-    readLine: function() { var __this = this; 
-    
-        return new Promise((function(resolver) {
-        
-            var listener = (function(data) {
-            
-                resolver.resolve(data);
-                __this._inStream.removeListener("data", listener);
-                __this._inStream.pause();
-            });
-            
-            __this._inStream.resume();
-            __this._inStream.on("data", listener);
-        }));
-    },
-    
-    writeLine: function(msg) {
-    
-        console.log(msg);
-    },
-    
-    write: function(msg) {
-    
-        process.stdout.write(msg);
-    }
-    
-}});
-
-
-exports.Style = Style; exports.ConsoleIO = ConsoleIO; return exports; }).call(this, {});
-
-var ConsoleIO_ = (function(exports) {
-
-Object.keys(ConsoleIO).forEach(function(k) { exports[k] = ConsoleIO[k]; });
-
-return exports; }).call(this, {});
-
 var PackageLocator = (function(exports) {
 
 var Path = _M1;
@@ -7353,14 +7295,16 @@ var Program_ = (function(exports) {
 
 var FS = _M0;
 var Path = _M1;
-var AsyncFS = AsyncFS_;
 var Runtime = Runtime_;
 
-var bundle = Bundler.bundle;
+var AsyncFS = main_.AsyncFS,
+    ConsoleCommand = main_.ConsoleCommand,
+    ConsoleIO = main_.ConsoleIO,
+    Style = main_.ConsoleStyle;
+
+var createBundle = main__.createBundle;
 var translate = Translator.translate;
 var Server = Server_.Server;
-var ConsoleCommand = ConsoleCommand_.ConsoleCommand;
-var ConsoleIO = ConsoleIO_.ConsoleIO, Style = ConsoleIO_.Style;
 var isPackageURI = PackageLocator.isPackageURI, locatePackage = PackageLocator.locatePackage;
 
 var ES6_GUESS = /(?:^|\n)\s*(?:import|export|class)\s/;
@@ -7484,7 +7428,7 @@ function run() {
         execute: function(params) {
             
             var promise = params.bundle ?
-                bundle(params.input) :
+                createBundle(params.input, locatePackage) :
                 AsyncFS.readFile(params.input, { encoding: "utf8" });
             
             promise.then((function(text) {
@@ -7495,6 +7439,7 @@ function run() {
                         wrapRuntimeModule(Runtime.Class) + 
                         wrapRuntimeModule(Runtime.ES5) +
                         wrapRuntimeModule(Runtime.ES6) +
+                        wrapRuntimeModule(Runtime.Promise) +
                         text;
                 }
                 
