@@ -15,11 +15,9 @@
   [ a, b, ...array, c, d ];
   ([ a, b ]).concat(array).concat([ c, d ]);
 
-- Parameter defaults (waiting on scope issue consensus)
+- Parameter defaults
 
 - Destructuring everything
-
-- Map, Set polyfills.
 
 - Array comprehensions
 

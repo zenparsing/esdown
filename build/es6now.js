@@ -978,7 +978,7 @@ var Promise =
 
 exports.Class = Class; exports.ES5 = ES5; exports.ES6 = ES6; exports.Promise = Promise; return exports; }).call(this, {});
 
-var ConsoleStyle = (function(exports) {
+var ConsoleStyle_ = (function(exports) {
 
 function green(msg) {
 
@@ -1004,7 +1004,7 @@ exports.green = green; exports.red = red; exports.gray = gray; exports.bold = bo
 
 var ConsoleCommand = (function(exports) {
 
-var Style = ConsoleStyle;
+var Style = ConsoleStyle_;
 
 var HAS = Object.prototype.hasOwnProperty;
 
@@ -1169,7 +1169,7 @@ exports.ConsoleCommand = ConsoleCommand; return exports; }).call(this, {});
 
 var ConsoleIO = (function(exports) {
 
-var Style = ConsoleStyle;
+var Style = ConsoleStyle_;
 
 var ConsoleIO = __class(function(__super) { return {
 
@@ -1269,7 +1269,7 @@ var StringMap = __class(function(__super) { return {
         if (!HAS.call(this._map, key))
             return false;
         
-        delete this.map[key];
+        delete this._map[key];
         return true;
     },
     
@@ -1444,17 +1444,19 @@ var main___ = (function(exports) {
 
 Object.keys(ConsoleCommand).forEach(function(k) { exports[k] = ConsoleCommand[k]; });
 Object.keys(ConsoleIO).forEach(function(k) { exports[k] = ConsoleIO[k]; });
-Object.keys(ConsoleStyle).forEach(function(k) { exports[k] = ConsoleStyle[k]; });
 Object.keys(StringSet).forEach(function(k) { exports[k] = StringSet[k]; });
 Object.keys(StringMap_).forEach(function(k) { exports[k] = StringMap_[k]; });
 Object.keys(PromiseExtensions).forEach(function(k) { exports[k] = PromiseExtensions[k]; });
+
+var ConsoleStyle = ConsoleStyle_;
+
 
 var AsyncFS = AsyncFS_;
 
 
 
 
-exports.AsyncFS = AsyncFS; return exports; }).call(this, {});
+exports.ConsoleStyle = ConsoleStyle; exports.AsyncFS = AsyncFS; return exports; }).call(this, {});
 
 var main_ = (function(exports) {
 
@@ -7397,7 +7399,11 @@ function run() {
             params.debug = true;
             overrideCompilation();
             process.argv.splice(1, 1);
-            require(absPath(params.target));
+            
+            var m = require(absPath(params.target));
+            
+            if (typeof m.main === "function")
+                m.main(process.argv);
         }
         
     }).add("translate", {

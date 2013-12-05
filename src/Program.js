@@ -106,7 +106,11 @@ export function run() {
             params.debug = true;
             overrideCompilation();
             process.argv.splice(1, 1);
-            require(absPath(params.target));
+            
+            var m = require(absPath(params.target));
+            
+            if (typeof m.main === "function")
+                m.main(process.argv);
         }
         
     }).add("translate", {
