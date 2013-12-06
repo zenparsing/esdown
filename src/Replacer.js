@@ -8,10 +8,19 @@
 
 */
 
-module Parser from "package:es6parse";
+import { parseModule, AST } from "package:es6parse";
 
 var HAS_SCHEMA = /^[a-z]+:/i,
     NODE_SCHEMA = /^(?:npm|node):/i;
+
+class RootNode extends AST.Node {
+
+    constructor(root, end) {
+    
+        super(0, end);
+        this.root = root;
+    }
+}
 
 export class Replacer {
 
@@ -31,16 +40,19 @@ export class Replacer {
         this.uid = 0;
         this.input = input;
 
-        var root = Parser.parseModule(input);
+        var root = parseModule(input);
         
-        var visit = (node) => {
+        var visit = node => {
         
             // Call pre-order traversal method
             if (this[node.type + "Begin"])
                 this[node.type + "Begin"](node);
             
+            if (!node.forEachChild)
+                console.log(node);
+                
             // Perform a depth-first traversal
-            Parser.forEachChild(node, child => {
+            node.forEachChild(child => {
             
                 child.parentNode = node;
                 visit(child);
@@ -61,15 +73,8 @@ export class Replacer {
             return node.text;
         };
         
-        var output = visit({ 
-        
-            type: "$", 
-            root: root, 
-            start: 0, 
-            end: input.length
-        });
-        
-        var head = "";
+        var output = visit(new RootNode(root, input.length)),
+            head = "";
         
         this.dependencies.forEach(url => {
         
@@ -171,6 +176,9 @@ export class Replacer {
         var moduleSpec = this.modulePath(node.from),
             list = [];
         
+        // TODO: Preserve line numbers in import declarations 
+        // that span multiple lines
+        
         node.specifiers.forEach(spec => {
         
             var remote = spec.remote,
@@ -187,6 +195,12 @@ export class Replacer {
             return "";
         
         return "var " + this.joinList(list) + ";";
+    }
+    
+    ImportDefaultDeclaration(node) {
+    
+        // TODO
+        throw new Error("Not implemented.");
     }
     
     ExportDeclaration(node) {
@@ -443,7 +457,7 @@ export class Replacer {
             if (node.type === "ThisExpression")
                 throw hasThis;
             
-            Parser.forEachChild(node, visit);
+            node.forEachChild(visit);
         }
     }
     
@@ -479,7 +493,7 @@ export class Replacer {
             text = "";
         
         // Build text from child nodes
-        Parser.forEachChild(node, child => {
+        node.forEachChild(child => {
         
             if (offset < child.start)
                 text += input.slice(offset, child.start);

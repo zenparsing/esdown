@@ -1464,8 +1464,7 @@ Object.keys(main___).forEach(function(k) { exports[k] = main___[k]; });
 
 return exports; }).call(this, {});
 
-var TreeNode = (function(exports) {
-
+var AST_ = (function(exports) {
 
 var Node = __class(function(__super) { return {
 
@@ -1475,7 +1474,39 @@ var Node = __class(function(__super) { return {
         this.start = start;
         this.end = end;
         this.error = "";
+    },
+    
+    forEachChild: function(fn) {
+
+        var keys = Object.keys(this), val, i, j;
+    
+        for (i = 0; i < keys.length; ++i) {
+    
+            // Don't iterate over backlink to parent
+            if (keys[i] === "parentNode")
+                continue;
+            
+            val = this[keys[i]];
+        
+            // Skip non-objects and functions
+            if (!val || typeof val !== "object") 
+                continue;
+        
+            if (typeof val.type === "string") {
+        
+                // Nodes have a "type" property
+                fn(val);
+        
+            } else {
+        
+                // Iterate arrays
+                for (j = 0; j < (val.length >>> 0); ++j)
+                    if (val[j] && typeof val[j].type === "string")
+                        fn(val[j]);
+            }
+        }
     }
+    
 }});
 
 var Script = __class(Node, function(__super) { return {
@@ -2251,7 +2282,7 @@ var ClassElement = __class(Node, function(__super) { return {
 }});
 
 
-exports.Script = Script; exports.Module = Module; exports.Identifier = Identifier; exports.Number = Number; exports.String = String; exports.Template = Template; exports.RegularExpression = RegularExpression; exports.Null = Null; exports.Boolean = Boolean; exports.ThisExpression = ThisExpression; exports.SuperExpression = SuperExpression; exports.SequenceExpression = SequenceExpression; exports.AssignmentExpression = AssignmentExpression; exports.SpreadExpression = SpreadExpression; exports.YieldExpression = YieldExpression; exports.ConditionalExpression = ConditionalExpression; exports.BinaryExpression = BinaryExpression; exports.UpdateExpression = UpdateExpression; exports.UnaryExpression = UnaryExpression; exports.MemberExpression = MemberExpression; exports.CallExpression = CallExpression; exports.TaggedTemplateExpression = TaggedTemplateExpression; exports.NewExpression = NewExpression; exports.ParenExpression = ParenExpression; exports.ObjectLiteral = ObjectLiteral; exports.ComputedPropertyName = ComputedPropertyName; exports.PropertyDefinition = PropertyDefinition; exports.PatternProperty = PatternProperty; exports.PatternElement = PatternElement; exports.MethodDefinition = MethodDefinition; exports.ArrayLiteral = ArrayLiteral; exports.ArrayComprehension = ArrayComprehension; exports.GeneratorComprehension = GeneratorComprehension; exports.ComprehensionFor = ComprehensionFor; exports.ComprehensionIf = ComprehensionIf; exports.TemplateExpression = TemplateExpression; exports.Block = Block; exports.LabelledStatement = LabelledStatement; exports.ExpressionStatement = ExpressionStatement; exports.EmptyStatement = EmptyStatement; exports.VariableDeclaration = VariableDeclaration; exports.VariableDeclarator = VariableDeclarator; exports.ReturnStatement = ReturnStatement; exports.BreakStatement = BreakStatement; exports.ContinueStatement = ContinueStatement; exports.ThrowStatement = ThrowStatement; exports.DebuggerStatement = DebuggerStatement; exports.IfStatement = IfStatement; exports.DoWhileStatement = DoWhileStatement; exports.WhileStatement = WhileStatement; exports.ForStatement = ForStatement; exports.ForInStatement = ForInStatement; exports.ForOfStatement = ForOfStatement; exports.WithStatement = WithStatement; exports.SwitchStatement = SwitchStatement; exports.SwitchCase = SwitchCase; exports.TryStatement = TryStatement; exports.CatchClause = CatchClause; exports.FunctionDeclaration = FunctionDeclaration; exports.FunctionExpression = FunctionExpression; exports.FormalParameter = FormalParameter; exports.RestParameter = RestParameter; exports.FunctionBody = FunctionBody; exports.ArrowFunctionHead = ArrowFunctionHead; exports.ArrowFunction = ArrowFunction; exports.ModuleDeclaration = ModuleDeclaration; exports.ModuleBody = ModuleBody; exports.ModuleImport = ModuleImport; exports.ModuleAlias = ModuleAlias; exports.ImportDefaultDeclaration = ImportDefaultDeclaration; exports.ImportDeclaration = ImportDeclaration; exports.ImportSpecifier = ImportSpecifier; exports.ExportDeclaration = ExportDeclaration; exports.ExportsList = ExportsList; exports.ExportSpecifier = ExportSpecifier; exports.ModulePath = ModulePath; exports.ClassDeclaration = ClassDeclaration; exports.ClassExpression = ClassExpression; exports.ClassBody = ClassBody; exports.ClassElement = ClassElement; return exports; }).call(this, {});
+exports.Node = Node; exports.Script = Script; exports.Module = Module; exports.Identifier = Identifier; exports.Number = Number; exports.String = String; exports.Template = Template; exports.RegularExpression = RegularExpression; exports.Null = Null; exports.Boolean = Boolean; exports.ThisExpression = ThisExpression; exports.SuperExpression = SuperExpression; exports.SequenceExpression = SequenceExpression; exports.AssignmentExpression = AssignmentExpression; exports.SpreadExpression = SpreadExpression; exports.YieldExpression = YieldExpression; exports.ConditionalExpression = ConditionalExpression; exports.BinaryExpression = BinaryExpression; exports.UpdateExpression = UpdateExpression; exports.UnaryExpression = UnaryExpression; exports.MemberExpression = MemberExpression; exports.CallExpression = CallExpression; exports.TaggedTemplateExpression = TaggedTemplateExpression; exports.NewExpression = NewExpression; exports.ParenExpression = ParenExpression; exports.ObjectLiteral = ObjectLiteral; exports.ComputedPropertyName = ComputedPropertyName; exports.PropertyDefinition = PropertyDefinition; exports.PatternProperty = PatternProperty; exports.PatternElement = PatternElement; exports.MethodDefinition = MethodDefinition; exports.ArrayLiteral = ArrayLiteral; exports.ArrayComprehension = ArrayComprehension; exports.GeneratorComprehension = GeneratorComprehension; exports.ComprehensionFor = ComprehensionFor; exports.ComprehensionIf = ComprehensionIf; exports.TemplateExpression = TemplateExpression; exports.Block = Block; exports.LabelledStatement = LabelledStatement; exports.ExpressionStatement = ExpressionStatement; exports.EmptyStatement = EmptyStatement; exports.VariableDeclaration = VariableDeclaration; exports.VariableDeclarator = VariableDeclarator; exports.ReturnStatement = ReturnStatement; exports.BreakStatement = BreakStatement; exports.ContinueStatement = ContinueStatement; exports.ThrowStatement = ThrowStatement; exports.DebuggerStatement = DebuggerStatement; exports.IfStatement = IfStatement; exports.DoWhileStatement = DoWhileStatement; exports.WhileStatement = WhileStatement; exports.ForStatement = ForStatement; exports.ForInStatement = ForInStatement; exports.ForOfStatement = ForOfStatement; exports.WithStatement = WithStatement; exports.SwitchStatement = SwitchStatement; exports.SwitchCase = SwitchCase; exports.TryStatement = TryStatement; exports.CatchClause = CatchClause; exports.FunctionDeclaration = FunctionDeclaration; exports.FunctionExpression = FunctionExpression; exports.FormalParameter = FormalParameter; exports.RestParameter = RestParameter; exports.FunctionBody = FunctionBody; exports.ArrowFunctionHead = ArrowFunctionHead; exports.ArrowFunction = ArrowFunction; exports.ModuleDeclaration = ModuleDeclaration; exports.ModuleBody = ModuleBody; exports.ModuleImport = ModuleImport; exports.ModuleAlias = ModuleAlias; exports.ImportDefaultDeclaration = ImportDefaultDeclaration; exports.ImportDeclaration = ImportDeclaration; exports.ImportSpecifier = ImportSpecifier; exports.ExportDeclaration = ExportDeclaration; exports.ExportsList = ExportsList; exports.ExportSpecifier = ExportSpecifier; exports.ModulePath = ModulePath; exports.ClassDeclaration = ClassDeclaration; exports.ClassExpression = ClassExpression; exports.ClassBody = ClassBody; exports.ClassElement = ClassElement; return exports; }).call(this, {});
 
 var Scanner_ = (function(exports) {
 
@@ -3170,7 +3201,7 @@ exports.Scanner = Scanner; return exports; }).call(this, {});
 
 var Transform_ = (function(exports) {
 
-var Node = TreeNode;
+var AST = AST_;
 
 var Transform = __class(function(__super) { return {
 
@@ -3189,7 +3220,7 @@ var Transform = __class(function(__super) { return {
         for (i = 0; i < list.length; ++i) {
         
             node = list[i];
-            params.push(param = new Node.FormalParameter(node, null, node.start, node.end));
+            params.push(param = new AST.FormalParameter(node, null, node.start, node.end));
             this.transformPatternElement(param, true);
         }
         
@@ -3219,7 +3250,7 @@ var Transform = __class(function(__super) { return {
             
                 rest = (elem.type === "SpreadExpression");
                 
-                elem = elems[i] = new Node.PatternElement(
+                elem = elems[i] = new AST.PatternElement(
                     rest ? elem.expression : elem,
                     null,
                     rest,
@@ -3260,7 +3291,7 @@ var Transform = __class(function(__super) { return {
                 case "PropertyDefinition":
                     
                     // Replace node
-                    prop = new Node.PatternProperty(
+                    prop = new AST.PatternProperty(
                         prop.name,
                         prop.expression,
                         null,
@@ -3585,7 +3616,7 @@ exports.Validate = Validate; return exports; }).call(this, {});
 
 var Parser_ = (function(exports) {
 
-var Node = TreeNode;
+var AST = AST_;
 
 var Scanner = Scanner_.Scanner;
 var Transform = Transform_.Transform;
@@ -3991,7 +4022,7 @@ var Parser = __class(function(__super) { return {
         
         this.popContext();
         
-        return new Node.Script(statements, start, this.endOffset);
+        return new AST.Script(statements, start, this.endOffset);
     },
     
     Module: function() {
@@ -4003,7 +4034,7 @@ var Parser = __class(function(__super) { return {
         
         this.popContext();
         
-        return new Node.Module(statements, start, this.endOffset);
+        return new AST.Module(statements, start, this.endOffset);
     },
     
     // === Expressions ===
@@ -4027,7 +4058,7 @@ var Parser = __class(function(__super) { return {
             this.read();
             
             if (list === null)
-                expr = new Node.SequenceExpression(list = [expr], start, -1);
+                expr = new AST.SequenceExpression(list = [expr], start, -1);
             
             list.push(this.AssignmentExpression(noIn));
         }
@@ -4058,7 +4089,7 @@ var Parser = __class(function(__super) { return {
         
         this.checkAssignTarget(left);
         
-        return new Node.AssignmentExpression(
+        return new AST.AssignmentExpression(
             this.read(),
             left,
             this.AssignmentExpression(noIn),
@@ -4074,7 +4105,7 @@ var Parser = __class(function(__super) { return {
             
             this.read();
             
-            return new Node.SpreadExpression(
+            return new AST.SpreadExpression(
                 this.AssignmentExpression(noIn), 
                 start, 
                 this.endOffset);
@@ -4100,7 +4131,7 @@ var Parser = __class(function(__super) { return {
         if (delegate || !this.maybeEnd())
             expr = this.AssignmentExpression();
         
-        return new Node.YieldExpression(
+        return new AST.YieldExpression(
             expr, 
             delegate, 
             start, 
@@ -4122,7 +4153,7 @@ var Parser = __class(function(__super) { return {
         this.read(":");
         right = this.AssignmentExpression(noIn);
         
-        return new Node.ConditionalExpression(left, middle, right, start, this.endOffset);
+        return new AST.ConditionalExpression(left, middle, right, start, this.endOffset);
     },
     
     BinaryExpression: function(noIn) {
@@ -4167,7 +4198,7 @@ var Parser = __class(function(__super) { return {
                 rhs = this.PartialBinaryExpression(rhs, prec, noIn);
             }
             
-            lhs = new Node.BinaryExpression(op, lhs, rhs, lhs.start, rhs.end);
+            lhs = new AST.BinaryExpression(op, lhs, rhs, lhs.start, rhs.end);
         }
         
         return lhs;
@@ -4186,7 +4217,7 @@ var Parser = __class(function(__super) { return {
             expr = this.MemberExpression(true);
             this.checkAssignTarget(expr, true);
             
-            return new Node.UpdateExpression(type, expr, true, start, this.endOffset);
+            return new AST.UpdateExpression(type, expr, true, start, this.endOffset);
         }
         
         if (isUnary(type)) {
@@ -4197,7 +4228,7 @@ var Parser = __class(function(__super) { return {
             if (type === "delete" && expr.type === "Identifier")
                 this.addStrictError("Cannot delete unqualified property in strict mode", expr);
             
-            return new Node.UnaryExpression(type, expr, start, this.endOffset);
+            return new AST.UnaryExpression(type, expr, start, this.endOffset);
         }
         
         expr = this.MemberExpression(true);
@@ -4210,7 +4241,7 @@ var Parser = __class(function(__super) { return {
             this.read();
             this.checkAssignTarget(expr, true);
             
-            return new Node.UpdateExpression(type, expr, false, start, this.endOffset);
+            return new AST.UpdateExpression(type, expr, false, start, this.endOffset);
         }
         
         return expr;
@@ -4237,7 +4268,7 @@ var Parser = __class(function(__super) { return {
                 
                     this.read();
                     
-                    expr = new Node.MemberExpression(
+                    expr = new AST.MemberExpression(
                         expr, 
                         this.IdentifierName(), 
                         false, 
@@ -4252,7 +4283,7 @@ var Parser = __class(function(__super) { return {
                     prop = this.Expression();
                     this.read("]");
                     
-                    expr = new Node.MemberExpression(
+                    expr = new AST.MemberExpression(
                         expr, 
                         prop, 
                         true, 
@@ -4269,7 +4300,7 @@ var Parser = __class(function(__super) { return {
                         break;
                     }
                     
-                    expr = new Node.CallExpression(
+                    expr = new AST.CallExpression(
                         expr, 
                         this.ArgumentList(), 
                         start, 
@@ -4279,7 +4310,7 @@ var Parser = __class(function(__super) { return {
                 
                 case "TEMPLATE":
                 
-                    expr = new Node.TaggedTemplateExpression(
+                    expr = new AST.TaggedTemplateExpression(
                         expr,
                         this.TemplateExpression(),
                         start,
@@ -4312,7 +4343,7 @@ var Parser = __class(function(__super) { return {
         
         var args = this.peek("div") === "(" ? this.ArgumentList() : null;
         
-        return new Node.NewExpression(expr, args, start, this.endOffset);
+        return new AST.NewExpression(expr, args, start, this.endOffset);
     },
     
     SuperExpression: function() {
@@ -4320,7 +4351,7 @@ var Parser = __class(function(__super) { return {
         var start = this.startOffset;
         this.read("super");
         
-        return new Node.SuperExpression(start, this.endOffset);
+        return new AST.SuperExpression(start, this.endOffset);
     },
     
     ArgumentList: function() {
@@ -4377,20 +4408,20 @@ var Parser = __class(function(__super) { return {
             
             case "REGEX":
                 this.read();
-                return new Node.RegularExpression(tok.value, tok.regExpFlags, tok.start, tok.end);
+                return new AST.RegularExpression(tok.value, tok.regExpFlags, tok.start, tok.end);
             
             case "null":
                 this.read();
-                return new Node.Null(tok.start, tok.end);
+                return new AST.Null(tok.start, tok.end);
             
             case "true":
             case "false":
                 this.read();
-                return new Node.Boolean(type === "true", tok.start, tok.end);
+                return new AST.Boolean(type === "true", tok.start, tok.end);
             
             case "this":
                 this.read();
-                return new Node.ThisExpression(tok.start, tok.end);
+                return new AST.ThisExpression(tok.start, tok.end);
         }
         
         this.fail("Unexpected token " + type);
@@ -4402,7 +4433,7 @@ var Parser = __class(function(__super) { return {
             context = isVar ? "variable" : "",
             node;
             
-        node = new Node.Identifier(token.value, context, token.start, token.end);
+        node = new AST.Identifier(token.value, context, token.start, token.end);
         
         this.checkIdentifier(node);
         
@@ -4412,7 +4443,7 @@ var Parser = __class(function(__super) { return {
     IdentifierName: function() {
     
         var token = this.readToken("IDENTIFIER", "name");
-        return new Node.Identifier(token.value, "", token.start, token.end);
+        return new AST.Identifier(token.value, "", token.start, token.end);
     },
     
     String: function() {
@@ -4423,7 +4454,7 @@ var Parser = __class(function(__super) { return {
         if (token.strictError)
             this.addStrictError(token.strictError, token);
             
-        return new Node.String(token.value, token.start, token.end);
+        return new AST.String(token.value, token.start, token.end);
     },
     
     Number: function() {
@@ -4434,7 +4465,7 @@ var Parser = __class(function(__super) { return {
         if (token.strictError)
             this.addStrictError(token.strictError, token);
             
-        return new Node.Number(token.number, token.start, token.end);
+        return new AST.Number(token.number, token.start, token.end);
     },
     
     Template: function() {
@@ -4445,7 +4476,7 @@ var Parser = __class(function(__super) { return {
         if (token.strictError)
             this.addStrictError(token.strictError, token);
             
-        return new Node.Template(token.value, token.templateEnd, token.start, token.end);
+        return new AST.Template(token.value, token.templateEnd, token.start, token.end);
     },
     
     BindingIdentifier: function() {
@@ -4525,7 +4556,7 @@ var Parser = __class(function(__super) { return {
         // Collapse this context into its parent
         this.popContext(true);
         
-        return new Node.ParenExpression(expr, start, this.endOffset);
+        return new AST.ParenExpression(expr, start, this.endOffset);
     },
     
     ObjectLiteral: function() {
@@ -4553,7 +4584,7 @@ var Parser = __class(function(__super) { return {
         
         this.read("}");
         
-        return new Node.ObjectLiteral(list, start, this.endOffset);
+        return new AST.ObjectLiteral(list, start, this.endOffset);
     },
     
     PropertyDefinition: function() {
@@ -4572,7 +4603,7 @@ var Parser = __class(function(__super) { return {
                 // Re-read token as an identifier
                 this.unpeek();
             
-                node = new Node.PatternProperty(
+                node = new AST.PatternProperty(
                     this.Identifier(),
                     null,
                     (this.read(), this.AssignmentExpression()),
@@ -4588,7 +4619,7 @@ var Parser = __class(function(__super) { return {
                 // Re-read token as an identifier
                 this.unpeek();
         
-                return new Node.PropertyDefinition(
+                return new AST.PropertyDefinition(
                     this.Identifier(),
                     null,
                     start,
@@ -4599,7 +4630,7 @@ var Parser = __class(function(__super) { return {
         
         if (this.peek("name") === ":") {
         
-            return new Node.PropertyDefinition(
+            return new AST.PropertyDefinition(
                 name,
                 (this.read(), this.AssignmentExpression()),
                 start,
@@ -4632,7 +4663,7 @@ var Parser = __class(function(__super) { return {
         var expr = this.AssignmentExpression();
         this.read("]");
         
-        return new Node.ComputedPropertyName(expr, start, this.endOffset);
+        return new AST.ComputedPropertyName(expr, start, this.endOffset);
     },
     
     MethodDefinition: function(name) {
@@ -4673,7 +4704,7 @@ var Parser = __class(function(__super) { return {
         this.checkParameters(params);
         this.popContext();
         
-        return new Node.MethodDefinition(
+        return new AST.MethodDefinition(
             kind,
             name,
             params,
@@ -4712,7 +4743,7 @@ var Parser = __class(function(__super) { return {
         
         this.read("]");
         
-        return new Node.ArrayLiteral(list, start, this.endOffset);
+        return new AST.ArrayLiteral(list, start, this.endOffset);
     },
     
     ArrayComprehension: function() {
@@ -4726,7 +4757,7 @@ var Parser = __class(function(__super) { return {
         
         this.read("]");
         
-        return new Node.ArrayComprehension(list, expr, start, this.endOffset);
+        return new AST.ArrayComprehension(list, expr, start, this.endOffset);
     },
     
     GeneratorComprehension: function() {
@@ -4740,7 +4771,7 @@ var Parser = __class(function(__super) { return {
         
         this.read(")");
         
-        return new Node.GeneratorComprehension(list, expr, start, this.endOffset);
+        return new AST.GeneratorComprehension(list, expr, start, this.endOffset);
     },
     
     ComprehensionQualifierList: function() {
@@ -4769,7 +4800,7 @@ var Parser = __class(function(__super) { return {
         
         this.read("for");
         
-        return new Node.ComprehensionFor(
+        return new AST.ComprehensionFor(
             this.BindingPattern(),
             (this.readKeyword("of"), this.AssignmentExpression()),
             start,
@@ -4787,7 +4818,7 @@ var Parser = __class(function(__super) { return {
         test = this.AssignmentExpression();
         this.read(")");
         
-        return new Node.ComprehensionIf(test, start, this.endOffset);
+        return new AST.ComprehensionIf(test, start, this.endOffset);
     },
     
     TemplateExpression: function() {
@@ -4807,7 +4838,7 @@ var Parser = __class(function(__super) { return {
             lit.push(atom = this.Template());
         }
         
-        return new Node.TemplateExpression(lit, sub, start, this.endOffset);
+        return new AST.TemplateExpression(lit, sub, start, this.endOffset);
     },
     
     // === Statements ===
@@ -4866,7 +4897,7 @@ var Parser = __class(function(__super) { return {
         var list = this.StatementList(false, false);
         this.read("}");
         
-        return new Node.Block(list, start, this.endOffset);
+        return new AST.Block(list, start, this.endOffset);
     },
     
     Semicolon: function() {
@@ -4885,7 +4916,7 @@ var Parser = __class(function(__super) { return {
         
         this.read(":");
         
-        return new Node.LabelledStatement(
+        return new AST.LabelledStatement(
             label, 
             this.StatementWithLabel(label),
             start,
@@ -4899,7 +4930,7 @@ var Parser = __class(function(__super) { return {
         
         this.Semicolon();
         
-        return new Node.ExpressionStatement(expr, start, this.endOffset);
+        return new AST.ExpressionStatement(expr, start, this.endOffset);
     },
     
     EmptyStatement: function() {
@@ -4908,7 +4939,7 @@ var Parser = __class(function(__super) { return {
         
         this.Semicolon();
         
-        return new Node.EmptyStatement(start, this.endOffset);
+        return new AST.EmptyStatement(start, this.endOffset);
     },
     
     VariableStatement: function() {
@@ -4936,6 +4967,7 @@ var Parser = __class(function(__super) { return {
             
             case "const":
                 isConst = true;
+                break;
             
             case "IDENTIFIER":
             
@@ -4959,7 +4991,7 @@ var Parser = __class(function(__super) { return {
             else break;
         }
         
-        return new Node.VariableDeclaration(kind, list, start, this.endOffset);
+        return new AST.VariableDeclaration(kind, list, start, this.endOffset);
     },
     
     VariableDeclarator: function(noIn, isConst) {
@@ -4978,7 +5010,7 @@ var Parser = __class(function(__super) { return {
             this.fail("Missing const initializer", pattern);
         }
         
-        return new Node.VariableDeclarator(pattern, init, start, this.endOffset);
+        return new AST.VariableDeclarator(pattern, init, start, this.endOffset);
     },
     
     ReturnStatement: function() {
@@ -4993,7 +5025,7 @@ var Parser = __class(function(__super) { return {
         
         this.Semicolon();
         
-        return new Node.ReturnStatement(value, start, this.endOffset);
+        return new AST.ReturnStatement(value, start, this.endOffset);
     },
     
     BreakOrContinueStatement: function() {
@@ -5022,8 +5054,8 @@ var Parser = __class(function(__super) { return {
         }
         
         return keyword === "break" ?
-            new Node.BreakStatement(label, start, this.endOffset) :
-            new Node.ContinueStatement(label, start, this.endOffset);
+            new AST.BreakStatement(label, start, this.endOffset) :
+            new AST.ContinueStatement(label, start, this.endOffset);
     },
     
     ThrowStatement: function() {
@@ -5039,7 +5071,7 @@ var Parser = __class(function(__super) { return {
         
         this.Semicolon();
         
-        return new Node.ThrowStatement(expr, start, this.endOffset);
+        return new AST.ThrowStatement(expr, start, this.endOffset);
     },
     
     DebuggerStatement: function() {
@@ -5049,7 +5081,7 @@ var Parser = __class(function(__super) { return {
         this.read("debugger");
         this.Semicolon();
         
-        return new Node.DebuggerStatement(start, this.endOffset);
+        return new AST.DebuggerStatement(start, this.endOffset);
     },
     
     IfStatement: function() {
@@ -5072,7 +5104,7 @@ var Parser = __class(function(__super) { return {
             elseBody = this.Statement();
         }
         
-        return new Node.IfStatement(test, body, elseBody, start, this.endOffset);
+        return new AST.IfStatement(test, body, elseBody, start, this.endOffset);
     },
     
     DoWhileStatement: function() {
@@ -5091,7 +5123,7 @@ var Parser = __class(function(__super) { return {
         
         this.read(")");
         
-        return new Node.DoWhileStatement(body, test, start, this.endOffset);
+        return new AST.DoWhileStatement(body, test, start, this.endOffset);
     },
     
     WhileStatement: function() {
@@ -5101,7 +5133,7 @@ var Parser = __class(function(__super) { return {
         this.read("while");
         this.read("(");
         
-        return new Node.WhileStatement(
+        return new AST.WhileStatement(
             this.Expression(), 
             (this.read(")"), this.StatementWithLabel()), 
             start, 
@@ -5159,7 +5191,7 @@ var Parser = __class(function(__super) { return {
         
         this.read(")");
         
-        return new Node.ForStatement(
+        return new AST.ForStatement(
             init, 
             test, 
             step, 
@@ -5176,7 +5208,7 @@ var Parser = __class(function(__super) { return {
         var expr = this.Expression();
         this.read(")");
         
-        return new Node.ForInStatement(
+        return new AST.ForInStatement(
             init, 
             expr, 
             this.StatementWithLabel(), 
@@ -5192,7 +5224,7 @@ var Parser = __class(function(__super) { return {
         var expr = this.AssignmentExpression();
         this.read(")");
         
-        return new Node.ForOfStatement(
+        return new AST.ForOfStatement(
             init, 
             expr, 
             this.StatementWithLabel(), 
@@ -5211,7 +5243,7 @@ var Parser = __class(function(__super) { return {
         this.read("with");
         this.read("(");
         
-        return new Node.WithStatement(
+        return new AST.WithStatement(
             this.Expression(), 
             (this.read(")"), this.Statement()),
             start,
@@ -5252,7 +5284,7 @@ var Parser = __class(function(__super) { return {
         this.context.switchDepth -= 1;
         this.read("}");
         
-        return new Node.SwitchStatement(head, cases, start, this.endOffset);
+        return new AST.SwitchStatement(head, cases, start, this.endOffset);
     },
     
     SwitchCase: function() {
@@ -5282,7 +5314,7 @@ var Parser = __class(function(__super) { return {
             list.push(this.Statement());
         }
         
-        return new Node.SwitchCase(expr, list, start, this.endOffset);
+        return new AST.SwitchCase(expr, list, start, this.endOffset);
     },
     
     TryStatement: function() {
@@ -5304,7 +5336,7 @@ var Parser = __class(function(__super) { return {
             fin = this.Block();
         }
         
-        return new Node.TryStatement(tryBlock, handler, fin, start, this.endOffset);
+        return new AST.TryStatement(tryBlock, handler, fin, start, this.endOffset);
     },
     
     CatchClause: function() {
@@ -5316,7 +5348,7 @@ var Parser = __class(function(__super) { return {
         var param = this.BindingPattern();
         this.read(")");
         
-        return new Node.CatchClause(param, this.Block(), start, this.endOffset);
+        return new AST.CatchClause(param, this.Block(), start, this.endOffset);
     },
     
     // === Declarations ===
@@ -5425,7 +5457,7 @@ var Parser = __class(function(__super) { return {
         
         this.popContext();
         
-        return new Node.FunctionDeclaration(
+        return new AST.FunctionDeclaration(
             kind,
             ident,
             params,
@@ -5466,7 +5498,7 @@ var Parser = __class(function(__super) { return {
         
         this.popContext();
         
-        return new Node.FunctionExpression(
+        return new AST.FunctionExpression(
             kind,
             ident,
             params,
@@ -5513,7 +5545,7 @@ var Parser = __class(function(__super) { return {
             init = this.AssignmentExpression();
         }
         
-        return new Node.FormalParameter(pattern, init, start, this.endOffset);
+        return new AST.FormalParameter(pattern, init, start, this.endOffset);
     },
     
     RestParameter: function() {
@@ -5522,7 +5554,7 @@ var Parser = __class(function(__super) { return {
         
         this.read("...");
         
-        return new Node.RestParameter(this.BindingIdentifier(), start, this.endOffset);
+        return new AST.RestParameter(this.BindingIdentifier(), start, this.endOffset);
     },
     
     FunctionBody: function() {
@@ -5535,7 +5567,7 @@ var Parser = __class(function(__super) { return {
         var statements = this.StatementList(true, false);
         this.read("}");
         
-        return new Node.FunctionBody(statements, start, this.endOffset);
+        return new AST.FunctionBody(statements, start, this.endOffset);
     },
     
     ArrowFunctionHead: function(formals, rest, start) {
@@ -5546,7 +5578,7 @@ var Parser = __class(function(__super) { return {
         var params = this.transformFormals(formals, rest);
         this.checkParameters(params);
         
-        return new Node.ArrowFunctionHead(params, start, this.endOffset);
+        return new AST.ArrowFunctionHead(params, start, this.endOffset);
     },
     
     ArrowFunctionBody: function(head, noIn) {
@@ -5562,7 +5594,7 @@ var Parser = __class(function(__super) { return {
         
         this.popContext();
         
-        return new Node.ArrowFunction(params, body, start, this.endOffset);
+        return new AST.ArrowFunction(params, body, start, this.endOffset);
     },
     
     // === Modules ===
@@ -5583,7 +5615,7 @@ var Parser = __class(function(__super) { return {
             target = this.ModulePath();
             this.Semicolon();
         
-            return new Node.ModuleAlias(
+            return new AST.ModuleAlias(
                 ident,
                 target,
                 start,
@@ -5594,14 +5626,14 @@ var Parser = __class(function(__super) { return {
             target = this.ModuleSpecifier();
             this.Semicolon();
         
-            return new Node.ModuleImport(
+            return new AST.ModuleImport(
                 ident,
                 target,
                 start,
                 this.endOffset);
         }
         
-        return new Node.ModuleDeclaration(
+        return new AST.ModuleDeclaration(
             ident,
             this.ModuleBody(),
             start,
@@ -5614,7 +5646,7 @@ var Parser = __class(function(__super) { return {
         
         this.readKeyword("module");
         
-        return new Node.ModuleDeclaration(
+        return new AST.ModuleDeclaration(
             this.BindingIdentifier(),
             this.ModuleBody(),
             start,
@@ -5633,7 +5665,7 @@ var Parser = __class(function(__super) { return {
         
         this.popContext();
         
-        return new Node.ModuleBody(list, start, this.endOffset);
+        return new AST.ModuleBody(list, start, this.endOffset);
     },
     
     ModuleSpecifier: function() {
@@ -5657,7 +5689,7 @@ var Parser = __class(function(__super) { return {
             from = this.ModuleSpecifier();
             this.Semicolon();
             
-            return new Node.ImportDefaultDeclaration(ident, from, start, this.endOffset);
+            return new AST.ImportDefaultDeclaration(ident, from, start, this.endOffset);
         }
         
         this.read("{");
@@ -5674,7 +5706,7 @@ var Parser = __class(function(__super) { return {
         from = this.ModuleSpecifier();
         this.Semicolon();
         
-        return new Node.ImportDeclaration(list, from, start, this.endOffset);
+        return new AST.ImportDeclaration(list, from, start, this.endOffset);
     },
     
     ImportSpecifier: function() {
@@ -5707,7 +5739,7 @@ var Parser = __class(function(__super) { return {
             this.checkBindingIdent(remote);
         }
         
-        return new Node.ImportSpecifier(remote, local, start, this.endOffset);
+        return new AST.ImportSpecifier(remote, local, start, this.endOffset);
     },
     
     ExportDeclaration: function() {
@@ -5758,7 +5790,7 @@ var Parser = __class(function(__super) { return {
                 break;
         }
         
-        return new Node.ExportDeclaration(binding, start, this.endOffset);
+        return new AST.ExportDeclaration(binding, start, this.endOffset);
     },
     
     ExportsList: function() {
@@ -5799,7 +5831,7 @@ var Parser = __class(function(__super) { return {
             }
         }
         
-        return new Node.ExportsList(list, from, start, this.endOffset);
+        return new AST.ExportsList(list, from, start, this.endOffset);
     },
     
     ExportSpecifier: function() {
@@ -5814,7 +5846,7 @@ var Parser = __class(function(__super) { return {
             remote = this.IdentifierName();
         }
         
-        return new Node.ExportSpecifier(local, remote, start, this.endOffset);
+        return new AST.ExportSpecifier(local, remote, start, this.endOffset);
     },
     
     ModulePath: function() {
@@ -5830,7 +5862,7 @@ var Parser = __class(function(__super) { return {
             else break;
         }
         
-        return new Node.ModulePath(path, start, this.endOffset);
+        return new AST.ModulePath(path, start, this.endOffset);
     },
     
     // === Classes ===
@@ -5851,7 +5883,7 @@ var Parser = __class(function(__super) { return {
             base = this.MemberExpression(true);
         }
         
-        return new Node.ClassDeclaration(
+        return new AST.ClassDeclaration(
             ident,
             base,
             this.ClassBody(),
@@ -5876,7 +5908,7 @@ var Parser = __class(function(__super) { return {
             base = this.AssignmentExpression();
         }
         
-        return new Node.ClassExpression(
+        return new AST.ClassExpression(
             ident, 
             base, 
             this.ClassBody(), 
@@ -5903,7 +5935,7 @@ var Parser = __class(function(__super) { return {
         
         this.popContext();
         
-        return new Node.ClassBody(list, start, this.endOffset);
+        return new AST.ClassBody(list, start, this.endOffset);
     },
     
     ClassElement: function(nameSet, staticSet) {
@@ -5926,7 +5958,7 @@ var Parser = __class(function(__super) { return {
         method = this.MethodDefinition();
         this.checkClassElementName(method, nameSet);
         
-        return new Node.ClassElement(isStatic, method, start, this.endOffset);
+        return new AST.ClassElement(isStatic, method, start, this.endOffset);
     }
     
 }});
@@ -5948,7 +5980,7 @@ exports.Parser = Parser; return exports; }).call(this, {});
 
 var main______ = (function(exports) {
 
-var Node = TreeNode;
+var AST = AST_;
 
 var Parser = Parser_.Parser;
 var Scanner = Scanner_.Scanner;
@@ -5965,39 +5997,8 @@ function parseScript(input, options) {
     return new Parser(input, options).Script();
 }
 
-function forEachChild(node, fn) {
 
-    var keys = Object.keys(node), val, i, j;
-    
-    for (i = 0; i < keys.length; ++i) {
-    
-        if (keys[i] === "parentNode")
-            continue;
-            
-        val = node[keys[i]];
-        
-        // Skip non-objects
-        if (!val || typeof val !== "object") 
-            continue;
-        
-        if (typeof val.type === "string") {
-        
-            // Nodes have a "type" property
-            fn(val);
-        
-        } else {
-        
-            // Iterate arrays
-            for (j = 0; j < (val.length >>> 0); ++j)
-                if (val[j] && typeof val[j].type === "string")
-                    fn(val[j]);
-        }
-    }
-}
-
-
-
-exports.Parser = Parser; exports.Scanner = Scanner; exports.Node = Node; exports.parseModule = parseModule; exports.parseScript = parseScript; exports.forEachChild = forEachChild; return exports; }).call(this, {});
+exports.Parser = Parser; exports.Scanner = Scanner; exports.AST = AST; exports.parseModule = parseModule; exports.parseScript = parseScript; return exports; }).call(this, {});
 
 var main_____ = (function(exports) {
 
@@ -6007,7 +6008,7 @@ return exports; }).call(this, {});
 
 var Analyzer = (function(exports) {
 
-var parseModule = main_____.parseModule, forEachChild = main_____.forEachChild;
+var parseModule = main_____.parseModule;
 var StringSet = main_.StringSet, StringMap = main_.StringMap;
 
 function parse(code) { 
@@ -6061,7 +6062,7 @@ function analyze(ast, resolvePath) {
                 
         }
         
-        forEachChild(node, (function(node) { return visit(node, topLevel); }));
+        node.forEachChild((function(child) { return visit(child, topLevel); }));
     }
     
     function addEdge(spec) {
@@ -6272,31 +6273,32 @@ var createBundle = Bundler.createBundle;
 var AsyncFS = main_.AsyncFS, ConsoleCommand = main_.ConsoleCommand;
 
 
-/*
+function main() {
 
-new ConsoleCommand({
+    new ConsoleCommand({
 
-    params: {
+        params: {
     
-        "input": { short: "i", positional: true, required: true },
-        "output": { short: "o", positional: true, required: false }
-    },
+            "input": { short: "i", positional: true, required: true },
+            "output": { short: "o", positional: true, required: false }
+        },
     
-    execute(options) {
+        execute: function(options) {
 
-        bundle(options.input).then(code => {
+            createBundle(options.input).then((function(code) {
         
-            return options.output ?
-                AsyncFS.writeFile(options.output, code) :
-                console.log(code);
-        });
-    }
+                return options.output ?
+                    AsyncFS.writeFile(options.output, code) :
+                    console.log(code);
+            }));
+        }
     
-}).run();
+    }).run();
+    
+}
 
-*/
 
-exports.createBundle = createBundle; return exports; }).call(this, {});
+exports.createBundle = createBundle; exports.main = main; return exports; }).call(this, {});
 
 var main__ = (function(exports) {
 
@@ -6316,10 +6318,19 @@ var Replacer_ = (function(exports) {
 
 */
 
-var Parser = main_____;
+var parseModule = main_____.parseModule, AST = main_____.AST;
 
 var HAS_SCHEMA = /^[a-z]+:/i,
     NODE_SCHEMA = /^(?:npm|node):/i;
+
+var RootNode = __class(AST.Node, function(__super) { return {
+
+    constructor: function RootNode(root, end) {
+    
+        __super.constructor.call(this, 0, end);
+        this.root = root;
+    }
+}});
 
 var Replacer = __class(function(__super) { return {
 
@@ -6339,7 +6350,7 @@ var Replacer = __class(function(__super) { return {
         this.uid = 0;
         this.input = input;
 
-        var root = Parser.parseModule(input);
+        var root = parseModule(input);
         
         var visit = (function(node) {
         
@@ -6347,8 +6358,11 @@ var Replacer = __class(function(__super) { return {
             if (__this[node.type + "Begin"])
                 __this[node.type + "Begin"](node);
             
+            if (!node.forEachChild)
+                console.log(node);
+                
             // Perform a depth-first traversal
-            Parser.forEachChild(node, (function(child) {
+            node.forEachChild((function(child) {
             
                 child.parentNode = node;
                 visit(child);
@@ -6369,15 +6383,8 @@ var Replacer = __class(function(__super) { return {
             return node.text;
         });
         
-        var output = visit({ 
-        
-            type: "$", 
-            root: root, 
-            start: 0, 
-            end: input.length
-        });
-        
-        var head = "";
+        var output = visit(new RootNode(root, input.length)),
+            head = "";
         
         this.dependencies.forEach((function(url) {
         
@@ -6479,6 +6486,9 @@ var Replacer = __class(function(__super) { return {
         var moduleSpec = this.modulePath(node.from),
             list = [];
         
+        // TODO: Preserve line numbers in import declarations 
+        // that span multiple lines
+        
         node.specifiers.forEach((function(spec) {
         
             var remote = spec.remote,
@@ -6495,6 +6505,12 @@ var Replacer = __class(function(__super) { return {
             return "";
         
         return "var " + this.joinList(list) + ";";
+    },
+    
+    ImportDefaultDeclaration: function(node) {
+    
+        // TODO
+        throw new Error("Not implemented.");
     },
     
     ExportDeclaration: function(node) {
@@ -6751,7 +6767,7 @@ var Replacer = __class(function(__super) { return {
             if (node.type === "ThisExpression")
                 throw hasThis;
             
-            Parser.forEachChild(node, visit);
+            node.forEachChild(visit);
         }
     },
     
@@ -6787,7 +6803,7 @@ var Replacer = __class(function(__super) { return {
             text = "";
         
         // Build text from child nodes
-        Parser.forEachChild(node, (function(child) {
+        node.forEachChild((function(child) {
         
             if (offset < child.start)
                 text += input.slice(offset, child.start);
