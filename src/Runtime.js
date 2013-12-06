@@ -689,16 +689,11 @@ export var Promise =
 
 `var queueTask = ($=> {
 
-    var process = this.process,
-        window = this.window,
+    var window = this.window,
         msgChannel = null,
         list = [];
     
-    if (process && typeof process.nextTick === "function") {
-    
-        return process.nextTick;
-        
-    } else if (typeof setImmediate === "function") {
+    if (typeof setImmediate === "function") {
     
         return window ?
             window.setImmediate.bind(window) :

@@ -2,6 +2,7 @@ module FS from "node:fs";
 module Path from "node:path";
 
 import { translate } from "../src/Translator.js";
+import { runTests } from "package:moon-unit";
 
 function statPath(path) {
 
@@ -20,7 +21,7 @@ function getFilePaths(dir) {
         .map(item => item.path);
 }
 
-function testTranslator() {
+export function main() {
 
     var inputFiles = [],
         outputFiles = [],
@@ -62,4 +63,3 @@ function testTranslator() {
     }
 }
 
-testTranslator();
