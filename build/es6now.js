@@ -1436,7 +1436,7 @@ var
 
 exports.exists = exists; exports.readFile = readFile; exports.close = close; exports.open = open; exports.read = read; exports.write = write; exports.rename = rename; exports.truncate = truncate; exports.rmdir = rmdir; exports.fsync = fsync; exports.mkdir = mkdir; exports.sendfile = sendfile; exports.readdir = readdir; exports.fstat = fstat; exports.lstat = lstat; exports.stat = stat; exports.readlink = readlink; exports.symlink = symlink; exports.link = link; exports.unlink = unlink; exports.fchmod = fchmod; exports.lchmod = lchmod; exports.chmod = chmod; exports.lchown = lchown; exports.fchown = fchown; exports.chown = chown; exports.utimes = utimes; exports.futimes = futimes; exports.writeFile = writeFile; exports.appendFile = appendFile; exports.realpath = realpath; return exports; }).call(this, {});
 
-var main___ = (function(exports) {
+var main____ = (function(exports) {
 
 Object.keys(ConsoleCommand).forEach(function(k) { exports[k] = ConsoleCommand[k]; });
 Object.keys(ConsoleIO).forEach(function(k) { exports[k] = ConsoleIO[k]; });
@@ -1456,7 +1456,7 @@ exports.ConsoleStyle = ConsoleStyle; exports.AsyncFS = AsyncFS; return exports; 
 
 var main_ = (function(exports) {
 
-Object.keys(main___).forEach(function(k) { exports[k] = main___[k]; });
+Object.keys(main____).forEach(function(k) { exports[k] = main____[k]; });
 
 return exports; }).call(this, {});
 
@@ -6273,7 +6273,7 @@ function createBundle(rootPath, locatePackage) {
 
 exports.createBundle = createBundle; return exports; }).call(this, {});
 
-var main____ = (function(exports) {
+var main___ = (function(exports) {
 
 var createBundle = Bundler.createBundle;
 var AsyncFS = main_.AsyncFS, ConsoleCommand = main_.ConsoleCommand;
@@ -6308,7 +6308,7 @@ exports.createBundle = createBundle; exports.main = main; return exports; }).cal
 
 var main__ = (function(exports) {
 
-Object.keys(main____).forEach(function(k) { exports[k] = main____[k]; });
+Object.keys(main___).forEach(function(k) { exports[k] = main___[k]; });
 
 return exports; }).call(this, {});
 
@@ -6379,8 +6379,6 @@ var Replacer = __class(function(__super) { return {
         var visit = (function(node) {
         
             node.text = null;
-            
-            var height = scanner.lineNumber(node.end - 1) - scanner.lineNumber(node.start);
                 
             // Call pre-order traversal method
             if (__this[node.type + "Begin"])
@@ -6401,6 +6399,8 @@ var Replacer = __class(function(__super) { return {
             
             if (text === null || text === void 0)
                 text = __this.stringify(node);
+            
+            var height = scanner.lineNumber(node.end - 1) - scanner.lineNumber(node.start);
             
             return node.text = preserveNewlines(text, height);
         });
@@ -7330,7 +7330,7 @@ function locatePackage(uri) {
 
 exports.isPackageURI = isPackageURI; exports.locatePackage = locatePackage; return exports; }).call(this, {});
 
-var Program_ = (function(exports) {
+var main = (function(exports) {
 
 var FS = _M0;
 var Path = _M1;
@@ -7422,7 +7422,7 @@ function wrapRuntimeModule(text) {
     return "(function() {\n\n" + text + "\n\n}).call(this);\n\n";
 }
 
-function run() {
+function main() {
 
     new ConsoleCommand({
 
@@ -7537,20 +7537,7 @@ function run() {
     
 }
 
-exports.run = run; return exports; }).call(this, {});
-
-var main = (function(exports) {
-
-var Program = Program_;
-
-if (typeof require === "function" && 
-    typeof module !== "undefined" && 
-    module === require.main) {
-    
-    Program.run();
-}
-
-return exports; }).call(this, {});
+exports.main = main; return exports; }).call(this, {});
 
 Object.keys(main).forEach(function(k) { exports[k] = main[k]; });
 

@@ -63,8 +63,6 @@ export class Replacer {
         var visit = node => {
         
             node.text = null;
-            
-            var height = scanner.lineNumber(node.end - 1) - scanner.lineNumber(node.start);
                 
             // Call pre-order traversal method
             if (this[node.type + "Begin"])
@@ -85,6 +83,8 @@ export class Replacer {
             
             if (text === null || text === void 0)
                 text = this.stringify(node);
+            
+            var height = scanner.lineNumber(node.end - 1) - scanner.lineNumber(node.start);
             
             return node.text = preserveNewlines(text, height);
         };
