@@ -1433,6 +1433,7 @@ var
     realpath = wrap(FS.realpath);
 
 
+
 exports.exists = exists; exports.readFile = readFile; exports.close = close; exports.open = open; exports.read = read; exports.write = write; exports.rename = rename; exports.truncate = truncate; exports.rmdir = rmdir; exports.fsync = fsync; exports.mkdir = mkdir; exports.sendfile = sendfile; exports.readdir = readdir; exports.fstat = fstat; exports.lstat = lstat; exports.stat = stat; exports.readlink = readlink; exports.symlink = symlink; exports.link = link; exports.unlink = unlink; exports.fchmod = fchmod; exports.lchmod = lchmod; exports.chmod = chmod; exports.lchown = lchown; exports.fchown = fchown; exports.chown = chown; exports.utimes = utimes; exports.futimes = futimes; exports.writeFile = writeFile; exports.appendFile = appendFile; exports.realpath = realpath; return exports; }).call(this, {});
 
 var main___ = (function(exports) {
@@ -2463,6 +2464,7 @@ var Scanner = __class(function(__super) { return {
         this.offset = offset || 0;
         this.length = this.input.length;
         this.lines = [-1];
+        this.lastLineBreak = -1;
         
         this.type = "";
         this.start = 0;
@@ -2505,12 +2507,20 @@ var Scanner = __class(function(__super) { return {
         return this.input.slice(this.start, this.end);
     },
     
+    lineNumber: function(offset) {
+    
+        if (Number(offset) !== offset)
+            offset = (offset || this).start;
+        
+        return binarySearch(this.lines, offset);
+    },
+    
     position: function(token) {
     
         token || (token = this);
         
         var offset = token.start,
-            line = binarySearch(this.lines, offset),
+            line = this.lineNumber(offset),
             pos = this.lines[line - 1],
             column = offset - pos;
         
@@ -2526,7 +2536,8 @@ var Scanner = __class(function(__super) { return {
     
     addLineBreak: function(offset) {
     
-        this.lines.push(offset);
+        if (offset > this.lastLineBreak)
+            this.lines.push(this.lastLineBreak = offset);
     },
     
     readIdentifierEscape: function() {
@@ -6313,10 +6324,26 @@ var Replacer_ = (function(exports) {
 
 */
 
-var parseModule = main_____.parseModule, AST = main_____.AST;
+var Parser = main_____.Parser, AST = main_____.AST;
 
 var HAS_SCHEMA = /^[a-z]+:/i,
     NODE_SCHEMA = /^(?:npm|node):/i;
+
+function countNewlines(text) {
+
+    var m = text.match(/\r\n?|\n/g);
+    return m ? m.length : 0;
+}
+
+function preserveNewlines(text, height) {
+
+    var n = countNewlines(text);
+    
+    if (height > 0 && n < height)
+        text += "\n".repeat(height - n);
+    
+    return text;
+}
 
 var RootNode = __class(AST.Node, function(__super) { return {
 
@@ -6345,17 +6372,20 @@ var Replacer = __class(function(__super) { return {
         this.uid = 0;
         this.input = input;
 
-        var root = parseModule(input);
+        var parser = new Parser(input),
+            scanner = parser.scanner,
+            root = parser.Module();
         
         var visit = (function(node) {
         
+            node.text = null;
+            
+            var height = scanner.lineNumber(node.end - 1) - scanner.lineNumber(node.start);
+                
             // Call pre-order traversal method
             if (__this[node.type + "Begin"])
                 __this[node.type + "Begin"](node);
             
-            if (!node.forEachChild)
-                console.log(node);
-                
             // Perform a depth-first traversal
             node.forEachChild((function(child) {
             
@@ -6363,19 +6393,16 @@ var Replacer = __class(function(__super) { return {
                 visit(child);
             }));
             
-            node.text = __this.stringify(node);
+            var text = null;
             
             // Call replacer
-            if (__this[node.type]) {
+            if (__this[node.type])
+                text = __this[node.type](node);
             
-                var replaced = __this[node.type](node);
-                
-                node.text = (replaced === undefined || replaced === null) ?
-                    __this.stringify(node) :
-                    replaced;
-            }
+            if (text === null || text === void 0)
+                text = __this.stringify(node);
             
-            return node.text;
+            return node.text = preserveNewlines(text, height);
         });
         
         var output = visit(new RootNode(root, input.length)),
@@ -6404,26 +6431,28 @@ var Replacer = __class(function(__super) { return {
 
     DoWhileStatement: function(node) {
     
-        if (node.text.slice(-1) !== ";")
-            return node.text + ";";
+        var text = this.stringify(node);
+        
+        if (text.slice(-1) !== ";")
+            return text + ";";
     },
     
     Module: function(node) {
     
         if (node.createThisBinding)
-            return "var __this = this; " + node.text;
+            return "var __this = this; " + this.stringify(node);
     },
     
     Script: function(node) {
     
         if (node.createThisBinding)
-            return "var __this = this; " + node.text;
+            return "var __this = this; " + this.stringify(node);
     },
     
     FunctionBody: function(node) {
     
         if (node.parentNode.createThisBinding)
-            return "{ var __this = this; " + node.text.slice(1);
+            return "{ var __this = this; " + this.stringify(node).slice(1);
     },
     
     MethodDefinition: function(node) {
@@ -6480,9 +6509,6 @@ var Replacer = __class(function(__super) { return {
     
         var moduleSpec = this.modulePath(node.from),
             list = [];
-        
-        // TODO: Preserve line numbers in import declarations 
-        // that span multiple lines
         
         node.specifiers.forEach((function(spec) {
         
@@ -6770,7 +6796,7 @@ var Replacer = __class(function(__super) { return {
     
         return node.type === "String" ?
             this.moduleIdent(node.value) :
-            node.text;
+            this.stringify(node);
     },
     
     moduleIdent: function(url) {
@@ -7314,6 +7340,10 @@ var AsyncFS = main_.AsyncFS,
     ConsoleCommand = main_.ConsoleCommand,
     ConsoleIO = main_.ConsoleIO,
     Style = main_.ConsoleStyle;
+
+
+
+
 
 var createBundle = main__.createBundle;
 var translate = Translator.translate;

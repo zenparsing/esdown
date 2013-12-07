@@ -8,10 +8,26 @@
 
 */
 
-import { parseModule, AST } from "package:es6parse";
+import { Parser, AST } from "package:es6parse";
 
 var HAS_SCHEMA = /^[a-z]+:/i,
     NODE_SCHEMA = /^(?:npm|node):/i;
+
+function countNewlines(text) {
+
+    var m = text.match(/\r\n?|\n/g);
+    return m ? m.length : 0;
+}
+
+function preserveNewlines(text, height) {
+
+    var n = countNewlines(text);
+    
+    if (height > 0 && n < height)
+        text += "\n".repeat(height - n);
+    
+    return text;
+}
 
 class RootNode extends AST.Node {
 
@@ -40,17 +56,20 @@ export class Replacer {
         this.uid = 0;
         this.input = input;
 
-        var root = parseModule(input);
+        var parser = new Parser(input),
+            scanner = parser.scanner,
+            root = parser.Module();
         
         var visit = node => {
         
+            node.text = null;
+            
+            var height = scanner.lineNumber(node.end - 1) - scanner.lineNumber(node.start);
+                
             // Call pre-order traversal method
             if (this[node.type + "Begin"])
                 this[node.type + "Begin"](node);
             
-            if (!node.forEachChild)
-                console.log(node);
-                
             // Perform a depth-first traversal
             node.forEachChild(child => {
             
@@ -58,19 +77,16 @@ export class Replacer {
                 visit(child);
             });
             
-            node.text = this.stringify(node);
+            var text = null;
             
             // Call replacer
-            if (this[node.type]) {
+            if (this[node.type])
+                text = this[node.type](node);
             
-                var replaced = this[node.type](node);
-                
-                node.text = (replaced === undefined || replaced === null) ?
-                    this.stringify(node) :
-                    replaced;
-            }
+            if (text === null || text === void 0)
+                text = this.stringify(node);
             
-            return node.text;
+            return node.text = preserveNewlines(text, height);
         };
         
         var output = visit(new RootNode(root, input.length)),
@@ -99,26 +115,28 @@ export class Replacer {
 
     DoWhileStatement(node) {
     
-        if (node.text.slice(-1) !== ";")
-            return node.text + ";";
+        var text = this.stringify(node);
+        
+        if (text.slice(-1) !== ";")
+            return text + ";";
     }
     
     Module(node) {
     
         if (node.createThisBinding)
-            return "var __this = this; " + node.text;
+            return "var __this = this; " + this.stringify(node);
     }
     
     Script(node) {
     
         if (node.createThisBinding)
-            return "var __this = this; " + node.text;
+            return "var __this = this; " + this.stringify(node);
     }
     
     FunctionBody(node) {
     
         if (node.parentNode.createThisBinding)
-            return "{ var __this = this; " + node.text.slice(1);
+            return "{ var __this = this; " + this.stringify(node).slice(1);
     }
     
     MethodDefinition(node) {
@@ -175,9 +193,6 @@ export class Replacer {
     
         var moduleSpec = this.modulePath(node.from),
             list = [];
-        
-        // TODO: Preserve line numbers in import declarations 
-        // that span multiple lines
         
         node.specifiers.forEach(spec => {
         
@@ -465,7 +480,7 @@ export class Replacer {
     
         return node.type === "String" ?
             this.moduleIdent(node.value) :
-            node.text;
+            this.stringify(node);
     }
     
     moduleIdent(url) {

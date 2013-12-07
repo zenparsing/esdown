@@ -9,3 +9,6 @@ import {
   A,
   B,
 } from X;
+import { A } 
+    from X;
+;
