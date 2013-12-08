@@ -6329,6 +6329,14 @@ var Parser = main_____.Parser, AST = main_____.AST;
 var HAS_SCHEMA = /^[a-z]+:/i,
     NODE_SCHEMA = /^(?:npm|node):/i;
 
+var RESERVED_WORD = new RegExp("^(?:" +
+    "break|case|catch|class|const|continue|debugger|default|delete|do|" +
+    "else|enum|export|extends|false|finally|for|function|if|import|in|" +
+    "instanceof|new|null|return|super|switch|this|throw|true|try|typeof|" +
+    "var|void|while|with|implements|private|public|interface|package|let|" +
+    "protected|static|yield" +
+")$");
+
 function countNewlines(text) {
 
     var m = text.match(/\r\n?|\n/g);
@@ -6423,7 +6431,14 @@ var Replacer = __class(function(__super) { return {
         
         Object.keys(this.exports).forEach((function(k) {
     
-            output += "\nexports." + k + " = " + __this.exports[k] + ";";
+            output += "\nexports";
+            
+            if (RESERVED_WORD.test(k))
+                output += "[" + JSON.stringify(k) + "]";
+            else
+                output += "." + k;
+            
+            output += " = " + __this.exports[k] + ";";
         }));
         
         return output;
@@ -6530,8 +6545,8 @@ var Replacer = __class(function(__super) { return {
     
     ImportDefaultDeclaration: function(node) {
     
-        // TODO
-        throw new Error("Not implemented.");
+        var moduleSpec = this.modulePath(node.from);
+        return "var " + node.identifier.text + " = " + moduleSpec + "['default'];";
     },
     
     ExportDeclaration: function(node) {
@@ -6582,7 +6597,7 @@ var Replacer = __class(function(__super) { return {
                 exports[remote] = from ? 
                     fromPath + "." + local :
                     local;
-            }));        
+            }));
         }
         
         return out;

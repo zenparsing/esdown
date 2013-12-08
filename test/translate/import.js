@@ -12,3 +12,5 @@ import {
 import { A } 
     from X;
 ;
+import {} from "A.js";
+import x from "A.js";

@@ -13,6 +13,14 @@ import { Parser, AST } from "package:es6parse";
 var HAS_SCHEMA = /^[a-z]+:/i,
     NODE_SCHEMA = /^(?:npm|node):/i;
 
+var RESERVED_WORD = new RegExp("^(?:" +
+    "break|case|catch|class|const|continue|debugger|default|delete|do|" +
+    "else|enum|export|extends|false|finally|for|function|if|import|in|" +
+    "instanceof|new|null|return|super|switch|this|throw|true|try|typeof|" +
+    "var|void|while|with|implements|private|public|interface|package|let|" +
+    "protected|static|yield" +
+")$");
+
 function countNewlines(text) {
 
     var m = text.match(/\r\n?|\n/g);
@@ -107,7 +115,14 @@ export class Replacer {
         
         Object.keys(this.exports).forEach(k => {
     
-            output += "\nexports." + k + " = " + this.exports[k] + ";";
+            output += "\nexports";
+            
+            if (RESERVED_WORD.test(k))
+                output += "[" + JSON.stringify(k) + "]";
+            else
+                output += "." + k;
+            
+            output += " = " + this.exports[k] + ";";
         });
         
         return output;
@@ -214,8 +229,8 @@ export class Replacer {
     
     ImportDefaultDeclaration(node) {
     
-        // TODO
-        throw new Error("Not implemented.");
+        var moduleSpec = this.modulePath(node.from);
+        return "var " + node.identifier.text + " = " + moduleSpec + "['default'];";
     }
     
     ExportDeclaration(node) {
@@ -266,7 +281,7 @@ export class Replacer {
                 exports[remote] = from ? 
                     fromPath + "." + local :
                     local;
-            });        
+            });
         }
         
         return out;

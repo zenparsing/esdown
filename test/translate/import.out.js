@@ -1,4 +1,4 @@
-var _M0 = __load("./Z.js"), _M1 = __load("./B.js"); var A = _M0.A;
+var _M0 = __load("./Z.js"), _M1 = __load("./B.js"), _M2 = __load("./A.js"); var A = _M0.A;
 var A = _M0.A, B = _M0.B;
 var C2 = _M0.C, D2 = _M0.D;
 var A = X.A;
@@ -12,3 +12,5 @@ var A = X.A,
 var A = X.A;
 
 ;
+
+var x = _M2['default'];
