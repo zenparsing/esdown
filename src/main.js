@@ -110,10 +110,10 @@ export function main() {
             var m = require(absPath(params.target));
             
             if (typeof m.main === "function")
-                m.main(process.argv);
+                m.main();
         }
         
-    }).add("translate", {
+    }).add("-", {
     
         params: {
                 
@@ -173,7 +173,9 @@ export function main() {
             });
         }
     
-    }).add("serve", {
+    }).run();
+    
+    /*).add("serve", {
     
         params: {
         
@@ -199,6 +201,6 @@ export function main() {
             });
         }
         
-    }).run();
+    }*/
     
 }
