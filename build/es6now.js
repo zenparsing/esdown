@@ -7354,7 +7354,7 @@ var isPackageURI = PackageLocator.isPackageURI, locatePackage = PackageLocator.l
 
 var ES6_GUESS = /(?:^|\n)\s*(?:import|export|class)\s/;
 
-function absPath(path) {
+function absolutePath(path) {
 
     return Path.resolve(process.cwd(), path);
 }
@@ -7363,7 +7363,7 @@ function getOutPath(inPath, outPath) {
 
     var stat;
     
-    outPath = absPath(outPath);
+    outPath = absolutePath(outPath);
     
     try { stat = FS.statSync(outPath); } catch (e) {}
     
@@ -7439,13 +7439,21 @@ function main() {
         
         execute: function(params) {
         
-            params.debug = true;
             overrideCompilation();
             process.argv.splice(1, 1);
             
-            var m = require(absPath(params.target));
+            var path = absolutePath(params.target),
+                stat;
             
-            if (typeof m.main === "function")
+            try { stat = FS.statSync(path) }
+            catch (x) {}
+            
+            if (stat && stat.isDirectory())
+                path = Path.join(path, "main.js");
+            
+            var m = require(path);
+            
+            if (m && typeof m.main === "function")
                 m.main();
         }
         
