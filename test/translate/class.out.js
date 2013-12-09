@@ -14,6 +14,8 @@ var A = __class(B, function(__super) { return {
         __super.bar.call(this, x, y);
         __super["bar"].call(this, x, y);
         __super.foo.foo();
+        
+        (function(x) { __super.foo })
     },
     
     __static_S: function() {},

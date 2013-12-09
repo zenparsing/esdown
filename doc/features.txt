@@ -21,7 +21,6 @@
 
 - Array comprehensions
 
-
 == Nope ==
 
 - Let and const:  block declarations fall apart with per-iteration bindings.  It's
@@ -31,4 +30,4 @@
   consititutes rewriting.
 - Replace all occurances of imported declarations with member expressions 
   (MODULE.exportedName), in order to support cyclical dependencies.  This is a
-  significant caveat
+  significant caveat.
