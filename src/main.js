@@ -88,127 +88,99 @@ function wrapRuntimeModule(text) {
     return "(function() {\n\n" + text + "\n\n}).call(this);\n\n";
 }
 
-export function main() {
+new ConsoleCommand({
 
-    new ConsoleCommand({
-
-        params: {
+    params: {
+    
+        "target": {
         
-            "target": {
+            positional: true,
+            required: true
+        }
+    },
+    
+    execute(params) {
+    
+        overrideCompilation();
+        process.argv.splice(1, 1);
+        
+        var path = absolutePath(params.target),
+            stat;
+        
+        try { stat = FS.statSync(path) }
+        catch (x) {}
+        
+        if (stat && stat.isDirectory())
+            path = Path.join(path, "main.js");
+        
+        var m = require(path);
+        
+        if (m && typeof m.main === "function")
+            Promise.cast(m.main()).catch(x => setTimeout($=> { throw x }, 0));
+    }
+    
+}).add("-", {
+
+    params: {
             
-                positional: true,
-                required: true
+        "input": {
+
+            short: "i",
+            positional: true,
+            required: true
+        },
+        
+        "output": {
+            
+            short: "o",
+            positional: true,
+            required: false
+        },
+        
+        "global": { short: "g" },
+        
+        "bundle": { short: "b", flag: true },
+        
+        "runtime": { short: "r", flag: true }
+    },
+    
+    execute(params) {
+        
+        var promise = params.bundle ?
+            createBundle(params.input, locatePackage) :
+            AsyncFS.readFile(params.input, { encoding: "utf8" });
+        
+        promise.then(text => {
+        
+            if (params.runtime) {
+            
+                text = "\n\n" +
+                    wrapRuntimeModule(Runtime.Class) + 
+                    wrapRuntimeModule(Runtime.ES5) +
+                    wrapRuntimeModule(Runtime.ES6) +
+                    wrapRuntimeModule(Runtime.Promise) +
+                    text;
             }
-        },
+            
+            return translate(text, { global: params.global });
         
-        execute(params) {
+        }).then(text => {
+            
+            if (params.output) {
+            
+                var outPath = getOutPath(params.input, params.output);
+                FS.writeFileSync(outPath, text, "utf8");
+            
+            } else {
+            
+                console.log(text);
+            }
+            
+        }).catch(x => {
         
-            overrideCompilation();
-            process.argv.splice(1, 1);
-            
-            var path = absolutePath(params.target),
-                stat;
-            
-            try { stat = FS.statSync(path) }
-            catch (x) {}
-            
-            if (stat && stat.isDirectory())
-                path = Path.join(path, "main.js");
-            
-            var m = require(path);
-            
-            if (m && typeof m.main === "function")
-                m.main();
-        }
-        
-    }).add("-", {
-    
-        params: {
-                
-            "input": {
-    
-                short: "i",
-                positional: true,
-                required: true
-            },
-            
-            "output": {
-                
-                short: "o",
-                positional: true,
-                required: false
-            },
-            
-            "global": { short: "g" },
-            
-            "bundle": { short: "b", flag: true },
-            
-            "runtime": { short: "r", flag: true }
-        },
-        
-        execute(params) {
-            
-            var promise = params.bundle ?
-                createBundle(params.input, locatePackage) :
-                AsyncFS.readFile(params.input, { encoding: "utf8" });
-            
-            promise.then(text => {
-            
-                if (params.runtime) {
-                
-                    text = "\n\n" +
-                        wrapRuntimeModule(Runtime.Class) + 
-                        wrapRuntimeModule(Runtime.ES5) +
-                        wrapRuntimeModule(Runtime.ES6) +
-                        wrapRuntimeModule(Runtime.Promise) +
-                        text;
-                }
-                
-                return translate(text, { global: params.global });
-            
-            }).then(text => {
-                
-                if (params.output) {
-                
-                    var outPath = getOutPath(params.input, params.output);
-                    FS.writeFileSync(outPath, text, "utf8");
-                
-                } else {
-                
-                    console.log(text);
-                }
-                
-            });
-        }
-    
-    }).run();
-    
-    /*).add("serve", {
-    
-        params: {
-        
-            "root": { short: "r", positional: true },
-            "port": { short: "p", positional: true }
-        },
-        
-        execute(params) {
-        
-            var server = new Server(params);
-            server.start();
-            
-            console.log("Listening on port " + server.port + ".  Press Enter to exit.");
-            
-            var stdin = process.stdin;
-            
-            stdin.resume();
-            stdin.setEncoding('utf8');
-            
-            stdin.on("data", () => { 
-            
-                server.stop().then(val => { process.exit(0); });
-            });
-        }
-        
-    }*/
-    
-}
+            setTimeout($=> { throw x }, 0);
+        });
+    }
+
+}).run();
+

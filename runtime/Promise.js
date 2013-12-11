@@ -30,17 +30,18 @@ var queueTask = ($=> {
 var $status = "Promise#status",
     $value = "Promise#value",
     $onResolve = "Promise#onResolve",
-    $onReject = "Promise#onReject",
-    $throwable = "Promise#throwable";
+    $onReject = "Promise#onReject";
 
-function isPromise(x) { return x && $status in Object(x) }
+function isPromise(x) { 
+
+    return x && $status in Object(x);
+}
 
 function Promise(init) {
 
     this[$status] = "pending";
     this[$onResolve] = [];
     this[$onReject] = [];
-    this[$throwable] = true;
     
     init(x => promiseResolve(this, x), r => promiseReject(this, r));
 }
@@ -53,12 +54,6 @@ function promiseResolve(promise, x) {
 function promiseReject(promise, x) {
     
     promiseDone(promise, "rejected", x, promise[$onReject]);
-    
-    if (promise[$throwable]) queueTask($=> {
-    
-        if (promise[$throwable])
-            throw promise[$value];
-    });
 }
 
 function promiseDone(promise, status, value, reactions) {
@@ -117,8 +112,6 @@ Promise.deferred = function() {
 
 Promise.prototype.chain = function(onResolve, onReject) {
 
-    this[$throwable] = false;
-    
     // [A+ compatibility]
     // onResolve = onResolve || (x => x);
     // onReject = onReject || (e => { throw e });

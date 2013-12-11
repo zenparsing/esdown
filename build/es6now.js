@@ -1,4 +1,4 @@
-/*=es6now=*/(function(fn, deps, name) { if (typeof exports !== 'undefined') { fn.call(typeof global === 'object' ? global : this, require, exports); if (require.main === module && typeof exports.main === 'function') exports.main(); } else if (typeof __MODULE === 'function') __MODULE(fn, deps); else if (typeof define === 'function' && define.amd) define(['require', 'exports'].concat(deps), fn); else if (typeof window !== 'undefined' && name) fn.call(window, null, window[name] = {}); else fn.call(window || this, null, {}); })(function(require, exports) { 'use strict'; function __load(p) { var e = require(p); return typeof e === 'object' ? e : { 'default': e }; } var _M0 = __load("fs"), _M1 = __load("path"), _M2 = __load("http"), _M3 = __load("url"); 
+/*=es6now=*/(function(fn, deps, name) { if (typeof exports !== 'undefined') fn.call(typeof global === 'object' ? global : this, require, exports); else if (typeof __MODULE === 'function') __MODULE(fn, deps); else if (typeof define === 'function' && define.amd) define(['require', 'exports'].concat(deps), fn); else if (typeof window !== 'undefined' && name) fn.call(window, null, window[name] = {}); else fn.call(window || this, null, {}); })(function(require, exports) { 'use strict'; function __load(p) { var e = require(p); return typeof e === 'object' ? e : { 'default': e }; } var _M0 = __load("fs"), _M1 = __load("path"), _M2 = __load("http"), _M3 = __load("url"); 
 
 var __this = this; (function() {
 
@@ -727,17 +727,18 @@ var queueTask = ((function($) {
 var $status = "Promise#status",
     $value = "Promise#value",
     $onResolve = "Promise#onResolve",
-    $onReject = "Promise#onReject",
-    $throwable = "Promise#throwable";
+    $onReject = "Promise#onReject";
 
-function isPromise(x) { return x && $status in Object(x) }
+function isPromise(x) { 
+
+    return x && $status in Object(x);
+}
 
 function Promise(init) { var __this = this; 
 
     this[$status] = "pending";
     this[$onResolve] = [];
     this[$onReject] = [];
-    this[$throwable] = true;
     
     init((function(x) { return promiseResolve(__this, x); }), (function(r) { return promiseReject(__this, r); }));
 }
@@ -750,12 +751,6 @@ function promiseResolve(promise, x) {
 function promiseReject(promise, x) {
     
     promiseDone(promise, "rejected", x, promise[$onReject]);
-    
-    if (promise[$throwable]) queueTask((function($) {
-    
-        if (promise[$throwable])
-            throw promise[$value];
-    }));
 }
 
 function promiseDone(promise, status, value, reactions) {
@@ -814,8 +809,6 @@ Promise.deferred = function() {
 
 Promise.prototype.chain = function(onResolve, onReject) {
 
-    this[$throwable] = false;
-    
     // [A+ compatibility]
     // onResolve = onResolve || (x => x);
     // onReject = onReject || (e => { throw e });
@@ -967,7 +960,7 @@ var ES6 =
 
 var Promise = 
 
-"var queueTask = ($=> {\n\n    var window = this.window,\n        msgChannel = null,\n        list = [];\n    \n    if (typeof setImmediate === \"function\") {\n    \n        return window ?\n            window.setImmediate.bind(window) :\n            setImmediate;\n   \n    } else if (window && window.MessageChannel) {\n        \n        msgChannel = new window.MessageChannel();\n        msgChannel.port1.onmessage = $=> { if (list.length) list.shift()(); };\n    \n        return fn => {\n        \n            list.push(fn);\n            msgChannel.port2.postMessage(0);\n        };\n    }\n    \n    return fn => setTimeout(fn, 0);\n\n})();\n\n\nvar $status = \"Promise#status\",\n    $value = \"Promise#value\",\n    $onResolve = \"Promise#onResolve\",\n    $onReject = \"Promise#onReject\",\n    $throwable = \"Promise#throwable\";\n\nfunction isPromise(x) { return x && $status in Object(x) }\n\nfunction Promise(init) {\n\n    this[$status] = \"pending\";\n    this[$onResolve] = [];\n    this[$onReject] = [];\n    this[$throwable] = true;\n    \n    init(x => promiseResolve(this, x), r => promiseReject(this, r));\n}\n\nfunction promiseResolve(promise, x) {\n    \n    promiseDone(promise, \"resolved\", x, promise[$onResolve]);\n}\n\nfunction promiseReject(promise, x) {\n    \n    promiseDone(promise, \"rejected\", x, promise[$onReject]);\n    \n    if (promise[$throwable]) queueTask($=> {\n    \n        if (promise[$throwable])\n            throw promise[$value];\n    });\n}\n\nfunction promiseDone(promise, status, value, reactions) {\n\n    if (promise[$status] !== \"pending\") \n        return;\n    \n    for (var i in reactions) \n        promiseReact(reactions[i][0], reactions[i][1], value);\n        \n    promise[$status] = status;\n    promise[$value] = value;\n    promise[$onResolve] = promise[$onReject] = void 0;\n}\n\nfunction promiseReact(deferred, handler, x) {\n\n    queueTask($=> {\n    \n        try {\n        \n            var y = handler(x);\n        \n            if (y === deferred.promise)\n                throw new TypeError;\n            else if (isPromise(y))\n                y.chain(deferred.resolve, deferred.reject);\n            else\n                deferred.resolve(y);\n        \n        } catch(e) { deferred.reject(e) }\n    });\n}\n\nPromise.resolve = function(x) {\n\n    return new this(resolve => resolve(x));\n};\n\nPromise.reject = function(r) {\n\n    return new this((resolve, reject) => reject(r));\n};\n\nPromise.deferred = function() {\n\n    var result = {};\n    \n    result.promise = new this((resolve, reject) => {\n        result.resolve = resolve;\n        result.reject = reject;\n    });\n    \n    return result;\n};\n\nPromise.prototype.chain = function(onResolve, onReject) {\n\n    this[$throwable] = false;\n    \n    // [A+ compatibility]\n    // onResolve = onResolve || (x => x);\n    // onReject = onReject || (e => { throw e });\n    \n    if (typeof onResolve !== \"function\") onResolve = x => x;\n    if (typeof onReject !== \"function\") onReject = e => { throw e };\n    \n    var deferred = Promise.deferred.call(this.constructor);\n    \n    switch (this[$status]) {\n    \n        case undefined:\n            throw new TypeError;\n            \n        case \"pending\":\n            this[$onResolve].push([deferred, onResolve]);\n            this[$onReject].push([deferred, onReject]);\n            break;\n        \n        case \"resolved\":\n            promiseReact(deferred, onResolve, this[$value]);\n            break;\n            \n        case \"rejected\":\n            promiseReact(deferred, onReject, this[$value]);\n            break;\n    }\n    \n    return deferred.promise;\n};\n\nPromise.prototype.catch = function(onReject) {\n\n    // TODO: if !onReject, should it default to x => x?\n    return this.chain(undefined, onReject)\n};\n\nPromise.prototype.then = function(onResolve, onReject) {\n\n    // [A+ compatibility]\n    // onResolve = onResolve || (x => x);\n    \n    if (typeof onResolve !== \"function\") onResolve = x => x;\n    \n    var constructor = this.constructor;\n    \n    return this.chain(x => {\n    \n        x = promiseCoerce(constructor, x);\n        \n        if (x === this)\n            throw new TypeError;\n        \n        return isPromise(x) ?\n            x.then(onResolve, onReject) :\n            onResolve(x);\n        \n    }, onReject);\n};\n\nfunction promiseCoerce(constructor, x) {\n\n    if (isPromise(x))\n        return x;\n    \n    // [A+ compatibility]\n    // if (!(x && \"then\" in Object(x))\n    //    return x;\n        \n    if (!(x && \"then\" in Object(x) && typeof x.then === \"function\"))\n        return x;\n    \n    var deferred = constructor.deferred();\n      \n    try { x.then(deferred.resolve, deferred.reject) } \n    catch(e) { deferred.reject(e) }\n    \n    return deferred.promise;\n}\n\nPromise.cast = function(x) {\n\n    if (x instanceof this)\n        return x;\n\n    if (!isPromise(x))\n        return this.resolve(x);\n    \n    var result = this.deferred();\n    x.chain(result.resolve, result.reject);\n    return result.promise;\n};\n\nPromise.all = function(values) {\n\n    var deferred = this.deferred(),\n        count = 0,\n        resolutions = [];\n        \n    for (var i in values) {\n    \n        ++count;\n        \n        this.cast(values[i]).chain(onResolve(i), r => {\n        \n            if (count > 0) { \n            \n                count = 0; \n                deferred.reject(r);\n            }\n        });\n    }\n    \n    if (count === 0) \n        deferred.resolve(resolutions);\n        \n    return deferred.promise;\n    \n    function onResolve(i) {\n    \n        return x => {\n        \n            resolutions[i] = x;\n            \n            if (--count === 0)\n                deferred.resolve(resolutions);\n        };\n    }\n};\n\nthis.Promise = Promise;\n";
+"var queueTask = ($=> {\n\n    var window = this.window,\n        msgChannel = null,\n        list = [];\n    \n    if (typeof setImmediate === \"function\") {\n    \n        return window ?\n            window.setImmediate.bind(window) :\n            setImmediate;\n   \n    } else if (window && window.MessageChannel) {\n        \n        msgChannel = new window.MessageChannel();\n        msgChannel.port1.onmessage = $=> { if (list.length) list.shift()(); };\n    \n        return fn => {\n        \n            list.push(fn);\n            msgChannel.port2.postMessage(0);\n        };\n    }\n    \n    return fn => setTimeout(fn, 0);\n\n})();\n\n\nvar $status = \"Promise#status\",\n    $value = \"Promise#value\",\n    $onResolve = \"Promise#onResolve\",\n    $onReject = \"Promise#onReject\";\n\nfunction isPromise(x) { \n\n    return x && $status in Object(x);\n}\n\nfunction Promise(init) {\n\n    this[$status] = \"pending\";\n    this[$onResolve] = [];\n    this[$onReject] = [];\n    \n    init(x => promiseResolve(this, x), r => promiseReject(this, r));\n}\n\nfunction promiseResolve(promise, x) {\n    \n    promiseDone(promise, \"resolved\", x, promise[$onResolve]);\n}\n\nfunction promiseReject(promise, x) {\n    \n    promiseDone(promise, \"rejected\", x, promise[$onReject]);\n}\n\nfunction promiseDone(promise, status, value, reactions) {\n\n    if (promise[$status] !== \"pending\") \n        return;\n    \n    for (var i in reactions) \n        promiseReact(reactions[i][0], reactions[i][1], value);\n        \n    promise[$status] = status;\n    promise[$value] = value;\n    promise[$onResolve] = promise[$onReject] = void 0;\n}\n\nfunction promiseReact(deferred, handler, x) {\n\n    queueTask($=> {\n    \n        try {\n        \n            var y = handler(x);\n        \n            if (y === deferred.promise)\n                throw new TypeError;\n            else if (isPromise(y))\n                y.chain(deferred.resolve, deferred.reject);\n            else\n                deferred.resolve(y);\n        \n        } catch(e) { deferred.reject(e) }\n    });\n}\n\nPromise.resolve = function(x) {\n\n    return new this(resolve => resolve(x));\n};\n\nPromise.reject = function(r) {\n\n    return new this((resolve, reject) => reject(r));\n};\n\nPromise.deferred = function() {\n\n    var result = {};\n    \n    result.promise = new this((resolve, reject) => {\n        result.resolve = resolve;\n        result.reject = reject;\n    });\n    \n    return result;\n};\n\nPromise.prototype.chain = function(onResolve, onReject) {\n\n    // [A+ compatibility]\n    // onResolve = onResolve || (x => x);\n    // onReject = onReject || (e => { throw e });\n    \n    if (typeof onResolve !== \"function\") onResolve = x => x;\n    if (typeof onReject !== \"function\") onReject = e => { throw e };\n    \n    var deferred = Promise.deferred.call(this.constructor);\n    \n    switch (this[$status]) {\n    \n        case undefined:\n            throw new TypeError;\n            \n        case \"pending\":\n            this[$onResolve].push([deferred, onResolve]);\n            this[$onReject].push([deferred, onReject]);\n            break;\n        \n        case \"resolved\":\n            promiseReact(deferred, onResolve, this[$value]);\n            break;\n            \n        case \"rejected\":\n            promiseReact(deferred, onReject, this[$value]);\n            break;\n    }\n    \n    return deferred.promise;\n};\n\nPromise.prototype.catch = function(onReject) {\n\n    // TODO: if !onReject, should it default to x => x?\n    return this.chain(undefined, onReject)\n};\n\nPromise.prototype.then = function(onResolve, onReject) {\n\n    // [A+ compatibility]\n    // onResolve = onResolve || (x => x);\n    \n    if (typeof onResolve !== \"function\") onResolve = x => x;\n    \n    var constructor = this.constructor;\n    \n    return this.chain(x => {\n    \n        x = promiseCoerce(constructor, x);\n        \n        if (x === this)\n            throw new TypeError;\n        \n        return isPromise(x) ?\n            x.then(onResolve, onReject) :\n            onResolve(x);\n        \n    }, onReject);\n};\n\nfunction promiseCoerce(constructor, x) {\n\n    if (isPromise(x))\n        return x;\n    \n    // [A+ compatibility]\n    // if (!(x && \"then\" in Object(x))\n    //    return x;\n        \n    if (!(x && \"then\" in Object(x) && typeof x.then === \"function\"))\n        return x;\n    \n    var deferred = constructor.deferred();\n      \n    try { x.then(deferred.resolve, deferred.reject) } \n    catch(e) { deferred.reject(e) }\n    \n    return deferred.promise;\n}\n\nPromise.cast = function(x) {\n\n    if (x instanceof this)\n        return x;\n\n    if (!isPromise(x))\n        return this.resolve(x);\n    \n    var result = this.deferred();\n    x.chain(result.resolve, result.reject);\n    return result.promise;\n};\n\nPromise.all = function(values) {\n\n    var deferred = this.deferred(),\n        count = 0,\n        resolutions = [];\n        \n    for (var i in values) {\n    \n        ++count;\n        \n        this.cast(values[i]).chain(onResolve(i), r => {\n        \n            if (count > 0) { \n            \n                count = 0; \n                deferred.reject(r);\n            }\n        });\n    }\n    \n    if (count === 0) \n        deferred.resolve(resolutions);\n        \n    return deferred.promise;\n    \n    function onResolve(i) {\n    \n        return x => {\n        \n            resolutions[i] = x;\n            \n            if (--count === 0)\n                deferred.resolve(resolutions);\n        };\n    }\n};\n\nthis.Promise = Promise;\n";
 
 
 
@@ -6886,10 +6879,8 @@ var SIGNATURE = "/*=es6now=*/";
 var WRAP_CALLEE = "(function(fn, deps, name) { " +
 
     // Node.js:
-    "if (typeof exports !== 'undefined') { " +
+    "if (typeof exports !== 'undefined') " +
         "fn.call(typeof global === 'object' ? global : this, require, exports); " +
-        "if (require.main === module && typeof exports.main === 'function') exports.main(); " +
-    "} " +
         
     // Sane module transport:
     "else if (typeof __MODULE === 'function') " +
@@ -7439,133 +7430,105 @@ function wrapRuntimeModule(text) {
     return "(function() {\n\n" + text + "\n\n}).call(this);\n\n";
 }
 
-function main() {
+new ConsoleCommand({
 
-    new ConsoleCommand({
-
-        params: {
+    params: {
+    
+        "target": {
         
-            "target": {
+            positional: true,
+            required: true
+        }
+    },
+    
+    execute: function(params) {
+    
+        overrideCompilation();
+        process.argv.splice(1, 1);
+        
+        var path = absolutePath(params.target),
+            stat;
+        
+        try { stat = FS.statSync(path) }
+        catch (x) {}
+        
+        if (stat && stat.isDirectory())
+            path = Path.join(path, "main.js");
+        
+        var m = require(path);
+        
+        if (m && typeof m.main === "function")
+            Promise.cast(m.main()).catch((function(x) { return setTimeout((function($) { throw x }), 0); }));
+    }
+    
+}).add("-", {
+
+    params: {
             
-                positional: true,
-                required: true
+        "input": {
+
+            short: "i",
+            positional: true,
+            required: true
+        },
+        
+        "output": {
+            
+            short: "o",
+            positional: true,
+            required: false
+        },
+        
+        "global": { short: "g" },
+        
+        "bundle": { short: "b", flag: true },
+        
+        "runtime": { short: "r", flag: true }
+    },
+    
+    execute: function(params) {
+        
+        var promise = params.bundle ?
+            createBundle(params.input, locatePackage) :
+            AsyncFS.readFile(params.input, { encoding: "utf8" });
+        
+        promise.then((function(text) {
+        
+            if (params.runtime) {
+            
+                text = "\n\n" +
+                    wrapRuntimeModule(Runtime.Class) + 
+                    wrapRuntimeModule(Runtime.ES5) +
+                    wrapRuntimeModule(Runtime.ES6) +
+                    wrapRuntimeModule(Runtime.Promise) +
+                    text;
             }
-        },
+            
+            return translate(text, { global: params.global });
         
-        execute: function(params) {
+        })).then((function(text) {
+            
+            if (params.output) {
+            
+                var outPath = getOutPath(params.input, params.output);
+                FS.writeFileSync(outPath, text, "utf8");
+            
+            } else {
+            
+                console.log(text);
+            }
+            
+        })).catch((function(x) {
         
-            overrideCompilation();
-            process.argv.splice(1, 1);
-            
-            var path = absolutePath(params.target),
-                stat;
-            
-            try { stat = FS.statSync(path) }
-            catch (x) {}
-            
-            if (stat && stat.isDirectory())
-                path = Path.join(path, "main.js");
-            
-            var m = require(path);
-            
-            if (m && typeof m.main === "function")
-                m.main();
-        }
-        
-    }).add("-", {
-    
-        params: {
-                
-            "input": {
-    
-                short: "i",
-                positional: true,
-                required: true
-            },
-            
-            "output": {
-                
-                short: "o",
-                positional: true,
-                required: false
-            },
-            
-            "global": { short: "g" },
-            
-            "bundle": { short: "b", flag: true },
-            
-            "runtime": { short: "r", flag: true }
-        },
-        
-        execute: function(params) {
-            
-            var promise = params.bundle ?
-                createBundle(params.input, locatePackage) :
-                AsyncFS.readFile(params.input, { encoding: "utf8" });
-            
-            promise.then((function(text) {
-            
-                if (params.runtime) {
-                
-                    text = "\n\n" +
-                        wrapRuntimeModule(Runtime.Class) + 
-                        wrapRuntimeModule(Runtime.ES5) +
-                        wrapRuntimeModule(Runtime.ES6) +
-                        wrapRuntimeModule(Runtime.Promise) +
-                        text;
-                }
-                
-                return translate(text, { global: params.global });
-            
-            })).then((function(text) {
-                
-                if (params.output) {
-                
-                    var outPath = getOutPath(params.input, params.output);
-                    FS.writeFileSync(outPath, text, "utf8");
-                
-                } else {
-                
-                    console.log(text);
-                }
-                
-            }));
-        }
-    
-    }).run();
-    
-    /*).add("serve", {
-    
-        params: {
-        
-            "root": { short: "r", positional: true },
-            "port": { short: "p", positional: true }
-        },
-        
-        execute(params) {
-        
-            var server = new Server(params);
-            server.start();
-            
-            console.log("Listening on port " + server.port + ".  Press Enter to exit.");
-            
-            var stdin = process.stdin;
-            
-            stdin.resume();
-            stdin.setEncoding('utf8');
-            
-            stdin.on("data", () => { 
-            
-                server.stop().then(val => { process.exit(0); });
-            });
-        }
-        
-    }*/
-    
-}
+            setTimeout((function($) { throw x }), 0);
+        }));
+    }
+
+}).run();
 
 
-exports.main = main; return exports; }).call(this, {});
+
+return exports; }).call(this, {});
 
 Object.keys(main).forEach(function(k) { exports[k] = main[k]; });
 

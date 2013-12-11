@@ -1,0 +1,10 @@
+== TODO ==
+
+- Classes: Correct the super implementation:
+
+  - Make super repect changes to an object's prototype
+  - Make super work correctly in static functions (should refer to the
+    prototype of the constructor, I think).
+
+- Classes: Make sure that constructors for classes without an explicit
+  constructor also get the correct name. 

@@ -5,10 +5,8 @@ var SIGNATURE = "/*=es6now=*/";
 var WRAP_CALLEE = "(function(fn, deps, name) { " +
 
     // Node.js:
-    "if (typeof exports !== 'undefined') { " +
+    "if (typeof exports !== 'undefined') " +
         "fn.call(typeof global === 'object' ? global : this, require, exports); " +
-        "if (require.main === module && typeof exports.main === 'function') exports.main(); " +
-    "} " +
         
     // Sane module transport:
     "else if (typeof __MODULE === 'function') " +
