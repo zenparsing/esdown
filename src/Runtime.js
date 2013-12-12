@@ -690,6 +690,7 @@ export var Promise =
 `var queueTask = ($=> {
 
     var window = this.window,
+        process = this.process,
         msgChannel = null,
         list = [];
     
@@ -698,7 +699,11 @@ export var Promise =
         return window ?
             window.setImmediate.bind(window) :
             setImmediate;
-   
+    
+    } else if (process && typeof process.nextTick === "function") {
+    
+        return process.nextTick;
+        
     } else if (window && window.MessageChannel) {
         
         msgChannel = new window.MessageChannel();
