@@ -590,30 +590,32 @@ function addProps(obj, props) {
     }));
 }
 
+/*
 addProps(Object, {
 
-    is: function(a, b) {
+    is(a, b) {
     
         // TODO
     },
     
-    assign: function(target, source) {
+    assign(target, source) {
     
-        Object.keys(source).forEach((function(k) { return target[k] = source[k]; }));
+        Object.keys(source).forEach(k => target[k] = source[k]);
         return target;
     },
     
-    mixin: function(target, source) {
+    mixin(target, source) {
     
-        Object.getOwnPropertyNames(source).forEach((function(name) {
+        Object.getOwnPropertyNames(source).forEach(name => {
         
             var desc = Object.getOwnPropertyDescriptor(source, name);
             Object.defineProperty(target, name, desc);
-        }));
+        });
         
         return target;
     }
 });
+*/
 
 addProps(Number, {
 
@@ -671,17 +673,20 @@ addProps(String.prototype, {
     
     startsWith: function(search, start) {
     
+        start = start >>> 0;
         return this.indexOf(search, start) === start;
     },
     
     endsWith: function(search, end) {
     
+        // TODO
         return this.slice(-search.length) === search;
     },
     
     contains: function(search, pos) {
     
-        return this.indexOf(search, pos) !== -1;
+        // TODO
+        return this.indexOf(search, pos >>> 0) !== -1;
     }
 });
 
@@ -961,7 +966,7 @@ var ES5 =
 
 var ES6 = 
 
-"var global = this,\n    HAS_OWN = Object.prototype.hasOwnProperty;\n\nfunction addProps(obj, props) {\n\n    Object.keys(props).forEach(k => {\n    \n        if (typeof obj[k] !== \"undefined\")\n            return;\n        \n        Object.defineProperty(obj, k, {\n        \n            value: props[k],\n            configurable: true,\n            enumerable: false,\n            writable: true\n        });\n    });\n}\n\naddProps(Object, {\n\n    is(a, b) {\n    \n        // TODO\n    },\n    \n    assign(target, source) {\n    \n        Object.keys(source).forEach(k => target[k] = source[k]);\n        return target;\n    },\n    \n    mixin(target, source) {\n    \n        Object.getOwnPropertyNames(source).forEach(name => {\n        \n            var desc = Object.getOwnPropertyDescriptor(source, name);\n            Object.defineProperty(target, name, desc);\n        });\n        \n        return target;\n    }\n});\n\naddProps(Number, {\n\n    EPSILON: Number.EPSILON || (function() {\n    \n        var next, result;\n        \n        for (next = 1; 1 + next !== 1; next = next / 2)\n            result = next;\n        \n        return result;\n    }()),\n    \n    MAX_INTEGER: 9007199254740992,\n    \n    isFinite(val) {\n        \n        return typeof val === \"number\" && isFinite(val);\n    },\n    \n    isNaN(val) {\n    \n        return typeof val === \"number\" && isNaN(val);\n    },\n    \n    isInteger(val) {\n    \n        typeof val === \"number\" && val | 0 === val;\n    },\n    \n    toInteger(val) {\n        \n        return val | 0;\n    }\n});\n\naddProps(Array, {\n\n    from(arg) {\n        // TODO\n    },\n    \n    of() {\n        // ?\n    }\n\n});\n\naddProps(String.prototype, {\n    \n    repeat(count) {\n    \n        return new Array(count + 1).join(this);\n    },\n    \n    startsWith(search, start) {\n    \n        return this.indexOf(search, start) === start;\n    },\n    \n    endsWith(search, end) {\n    \n        return this.slice(-search.length) === search;\n    },\n    \n    contains(search, pos) {\n    \n        return this.indexOf(search, pos) !== -1;\n    }\n});\n\nif (typeof Reflect === \"undefined\") global.Reflect = {\n\n    hasOwn(obj, name) { return HAS_OWN.call(obj, name); }\n};\n";
+"var global = this,\n    HAS_OWN = Object.prototype.hasOwnProperty;\n\nfunction addProps(obj, props) {\n\n    Object.keys(props).forEach(k => {\n    \n        if (typeof obj[k] !== \"undefined\")\n            return;\n        \n        Object.defineProperty(obj, k, {\n        \n            value: props[k],\n            configurable: true,\n            enumerable: false,\n            writable: true\n        });\n    });\n}\n\n/*\naddProps(Object, {\n\n    is(a, b) {\n    \n        // TODO\n    },\n    \n    assign(target, source) {\n    \n        Object.keys(source).forEach(k => target[k] = source[k]);\n        return target;\n    },\n    \n    mixin(target, source) {\n    \n        Object.getOwnPropertyNames(source).forEach(name => {\n        \n            var desc = Object.getOwnPropertyDescriptor(source, name);\n            Object.defineProperty(target, name, desc);\n        });\n        \n        return target;\n    }\n});\n*/\n\naddProps(Number, {\n\n    EPSILON: Number.EPSILON || (function() {\n    \n        var next, result;\n        \n        for (next = 1; 1 + next !== 1; next = next / 2)\n            result = next;\n        \n        return result;\n    }()),\n    \n    MAX_INTEGER: 9007199254740992,\n    \n    isFinite(val) {\n        \n        return typeof val === \"number\" && isFinite(val);\n    },\n    \n    isNaN(val) {\n    \n        return typeof val === \"number\" && isNaN(val);\n    },\n    \n    isInteger(val) {\n    \n        typeof val === \"number\" && val | 0 === val;\n    },\n    \n    toInteger(val) {\n        \n        return val | 0;\n    }\n});\n\naddProps(Array, {\n\n    from(arg) {\n        // TODO\n    },\n    \n    of() {\n        // ?\n    }\n\n});\n\naddProps(String.prototype, {\n    \n    repeat(count) {\n    \n        return new Array(count + 1).join(this);\n    },\n    \n    startsWith(search, start) {\n    \n        start = start >>> 0;\n        return this.indexOf(search, start) === start;\n    },\n    \n    endsWith(search, end) {\n    \n        // TODO\n        return this.slice(-search.length) === search;\n    },\n    \n    contains(search, pos) {\n    \n        // TODO\n        return this.indexOf(search, pos >>> 0) !== -1;\n    }\n});\n\nif (typeof Reflect === \"undefined\") global.Reflect = {\n\n    hasOwn(obj, name) { return HAS_OWN.call(obj, name); }\n};\n";
 
 var Promise = 
 
@@ -5399,7 +5404,11 @@ var Parser = __class(function(__super) { return {
             case "function": return this.FunctionDeclaration();
             case "class": return this.ClassDeclaration();
             case "const": return this.LexicalDeclaration();
-            case "import": return this.ImportDeclaration();
+            
+            case "import": 
+            
+                if (isModule)
+                    return this.ImportDeclaration();
             
             case "export":
                 
@@ -5627,6 +5636,7 @@ var Parser = __class(function(__super) { return {
             
         } else if (this.peekKeyword("from")) {
     
+            this.read();
             target = this.ModuleSpecifier();
             this.Semicolon();
         
@@ -5674,27 +5684,37 @@ var Parser = __class(function(__super) { return {
     
     ModuleSpecifier: function() {
     
-        this.readKeyword("from");
         return this.peek() === "STRING" ? this.String() : this.ModulePath();
     },
     
     ImportDeclaration: function() {
     
         var start = this.startOffset,
-            list = [],
             ident,
             from;
         
         this.read("import");
         
-        if (this.peek() === "IDENTIFIER") {
+        switch (this.peek()) {
         
-            ident = this.BindingIdentifier();
-            from = this.ModuleSpecifier();
-            this.Semicolon();
+            case "IDENTIFIER":
             
-            return new AST.ImportDefaultDeclaration(ident, from, start, this.endOffset);
+                ident = this.BindingIdentifier();
+                this.readKeyword("from");
+                from = this.ModuleSpecifier();
+                this.Semicolon();
+                
+                return new AST.ImportDefaultDeclaration(ident, from, start, this.endOffset);
+            
+            case "STRING":
+            
+                from = this.ModuleSpecifier();
+                this.Semicolon();
+                
+                return new AST.ImportDeclaration(null, from, start, this.endOffset);
         }
+        
+        var list = [];
         
         this.read("{");
     
@@ -5707,6 +5727,7 @@ var Parser = __class(function(__super) { return {
         }
     
         this.read("}");
+        this.readKeyword("from");
         from = this.ModuleSpecifier();
         this.Semicolon();
         
@@ -5806,6 +5827,7 @@ var Parser = __class(function(__super) { return {
         if (this.peek() === "*") {
         
             this.read();
+            this.readKeyword("from");
             from = this.ModuleSpecifier();
             
         } else {
@@ -5826,6 +5848,7 @@ var Parser = __class(function(__super) { return {
             
             if (this.peekKeyword("from")) {
             
+                this.read();
                 from = this.ModuleSpecifier();
             
             } else {

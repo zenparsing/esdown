@@ -584,6 +584,7 @@ function addProps(obj, props) {
     });
 }
 
+/*
 addProps(Object, {
 
     is(a, b) {
@@ -608,6 +609,7 @@ addProps(Object, {
         return target;
     }
 });
+*/
 
 addProps(Number, {
 
@@ -665,17 +667,20 @@ addProps(String.prototype, {
     
     startsWith(search, start) {
     
+        start = start >>> 0;
         return this.indexOf(search, start) === start;
     },
     
     endsWith(search, end) {
     
+        // TODO
         return this.slice(-search.length) === search;
     },
     
     contains(search, pos) {
     
-        return this.indexOf(search, pos) !== -1;
+        // TODO
+        return this.indexOf(search, pos >>> 0) !== -1;
     }
 });
 
