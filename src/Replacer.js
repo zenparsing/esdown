@@ -156,17 +156,30 @@ export class Replacer {
     
     MethodDefinition(node) {
     
-        // TODO: Generator methods
-        
         // TODO: will fail if name is a string:  static "name"() {}
+    
         if (node.parentNode.type === "ClassElement" && 
             node.parentNode.static) {
             
             node.name.text = "__static_" + node.name.text;
         }
         
-        if (!node.kind)
-            return node.name.text + ": function(" + this.joinList(node.params) + ") " + node.body.text;
+        switch (node.kind) {
+        
+            case "":
+                return node.name.text + ": function(" + 
+                    this.joinList(node.params) + ") " + 
+                    node.body.text;
+            
+            case "async":
+                return node.name.text + ": " + this.asyncFunction(null, node.params, node.body);
+            
+            case "generator":
+                return node.name.text + ": function*(" + 
+                    this.joinList(node.params) + ") " + 
+                    node.body.text;
+                
+        }
     }
     
     PropertyDefinition(node) {
@@ -370,6 +383,23 @@ export class Replacer {
         }
     }
     
+    AwaitExpression(node) {
+    
+        return node.expression ? "(yield " + node.expression.text + ")" : "yield";
+    }
+    
+    FunctionDeclaration(node) {
+    
+        if (node.kind === "async")
+            return this.asyncFunction(node.identifier, node.params, node.body);
+    }
+    
+    FunctionExpression(node) {
+    
+        if (node.kind === "async")
+            return this.asyncFunction(node.identifier, node.params, node.body);
+    }
+    
     ClassDeclaration(node) {
     
         return "var " + node.identifier.text + " = __class(" + 
@@ -441,6 +471,21 @@ export class Replacer {
         }
         
         return out;
+    }
+    
+    asyncFunction(ident, params, body) {
+    
+        // TODO: function.length is incorrect!
+        
+        var head = "function";
+        
+        if (ident)
+            head += " " + ident.text;
+        
+        return `${head}() { ` +
+            `try { return Promise.__iterate(function*(${ this.joinList(params) }) ` + 
+            `${ body.text }.apply(this, arguments)); ` +
+            `} catch (x) { return Promise.reject(x); } }`;
     }
     
     parentFunction(node) {

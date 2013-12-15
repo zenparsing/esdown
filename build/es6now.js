@@ -1641,6 +1641,15 @@ var YieldExpression = __class(Node, function(__super) { return {
     }
 }});
 
+var AwaitExpression = __class(Node, function(__super) { return {
+
+    constructor: function AwaitExpression(expression, start, end) {
+    
+        __super.constructor.call(this, start, end);
+        this.expression = expression;
+    }
+}});
+
 var ConditionalExpression = __class(Node, function(__super) { return {
 
     constructor: function ConditionalExpression(test, cons, alt, start, end) {
@@ -2285,7 +2294,7 @@ var ClassElement = __class(Node, function(__super) { return {
 }});
 
 
-exports.Node = Node; exports.Script = Script; exports.Module = Module; exports.Identifier = Identifier; exports.Number = Number; exports.String = String; exports.Template = Template; exports.RegularExpression = RegularExpression; exports.Null = Null; exports.Boolean = Boolean; exports.ThisExpression = ThisExpression; exports.SuperExpression = SuperExpression; exports.SequenceExpression = SequenceExpression; exports.AssignmentExpression = AssignmentExpression; exports.SpreadExpression = SpreadExpression; exports.YieldExpression = YieldExpression; exports.ConditionalExpression = ConditionalExpression; exports.BinaryExpression = BinaryExpression; exports.UpdateExpression = UpdateExpression; exports.UnaryExpression = UnaryExpression; exports.MemberExpression = MemberExpression; exports.CallExpression = CallExpression; exports.TaggedTemplateExpression = TaggedTemplateExpression; exports.NewExpression = NewExpression; exports.ParenExpression = ParenExpression; exports.ObjectLiteral = ObjectLiteral; exports.ComputedPropertyName = ComputedPropertyName; exports.PropertyDefinition = PropertyDefinition; exports.PatternProperty = PatternProperty; exports.PatternElement = PatternElement; exports.MethodDefinition = MethodDefinition; exports.ArrayLiteral = ArrayLiteral; exports.ArrayComprehension = ArrayComprehension; exports.GeneratorComprehension = GeneratorComprehension; exports.ComprehensionFor = ComprehensionFor; exports.ComprehensionIf = ComprehensionIf; exports.TemplateExpression = TemplateExpression; exports.Block = Block; exports.LabelledStatement = LabelledStatement; exports.ExpressionStatement = ExpressionStatement; exports.EmptyStatement = EmptyStatement; exports.VariableDeclaration = VariableDeclaration; exports.VariableDeclarator = VariableDeclarator; exports.ReturnStatement = ReturnStatement; exports.BreakStatement = BreakStatement; exports.ContinueStatement = ContinueStatement; exports.ThrowStatement = ThrowStatement; exports.DebuggerStatement = DebuggerStatement; exports.IfStatement = IfStatement; exports.DoWhileStatement = DoWhileStatement; exports.WhileStatement = WhileStatement; exports.ForStatement = ForStatement; exports.ForInStatement = ForInStatement; exports.ForOfStatement = ForOfStatement; exports.WithStatement = WithStatement; exports.SwitchStatement = SwitchStatement; exports.SwitchCase = SwitchCase; exports.TryStatement = TryStatement; exports.CatchClause = CatchClause; exports.FunctionDeclaration = FunctionDeclaration; exports.FunctionExpression = FunctionExpression; exports.FormalParameter = FormalParameter; exports.RestParameter = RestParameter; exports.FunctionBody = FunctionBody; exports.ArrowFunctionHead = ArrowFunctionHead; exports.ArrowFunction = ArrowFunction; exports.ModuleDeclaration = ModuleDeclaration; exports.ModuleBody = ModuleBody; exports.ModuleImport = ModuleImport; exports.ModuleAlias = ModuleAlias; exports.ImportDefaultDeclaration = ImportDefaultDeclaration; exports.ImportDeclaration = ImportDeclaration; exports.ImportSpecifier = ImportSpecifier; exports.ExportDeclaration = ExportDeclaration; exports.ExportsList = ExportsList; exports.ExportSpecifier = ExportSpecifier; exports.ModulePath = ModulePath; exports.ClassDeclaration = ClassDeclaration; exports.ClassExpression = ClassExpression; exports.ClassBody = ClassBody; exports.ClassElement = ClassElement; return exports; }).call(this, {});
+exports.Node = Node; exports.Script = Script; exports.Module = Module; exports.Identifier = Identifier; exports.Number = Number; exports.String = String; exports.Template = Template; exports.RegularExpression = RegularExpression; exports.Null = Null; exports.Boolean = Boolean; exports.ThisExpression = ThisExpression; exports.SuperExpression = SuperExpression; exports.SequenceExpression = SequenceExpression; exports.AssignmentExpression = AssignmentExpression; exports.SpreadExpression = SpreadExpression; exports.YieldExpression = YieldExpression; exports.AwaitExpression = AwaitExpression; exports.ConditionalExpression = ConditionalExpression; exports.BinaryExpression = BinaryExpression; exports.UpdateExpression = UpdateExpression; exports.UnaryExpression = UnaryExpression; exports.MemberExpression = MemberExpression; exports.CallExpression = CallExpression; exports.TaggedTemplateExpression = TaggedTemplateExpression; exports.NewExpression = NewExpression; exports.ParenExpression = ParenExpression; exports.ObjectLiteral = ObjectLiteral; exports.ComputedPropertyName = ComputedPropertyName; exports.PropertyDefinition = PropertyDefinition; exports.PatternProperty = PatternProperty; exports.PatternElement = PatternElement; exports.MethodDefinition = MethodDefinition; exports.ArrayLiteral = ArrayLiteral; exports.ArrayComprehension = ArrayComprehension; exports.GeneratorComprehension = GeneratorComprehension; exports.ComprehensionFor = ComprehensionFor; exports.ComprehensionIf = ComprehensionIf; exports.TemplateExpression = TemplateExpression; exports.Block = Block; exports.LabelledStatement = LabelledStatement; exports.ExpressionStatement = ExpressionStatement; exports.EmptyStatement = EmptyStatement; exports.VariableDeclaration = VariableDeclaration; exports.VariableDeclarator = VariableDeclarator; exports.ReturnStatement = ReturnStatement; exports.BreakStatement = BreakStatement; exports.ContinueStatement = ContinueStatement; exports.ThrowStatement = ThrowStatement; exports.DebuggerStatement = DebuggerStatement; exports.IfStatement = IfStatement; exports.DoWhileStatement = DoWhileStatement; exports.WhileStatement = WhileStatement; exports.ForStatement = ForStatement; exports.ForInStatement = ForInStatement; exports.ForOfStatement = ForOfStatement; exports.WithStatement = WithStatement; exports.SwitchStatement = SwitchStatement; exports.SwitchCase = SwitchCase; exports.TryStatement = TryStatement; exports.CatchClause = CatchClause; exports.FunctionDeclaration = FunctionDeclaration; exports.FunctionExpression = FunctionExpression; exports.FormalParameter = FormalParameter; exports.RestParameter = RestParameter; exports.FunctionBody = FunctionBody; exports.ArrowFunctionHead = ArrowFunctionHead; exports.ArrowFunction = ArrowFunction; exports.ModuleDeclaration = ModuleDeclaration; exports.ModuleBody = ModuleBody; exports.ModuleImport = ModuleImport; exports.ModuleAlias = ModuleAlias; exports.ImportDefaultDeclaration = ImportDefaultDeclaration; exports.ImportDeclaration = ImportDeclaration; exports.ImportSpecifier = ImportSpecifier; exports.ExportDeclaration = ExportDeclaration; exports.ExportsList = ExportsList; exports.ExportSpecifier = ExportSpecifier; exports.ModulePath = ModulePath; exports.ClassDeclaration = ClassDeclaration; exports.ClassExpression = ClassExpression; exports.ClassBody = ClassBody; exports.ClassElement = ClassElement; return exports; }).call(this, {});
 
 var Scanner_ = (function(exports) {
 
@@ -3717,6 +3726,7 @@ function isUnary(op) {
         case "~":
         case "+":
         case "-":
+        case "await": // [Async Functions]
             return true;
     }
     
@@ -3749,9 +3759,8 @@ var Context = __class(function(__super) { return {
         this.parent = parent;
         this.strict = isStrict;
         this.isFunction = isFunction;
-        this.isFunctionBody = false;
-        this.isGenerator = false;
-        this.isClass = false;
+        this.functionBody = false;
+        this.functionType = null;
         this.labelSet = {};
         this.switchDepth = 0;
         this.invalidNodes = null;
@@ -3912,7 +3921,29 @@ var Parser = __class(function(__super) { return {
     
     peekYield: function() {
     
-        return this.peekKeyword("yield") && this.context.isGenerator && this.context.isFunctionBody;
+        return this.peekKeyword("yield") && 
+            this.context.functionType === "generator" && 
+            this.context.functionBody;
+    },
+    
+    // [Async Functions]
+    
+    peekAwait: function() {
+    
+        return this.peekKeyword("await") &&
+            this.context.functionType === "async" &&
+            this.context.functionBody;
+    },
+    
+    peekAsync: function() {
+    
+        if (this.peekKeyword("async")) {
+        
+            var token = this.peekToken("div", 1);
+            return (!token.newlineBefore && token.type === "IDENTIFIER");
+        }
+        
+        return false;
     },
     
     // == Context Management ==
@@ -4151,6 +4182,23 @@ var Parser = __class(function(__super) { return {
             this.endOffset);
     },
     
+    // [Async Functions]
+    AwaitExpression: function() {
+    
+        var start = this.startOffset,
+            expr = null;
+        
+        this.readKeyword("await");
+        
+        if (!this.maybeEnd())
+            expr = this.UnaryExpression();
+        
+        return new AST.AwaitExpression(
+            expr,
+            start,
+            this.endOffset);
+    },
+    
     ConditionalExpression: function(noIn) {
     
         var start = this.startOffset,
@@ -4232,6 +4280,10 @@ var Parser = __class(function(__super) { return {
             
             return new AST.UpdateExpression(type, expr, true, start, this.endOffset);
         }
+        
+        // [Async Functions]
+        if (this.peekAwait())
+            return this.AwaitExpression();
         
         if (isUnary(type)) {
         
@@ -4411,7 +4463,11 @@ var Parser = __class(function(__super) { return {
             
             case "IDENTIFIER":
             
-                if (this.peek("div", 1) === "=>") {
+                if (this.peekAsync()) {
+                
+                    return this.AsyncExpression();
+                
+                } else if (this.peek("div", 1) === "=>") {
                 
                     this.pushContext(true);
                     return this.ArrowFunctionHead(this.BindingIdentifier(), null, start);
@@ -4696,20 +4752,24 @@ var Parser = __class(function(__super) { return {
             if (!name)
                 name = this.PropertyName();
             
-            if (name.type === "Identifier" && 
-                this.peek("name") !== "(" &&
-                (name.value === "get" || name.value === "set")) {
+            if (name.type === "Identifier" && this.peek("name") !== "(") {
             
-                kind = name.value;
-                name = this.PropertyName();
+                switch (name.value) {
+                
+                    case "get":
+                    case "set":
+                    case "async":
+                        kind = name.value;
+                        name = this.PropertyName();
+                        break;
+                }
             }
         }
         
         this.pushContext(true);
         
-        
-        if (kind === "generator")
-            this.context.isGenerator = true;
+        if (kind === "generator" || kind === "async")
+            this.context.functionType = kind;
         
         var params = this.FormalParameters(),
             body = this.FunctionBody();
@@ -4862,8 +4922,8 @@ var Parser = __class(function(__super) { return {
             
             case "IDENTIFIER":
             
-                return this.peek("div", 1) === ":" ?
-                    this.LabelledStatement() :
+                return this.peekAsync() ? this.AsyncDeclaration() :
+                    this.peek("div", 1) === ":" ? this.LabelledStatement() :
                     this.ExpressionStatement();
             
             case "{": return this.Block();
@@ -5461,9 +5521,7 @@ var Parser = __class(function(__super) { return {
         }
         
         this.pushContext(true);
-        
-        if (kind === "generator")
-            this.context.isGenerator = true;
+        this.context.functionType = kind;
         
         var ident = this.Identifier(),
             params = this.FormalParameters(),
@@ -5504,9 +5562,7 @@ var Parser = __class(function(__super) { return {
         }
         
         this.pushContext(true);
-        
-        if (kind === "generator")
-            this.context.isGenerator = true;
+        this.context.functionType = kind;
         
         var params = this.FormalParameters(),
             body = this.FunctionBody();
@@ -5517,6 +5573,58 @@ var Parser = __class(function(__super) { return {
         
         return new AST.FunctionExpression(
             kind,
+            ident,
+            params,
+            body,
+            start,
+            this.endOffset);
+    },
+    
+    AsyncDeclaration: function() {
+    
+        var start = this.startOffset;
+        
+        this.readKeyword("async");
+        this.pushContext(true);
+        this.context.functionType = "async";
+        
+        var ident = this.Identifier(),
+            params = this.FormalParameters(),
+            body = this.FunctionBody();
+            
+        this.checkBindingIdent(ident);
+        this.checkParameters(params);
+        
+        this.popContext();
+        
+        return new AST.FunctionDeclaration(
+            "async",
+            ident,
+            params,
+            body,
+            start,
+            this.endOffset);
+    },
+    
+    AsyncExpression: function() {
+    
+        var start = this.startOffset;
+        
+        this.readKeyword("async");
+        this.pushContext(true);
+        this.context.functionType = "async";
+        
+        var ident = this.Identifier(),
+            params = this.FormalParameters(),
+            body = this.FunctionBody();
+            
+        this.checkBindingIdent(ident);
+        this.checkParameters(params);
+        
+        this.popContext();
+        
+        return new AST.FunctionExpression(
+            "async",
             ident,
             params,
             body,
@@ -5576,7 +5684,7 @@ var Parser = __class(function(__super) { return {
     
     FunctionBody: function() {
         
-        this.context.isFunctionBody = true;
+        this.context.functionBody = true;
         
         var start = this.startOffset;
         
@@ -5604,6 +5712,8 @@ var Parser = __class(function(__super) { return {
         
         var params = head.parameters,
             start = head.start;
+        
+        // TODO: if AssignmentExpression, should we set context.functionBody = true?
         
         var body = this.peek() === "{" ?
             this.FunctionBody() :
@@ -5805,6 +5915,12 @@ var Parser = __class(function(__super) { return {
                     this.Semicolon();
                     break;
                 }
+                
+                if (this.peekAsync()) {
+                
+                    binding = this.AsyncDeclaration();
+                    break;
+                }
             
                 if (this.peekModule()) {
                 
@@ -5950,7 +6066,6 @@ var Parser = __class(function(__super) { return {
     ClassBody: function() {
     
         this.pushContext(false, true);
-        this.context.isClass = true;
         
         var start = this.startOffset,
             nameSet = {}, 
@@ -6497,17 +6612,30 @@ var Replacer = __class(function(__super) { return {
     
     MethodDefinition: function(node) {
     
-        // TODO: Generator methods
-        
         // TODO: will fail if name is a string:  static "name"() {}
+    
         if (node.parentNode.type === "ClassElement" && 
             node.parentNode.static) {
             
             node.name.text = "__static_" + node.name.text;
         }
         
-        if (!node.kind)
-            return node.name.text + ": function(" + this.joinList(node.params) + ") " + node.body.text;
+        switch (node.kind) {
+        
+            case "":
+                return node.name.text + ": function(" + 
+                    this.joinList(node.params) + ") " + 
+                    node.body.text;
+            
+            case "async":
+                return node.name.text + ": " + this.asyncFunction(null, node.params, node.body);
+            
+            case "generator":
+                return node.name.text + ": function*(" + 
+                    this.joinList(node.params) + ") " + 
+                    node.body.text;
+                
+        }
     },
     
     PropertyDefinition: function(node) {
@@ -6711,6 +6839,23 @@ var Replacer = __class(function(__super) { return {
         }
     },
     
+    AwaitExpression: function(node) {
+    
+        return node.expression ? "(yield " + node.expression.text + ")" : "yield";
+    },
+    
+    FunctionDeclaration: function(node) {
+    
+        if (node.kind === "async")
+            return this.asyncFunction(node.identifier, node.params, node.body);
+    },
+    
+    FunctionExpression: function(node) {
+    
+        if (node.kind === "async")
+            return this.asyncFunction(node.identifier, node.params, node.body);
+    },
+    
     ClassDeclaration: function(node) {
     
         return "var " + node.identifier.text + " = __class(" + 
@@ -6782,6 +6927,21 @@ var Replacer = __class(function(__super) { return {
         }
         
         return out;
+    },
+    
+    asyncFunction: function(ident, params, body) {
+    
+        // TODO: function.length is incorrect!
+        
+        var head = "function";
+        
+        if (ident)
+            head += " " + ident.text;
+        
+        return "" + (head) + "() { " +
+            "try { return Promise.__iterate(function*(" + (this.joinList(params)) + ") " + 
+            "" + (body.text) + ".apply(this, arguments)); " +
+            "} catch (x) { return Promise.reject(x); } }";
     },
     
     parentFunction: function(node) {
