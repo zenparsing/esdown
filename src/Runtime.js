@@ -736,15 +736,6 @@ function isPromise(x) {
     return x && $status in Object(x);
 }
 
-function Promise(init) {
-
-    this[$status] = "pending";
-    this[$onResolve] = [];
-    this[$onReject] = [];
-    
-    init(x => promiseResolve(this, x), r => promiseReject(this, r));
-}
-
 function promiseResolve(promise, x) {
     
     promiseDone(promise, "resolved", x, promise[$onResolve]);
@@ -787,90 +778,6 @@ function promiseReact(deferred, handler, x) {
     });
 }
 
-Promise.resolve = function(x) {
-
-    return new this(resolve => resolve(x));
-};
-
-Promise.reject = function(r) {
-
-    return new this((resolve, reject) => reject(r));
-};
-
-Promise.deferred = function() {
-
-    var result = {};
-    
-    result.promise = new this((resolve, reject) => {
-        result.resolve = resolve;
-        result.reject = reject;
-    });
-    
-    return result;
-};
-
-Promise.prototype.chain = function(onResolve, onReject) {
-
-    // [A+ compatibility]
-    // onResolve = onResolve || (x => x);
-    // onReject = onReject || (e => { throw e });
-    
-    if (typeof onResolve !== "function") onResolve = x => x;
-    if (typeof onReject !== "function") onReject = e => { throw e };
-    
-    var deferred = Promise.deferred.call(this.constructor);
-    
-    switch (this[$status]) {
-    
-        case undefined:
-            throw new TypeError;
-            
-        case "pending":
-            this[$onResolve].push([deferred, onResolve]);
-            this[$onReject].push([deferred, onReject]);
-            break;
-        
-        case "resolved":
-            promiseReact(deferred, onResolve, this[$value]);
-            break;
-            
-        case "rejected":
-            promiseReact(deferred, onReject, this[$value]);
-            break;
-    }
-    
-    return deferred.promise;
-};
-
-Promise.prototype.catch = function(onReject) {
-
-    // TODO: if !onReject, should it default to x => x?
-    return this.chain(undefined, onReject)
-};
-
-Promise.prototype.then = function(onResolve, onReject) {
-
-    // [A+ compatibility]
-    // onResolve = onResolve || (x => x);
-    
-    if (typeof onResolve !== "function") onResolve = x => x;
-    
-    var constructor = this.constructor;
-    
-    return this.chain(x => {
-    
-        x = promiseCoerce(constructor, x);
-        
-        if (x === this)
-            throw new TypeError;
-        
-        return isPromise(x) ?
-            x.then(onResolve, onReject) :
-            onResolve(x);
-        
-    }, onReject);
-};
-
 function promiseCoerce(constructor, x) {
 
     if (isPromise(x))
@@ -883,7 +790,7 @@ function promiseCoerce(constructor, x) {
     if (!(x && "then" in Object(x) && typeof x.then === "function"))
         return x;
     
-    var deferred = constructor.deferred();
+    var deferred = promiseDeferred(constructor);
       
     try { x.then(deferred.resolve, deferred.reject) } 
     catch(e) { deferred.reject(e) }
@@ -891,55 +798,152 @@ function promiseCoerce(constructor, x) {
     return deferred.promise;
 }
 
-Promise.cast = function(x) {
+function promiseDeferred(constructor) {
 
-    if (x instanceof this)
-        return x;
+    var result = {};
 
-    if (!isPromise(x))
-        return this.resolve(x);
+    result.promise = new constructor((resolve, reject) => {
+        result.resolve = resolve;
+        result.reject = reject;
+    });
+
+    return result;
+}
+
+class Promise {
+
+    constructor(init) {
     
-    var result = this.deferred();
-    x.chain(result.resolve, result.reject);
-    return result.promise;
-};
-
-Promise.all = function(values) {
-
-    var deferred = this.deferred(),
-        count = 0,
-        resolutions = [];
-        
-    for (var i in values) {
+        this[$status] = "pending";
+        this[$onResolve] = [];
+        this[$onReject] = [];
     
-        ++count;
-        
-        this.cast(values[i]).chain(onResolve(i), r => {
-        
-            if (count > 0) { 
-            
-                count = 0; 
-                deferred.reject(r);
-            }
-        });
+        init(x => promiseResolve(this, x), r => promiseReject(this, r));
     }
     
-    if (count === 0) 
-        deferred.resolve(resolutions);
-        
-    return deferred.promise;
+    chain(onResolve, onReject) {
+
+        // [A+ compatibility]
+        // onResolve = onResolve || (x => x);
+        // onReject = onReject || (e => { throw e });
     
-    function onResolve(i) {
+        if (typeof onResolve !== "function") onResolve = x => x;
+        if (typeof onReject !== "function") onReject = e => { throw e };
     
-        return x => {
-        
-            resolutions[i] = x;
+        var deferred = promiseDeferred(this.constructor);
+    
+        switch (this[$status]) {
+    
+            case undefined:
+                throw new TypeError;
             
-            if (--count === 0)
-                deferred.resolve(resolutions);
-        };
+            case "pending":
+                this[$onResolve].push([deferred, onResolve]);
+                this[$onReject].push([deferred, onReject]);
+                break;
+        
+            case "resolved":
+                promiseReact(deferred, onResolve, this[$value]);
+                break;
+            
+            case "rejected":
+                promiseReact(deferred, onReject, this[$value]);
+                break;
+        }
+    
+        return deferred.promise;
     }
-};
+    
+    catch(onReject) {
+
+        // TODO: if !onReject, should it default to x => x?
+        return this.chain(undefined, onReject)
+    }
+
+    then(onResolve, onReject) {
+
+        // [A+ compatibility]
+        // onResolve = onResolve || (x => x);
+    
+        if (typeof onResolve !== "function") onResolve = x => x;
+    
+        var constructor = this.constructor;
+    
+        return this.chain(x => {
+    
+            x = promiseCoerce(constructor, x);
+        
+            if (x === this)
+                throw new TypeError;
+        
+            return isPromise(x) ?
+                x.then(onResolve, onReject) :
+                onResolve(x);
+        
+        }, onReject);
+    }
+    
+    static resolve(x) { 
+    
+        return new this(resolve => resolve(x));
+    }
+    
+    static reject(x) { 
+    
+        return new this((resolve, reject) => reject(x));
+    }
+    
+    static cast(x) {
+
+        if (x instanceof this)
+            return x;
+
+        if (!isPromise(x))
+            return this.resolve(x);
+    
+        var result = promiseDeferred();
+        x.chain(result.resolve, result.reject);
+        return result.promise;
+    }
+
+    static all(values) {
+
+        var deferred = promiseDeferred(this),
+            count = 0,
+            resolutions = [];
+        
+        for (var i in values) {
+    
+            ++count;
+        
+            this.cast(values[i]).chain(onResolve(i), r => {
+        
+                if (count > 0) { 
+            
+                    count = 0; 
+                    deferred.reject(r);
+                }
+            });
+        }
+    
+        if (count === 0) 
+            deferred.resolve(resolutions);
+        
+        return deferred.promise;
+    
+        function onResolve(i) {
+    
+            return x => {
+        
+                resolutions[i] = x;
+            
+                if (--count === 0)
+                    deferred.resolve(resolutions);
+            };
+        }
+    }
+
+}
 
 this.Promise = Promise;
 `;
