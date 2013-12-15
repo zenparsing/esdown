@@ -942,6 +942,46 @@ class Promise {
             };
         }
     }
+    
+    // Experimental
+    static __iterate(iterable) {
+    
+        // TODO:  Use System.iterator
+        var iter = iterable;
+        
+        var deferred = promiseDeferred(this),
+            constructor = this;
+        
+        function resume(value, error) {
+        
+            if (error && !("throw" in iter))
+                return deferred.reject(value);
+            
+            try {
+            
+                var result = error ? iter.throw(value) : iter.next(value);
+                
+                if (result.done) {
+                
+                    deferred.resolve(result.value);
+                
+                } else {
+                
+                    constructor.cast(result.value).chain(
+                        x => resume(x, false),
+                        x => resume(x, true));    
+                }
+                
+            } catch (x) {
+            
+                deferred.reject(x);
+            }
+        }
+        
+        resume(void 0, false);
+        
+        return deferred.promise;
+    }
 
 }
 
