@@ -172,7 +172,7 @@ export class Replacer {
                     node.body.text;
             
             case "async":
-                return node.name.text + ": " + this.asyncFunction(null, node.params, node.body);
+                return node.name.text + ": " + this.asyncFunction(null, node.params, node.body.text);
             
             case "generator":
                 return node.name.text + ": function*(" + 
@@ -353,20 +353,13 @@ export class Replacer {
     
     ArrowFunction(node) {
     
-        var head, body, expr;
+        var body = node.body.type === "FunctionBody" ?
+            node.body.text :
+            "{ return " + node.body.text + "; }";
         
-        head = "function(" + this.joinList(node.params) + ")";
-        
-        if (node.body.type === "FunctionBody") {
-        
-            body = node.body.text;
-        
-        } else {
-        
-            body = "{ return " + node.body.text + "; }";
-        }
-
-        return "(" + head + " " + body + ")";
+        return node.kind === "async" ?
+            "(" + this.asyncFunction(null, node.params, body) + ")" :
+            "(function(" + this.joinList(node.params) + ") " + body + ")";
     }
     
     ThisExpression(node) {
@@ -391,13 +384,13 @@ export class Replacer {
     FunctionDeclaration(node) {
     
         if (node.kind === "async")
-            return this.asyncFunction(node.identifier, node.params, node.body);
+            return this.asyncFunction(node.identifier, node.params, node.body.text);
     }
     
     FunctionExpression(node) {
     
         if (node.kind === "async")
-            return this.asyncFunction(node.identifier, node.params, node.body);
+            return this.asyncFunction(node.identifier, node.params, node.body.text);
     }
     
     ClassDeclaration(node) {
@@ -484,7 +477,7 @@ export class Replacer {
         
         return `${head}() { ` +
             `try { return Promise.__iterate(function*(${ this.joinList(params) }) ` + 
-            `${ body.text }.apply(this, arguments)); ` +
+            `${ body }.apply(this, arguments)); ` +
             `} catch (x) { return Promise.reject(x); } }`;
     }
     
