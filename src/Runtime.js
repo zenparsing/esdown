@@ -967,7 +967,7 @@ class Promise {
                 
                 } else {
                 
-                    constructor.cast(result.value).chain(
+                    constructor.cast(result.value).then(
                         x => resume(x, false),
                         x => resume(x, true));    
                 }
