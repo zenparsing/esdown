@@ -4,7 +4,7 @@ A quick and dirty ES6 to ES3/5 transpiler.
 
 === Instructions ===
 
-Put it in your path and smoke it.
+Put build/* in your path and smoke it.
 
 Start a REPL by running it without any arguments:
 
