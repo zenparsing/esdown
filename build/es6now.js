@@ -2177,9 +2177,10 @@ var ArrowFunctionHead = __class(Node, function(__super) { return {
 
 var ArrowFunction = __class(Node, function(__super) { return {
 
-    constructor: function ArrowFunction(params, body, start, end) {
+    constructor: function ArrowFunction(kind, params, body, start, end) {
     
         __super.constructor.call(this, start, end);
+        this.kind = kind;
         this.params = params;
         this.body = body;
     }
@@ -3766,7 +3767,6 @@ function isUnary(op) {
         case "~":
         case "+":
         case "-":
-        case "await": // [Async Functions]
             return true;
     }
     
@@ -3970,9 +3970,16 @@ var Parser = __class(function(__super) { return {
     
     peekAwait: function() {
     
-        return this.peekKeyword("await") &&
-            this.context.functionType === "async" &&
-            this.context.functionBody;
+        if (this.peekKeyword("await") && this.context.functionBody) {
+        
+            switch (this.context.functionType) {
+            
+                case "async": return true;
+                case "arrow": this.context.functionType = "async"; return true;
+            }
+        }
+        
+        return false;
     },
     
     peekAsync: function() {
@@ -4073,6 +4080,7 @@ var Parser = __class(function(__super) { return {
                 case "EOF":
                 case "}":
                 case ";":
+                case ")":
                     break;
                 
                 default:
@@ -4160,7 +4168,7 @@ var Parser = __class(function(__super) { return {
             lhs;
         
         if (this.peekYield())
-            return this.YieldExpression();
+            return this.YieldExpression(noIn);
         
         left = this.ConditionalExpression(noIn);
         
@@ -4198,7 +4206,7 @@ var Parser = __class(function(__super) { return {
         return this.AssignmentExpression(noIn);
     },
     
-    YieldExpression: function() {
+    YieldExpression: function(noIn) {
     
         var start = this.startOffset,
             delegate = false,
@@ -4213,29 +4221,12 @@ var Parser = __class(function(__super) { return {
         }
         
         if (delegate || !this.maybeEnd())
-            expr = this.AssignmentExpression();
+            expr = this.AssignmentExpression(noIn);
         
         return new AST.YieldExpression(
             expr, 
             delegate, 
             start, 
-            this.endOffset);
-    },
-    
-    // [Async Functions]
-    AwaitExpression: function() {
-    
-        var start = this.startOffset,
-            expr = null;
-        
-        this.readKeyword("await");
-        
-        if (!this.maybeEnd())
-            expr = this.UnaryExpression();
-        
-        return new AST.AwaitExpression(
-            expr,
-            start,
             this.endOffset);
     },
     
@@ -4350,6 +4341,23 @@ var Parser = __class(function(__super) { return {
         }
         
         return expr;
+    },
+    
+    // [Async Functions]
+    AwaitExpression: function() {
+    
+        var start = this.startOffset,
+            expr = null;
+        
+        this.readKeyword("await");
+        
+        if (!this.maybeEnd())
+            expr = this.UnaryExpression();
+        
+        return new AST.AwaitExpression(
+            expr,
+            start,
+            this.endOffset);
     },
     
     MemberExpression: function(allowCall) {
@@ -4629,7 +4637,10 @@ var Parser = __class(function(__super) { return {
             rest = null;
         
         // Push a new context in case we are parsing an arrow function
-        this.pushContext(false);
+        var parent = this.context;
+        this.pushContext(this.context.isFunction);
+        this.context.functionBody = parent.functionBody;
+        this.context.functionType = parent.functionType;
         
         this.read("(");
         
@@ -5751,17 +5762,23 @@ var Parser = __class(function(__super) { return {
         this.read("=>");
         
         var params = head.parameters,
-            start = head.start;
+            start = head.start,
+            kind = "";
         
-        // TODO: if AssignmentExpression, should we set context.functionBody = true?
+        // Use function body context even if parsing expression body form
+        this.context.functionType = "arrow";
+        this.context.functionBody = true;
         
         var body = this.peek() === "{" ?
             this.FunctionBody() :
             this.AssignmentExpression(noIn);
         
+        if (this.context.functionType === "async")
+            kind = "async";
+        
         this.popContext();
         
-        return new AST.ArrowFunction(params, body, start, this.endOffset);
+        return new AST.ArrowFunction(kind, params, body, start, this.endOffset);
     },
     
     // === Modules ===
@@ -6668,7 +6685,7 @@ var Replacer = __class(function(__super) { return {
                     node.body.text;
             
             case "async":
-                return node.name.text + ": " + this.asyncFunction(null, node.params, node.body);
+                return node.name.text + ": " + this.asyncFunction(null, node.params, node.body.text);
             
             case "generator":
                 return node.name.text + ": function*(" + 
@@ -6849,20 +6866,13 @@ var Replacer = __class(function(__super) { return {
     
     ArrowFunction: function(node) {
     
-        var head, body, expr;
+        var body = node.body.type === "FunctionBody" ?
+            node.body.text :
+            "{ return " + node.body.text + "; }";
         
-        head = "function(" + this.joinList(node.params) + ")";
-        
-        if (node.body.type === "FunctionBody") {
-        
-            body = node.body.text;
-        
-        } else {
-        
-            body = "{ return " + node.body.text + "; }";
-        }
-
-        return "(" + head + " " + body + ")";
+        return node.kind === "async" ?
+            "(" + this.asyncFunction(null, node.params, body) + ")" :
+            "(function(" + this.joinList(node.params) + ") " + body + ")";
     },
     
     ThisExpression: function(node) {
@@ -6887,13 +6897,13 @@ var Replacer = __class(function(__super) { return {
     FunctionDeclaration: function(node) {
     
         if (node.kind === "async")
-            return this.asyncFunction(node.identifier, node.params, node.body);
+            return this.asyncFunction(node.identifier, node.params, node.body.text);
     },
     
     FunctionExpression: function(node) {
     
         if (node.kind === "async")
-            return this.asyncFunction(node.identifier, node.params, node.body);
+            return this.asyncFunction(node.identifier, node.params, node.body.text);
     },
     
     ClassDeclaration: function(node) {
@@ -6980,7 +6990,7 @@ var Replacer = __class(function(__super) { return {
         
         return "" + (head) + "() { " +
             "try { return Promise.__iterate(function*(" + (this.joinList(params)) + ") " + 
-            "" + (body.text) + ".apply(this, arguments)); " +
+            "" + (body) + ".apply(this, arguments)); " +
             "} catch (x) { return Promise.reject(x); } }";
     },
     

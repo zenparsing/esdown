@@ -19,5 +19,7 @@ export function main() {
         return await AsyncFS.readFile(__filename, { encoding: "utf8" });
     }
     
+    return Promise.resolve().then(x => console.log(await gen()));
+    
     return gen().then(x => console.log(x));
 }
