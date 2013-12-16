@@ -1,5 +1,8 @@
 module FS from "node:fs";
 module Path from "node:path";
+module REPL from "node:repl";
+module VM from "node:vm";
+
 module Runtime from "Runtime.js";
 
 import {
@@ -13,7 +16,6 @@ import {
 
 import { createBundle } from "package:js-bundle";
 import { translate } from "Translator.js";
-import { Server } from "Server.js";
 import { isPackageURI, locatePackage } from "PackageLocator.js";
 
 var ES6_GUESS = /(?:^|\n)\s*(?:import|export|class)\s/;
@@ -83,6 +85,36 @@ function overrideCompilation() {
     };
 }
 
+function startREPL() {
+
+    var r = REPL.start({ 
+    
+        prompt: "es6> ",
+        
+        eval(input, context, filename, cb) {
+        
+            try {
+            
+                input = translate(input, { wrap: false });
+                
+                var result = context === global ? 
+                    VM.runInThisContext(input, filename) : 
+                    VM.runInContext(input, context, filename);
+                
+                cb(null, result);
+            
+            } catch (x) {
+            
+                cb(x);
+            }
+        }
+    });
+    
+    r.on("exit", $=> REPL.outputStream.write("\n"));
+    
+    return r;
+}
+
 function wrapRuntimeModule(text) {
 
     return "(function() {\n\n" + text + "\n\n}).call(this);\n\n";
@@ -92,10 +124,10 @@ new ConsoleCommand({
 
     params: {
     
-        "target": {
+        "input": {
         
             positional: true,
-            required: true
+            required: false
         }
     },
     
@@ -104,19 +136,26 @@ new ConsoleCommand({
         overrideCompilation();
         process.argv.splice(1, 1);
         
-        var path = absolutePath(params.target),
-            stat;
+        if (params.path) {
         
-        try { stat = FS.statSync(path) }
-        catch (x) {}
+            var path = absolutePath(params.path),
+                stat;
         
-        if (stat && stat.isDirectory())
-            path = Path.join(path, "main.js");
+            try { stat = FS.statSync(path) }
+            catch (x) {}
         
-        var m = require(path);
+            if (stat && stat.isDirectory())
+                path = Path.join(path, "main.js");
         
-        if (m && typeof m.main === "function")
-            Promise.cast(m.main()).catch(x => setTimeout($=> { throw x }, 0));
+            var m = require(path);
+        
+            if (m && typeof m.main === "function")
+                Promise.cast(m.main()).catch(x => setTimeout($=> { throw x }, 0));
+        
+        } else {
+        
+            startREPL();
+        }
     }
     
 }).add("-", {

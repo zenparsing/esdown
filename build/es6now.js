@@ -1,4 +1,4 @@
-/*=es6now=*/(function(fn, deps, name) { if (typeof exports !== 'undefined') fn.call(typeof global === 'object' ? global : this, require, exports); else if (typeof __MODULE === 'function') __MODULE(fn, deps); else if (typeof define === 'function' && define.amd) define(['require', 'exports'].concat(deps), fn); else if (typeof window !== 'undefined' && name) fn.call(window, null, window[name] = {}); else fn.call(window || this, null, {}); })(function(require, exports) { 'use strict'; function __load(p) { var e = require(p); return typeof e === 'object' ? e : { 'default': e }; } var _M0 = __load("fs"), _M1 = __load("path"), _M2 = __load("http"), _M3 = __load("url"); 
+/*=es6now=*/(function(fn, deps, name) { if (typeof exports !== 'undefined') fn.call(typeof global === 'object' ? global : this, require, exports); else if (typeof __MODULE === 'function') __MODULE(fn, deps); else if (typeof define === 'function' && define.amd) define(['require', 'exports'].concat(deps), fn); else if (typeof window !== 'undefined' && name) fn.call(window, null, window[name] = {}); else fn.call(window || this, null, {}); })(function(require, exports) { 'use strict'; function __load(p) { var e = require(p); return typeof e === 'object' ? e : { 'default': e }; } var _M0 = __load("fs"), _M1 = __load("path"), _M2 = __load("repl"), _M3 = __load("vm"); 
 
 var __this = this; (function() {
 
@@ -6109,7 +6109,7 @@ var Parser = __class(function(__super) { return {
         if (this.peek() === "extends") {
         
             this.read();
-            base = this.AssignmentExpression();
+            base = this.MemberExpression(true);
         }
         
         return new AST.ClassExpression(
@@ -7197,344 +7197,6 @@ function isWrapped(text) {
 
 exports.translate = translate; exports.wrap = wrap; exports.isWrapped = isWrapped; return exports; }).call(this, {});
 
-var ServerMime = (function(exports) {
-
-var mimeTypes = {
-
-    "aiff": "audio/x-aiff",
-    "arj": "application/x-arj-compressed",
-    "asf": "video/x-ms-asf",
-    "asx": "video/x-ms-asx",
-    "au": "audio/ulaw",
-    "avi": "video/x-msvideo",
-    "bcpio": "application/x-bcpio",
-    "ccad": "application/clariscad",
-    "cod": "application/vnd.rim.cod",
-    "com": "application/x-msdos-program",
-    "cpio": "application/x-cpio",
-    "cpt": "application/mac-compactpro",
-    "csh": "application/x-csh",
-    "css": "text/css",
-    "deb": "application/x-debian-package",
-    "dl": "video/dl",
-    "doc": "application/msword",
-    "drw": "application/drafting",
-    "dvi": "application/x-dvi",
-    "dwg": "application/acad",
-    "dxf": "application/dxf",
-    "dxr": "application/x-director",
-    "etx": "text/x-setext",
-    "ez": "application/andrew-inset",
-    "fli": "video/x-fli",
-    "flv": "video/x-flv",
-    "gif": "image/gif",
-    "gl": "video/gl",
-    "gtar": "application/x-gtar",
-    "gz": "application/x-gzip",
-    "hdf": "application/x-hdf",
-    "hqx": "application/mac-binhex40",
-    "htm": "text/html",
-    "html": "text/html",
-    "ice": "x-conference/x-cooltalk",
-    "ico": "image/x-icon",
-    "ief": "image/ief",
-    "igs": "model/iges",
-    "ips": "application/x-ipscript",
-    "ipx": "application/x-ipix",
-    "jad": "text/vnd.sun.j2me.app-descriptor",
-    "jar": "application/java-archive",
-    "jpeg": "image/jpeg",
-    "jpg": "image/jpeg",
-    "js": "text/javascript",
-    "json": "application/json",
-    "latex": "application/x-latex",
-    "less": "text/css",
-    "lsp": "application/x-lisp",
-    "lzh": "application/octet-stream",
-    "m": "text/plain",
-    "m3u": "audio/x-mpegurl",
-    "man": "application/x-troff-man",
-    "manifest": "text/cache-manifest",
-    "me": "application/x-troff-me",
-    "midi": "audio/midi",
-    "mif": "application/x-mif",
-    "mime": "www/mime",
-    "movie": "video/x-sgi-movie",
-    "mp4": "video/mp4",
-    "mpg": "video/mpeg",
-    "mpga": "audio/mpeg",
-    "ms": "application/x-troff-ms",
-    "nc": "application/x-netcdf",
-    "oda": "application/oda",
-    "ogm": "application/ogg",
-    "pbm": "image/x-portable-bitmap",
-    "pdf": "application/pdf",
-    "pgm": "image/x-portable-graymap",
-    "pgn": "application/x-chess-pgn",
-    "pgp": "application/pgp",
-    "pm": "application/x-perl",
-    "png": "image/png",
-    "pnm": "image/x-portable-anymap",
-    "ppm": "image/x-portable-pixmap",
-    "ppz": "application/vnd.ms-powerpoint",
-    "pre": "application/x-freelance",
-    "prt": "application/pro_eng",
-    "ps": "application/postscript",
-    "qt": "video/quicktime",
-    "ra": "audio/x-realaudio",
-    "rar": "application/x-rar-compressed",
-    "ras": "image/x-cmu-raster",
-    "rgb": "image/x-rgb",
-    "rm": "audio/x-pn-realaudio",
-    "rpm": "audio/x-pn-realaudio-plugin",
-    "rtf": "text/rtf",
-    "rtx": "text/richtext",
-    "scm": "application/x-lotusscreencam",
-    "set": "application/set",
-    "sgml": "text/sgml",
-    "sh": "application/x-sh",
-    "shar": "application/x-shar",
-    "silo": "model/mesh",
-    "sit": "application/x-stuffit",
-    "skt": "application/x-koan",
-    "smil": "application/smil",
-    "snd": "audio/basic",
-    "sol": "application/solids",
-    "spl": "application/x-futuresplash",
-    "src": "application/x-wais-source",
-    "stl": "application/SLA",
-    "stp": "application/STEP",
-    "sv4cpio": "application/x-sv4cpio",
-    "sv4crc": "application/x-sv4crc",
-    "svg": "image/svg+xml",
-    "swf": "application/x-shockwave-flash",
-    "tar": "application/x-tar",
-    "tcl": "application/x-tcl",
-    "tex": "application/x-tex",
-    "texinfo": "application/x-texinfo",
-    "tgz": "application/x-tar-gz",
-    "tiff": "image/tiff",
-    "tr": "application/x-troff",
-    "tsi": "audio/TSP-audio",
-    "tsp": "application/dsptype",
-    "tsv": "text/tab-separated-values",
-    "txt": "text/plain",
-    "unv": "application/i-deas",
-    "ustar": "application/x-ustar",
-    "vcd": "application/x-cdlink",
-    "vda": "application/vda",
-    "vivo": "video/vnd.vivo",
-    "vrm": "x-world/x-vrml",
-    "wav": "audio/x-wav",
-    "wax": "audio/x-ms-wax",
-    "wma": "audio/x-ms-wma",
-    "wmv": "video/x-ms-wmv",
-    "wmx": "video/x-ms-wmx",
-    "wrl": "model/vrml",
-    "wvx": "video/x-ms-wvx",
-    "xbm": "image/x-xbitmap",
-    "xlw": "application/vnd.ms-excel",
-    "xml": "text/xml",
-    "xpm": "image/x-xpixmap",
-    "xwd": "image/x-xwindowdump",
-    "xyz": "chemical/x-pdb",
-    "zip": "application/zip",
-    "*": "application/octect-stream"
-};
-
-
-exports.mimeTypes = mimeTypes; return exports; }).call(this, {});
-
-var Server_ = (function(exports) {
-
-var FS = _M0;
-var HTTP = _M2;
-var Path = _M1;
-var URL = _M3;
-
-var AsyncFS = main_.AsyncFS;
-var translate = Translator.translate, isWrapped = Translator.isWrapped;
-var mimeTypes = ServerMime.mimeTypes;
-
-var DEFAULT_PORT = 80,
-    DEFAULT_ROOT = ".",
-    JS_FILE = /\.js$/i;
-
-var Server = __class(function(__super) { return {
-
-    constructor: function Server(options) { var __this = this; 
-    
-        options || (options = {});
-    
-        this.root = Path.resolve(options.root || DEFAULT_ROOT);
-        this.port = options.port || DEFAULT_PORT;
-        this.hostname = options.hostname || null;
-        this.server = HTTP.createServer((function(request, response) { return __this.onRequest(request, response); }));
-        this.active = false;
-    },
-    
-    start: function(port, hostname) { var __this = this; 
-    
-        if (this.active)
-            throw new Error("Server is already listening");
-        
-        if (port)
-            this.port = port;
-        
-        if (hostname)
-            this.hostname = hostname;
-        
-        var promise = new Promise((function(resolve) {
-        
-            __this.server.listen(__this.port, __this.hostname, (function(ok) { return resolve(null); }));
-            __this.active = true;
-        }));
-        
-        return promise;
-    },
-    
-    stop: function() { var __this = this; 
-    
-        return new Promise((function(resolve) {
-        
-            if (__this.active) {
-        
-                __this.active = false;
-                __this.server.close((function(ok) { return resolve(null); }));
-        
-            } else {
-        
-                resolve(null);
-            }
-        }));
-    },
-    
-    onRequest: function(request, response) { var __this = this; 
-    
-        if (request.method !== "GET" && request.method !== "HEAD")
-            return this.error(405, response);
-        
-        var path = URL.parse(request.url).pathname;
-        
-        path = Path.join(this.root, path);
-        
-        if (path.indexOf(this.root) !== 0)
-            return this.error(403, response);
-        
-        AsyncFS.stat(path).then((function(stat) {
-        
-            if (stat.isDirectory())
-                return __this.streamDefault(path, response);
-            
-            if (stat.isFile()) {
-            
-                return JS_FILE.test(path) ? 
-                    __this.streamJS(path, response) : 
-                    __this.streamFile(path, stat.size, response);
-            }
-            
-            return __this.error(404, response);
-            
-        }), (function(err) {
-        
-            return __this.error(404, response);
-            
-        }));
-    },
-    
-    error: function(code, response) {
-    
-        response.writeHead(code, { "Content-Type": "text/plain" });
-        response.write(HTTP.STATUS_CODES[code] + "\n")
-        response.end();
-    },
-    
-    streamDefault: function(path, response) { var __this = this; 
-    
-        var files = [ "index.html", "index.htm", "default.html", "default.htm" ];
-        
-        var next = (function() {
-        
-            if (files.length === 0)
-                return __this.error(404, response);
-            
-            var file = files.shift(),
-                search = Path.join(path, file);
-            
-            AsyncFS.stat(search).then((function(stat) {
-            
-                if (!stat.isFile())
-                    return next();
-                
-                path = search;
-                __this.streamFile(path, stat.size, response);
-                
-            }), (function(err) {
-            
-                return next();
-            }));
-        });
-        
-        next();
-    },
-    
-    streamJS: function(path, response) { var __this = this; 
-        
-        AsyncFS.readFile(path, "utf8").then((function(source) {
-        
-            if (!isWrapped(source)) {
-            
-                // TODO:  A better way to report errors?
-                try { source = translate(source); } 
-                catch (x) { source += "\n\n// " + x.message; }
-            }
-            
-            response.writeHead(200, { "Content-Type": "text/javascript; charset=UTF-8" });
-            response.end(source, "utf8");
-        
-        }), (function(err) {
-        
-            __this.error(500, err);
-        }));
-    },
-    
-    streamFile: function(path, size, response) { var __this = this; 
-            
-        var ext = Path.extname(path).slice(1).toLowerCase();
-            
-        var headers = { 
-    
-            // TODO: we should only append charset to certain types
-            "Content-Type": (mimeTypes[ext] || mimeTypes["*"]) + "; charset=UTF-8",
-            "Content-Length": size
-        };
-            
-        var stream = FS.createReadStream(path, { 
-        
-            flags: "r", 
-            mode: 438
-        });
-        
-        stream.on("error", (function(err) {
-        
-            __this.error(500, response);
-        }));
-        
-        stream.on("data", (function(data) {
-        
-            if (headers) {
-            
-                response.writeHead(200, headers);
-                headers = null;
-            }
-        }));
-        
-        stream.pipe(response);
-    }
-}});
-
-exports.Server = Server; return exports; }).call(this, {});
-
 var PackageLocator = (function(exports) {
 
 var Path = _M1;
@@ -7584,6 +7246,9 @@ var main = (function(exports) {
 
 var FS = _M0;
 var Path = _M1;
+var REPL = _M2;
+var VM = _M3;
+
 var Runtime = Runtime_;
 
 var AsyncFS = main_.AsyncFS,
@@ -7597,7 +7262,6 @@ var AsyncFS = main_.AsyncFS,
 
 var createBundle = main__.createBundle;
 var translate = Translator.translate;
-var Server = Server_.Server;
 var isPackageURI = PackageLocator.isPackageURI, locatePackage = PackageLocator.locatePackage;
 
 var ES6_GUESS = /(?:^|\n)\s*(?:import|export|class)\s/;
@@ -7667,6 +7331,36 @@ function overrideCompilation() {
     });
 }
 
+function startREPL() {
+
+    var r = REPL.start({ 
+    
+        prompt: "es6> ",
+        
+        eval: function(input, context, filename, cb) {
+        
+            try {
+            
+                input = translate(input, { wrap: false });
+                
+                var result = context === global ? 
+                    VM.runInThisContext(input, filename) : 
+                    VM.runInContext(input, context, filename);
+                
+                cb(null, result);
+            
+            } catch (x) {
+            
+                cb(x);
+            }
+        }
+    });
+    
+    r.on("exit", (function($) { return REPL.outputStream.write("\n"); }));
+    
+    return r;
+}
+
 function wrapRuntimeModule(text) {
 
     return "(function() {\n\n" + text + "\n\n}).call(this);\n\n";
@@ -7676,10 +7370,10 @@ new ConsoleCommand({
 
     params: {
     
-        "target": {
+        "input": {
         
             positional: true,
-            required: true
+            required: false
         }
     },
     
@@ -7688,19 +7382,26 @@ new ConsoleCommand({
         overrideCompilation();
         process.argv.splice(1, 1);
         
-        var path = absolutePath(params.target),
-            stat;
+        if (params.path) {
         
-        try { stat = FS.statSync(path) }
-        catch (x) {}
+            var path = absolutePath(params.path),
+                stat;
         
-        if (stat && stat.isDirectory())
-            path = Path.join(path, "main.js");
+            try { stat = FS.statSync(path) }
+            catch (x) {}
         
-        var m = require(path);
+            if (stat && stat.isDirectory())
+                path = Path.join(path, "main.js");
         
-        if (m && typeof m.main === "function")
-            Promise.cast(m.main()).catch((function(x) { return setTimeout((function($) { throw x }), 0); }));
+            var m = require(path);
+        
+            if (m && typeof m.main === "function")
+                Promise.cast(m.main()).catch((function(x) { return setTimeout((function($) { throw x }), 0); }));
+        
+        } else {
+        
+            startREPL();
+        }
     }
     
 }).add("-", {
@@ -7775,4 +7476,4 @@ return exports; }).call(this, {});
 Object.keys(main).forEach(function(k) { exports[k] = main[k]; });
 
 
-}, ["fs","path","http","url"], "");
+}, ["fs","path","repl","vm"], "");
