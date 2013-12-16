@@ -7333,7 +7333,7 @@ function overrideCompilation() {
 
 function startREPL() {
 
-    var r = REPL.start({ 
+    REPL.start({ 
     
         prompt: "es6> ",
         
@@ -7355,10 +7355,6 @@ function startREPL() {
             }
         }
     });
-    
-    r.on("exit", (function($) { return REPL.outputStream.write("\n"); }));
-    
-    return r;
 }
 
 function wrapRuntimeModule(text) {
@@ -7382,9 +7378,9 @@ new ConsoleCommand({
         overrideCompilation();
         process.argv.splice(1, 1);
         
-        if (params.path) {
+        if (params.input) {
         
-            var path = absolutePath(params.path),
+            var path = absolutePath(params.input),
                 stat;
         
             try { stat = FS.statSync(path) }
