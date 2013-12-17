@@ -1,1 +1,1 @@
-node --harmony "%~dp0\.\es6now.js" %*
+@(node --harmony "%~dp0\.\es6now.js" %*)
