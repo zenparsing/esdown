@@ -1,4 +1,4 @@
-/*=es6now=*/(function(fn, deps, name) { if (typeof exports !== 'undefined') fn.call(typeof global === 'object' ? global : this, require, exports); else if (typeof __MODULE === 'function') __MODULE(fn, deps); else if (typeof define === 'function' && define.amd) define(['require', 'exports'].concat(deps), fn); else if (typeof window !== 'undefined' && name) fn.call(window, null, window[name] = {}); else fn.call(window || this, null, {}); })(function(require, exports) { 'use strict'; function __load(p) { var e = require(p); return typeof e === 'object' ? e : { 'default': e }; } var _M0 = __load("fs"), _M1 = __load("path"), _M2 = __load("repl"), _M3 = __load("vm"); 
+/*=es6now=*/(function(fn, deps, name) { if (typeof exports !== 'undefined') fn.call(typeof global === 'object' ? global : this, require, exports); else if (typeof __MODULE === 'function') __MODULE(fn, deps); else if (typeof define === 'function' && define.amd) define(['require', 'exports'].concat(deps), fn); else if (typeof window !== 'undefined' && name) fn.call(window, null, window[name] = {}); else fn.call(window || this, null, {}); })(function(require, exports) { 'use strict'; function __load(p) { var e = require(p); return typeof e === 'object' ? e : { 'default': e }; } var _M0 = __load("path"), _M1 = __load("fs"), _M2 = __load("repl"), _M3 = __load("vm"); 
 
 var __this = this; (function() {
 
@@ -1019,493 +1019,6 @@ var Promise =
 
 
 exports.Class = Class; exports.ES5 = ES5; exports.ES6 = ES6; exports.Promise = Promise; return exports; }).call(this, {});
-
-var ConsoleStyle_ = (function(exports) {
-
-function green(msg) {
-
-    return "\u001b[32m" + (msg) + "\u001b[39m";
-}
-
-function red(msg) {
-
-    return "\u001b[31m" + (msg) + "\u001b[39m";
-}
-
-function gray(msg) {
-
-    return "\u001b[90m" + (msg) + "\u001b[39m";
-}
-
-function bold(msg) {
-
-    return "\u001b[1m" + (msg) + "\u001b[22m";
-}
-
-exports.green = green; exports.red = red; exports.gray = gray; exports.bold = bold; return exports; }).call(this, {});
-
-var ConsoleCommand = (function(exports) {
-
-var Style = ConsoleStyle_;
-
-var HAS = Object.prototype.hasOwnProperty;
-
-function parse(argv, params) {
-
-    params || (params = {});
-    
-    var pos = Object.keys(params),
-        values = {},
-        shorts = {},
-        required = [],
-        param,
-        value,
-        name,
-        i,
-        a;
-    
-    // Create short-to-long mapping
-    pos.forEach((function(name) {
-    
-        var p = params[name];
-        
-        if (p.short)
-            shorts[p.short] = name;
-        
-        if (p.required)
-            required.push(name);
-    }));
-    
-    // For each command line arg...
-    for (i = 0; i < argv.length; ++i) {
-    
-        a = argv[i];
-        param = null;
-        value = null;
-        name = "";
-        
-        if (a[0] === "-") {
-        
-            if (a.slice(0, 2) === "--") {
-            
-                // Long named parameter
-                param = params[name = a.slice(2)];
-            
-            } else {
-            
-                // Short named parameter
-                param = params[name = shorts[a.slice(1)]];
-            }
-            
-            // Verify parameter exists
-            if (!param)
-                throw new Error("Invalid command line option: " + a);
-            
-            if (param.flag) {
-            
-                value = true;
-            
-            } else {
-            
-                // Get parameter value
-                value = argv[++i] || "";
-                
-                if (typeof value !== "string" || value[0] === "-")
-                    throw new Error("No value provided for option " + a);
-            }
-            
-        } else {
-        
-            // Positional parameter
-            do { param = params[name = pos.shift()]; } 
-            while (param && !param.positional);;
-            
-            value = a;
-        }
-        
-        if (param)
-            values[name] = value;
-    }
-    
-    required.forEach((function(name) {
-    
-        if (values[name] === void 0)
-            throw new Error("Missing required option: --" + name);
-    }));
-    
-    return values;
-}
-
-var ConsoleCommand = __class(function(__super) { return {
-
-    constructor: function ConsoleCommand(cmd) {
-    
-        this.fallback = cmd;
-        this.commands = {};
-    },
-    
-    add: function(name, cmd) {
-    
-        this.commands[name] = cmd;
-        return this;
-    },
-    
-    run: function(args) {
-    
-        // Peel off the "node" and main module args
-        args || (args = process.argv.slice(2));
-        
-        var name = args[0] || "",
-            cmd = this.fallback;
-        
-        if (name && HAS.call(this.commands, name)) {
-        
-            cmd = this.commands[name];
-            args = args.slice(1);
-        }
-        
-        if (!cmd)
-            throw new Error("Invalid command");
-        
-        return cmd.execute(parse(args, cmd.params));
-    }
-    
-}});
-
-/*
-
-Example: 
-
-parse(process.argv.slice(2), {
-
-    "verbose": {
-    
-        short: "v",
-        flag: true
-    },
-    
-    "input": {
-    
-        short: "i",
-        positional: true,
-        required: true
-    },
-    
-    "output": {
-    
-        short: "o",
-        positional: true
-    },
-    
-    "recursive": {
-    
-        short: "r",
-        flag: false
-    }
-});
-
-*/
-
-
-exports.ConsoleCommand = ConsoleCommand; return exports; }).call(this, {});
-
-var ConsoleIO = (function(exports) {
-
-var Style = ConsoleStyle_;
-
-var ConsoleIO = __class(function(__super) { return {
-
-    constructor: function ConsoleIO() {
-    
-        this._inStream = process.stdin;
-        this._outStream = process.stdout;
-        
-        this._outEnc = "utf8";
-        this._inEnc = "utf8";
-        
-        this.inputEncoding = "utf8";
-        this.outputEncoding = "utf8";
-    },
-    
-    get inputEncoding() { 
-    
-        return this._inEnc;
-    },
-    
-    set inputEncoding(enc) {
-    
-        this._inStream.setEncoding(this._inEnc = enc);
-    },
-    
-    get outputEncoding() {
-    
-        return this._outEnc;
-    },
-    
-    set outputEncoding(enc) {
-    
-        this._outStream.setEncoding(this._outEnc = enc);
-    },
-    
-    readLine: function() { var __this = this; 
-    
-        return new Promise((function(resolve) {
-        
-            var listener = (function(data) {
-            
-                resolve(data);
-                __this._inStream.removeListener("data", listener);
-                __this._inStream.pause();
-            });
-            
-            __this._inStream.resume();
-            __this._inStream.on("data", listener);
-        }));
-    },
-    
-    writeLine: function(msg) {
-    
-        console.log(msg);
-    },
-    
-    write: function(msg) {
-    
-        process.stdout.write(msg);
-    }
-    
-}});
-
-
-exports.ConsoleIO = ConsoleIO; return exports; }).call(this, {});
-
-var StringMap_ = (function(exports) {
-
-var HAS = Object.prototype.hasOwnProperty;
-
-var StringMap = __class(function(__super) { return {
-
-    constructor: function StringMap() {
-    
-        this._map = {};
-    },
-    
-    get: function(key) {
-    
-        if (HAS.call(this._map, key))
-            return this._map[key];
-    },
-    
-    set: function(key, value) {
-    
-        this._map[key] = value;
-        return this;
-    },
-    
-    has: function(key) {
-    
-        return HAS.call(this._map, key);
-    },
-    
-    delete: function(key) {
-    
-        if (!HAS.call(this._map, key))
-            return false;
-        
-        delete this._map[key];
-        return true;
-    },
-    
-    clear: function() {
-    
-        this._map = {};
-    },
-    
-    keys: function() {
-    
-        return Object.keys(this._map);
-    },
-    
-    values: function() { var __this = this; 
-    
-        return Object.keys(this._map).map((function(key) { return __this._map[key]; }));
-    },
-    
-    forEach: function(fn, thisArg) {
-    
-        var keys = this.keys(), i;
-        
-        for (i = 0; i < keys.length; ++i)
-            fn.call(thisArg, this._map[keys[i]], keys[i], this);
-    }
-}});
-
-exports.StringMap = StringMap; return exports; }).call(this, {});
-
-var StringSet = (function(exports) {
-
-var StringMap = StringMap_.StringMap;
-
-var StringSet = __class(function(__super) { return {
-
-    constructor: function StringSet() {
-    
-        this._map = new StringMap;
-    },
-    
-    has: function(key) {
-    
-        return this._map.has(key);
-    },
-    
-    add: function(key) {
-    
-        this._map.set(key, key);
-        return this;
-    },
-    
-    delete: function(key) {
-    
-        return this._map.delete(key);
-    },
-    
-    clear: function() {
-    
-        this._map.clear();
-    },
-    
-    keys: function() {
-    
-        return this._map.keys();
-    },
-    
-    values: function() {
-    
-        return this._map.keys();
-    },
-    
-    forEach: function(fn, thisArg) { var __this = this; 
-    
-        this._map.forEach((function(value, key) { return fn.call(thisArg, value, key, __this); }));
-    }
-}});
-
-exports.StringSet = StringSet; return exports; }).call(this, {});
-
-var PromiseExtensions = (function(exports) {
-
-var PromiseExtensions = __class(function(__super) { return {
-
-    __static_iterate: function(fn) {
-
-        var done = false,
-            stop = (function(val) { done = true; return val; }),
-            next = (function(last) { return done ? last : Promise.resolve(fn(stop)).then(next); });
-    
-        return Promise.resolve().then(next);
-    },
-
-    __static_forEach: function(list, fn) {
-
-        var i = -1;
-        return this.iterate((function(stop) { return (++i >= list.length) ? stop() : fn(list[i], i, list); }));
-    }
-
-}});
-
-exports.PromiseExtensions = PromiseExtensions; return exports; }).call(this, {});
-
-var AsyncFS_ = (function(exports) {
-
-var FS = _M0;
-
-// Wraps a standard Node async function with a promise
-// generating function
-function wrap(fn) {
-
-	return function() {
-	
-	    var a = [].slice.call(arguments, 0);
-	    
-		return new Promise((function(resolve, reject) {
-		    
-            a.push((function(err, data) {
-        
-                if (err) reject(err);
-                else resolve(data);
-            }));
-            
-            fn.apply(null, a);
-        }));
-	};
-}
-
-function exists(path) {
-
-    return new Promise((function(resolve) {
-    
-        FS.exists(path, (function(result) { return resolve(result); }));
-    }));
-}
-
-var 
-    readFile = wrap(FS.readFile),
-    close = wrap(FS.close),
-    open = wrap(FS.open),
-    read = wrap(FS.read),
-    write = wrap(FS.write),
-    rename = wrap(FS.rename),
-    truncate = wrap(FS.truncate),
-    rmdir = wrap(FS.rmdir),
-    fsync = wrap(FS.fsync),
-    mkdir = wrap(FS.mkdir),
-    sendfile = wrap(FS.sendfile),
-    readdir = wrap(FS.readdir),
-    fstat = wrap(FS.fstat),
-    lstat = wrap(FS.lstat),
-    stat = wrap(FS.stat),
-    readlink = wrap(FS.readlink),
-    symlink = wrap(FS.symlink),
-    link = wrap(FS.link),
-    unlink = wrap(FS.unlink),
-    fchmod = wrap(FS.fchmod),
-    lchmod = wrap(FS.lchmod),
-    chmod = wrap(FS.chmod),
-    lchown = wrap(FS.lchown),
-    fchown = wrap(FS.fchown),
-    chown = wrap(FS.chown),
-    utimes = wrap(FS.utimes),
-    futimes = wrap(FS.futimes),
-    writeFile = wrap(FS.writeFile),
-    appendFile = wrap(FS.appendFile),
-    realpath = wrap(FS.realpath);
-
-
-
-exports.exists = exists; exports.readFile = readFile; exports.close = close; exports.open = open; exports.read = read; exports.write = write; exports.rename = rename; exports.truncate = truncate; exports.rmdir = rmdir; exports.fsync = fsync; exports.mkdir = mkdir; exports.sendfile = sendfile; exports.readdir = readdir; exports.fstat = fstat; exports.lstat = lstat; exports.stat = stat; exports.readlink = readlink; exports.symlink = symlink; exports.link = link; exports.unlink = unlink; exports.fchmod = fchmod; exports.lchmod = lchmod; exports.chmod = chmod; exports.lchown = lchown; exports.fchown = fchown; exports.chown = chown; exports.utimes = utimes; exports.futimes = futimes; exports.writeFile = writeFile; exports.appendFile = appendFile; exports.realpath = realpath; return exports; }).call(this, {});
-
-var main___ = (function(exports) {
-
-Object.keys(ConsoleCommand).forEach(function(k) { exports[k] = ConsoleCommand[k]; });
-Object.keys(ConsoleIO).forEach(function(k) { exports[k] = ConsoleIO[k]; });
-Object.keys(StringSet).forEach(function(k) { exports[k] = StringSet[k]; });
-Object.keys(StringMap_).forEach(function(k) { exports[k] = StringMap_[k]; });
-Object.keys(PromiseExtensions).forEach(function(k) { exports[k] = PromiseExtensions[k]; });
-
-var ConsoleStyle = ConsoleStyle_;
-
-
-var AsyncFS = AsyncFS_;
-
-
-
-
-exports.ConsoleStyle = ConsoleStyle; exports.AsyncFS = AsyncFS; return exports; }).call(this, {});
-
-var main_ = (function(exports) {
-
-Object.keys(main___).forEach(function(k) { exports[k] = main___[k]; });
-
-return exports; }).call(this, {});
 
 var AST_ = (function(exports) {
 
@@ -4214,14 +3727,16 @@ var Parser = __class(function(__super) { return {
             
         this.readKeyword("yield");
         
-        if (this.peek() === "*") {
+        if (!this.maybeEnd()) {
         
-            this.read();
-            delegate = true;
-        }
+            if (this.peek() === "*") {
         
-        if (delegate || !this.maybeEnd())
+                this.read();
+                delegate = true;
+            }
+        
             expr = this.AssignmentExpression(noIn);
+        }
         
         return new AST.YieldExpression(
             expr, 
@@ -6209,306 +5724,6 @@ Object.keys(main______).forEach(function(k) { exports[k] = main______[k]; });
 
 return exports; }).call(this, {});
 
-var Analyzer = (function(exports) {
-
-var parseModule = main_____.parseModule;
-var StringSet = main_.StringSet, StringMap = main_.StringMap;
-
-function parse(code) { 
-
-    return parseModule(code);
-}
-
-function analyze(ast, resolvePath) {
-
-    if (typeof ast === "string")
-        ast = parseModule(ast);
-    
-    if (!resolvePath)
-        resolvePath = (function(x) { return x; });
-    
-    var edges = new StringMap,
-        identifiers = new StringSet;
-    
-    visit(ast, true);
-    
-    return { edges: edges, identifiers: identifiers };
-    
-    function visit(node, topLevel) {
-        
-        switch (node.type) {
-        
-            case "ExportsList":
-            case "ImportDeclaration":
-            case "ImportDefaultDeclaration":
-            case "ModuleImport":
-                
-                addEdge(node.from);
-                break;
-            
-            case "Identifier":
-            
-                if (node.context === "declaration" && topLevel)
-                    identifiers.add(node.value);
-                
-                break;
-            
-            // TODO: Add generator, block (let, const, function in block)?
-            case "ClassExpression":
-            case "ClassBody":
-            case "FunctionExpression":
-            case "FormalParameter":
-            case "FunctionBody":
-            
-                topLevel = false;
-                break;
-                
-        }
-        
-        node.forEachChild((function(child) { return visit(child, topLevel); }));
-    }
-    
-    function addEdge(spec) {
-    
-        if (!spec || spec.type !== "String")
-            return;
-        
-        var path = resolvePath(spec.value);
-        
-        if (path) {
-        
-            if (edges.has(path))
-                edges.get(path).push(spec);
-            else
-                edges.set(path, [spec]);
-        }
-    }
-}
-
-exports.parse = parse; exports.analyze = analyze; return exports; }).call(this, {});
-
-var Bundler = (function(exports) {
-
-var Path = _M1;
-
-var AsyncFS = main_.AsyncFS, StringMap = main_.StringMap, StringSet = main_.StringSet;
-var analyze = Analyzer.analyze;
-
-var EXTERNAL_URL = /[a-z][a-z]+:/i;
-
-function identFromPath(path) {
-
-    // TODO: Make this unicode friendly.  Can we export some
-    // functions or patterns from the parser to help?
-    
-    var name = Path.basename(path);
-    
-    // Remove the file extension
-    name = name.replace(/\..*$/i, "");
-    
-    // Replace dashes
-    name = name.replace(/-(\S?)/g, (function(m, m1) { return m1 ? m1.toUpperCase() : ""; }));
-    
-    // Replace any other non-ident chars with _
-    name = name.replace(/[^a-z0-9$_]+/ig, "_");
-    
-    // Make sure the name doesn't start with a number
-    name = name.replace(/^[0-9]+/, "");
-    
-    return name;
-}
-
-function createBundle(rootPath, locatePackage) {
-    
-    rootPath = Path.resolve(rootPath);
-    locatePackage = locatePackage || ((function(x) { return x; }));
-    
-    var nodes = new StringMap,
-        nodeNames = new StringSet,
-        sort = [],
-        pending = 0,
-        resolver,
-        allFetched;
-    
-    allFetched = new Promise((function(resolve, reject) { return resolver = { resolve: resolve, reject: reject }; }));
-    
-    function visit(path) {
-
-        if (nodes.has(path))
-            return;
-        
-        nodes.set(path, null);
-        pending += 1;
-        
-        var dir = Path.dirname(path);
-        
-        AsyncFS.readFile(path, { encoding: "utf8" }).then((function(code) {
-    
-            var node = analyze(code, (function(p) {
-            
-                try { p = locatePackage(p) }
-                catch (x) {}
-                
-                return EXTERNAL_URL.test(p) ? null : Path.resolve(dir, p);
-            }));
-            
-            nodes.set(path, node);
-            node.path = path;
-            node.source = code;
-            node.visited = false;
-            node.inEdges = new StringSet;
-            node.name = "";
-            
-            node.edges.keys().forEach(visit);
-            
-            pending -= 1;
-            
-            if (pending === 0)
-                resolver.resolve(null);
-        
-        })).catch((function(err) {
-        
-            resolver.reject(err);
-            
-        }));
-    }
-    
-    function traverse(path, from) {
-    
-        var node = nodes.get(path);
-        
-        if (from)
-            node.inEdges.add(from);
-        
-        if (node.visited)
-            return;
-        
-        node.visited = true;
-        node.edges.forEach((function(val, key) { return traverse(key, path); }));   
-        sort.push(path);
-    }
-    
-    function assignNames() {
-    
-        nodes.forEach((function(node) {
-        
-            var name = identFromPath(node.path),
-                identifiers = new StringSet;
-            
-            // Build list of top-level identifiers in
-            // referencing modules
-            node.inEdges.forEach((function(key) {
-            
-                nodes.get(key).identifiers.forEach((function(k) { return identifiers.add(k); }));
-            }));
-        
-            // Resolve naming conflicts IMPROVE
-            while (identifiers.has(name) || nodeNames.has(name))
-                name += "_";
-        
-            nodeNames.add(node.name = name);
-        }));
-    }
-    
-    function getModifiedSource(node) {
-    
-        var offset = 0,
-            source = "",
-            ranges = [];
-        
-        // Build list of ranges to replace
-        node.edges.forEach((function(val, key) {
-        
-            var ref = nodes.get(key);
-            
-            val.forEach((function(range) {
-            
-                ranges.push({ start: range.start, end: range.end, name: ref.name });
-            }));
-        }));
-        
-        // Sort the list of ranges in order of appearance
-        ranges.sort((function(a, b) { return a.start - b.start; }));
-        
-        // Build modified source with replace subranges
-        ranges.forEach((function(range) {
-        
-            source += node.source.slice(offset, range.start);
-            source += range.name;
-            
-            offset = range.end;
-        }));
-        
-        source += node.source.slice(offset);
-        
-        return source;
-    }
-    
-    visit(rootPath);
-    
-    return allFetched.then((function($) {
-    
-        traverse(rootPath, null);
-        assignNames();
-        
-        var out = "";
-        
-        sort.forEach((function(path) {
-        
-            var node = nodes.get(path);
-            
-            out += "module " + node.name + " {\n\n";
-            out += getModifiedSource(node);
-            out += "\n\n}\n\n";
-        }));
-        
-        out += "export * from " + nodes.get(rootPath).name + ";\n";
-        
-        return out;
-    }));
-}
-
-exports.createBundle = createBundle; return exports; }).call(this, {});
-
-var main____ = (function(exports) {
-
-var createBundle = Bundler.createBundle;
-var AsyncFS = main_.AsyncFS, ConsoleCommand = main_.ConsoleCommand;
-
-
-function main() {
-
-    new ConsoleCommand({
-
-        params: {
-    
-            "input": { short: "i", positional: true, required: true },
-            "output": { short: "o", positional: true, required: false }
-        },
-    
-        execute: function(options) {
-
-            createBundle(options.input).then((function(code) {
-        
-                return options.output ?
-                    AsyncFS.writeFile(options.output, code) :
-                    console.log(code);
-            }));
-        }
-    
-    }).run();
-    
-}
-
-
-exports.createBundle = createBundle; exports.main = main; return exports; }).call(this, {});
-
-var main__ = (function(exports) {
-
-Object.keys(main____).forEach(function(k) { exports[k] = main____[k]; });
-
-return exports; }).call(this, {});
-
 var Replacer_ = (function(exports) {
 
 /*
@@ -7199,8 +6414,8 @@ exports.translate = translate; exports.wrap = wrap; exports.isWrapped = isWrappe
 
 var PackageLocator = (function(exports) {
 
-var Path = _M1;
-var FS = _M0;
+var Path = _M0;
+var FS = _M1;
 
 var PACKAGE_URI = /^package:/i,
     JS_PACKAGE_ROOT = process.env["JS_PACKAGE_ROOT"] || "",
@@ -7242,29 +6457,936 @@ function locatePackage(uri) {
 
 exports.isPackageURI = isPackageURI; exports.locatePackage = locatePackage; return exports; }).call(this, {});
 
-var main = (function(exports) {
+var ConsoleStyle_ = (function(exports) {
 
-var FS = _M0;
-var Path = _M1;
+function green(msg) {
+
+    return "\u001b[32m" + (msg) + "\u001b[39m";
+}
+
+function red(msg) {
+
+    return "\u001b[31m" + (msg) + "\u001b[39m";
+}
+
+function gray(msg) {
+
+    return "\u001b[90m" + (msg) + "\u001b[39m";
+}
+
+function bold(msg) {
+
+    return "\u001b[1m" + (msg) + "\u001b[22m";
+}
+
+exports.green = green; exports.red = red; exports.gray = gray; exports.bold = bold; return exports; }).call(this, {});
+
+var ConsoleCommand = (function(exports) {
+
+var Style = ConsoleStyle_;
+
+var HAS = Object.prototype.hasOwnProperty;
+
+function parse(argv, params) {
+
+    params || (params = {});
+    
+    var pos = Object.keys(params),
+        values = {},
+        shorts = {},
+        required = [],
+        param,
+        value,
+        name,
+        i,
+        a;
+    
+    // Create short-to-long mapping
+    pos.forEach((function(name) {
+    
+        var p = params[name];
+        
+        if (p.short)
+            shorts[p.short] = name;
+        
+        if (p.required)
+            required.push(name);
+    }));
+    
+    // For each command line arg...
+    for (i = 0; i < argv.length; ++i) {
+    
+        a = argv[i];
+        param = null;
+        value = null;
+        name = "";
+        
+        if (a[0] === "-") {
+        
+            if (a.slice(0, 2) === "--") {
+            
+                // Long named parameter
+                param = params[name = a.slice(2)];
+            
+            } else {
+            
+                // Short named parameter
+                param = params[name = shorts[a.slice(1)]];
+            }
+            
+            // Verify parameter exists
+            if (!param)
+                throw new Error("Invalid command line option: " + a);
+            
+            if (param.flag) {
+            
+                value = true;
+            
+            } else {
+            
+                // Get parameter value
+                value = argv[++i] || "";
+                
+                if (typeof value !== "string" || value[0] === "-")
+                    throw new Error("No value provided for option " + a);
+            }
+            
+        } else {
+        
+            // Positional parameter
+            do { param = params[name = pos.shift()]; } 
+            while (param && !param.positional);;
+            
+            value = a;
+        }
+        
+        if (param)
+            values[name] = value;
+    }
+    
+    required.forEach((function(name) {
+    
+        if (values[name] === void 0)
+            throw new Error("Missing required option: --" + name);
+    }));
+    
+    return values;
+}
+
+var ConsoleCommand = __class(function(__super) { return {
+
+    constructor: function ConsoleCommand(cmd) {
+    
+        this.fallback = cmd;
+        this.commands = {};
+    },
+    
+    add: function(name, cmd) {
+    
+        this.commands[name] = cmd;
+        return this;
+    },
+    
+    run: function(args) {
+    
+        // Peel off the "node" and main module args
+        args || (args = process.argv.slice(2));
+        
+        var name = args[0] || "",
+            cmd = this.fallback;
+        
+        if (name && HAS.call(this.commands, name)) {
+        
+            cmd = this.commands[name];
+            args = args.slice(1);
+        }
+        
+        if (!cmd)
+            throw new Error("Invalid command");
+        
+        return cmd.execute(parse(args, cmd.params));
+    }
+    
+}});
+
+/*
+
+Example: 
+
+parse(process.argv.slice(2), {
+
+    "verbose": {
+    
+        short: "v",
+        flag: true
+    },
+    
+    "input": {
+    
+        short: "i",
+        positional: true,
+        required: true
+    },
+    
+    "output": {
+    
+        short: "o",
+        positional: true
+    },
+    
+    "recursive": {
+    
+        short: "r",
+        flag: false
+    }
+});
+
+*/
+
+
+exports.ConsoleCommand = ConsoleCommand; return exports; }).call(this, {});
+
+var ConsoleIO = (function(exports) {
+
+var Style = ConsoleStyle_;
+
+var ConsoleIO = __class(function(__super) { return {
+
+    constructor: function ConsoleIO() {
+    
+        this._inStream = process.stdin;
+        this._outStream = process.stdout;
+        
+        this._outEnc = "utf8";
+        this._inEnc = "utf8";
+        
+        this.inputEncoding = "utf8";
+        this.outputEncoding = "utf8";
+    },
+    
+    get inputEncoding() { 
+    
+        return this._inEnc;
+    },
+    
+    set inputEncoding(enc) {
+    
+        this._inStream.setEncoding(this._inEnc = enc);
+    },
+    
+    get outputEncoding() {
+    
+        return this._outEnc;
+    },
+    
+    set outputEncoding(enc) {
+    
+        this._outStream.setEncoding(this._outEnc = enc);
+    },
+    
+    readLine: function() { var __this = this; 
+    
+        return new Promise((function(resolve) {
+        
+            var listener = (function(data) {
+            
+                resolve(data);
+                __this._inStream.removeListener("data", listener);
+                __this._inStream.pause();
+            });
+            
+            __this._inStream.resume();
+            __this._inStream.on("data", listener);
+        }));
+    },
+    
+    writeLine: function(msg) {
+    
+        console.log(msg);
+    },
+    
+    write: function(msg) {
+    
+        process.stdout.write(msg);
+    }
+    
+}});
+
+
+exports.ConsoleIO = ConsoleIO; return exports; }).call(this, {});
+
+var StringMap_ = (function(exports) {
+
+var HAS = Object.prototype.hasOwnProperty;
+
+var StringMap = __class(function(__super) { return {
+
+    constructor: function StringMap() {
+    
+        this._map = {};
+    },
+    
+    get: function(key) {
+    
+        if (HAS.call(this._map, key))
+            return this._map[key];
+    },
+    
+    set: function(key, value) {
+    
+        this._map[key] = value;
+        return this;
+    },
+    
+    has: function(key) {
+    
+        return HAS.call(this._map, key);
+    },
+    
+    delete: function(key) {
+    
+        if (!HAS.call(this._map, key))
+            return false;
+        
+        delete this._map[key];
+        return true;
+    },
+    
+    clear: function() {
+    
+        this._map = {};
+    },
+    
+    keys: function() {
+    
+        return Object.keys(this._map);
+    },
+    
+    values: function() { var __this = this; 
+    
+        return Object.keys(this._map).map((function(key) { return __this._map[key]; }));
+    },
+    
+    forEach: function(fn, thisArg) {
+    
+        var keys = this.keys(), i;
+        
+        for (i = 0; i < keys.length; ++i)
+            fn.call(thisArg, this._map[keys[i]], keys[i], this);
+    }
+}});
+
+exports.StringMap = StringMap; return exports; }).call(this, {});
+
+var StringSet = (function(exports) {
+
+var StringMap = StringMap_.StringMap;
+
+var StringSet = __class(function(__super) { return {
+
+    constructor: function StringSet() {
+    
+        this._map = new StringMap;
+    },
+    
+    has: function(key) {
+    
+        return this._map.has(key);
+    },
+    
+    add: function(key) {
+    
+        this._map.set(key, key);
+        return this;
+    },
+    
+    delete: function(key) {
+    
+        return this._map.delete(key);
+    },
+    
+    clear: function() {
+    
+        this._map.clear();
+    },
+    
+    keys: function() {
+    
+        return this._map.keys();
+    },
+    
+    values: function() {
+    
+        return this._map.keys();
+    },
+    
+    forEach: function(fn, thisArg) { var __this = this; 
+    
+        this._map.forEach((function(value, key) { return fn.call(thisArg, value, key, __this); }));
+    }
+}});
+
+exports.StringSet = StringSet; return exports; }).call(this, {});
+
+var PromiseExtensions = (function(exports) {
+
+var PromiseExtensions = __class(function(__super) { return {
+
+    __static_iterate: function(fn) {
+
+        var done = false,
+            stop = (function(val) { done = true; return val; }),
+            next = (function(last) { return done ? last : Promise.resolve(fn(stop)).then(next); });
+    
+        return Promise.resolve().then(next);
+    },
+
+    __static_forEach: function(list, fn) {
+
+        var i = -1;
+        return this.iterate((function(stop) { return (++i >= list.length) ? stop() : fn(list[i], i, list); }));
+    }
+
+}});
+
+exports.PromiseExtensions = PromiseExtensions; return exports; }).call(this, {});
+
+var AsyncFS_ = (function(exports) {
+
+var FS = _M1;
+
+// Wraps a standard Node async function with a promise
+// generating function
+function wrap(fn) {
+
+	return function() {
+	
+	    var a = [].slice.call(arguments, 0);
+	    
+		return new Promise((function(resolve, reject) {
+		    
+            a.push((function(err, data) {
+        
+                if (err) reject(err);
+                else resolve(data);
+            }));
+            
+            fn.apply(null, a);
+        }));
+	};
+}
+
+function exists(path) {
+
+    return new Promise((function(resolve) {
+    
+        FS.exists(path, (function(result) { return resolve(result); }));
+    }));
+}
+
+var 
+    readFile = wrap(FS.readFile),
+    close = wrap(FS.close),
+    open = wrap(FS.open),
+    read = wrap(FS.read),
+    write = wrap(FS.write),
+    rename = wrap(FS.rename),
+    truncate = wrap(FS.truncate),
+    rmdir = wrap(FS.rmdir),
+    fsync = wrap(FS.fsync),
+    mkdir = wrap(FS.mkdir),
+    sendfile = wrap(FS.sendfile),
+    readdir = wrap(FS.readdir),
+    fstat = wrap(FS.fstat),
+    lstat = wrap(FS.lstat),
+    stat = wrap(FS.stat),
+    readlink = wrap(FS.readlink),
+    symlink = wrap(FS.symlink),
+    link = wrap(FS.link),
+    unlink = wrap(FS.unlink),
+    fchmod = wrap(FS.fchmod),
+    lchmod = wrap(FS.lchmod),
+    chmod = wrap(FS.chmod),
+    lchown = wrap(FS.lchown),
+    fchown = wrap(FS.fchown),
+    chown = wrap(FS.chown),
+    utimes = wrap(FS.utimes),
+    futimes = wrap(FS.futimes),
+    writeFile = wrap(FS.writeFile),
+    appendFile = wrap(FS.appendFile),
+    realpath = wrap(FS.realpath);
+
+
+
+exports.exists = exists; exports.readFile = readFile; exports.close = close; exports.open = open; exports.read = read; exports.write = write; exports.rename = rename; exports.truncate = truncate; exports.rmdir = rmdir; exports.fsync = fsync; exports.mkdir = mkdir; exports.sendfile = sendfile; exports.readdir = readdir; exports.fstat = fstat; exports.lstat = lstat; exports.stat = stat; exports.readlink = readlink; exports.symlink = symlink; exports.link = link; exports.unlink = unlink; exports.fchmod = fchmod; exports.lchmod = lchmod; exports.chmod = chmod; exports.lchown = lchown; exports.fchown = fchown; exports.chown = chown; exports.utimes = utimes; exports.futimes = futimes; exports.writeFile = writeFile; exports.appendFile = appendFile; exports.realpath = realpath; return exports; }).call(this, {});
+
+var main___ = (function(exports) {
+
+Object.keys(ConsoleCommand).forEach(function(k) { exports[k] = ConsoleCommand[k]; });
+Object.keys(ConsoleIO).forEach(function(k) { exports[k] = ConsoleIO[k]; });
+Object.keys(StringSet).forEach(function(k) { exports[k] = StringSet[k]; });
+Object.keys(StringMap_).forEach(function(k) { exports[k] = StringMap_[k]; });
+Object.keys(PromiseExtensions).forEach(function(k) { exports[k] = PromiseExtensions[k]; });
+
+var ConsoleStyle = ConsoleStyle_;
+
+
+var AsyncFS = AsyncFS_;
+
+
+
+
+exports.ConsoleStyle = ConsoleStyle; exports.AsyncFS = AsyncFS; return exports; }).call(this, {});
+
+var main_ = (function(exports) {
+
+Object.keys(main___).forEach(function(k) { exports[k] = main___[k]; });
+
+return exports; }).call(this, {});
+
+var NodeAdapter = (function(exports) {
+
+var FS = _M1;
 var REPL = _M2;
 var VM = _M3;
+var Path = _M0;
 
-var Runtime = Runtime_;
-
-var AsyncFS = main_.AsyncFS,
-    ConsoleCommand = main_.ConsoleCommand,
-    ConsoleIO = main_.ConsoleIO,
-    Style = main_.ConsoleStyle;
-
-
-
-
-
-var createBundle = main__.createBundle;
 var translate = Translator.translate;
 var isPackageURI = PackageLocator.isPackageURI, locatePackage = PackageLocator.locatePackage;
+var Style = main_.ConsoleStyle;
+
 
 var ES6_GUESS = /(?:^|\n)\s*(?:import|export|class)\s/;
+
+
+function formatSyntaxError(e, text, filename) {
+
+    var msg = e.message;
+    
+    if (filename)
+        msg += "\n    at " + filename + ":" + e.line;
+    
+    if (e.lineOffset < text.length) {
+    
+        msg += "\n\n" +
+            text.slice(e.lineOffset, e.startOffset) +
+            Style.bold(Style.red(text.slice(e.startOffset, e.endOffset))) + 
+            text.slice(e.endOffset, text.indexOf("\n", e.endOffset)) + "\n";
+    }
+    
+    return msg;
+}
+
+function addExtension() {
+
+    var Module = module.constructor,
+        resolveFilename = Module._resolveFilename;
+    
+    Module._resolveFilename = (function(filename, parent) {
+    
+        if (isPackageURI(filename))
+            filename = locatePackage(filename);
+        
+        return resolveFilename(filename, parent);
+    });
+    
+    // Compile ES6 js files
+    require.extensions[".js"] = (function(module, filename) {
+    
+        var text, source;
+        
+        try {
+        
+            text = source = FS.readFileSync(filename, "utf8");
+            
+            if (ES6_GUESS.test(text))
+                text = translate(text);
+        
+        } catch (e) {
+        
+            if (e instanceof SyntaxError)
+                e = new SyntaxError(formatSyntaxError(e, source, filename));
+            
+            throw e;
+        }
+        
+        return module._compile(text, filename);
+    });
+}
+
+function runModule(path) {
+
+    addExtension();
+        
+    var path = Path.resolve(process.cwd(), path),
+        stat;
+
+    try { stat = FS.statSync(path) }
+    catch (x) {}
+
+    if (stat && stat.isDirectory())
+        path = Path.join(path, "main.js");
+
+    var m = require(path);
+
+    if (m && typeof m.main === "function")
+        Promise.cast(m.main()).catch((function(x) { return setTimeout((function($) { throw x }), 0); }));
+}
+
+function startREPL() {
+
+    addExtension();
+
+    var repl = REPL.start({ 
+    
+        prompt: "es6> ",
+        
+        eval: function(input, context, filename, cb) {
+        
+            var text, result;
+            
+            try {
+            
+                text = translate(input, { wrap: false });
+            
+            } catch (x) {
+            
+                if (x instanceof SyntaxError)
+                    x = new SyntaxError(formatSyntaxError(x, input));
+                
+                return cb(x);
+            }
+            
+            try {
+            
+                result = context === global ? 
+                    VM.runInThisContext(text, filename) : 
+                    VM.runInContext(text, context, filename);
+                
+            } catch (x) {
+            
+                cb(x);
+            }
+            
+            cb(null, result);
+        }
+    });
+}
+
+exports.runModule = runModule; exports.startREPL = startREPL; return exports; }).call(this, {});
+
+var Analyzer = (function(exports) {
+
+var parseModule = main_____.parseModule;
+var StringSet = main_.StringSet, StringMap = main_.StringMap;
+
+function parse(code) { 
+
+    return parseModule(code);
+}
+
+function analyze(ast, resolvePath) {
+
+    if (typeof ast === "string")
+        ast = parseModule(ast);
+    
+    if (!resolvePath)
+        resolvePath = (function(x) { return x; });
+    
+    var edges = new StringMap,
+        identifiers = new StringSet;
+    
+    visit(ast, true);
+    
+    return { edges: edges, identifiers: identifiers };
+    
+    function visit(node, topLevel) {
+        
+        switch (node.type) {
+        
+            case "ExportsList":
+            case "ImportDeclaration":
+            case "ImportDefaultDeclaration":
+            case "ModuleImport":
+                
+                addEdge(node.from);
+                break;
+            
+            case "Identifier":
+            
+                if (node.context === "declaration" && topLevel)
+                    identifiers.add(node.value);
+                
+                break;
+            
+            // TODO: Add generator, block (let, const, function in block)?
+            case "ClassExpression":
+            case "ClassBody":
+            case "FunctionExpression":
+            case "FormalParameter":
+            case "FunctionBody":
+            
+                topLevel = false;
+                break;
+                
+        }
+        
+        node.forEachChild((function(child) { return visit(child, topLevel); }));
+    }
+    
+    function addEdge(spec) {
+    
+        if (!spec || spec.type !== "String")
+            return;
+        
+        var path = resolvePath(spec.value);
+        
+        if (path) {
+        
+            if (edges.has(path))
+                edges.get(path).push(spec);
+            else
+                edges.set(path, [spec]);
+        }
+    }
+}
+
+exports.parse = parse; exports.analyze = analyze; return exports; }).call(this, {});
+
+var Bundler = (function(exports) {
+
+var Path = _M0;
+
+var AsyncFS = main_.AsyncFS, StringMap = main_.StringMap, StringSet = main_.StringSet;
+var analyze = Analyzer.analyze;
+
+var EXTERNAL_URL = /[a-z][a-z]+:/i;
+
+function identFromPath(path) {
+
+    // TODO: Make this unicode friendly.  Can we export some
+    // functions or patterns from the parser to help?
+    
+    var name = Path.basename(path);
+    
+    // Remove the file extension
+    name = name.replace(/\..*$/i, "");
+    
+    // Replace dashes
+    name = name.replace(/-(\S?)/g, (function(m, m1) { return m1 ? m1.toUpperCase() : ""; }));
+    
+    // Replace any other non-ident chars with _
+    name = name.replace(/[^a-z0-9$_]+/ig, "_");
+    
+    // Make sure the name doesn't start with a number
+    name = name.replace(/^[0-9]+/, "");
+    
+    return name;
+}
+
+function createBundle(rootPath, locatePackage) {
+    
+    rootPath = Path.resolve(rootPath);
+    locatePackage = locatePackage || ((function(x) { return x; }));
+    
+    var nodes = new StringMap,
+        nodeNames = new StringSet,
+        sort = [],
+        pending = 0,
+        resolver,
+        allFetched;
+    
+    allFetched = new Promise((function(resolve, reject) { return resolver = { resolve: resolve, reject: reject }; }));
+    
+    function visit(path) {
+
+        if (nodes.has(path))
+            return;
+        
+        nodes.set(path, null);
+        pending += 1;
+        
+        var dir = Path.dirname(path);
+        
+        AsyncFS.readFile(path, { encoding: "utf8" }).then((function(code) {
+    
+            var node = analyze(code, (function(p) {
+            
+                try { p = locatePackage(p) }
+                catch (x) {}
+                
+                return EXTERNAL_URL.test(p) ? null : Path.resolve(dir, p);
+            }));
+            
+            nodes.set(path, node);
+            node.path = path;
+            node.source = code;
+            node.visited = false;
+            node.inEdges = new StringSet;
+            node.name = "";
+            
+            node.edges.keys().forEach(visit);
+            
+            pending -= 1;
+            
+            if (pending === 0)
+                resolver.resolve(null);
+        
+        })).catch((function(err) {
+        
+            resolver.reject(err);
+            
+        }));
+    }
+    
+    function traverse(path, from) {
+    
+        var node = nodes.get(path);
+        
+        if (from)
+            node.inEdges.add(from);
+        
+        if (node.visited)
+            return;
+        
+        node.visited = true;
+        node.edges.forEach((function(val, key) { return traverse(key, path); }));   
+        sort.push(path);
+    }
+    
+    function assignNames() {
+    
+        nodes.forEach((function(node) {
+        
+            var name = identFromPath(node.path),
+                identifiers = new StringSet;
+            
+            // Build list of top-level identifiers in
+            // referencing modules
+            node.inEdges.forEach((function(key) {
+            
+                nodes.get(key).identifiers.forEach((function(k) { return identifiers.add(k); }));
+            }));
+        
+            // Resolve naming conflicts IMPROVE
+            while (identifiers.has(name) || nodeNames.has(name))
+                name += "_";
+        
+            nodeNames.add(node.name = name);
+        }));
+    }
+    
+    function getModifiedSource(node) {
+    
+        var offset = 0,
+            source = "",
+            ranges = [];
+        
+        // Build list of ranges to replace
+        node.edges.forEach((function(val, key) {
+        
+            var ref = nodes.get(key);
+            
+            val.forEach((function(range) {
+            
+                ranges.push({ start: range.start, end: range.end, name: ref.name });
+            }));
+        }));
+        
+        // Sort the list of ranges in order of appearance
+        ranges.sort((function(a, b) { return a.start - b.start; }));
+        
+        // Build modified source with replace subranges
+        ranges.forEach((function(range) {
+        
+            source += node.source.slice(offset, range.start);
+            source += range.name;
+            
+            offset = range.end;
+        }));
+        
+        source += node.source.slice(offset);
+        
+        return source;
+    }
+    
+    visit(rootPath);
+    
+    return allFetched.then((function($) {
+    
+        traverse(rootPath, null);
+        assignNames();
+        
+        var out = "";
+        
+        sort.forEach((function(path) {
+        
+            var node = nodes.get(path);
+            
+            out += "module " + node.name + " {\n\n";
+            out += getModifiedSource(node);
+            out += "\n\n}\n\n";
+        }));
+        
+        out += "export * from " + nodes.get(rootPath).name + ";\n";
+        
+        return out;
+    }));
+}
+
+exports.createBundle = createBundle; return exports; }).call(this, {});
+
+var main____ = (function(exports) {
+
+var createBundle = Bundler.createBundle;
+var AsyncFS = main_.AsyncFS, ConsoleCommand = main_.ConsoleCommand;
+
+
+function main() {
+
+    new ConsoleCommand({
+
+        params: {
+    
+            "input": { short: "i", positional: true, required: true },
+            "output": { short: "o", positional: true, required: false }
+        },
+    
+        execute: function(options) {
+
+            createBundle(options.input).then((function(code) {
+        
+                return options.output ?
+                    AsyncFS.writeFile(options.output, code) :
+                    console.log(code);
+            }));
+        }
+    
+    }).run();
+    
+}
+
+
+exports.createBundle = createBundle; exports.main = main; return exports; }).call(this, {});
+
+var main__ = (function(exports) {
+
+Object.keys(main____).forEach(function(k) { exports[k] = main____[k]; });
+
+return exports; }).call(this, {});
+
+var main = (function(exports) {
+
+var FS = _M1;
+var Path = _M0;
+var Runtime = Runtime_;
+
+var runModule = NodeAdapter.runModule, startREPL = NodeAdapter.startREPL;
+var AsyncFS = main_.AsyncFS, ConsoleCommand = main_.ConsoleCommand;
+var createBundle = main__.createBundle;
+var translate = Translator.translate;
+var locatePackage = PackageLocator.locatePackage;
+
 
 function absolutePath(path) {
 
@@ -7285,78 +7407,6 @@ function getOutPath(inPath, outPath) {
     return outPath;
 }
 
-function overrideCompilation() {
-
-    var Module = module.constructor,
-        resolveFilename = Module._resolveFilename;
-    
-    Module._resolveFilename = function(filename, parent) {
-    
-        if (isPackageURI(filename))
-            filename = locatePackage(filename);
-        
-        return resolveFilename(filename, parent);
-    };
-    
-    // Compile ES6 js files
-    require.extensions[".js"] = (function(module, filename) {
-    
-        var text, source;
-        
-        try {
-        
-            text = source = FS.readFileSync(filename, "utf8");
-            
-            if (ES6_GUESS.test(text))
-                text = translate(text);
-        
-        } catch (e) {
-        
-            if (e instanceof SyntaxError) {
-            
-                var desc = e.message + "\n" +
-                    "    at " + filename + ":" + e.line + "\n\n" + 
-                    source.slice(e.lineOffset, e.startOffset) +
-                    Style.bold(Style.red(source.slice(e.startOffset, e.endOffset))) + 
-                    source.slice(e.endOffset, source.indexOf("\n", e.endOffset)) +
-                    "\n";
-                
-                e = new SyntaxError(desc);
-            }
-            
-            throw e;
-        }
-        
-        return module._compile(text, filename);
-    });
-}
-
-function startREPL() {
-
-    REPL.start({ 
-    
-        prompt: "es6> ",
-        
-        eval: function(input, context, filename, cb) {
-        
-            try {
-            
-                input = translate(input, { wrap: false });
-                
-                var result = context === global ? 
-                    VM.runInThisContext(input, filename) : 
-                    VM.runInContext(input, context, filename);
-                
-                cb(null, result);
-            
-            } catch (x) {
-            
-                cb(x);
-            }
-        }
-    });
-}
-
 function wrapRuntimeModule(text) {
 
     return "(function() {\n\n" + text + "\n\n}).call(this);\n\n";
@@ -7375,29 +7425,10 @@ new ConsoleCommand({
     
     execute: function(params) {
     
-        overrideCompilation();
         process.argv.splice(1, 1);
         
-        if (params.input) {
-        
-            var path = absolutePath(params.input),
-                stat;
-        
-            try { stat = FS.statSync(path) }
-            catch (x) {}
-        
-            if (stat && stat.isDirectory())
-                path = Path.join(path, "main.js");
-        
-            var m = require(path);
-        
-            if (m && typeof m.main === "function")
-                Promise.cast(m.main()).catch((function(x) { return setTimeout((function($) { throw x }), 0); }));
-        
-        } else {
-        
-            startREPL();
-        }
+        if (params.input) runModule(params.input);
+        else startREPL();
     }
     
 }).add("-", {
@@ -7472,4 +7503,4 @@ return exports; }).call(this, {});
 Object.keys(main).forEach(function(k) { exports[k] = main[k]; });
 
 
-}, ["fs","path","repl","vm"], "");
+}, ["path","fs","repl","vm"], "");
