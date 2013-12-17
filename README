@@ -8,7 +8,8 @@ retaining transparent debuggability using straightforward translation.
 
 === Instructions ===
 
-Put build/* in your path and smoke it.  NPM not required.
+Put build/* in your path and smoke it.  Node.js 0.11 or greater is
+required for async functions.  NPM not needed.
 
 Start a REPL by running it without any arguments:
 
