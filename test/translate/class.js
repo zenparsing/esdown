@@ -23,4 +23,18 @@ class A extends B {
     static get T() {}
 }
 
+class A {
+
+    foo() {}
+}
+
+class A extends B {
+
+    constructor() { super() }
+}
+
+class A extends B {
+
+}
+
 (class C {});

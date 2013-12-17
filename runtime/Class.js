@@ -51,18 +51,10 @@ function defineMethods(to, from, classMethods) {
         if (STATIC.test(name) === classMethods)
             Object.defineProperty(to, classMethods ? name.replace(STATIC, "") : name, desc);
     });
-    
-    return to;
 }
 
 function Class(base, def) {
 
-    function constructor() { 
-    
-        if (parent && parent.constructor)
-            parent.constructor.apply(this, arguments);
-    }
-    
     var parent;
     
     if (def === void 0) {
@@ -90,12 +82,15 @@ function Class(base, def) {
     if (parent === void 0)
         throw new TypeError();
     
-    // Generate the method collection, closing over "super"
-    var props = def(parent);
+    var proto = Object.create(parent),
+        sup = prop => Object.getPrototypeOf(proto)[prop];
     
-    // Get constructor
-    if (hasOwn(props, "constructor"))
+    // Generate the method collection, closing over "__super"
+    var props = def(sup),
         constructor = props.constructor;
+    
+    if (!constructor)
+        throw new Error("No constructor specified.");
     
     // Make constructor non-enumerable and assign a default
     // if none is provided
@@ -107,8 +102,8 @@ function Class(base, def) {
         value: constructor
     });
     
-    // Create prototype object
-    var proto = defineMethods(Object.create(parent), props, false);
+    // Set prototype methods
+    defineMethods(proto, props, false);
     
     // Set constructor's prototype
     constructor.prototype = proto;

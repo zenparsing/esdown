@@ -151,13 +151,12 @@ addKeys(Object, {
     
     getPrototypeOf(o) {
     
-        var p = o.__proto__ || o.constructor.prototype;
-        return p;
+        return "__proto__" in o ? o.__proto__ : o.constructor.prototype;
     },
     
     /*
     
-    getOwnPropertyNames is buggy since there is no way to get non-enumerable 
+    NOTE: getOwnPropertyNames is buggy since there is no way to get non-enumerable 
     ES3 properties.
     
     */

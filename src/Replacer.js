@@ -305,17 +305,6 @@ export class Replacer {
         var callee = node.callee,
             args = node.arguments;
         
-        /*
-        // Translate CommonJS require calls
-        if (callee.type === "Identifier" && 
-            callee.value === "require" &&
-            args.length === 1 &&
-            args[0].type === "String") {
-        
-            return this.loadCall(this.requirePath(args[0].value));
-        }
-        */
-        
         if (node.isSuperCall) {
         
             var argText = "this";
@@ -334,21 +323,44 @@ export class Replacer {
         
         if (p.type === "CallExpression") {
         
+            // super(args);
+        
             p.isSuperCall = true;
             
             var m = this.parentFunction(p),
                 name = (m.type === "MethodDefinition" ? m.name.text : "constructor");
             
             // TODO: what if method name is not an identifier?
-            return "__super." + name;
+            return "__super(" + JSON.stringify(name) + ")";
+            
+        } else {
+        
+            // super.foo...
+            p.isSuperLookup = true;
         }
         
         p = p.parentNode;
         
-        if (p.type === "CallExpression")
+        if (p.type === "CallExpression") {
+        
+            // super.foo(args);
             p.isSuperCall = true;
+        }
         
         return "__super";
+    }
+    
+    MemberExpression(node) {
+    
+        if (node.isSuperLookup) {
+        
+            var prop = node.property.text;
+            
+            if (!node.computed)
+                prop = '"' + prop + '"';
+            
+            return node.object.text + "(" + prop + ")";
+        }
     }
     
     ArrowFunction(node) {
@@ -398,7 +410,7 @@ export class Replacer {
         return "var " + node.identifier.text + " = __class(" + 
             (node.base ? (node.base.text + ", ") : "") +
             "function(__super) { return " +
-            node.body.text + "});";
+            node.body.text + " });";
     }
     
     ClassExpression(node) {
@@ -424,6 +436,7 @@ export class Replacer {
     
         var classIdent = node.parentNode.identifier,
             elems = node.elements, 
+            hasCtor = false,
             e,
             i;
         
@@ -435,9 +448,14 @@ export class Replacer {
             
                 e.text = e.text.replace(/^static\s+/, "");
                 
-            } else if (e.method.name.value === "constructor" && classIdent) {
+            } else if (e.method.name.value === "constructor") {
             
-                e.text = e.text.replace(/function/, "function " + classIdent.value);
+                hasCtor = true;
+                
+                // Give the constructor function a name so that the
+                // class function's name property will be correct.
+                if (classIdent)
+                    e.text = e.text.replace(/:\s*function/, ": function " + classIdent.value);
             }
             
             if (i < elems.length - 1)
@@ -445,6 +463,18 @@ export class Replacer {
             
             // TODO: fix so that classes without a constructor still
             // have the right "name"
+        }
+        
+        if (classIdent && !hasCtor) {
+            
+            var ctor = "constructor: function " + classIdent.value + "() { " +
+                'var c = __super("constructor"); ' +
+                "if (c) return c.apply(this, arguments); }";
+            
+            if (elems.length === 0)
+                return "{ " + ctor + " }";
+                
+            elems[elems.length - 1].text += ", " + ctor;
         }
     }
     

@@ -55,18 +55,10 @@ function defineMethods(to, from, classMethods) {
         if (STATIC.test(name) === classMethods)
             Object.defineProperty(to, classMethods ? name.replace(STATIC, "") : name, desc);
     }));
-    
-    return to;
 }
 
 function Class(base, def) {
 
-    function constructor() { 
-    
-        if (parent && parent.constructor)
-            parent.constructor.apply(this, arguments);
-    }
-    
     var parent;
     
     if (def === void 0) {
@@ -94,12 +86,15 @@ function Class(base, def) {
     if (parent === void 0)
         throw new TypeError();
     
-    // Generate the method collection, closing over "super"
-    var props = def(parent);
+    var proto = Object.create(parent),
+        sup = (function(prop) { return Object.getPrototypeOf(proto)[prop]; });
     
-    // Get constructor
-    if (hasOwn(props, "constructor"))
+    // Generate the method collection, closing over "__super"
+    var props = def(sup),
         constructor = props.constructor;
+    
+    if (!constructor)
+        throw new Error("No constructor specified.");
     
     // Make constructor non-enumerable and assign a default
     // if none is provided
@@ -111,8 +106,8 @@ function Class(base, def) {
         value: constructor
     });
     
-    // Create prototype object
-    var proto = defineMethods(Object.create(parent), props, false);
+    // Set prototype methods
+    defineMethods(proto, props, false);
     
     // Set constructor's prototype
     constructor.prototype = proto;
@@ -286,13 +281,12 @@ addKeys(Object, {
     
     getPrototypeOf: function(o) {
     
-        var p = o.__proto__ || o.constructor.prototype;
-        return p;
+        return "__proto__" in o ? o.__proto__ : o.constructor.prototype;
     },
     
     /*
     
-    getOwnPropertyNames is buggy since there is no way to get non-enumerable 
+    NOTE: getOwnPropertyNames is buggy since there is no way to get non-enumerable 
     ES3 properties.
     
     */
@@ -991,7 +985,7 @@ var Promise = __class(function(__super) { return {
         return deferred.promise;
     }
 
-}});
+} });
 
 this.Promise = Promise;
 
@@ -1002,7 +996,7 @@ var Runtime_ = (function(exports) {
 
 var ES5 = 
 
-"/*\n\nProvides basic support for methods added in EcmaScript 5 for EcmaScript 4 browsers.\nThe intent is not to create 100% spec-compatible replacements, but to allow the use\nof basic ES5 functionality with predictable results.  There are features in ES5 that\nrequire an ES5 engine (freezing an object, for instance).  If you plan to write for \nlegacy engines, then don't rely on those features.\n\n*/\n\nvar global = this,\n    OP = Object.prototype,\n    HOP = OP.hasOwnProperty,\n    slice = Array.prototype.slice,\n    TRIM_S = /^s+/,\n    TRIM_E = /s+$/,\n    FALSE = function() { return false; },\n    TRUE = function() { return true; },\n    identity = function(o) { return o; },\n    defGet = OP.__defineGetter__,\n    defSet = OP.__defineSetter__,\n    keys = Object.keys || es4Keys,\n    ENUM_BUG = !function() { var o = { constructor: 1 }; for (var i in o) return i = true; }(),\n    ENUM_BUG_KEYS = [ \"toString\", \"toLocaleString\", \"valueOf\", \"hasOwnProperty\", \"isPrototypeOf\", \"propertyIsEnumerable\", \"constructor\" ],\n    ERR_REDUCE = \"Reduce of empty array with no initial value\";\n\n// Returns the internal class of an object\nfunction getClass(o) {\n\n    if (o === null || o === undefined) return \"Object\";\n    return OP.toString.call(o).slice(\"[object \".length, -1);\n}\n\n// Returns an array of keys defined on the object\nfunction es4Keys(o) {\n\n    var a = [], i;\n    \n    for (i in o)\n        if (HOP.call(o, i))\n            a.push(i);\n    \n    if (ENUM_BUG) \n        for (i = 0; i < ENUM_BUG_KEYS.length; ++i)\n            if (HOP.call(o, ENUM_BUG_KEYS[i]))\n                a.push(ENUM_BUG_KEYS[i]);\n    \n    return a;\n}\n\n// Sets a collection of keys, if the property is not already set\nfunction addKeys(o, p) {\n\n    for (var i = 0, a = keys(p), k; i < a.length; ++i) {\n    \n        k = a[i];\n        \n        if (o[k] === undefined) \n            o[k] = p[k];\n    }\n    \n    return o;\n}\n\n\n// In IE8, defineProperty and getOwnPropertyDescriptor only work on DOM objects\n// and are therefore useless - so bury them.\ntry { (Object.defineProperty || FALSE)({}, \"-\", { value: 0 }); }\ncatch (x) { Object.defineProperty = undefined; };\n\ntry { (Object.getOwnPropertyDescriptor || FALSE)({}, \"-\"); }\ncatch (x) { Object.getOwnPropertyDescriptor = undefined; }\n\n// In IE < 9 [].slice does not work properly when the start or end arguments are undefined.\ntry { [0].slice(0, undefined)[0][0]; }\ncatch (x) {\n\n    Array.prototype.slice = function(s, e) {\n    \n        s = s || 0;\n        return (e === undefined ? slice.call(this, s) : slice.call(this, s, e));\n    };\n}\n\n// ES5 Object functions\naddKeys(Object, {\n\n    create(o, p) {\n    \n        var n;\n        \n        if (o === null) {\n        \n            n = { \"__proto__\": o };\n        \n        } else {\n        \n            var f = function() {};\n            f.prototype = o;\n            n = new f;\n        }\n        \n        if (p !== undefined)\n            Object.defineProperties(n, p);\n        \n        return n;\n    },\n    \n    keys: keys,\n    \n    getOwnPropertyDescriptor(o, p) {\n    \n        if (!HOP.call(o, p))\n            return undefined;\n        \n        return { \n            value: o[p], \n            writable: true, \n            configurable: true, \n            enumerable: OP.propertyIsEnumerable.call(o, p)\n        };\n    },\n    \n    defineProperty(o, n, p) {\n    \n        var msg = \"Accessor properties are not supported.\";\n        \n        if (\"get\" in p) {\n        \n            if (defGet) defGet(n, p.get);\n            else throw new Error(msg);\n        }\n        \n        if (\"set\" in p) {\n        \n            if (defSet) defSet(n, p.set);\n            else throw new Error(msg);\n        }\n        \n        if (\"value\" in p)\n            o[n] = p.value;\n        \n        return o;\n    },\n    \n    defineProperties(o, d) {\n    \n        Object.keys(d).forEach(function(k) { Object.defineProperty(o, k, d[k]); });\n        return o;\n    },\n    \n    getPrototypeOf(o) {\n    \n        var p = o.__proto__ || o.constructor.prototype;\n        return p;\n    },\n    \n    /*\n    \n    getOwnPropertyNames is buggy since there is no way to get non-enumerable \n    ES3 properties.\n    \n    */\n    \n    getOwnProperyNames: keys,\n    \n    freeze: identity,\n    seal: identity,\n    preventExtensions: identity,\n    isFrozen: FALSE,\n    isSealed: FALSE,\n    isExtensible: TRUE\n    \n});\n\n\n// Add ES5 String extras\naddKeys(String.prototype, {\n\n    trim() { return this.replace(TRIM_S, \"\").replace(TRIM_E, \"\"); }\n});\n\n\n// Add ES5 Array extras\naddKeys(Array, {\n\n    isArray(obj) { return getClass(obj) === \"Array\"; }\n});\n\n\naddKeys(Array.prototype, {\n\n    indexOf(v, i) {\n    \n        var len = this.length >>> 0;\n        \n        i = i || 0;\n        if (i < 0) i = Math.max(len + i, 0);\n        \n        for (; i < len; ++i)\n            if (this[i] === v)\n                return i;\n        \n        return -1;\n    },\n    \n    lastIndexOf(v, i) {\n    \n        var len = this.length >>> 0;\n        \n        i = Math.min(i || 0, len - 1);\n        if (i < 0) i = len + i;\n        \n        for (; i >= 0; --i)\n            if (this[i] === v)\n                return i;\n        \n        return -1;\n    },\n    \n    every(fn, self) {\n    \n        var r = true;\n        \n        for (var i = 0, len = this.length >>> 0; i < len; ++i)\n            if (i in this && !(r = fn.call(self, this[i], i, this)))\n                break;\n        \n        return !!r;\n    },\n    \n    some(fn, self) {\n    \n        var r = false;\n        \n        for (var i = 0, len = this.length >>> 0; i < len; ++i)\n            if (i in this && (r = fn.call(self, this[i], i, this)))\n                break;\n        \n        return !!r;\n    },\n    \n    forEach(fn, self) {\n    \n        for (var i = 0, len = this.length >>> 0; i < len; ++i)\n            if (i in this)\n                fn.call(self, this[i], i, this);\n    },\n    \n    map(fn, self) {\n    \n        var a = [];\n        \n        for (var i = 0, len = this.length >>> 0; i < len; ++i)\n            if (i in this)\n                a[i] = fn.call(self, this[i], i, this);\n        \n        return a;\n    },\n    \n    filter(fn, self) {\n    \n        var a = [];\n        \n        for (var i = 0, len = this.length >>> 0; i < len; ++i)\n            if (i in this && fn.call(self, this[i], i, this))\n                a.push(this[i]);\n        \n        return a;\n    },\n    \n    reduce(fn) {\n    \n        var len = this.length >>> 0,\n            i = 0, \n            some = false,\n            ini = (arguments.length > 1),\n            val = (ini ? arguments[1] : this[i++]);\n        \n        for (; i < len; ++i) {\n        \n            if (i in this) {\n            \n                some = true;\n                val = fn(val, this[i], i, this);\n            }\n        }\n        \n        if (!some && !ini)\n            throw new TypeError(ERR_REDUCE);\n        \n        return val;\n    },\n    \n    reduceRight(fn) {\n    \n        var len = this.length >>> 0,\n            i = len - 1,\n            some = false,\n            ini = (arguments.length > 1),\n            val = (ini || i < 0  ? arguments[1] : this[i--]);\n        \n        for (; i >= 0; --i) {\n        \n            if (i in this) {\n            \n                some = true;\n                val = fn(val, this[i], i, this);\n            }\n        }\n        \n        if (!some && !ini)\n            throw new TypeError(ERR_REDUCE);\n        \n        return val;\n    }\n});\n\n// Add ES5 Function extras\naddKeys(Function.prototype, {\n\n    bind(self) {\n    \n        var f = this,\n            args = slice.call(arguments, 1),\n            noargs = (args.length === 0);\n        \n        bound.prototype = f.prototype;\n        return bound;\n        \n        function bound() {\n        \n            return f.apply(\n                this instanceof bound ? this : self, \n                noargs ? arguments : args.concat(slice.call(arguments, 0)));\n        }\n    }\n});\n\n// Add ES5 Date extras\naddKeys(Date, {\n\n    now() { return (new Date()).getTime(); }\n});\n\n// Add ES5 Date extras\naddKeys(Date.prototype, {\n\n    toISOString() {\n    \n        function pad(s) {\n        \n            if ((s = \"\" + s).length === 1) s = \"0\" + s;\n            return s;\n        }\n        \n        return this.getUTCFullYear() + \"-\" +\n            pad(this.getUTCMonth() + 1, 2) + \"-\" +\n            pad(this.getUTCDate(), 2) + \"T\" +\n            pad(this.getUTCHours(), 2) + \":\" +\n            pad(this.getUTCMinutes(), 2) + \":\" +\n            pad(this.getUTCSeconds(), 2) + \"Z\";\n    },\n    \n    toJSON() {\n    \n        return this.toISOString();\n    }\n});\n\n// Add ISO support to Date.parse\nif (Date.parse(new Date(0).toISOString()) !== 0) !function() {\n\n    /*\n    \n    In ES5 the Date constructor will also parse ISO dates, but overwritting \n    the Date function itself is too far.  Note that new Date(isoDateString)\n    is not backward-compatible.  Use the following instead:\n    \n    new Date(Date.parse(dateString));\n    \n    1: +/- year\n    2: month\n    3: day\n    4: hour\n    5: minute\n    6: second\n    7: fraction\n    8: +/- tz hour\n    9: tz minute\n    \n    */\n    \n    var isoRE = /^(?:((?:[+-]d{2})?d{4})(?:-(d{2})(?:-(d{2}))?)?)?(?:T(d{2}):(d{2})(?::(d{2})(?:.d{3})?)?)?(?:Z|([-+]d{2}):(d{2}))?$/,\n        dateParse = Date.parse;\n\n    Date.parse = function(s) {\n    \n        var t, m, hasDate, i, offset;\n        \n        if (!isNaN(t = dateParse(s)))\n            return t;\n        \n        if (s && (m = isoRE.exec(s))) {\n        \n            hasDate = m[1] !== undefined;\n            \n            // Convert matches to numbers (month and day default to 1)\n            for (i = 1; i <= 9; ++i)\n                m[i] = Number(m[i] || (i <= 3 ? 1 : 0));\n            \n            // Calculate ms directly if no date is provided\n            if (!hasDate)\n                return ((m[4] * 60 + m[5]) * 60 + m[6]) * 1000 + m[7];\n            \n            // Convert month to zero-indexed\n            m[2] -= 1;\n            \n            // Get TZ offset\n            offset = (m[8] * 60 + m[9]) * 60 * 1000;\n            \n            // Remove full match from array\n            m.shift();\n            \n            t = Date.UTC.apply(this, m) + offset;\n        }\n        \n        return t;\n    };\n            \n}();\n";
+"/*\n\nProvides basic support for methods added in EcmaScript 5 for EcmaScript 4 browsers.\nThe intent is not to create 100% spec-compatible replacements, but to allow the use\nof basic ES5 functionality with predictable results.  There are features in ES5 that\nrequire an ES5 engine (freezing an object, for instance).  If you plan to write for \nlegacy engines, then don't rely on those features.\n\n*/\n\nvar global = this,\n    OP = Object.prototype,\n    HOP = OP.hasOwnProperty,\n    slice = Array.prototype.slice,\n    TRIM_S = /^s+/,\n    TRIM_E = /s+$/,\n    FALSE = function() { return false; },\n    TRUE = function() { return true; },\n    identity = function(o) { return o; },\n    defGet = OP.__defineGetter__,\n    defSet = OP.__defineSetter__,\n    keys = Object.keys || es4Keys,\n    ENUM_BUG = !function() { var o = { constructor: 1 }; for (var i in o) return i = true; }(),\n    ENUM_BUG_KEYS = [ \"toString\", \"toLocaleString\", \"valueOf\", \"hasOwnProperty\", \"isPrototypeOf\", \"propertyIsEnumerable\", \"constructor\" ],\n    ERR_REDUCE = \"Reduce of empty array with no initial value\";\n\n// Returns the internal class of an object\nfunction getClass(o) {\n\n    if (o === null || o === undefined) return \"Object\";\n    return OP.toString.call(o).slice(\"[object \".length, -1);\n}\n\n// Returns an array of keys defined on the object\nfunction es4Keys(o) {\n\n    var a = [], i;\n    \n    for (i in o)\n        if (HOP.call(o, i))\n            a.push(i);\n    \n    if (ENUM_BUG) \n        for (i = 0; i < ENUM_BUG_KEYS.length; ++i)\n            if (HOP.call(o, ENUM_BUG_KEYS[i]))\n                a.push(ENUM_BUG_KEYS[i]);\n    \n    return a;\n}\n\n// Sets a collection of keys, if the property is not already set\nfunction addKeys(o, p) {\n\n    for (var i = 0, a = keys(p), k; i < a.length; ++i) {\n    \n        k = a[i];\n        \n        if (o[k] === undefined) \n            o[k] = p[k];\n    }\n    \n    return o;\n}\n\n\n// In IE8, defineProperty and getOwnPropertyDescriptor only work on DOM objects\n// and are therefore useless - so bury them.\ntry { (Object.defineProperty || FALSE)({}, \"-\", { value: 0 }); }\ncatch (x) { Object.defineProperty = undefined; };\n\ntry { (Object.getOwnPropertyDescriptor || FALSE)({}, \"-\"); }\ncatch (x) { Object.getOwnPropertyDescriptor = undefined; }\n\n// In IE < 9 [].slice does not work properly when the start or end arguments are undefined.\ntry { [0].slice(0, undefined)[0][0]; }\ncatch (x) {\n\n    Array.prototype.slice = function(s, e) {\n    \n        s = s || 0;\n        return (e === undefined ? slice.call(this, s) : slice.call(this, s, e));\n    };\n}\n\n// ES5 Object functions\naddKeys(Object, {\n\n    create(o, p) {\n    \n        var n;\n        \n        if (o === null) {\n        \n            n = { \"__proto__\": o };\n        \n        } else {\n        \n            var f = function() {};\n            f.prototype = o;\n            n = new f;\n        }\n        \n        if (p !== undefined)\n            Object.defineProperties(n, p);\n        \n        return n;\n    },\n    \n    keys: keys,\n    \n    getOwnPropertyDescriptor(o, p) {\n    \n        if (!HOP.call(o, p))\n            return undefined;\n        \n        return { \n            value: o[p], \n            writable: true, \n            configurable: true, \n            enumerable: OP.propertyIsEnumerable.call(o, p)\n        };\n    },\n    \n    defineProperty(o, n, p) {\n    \n        var msg = \"Accessor properties are not supported.\";\n        \n        if (\"get\" in p) {\n        \n            if (defGet) defGet(n, p.get);\n            else throw new Error(msg);\n        }\n        \n        if (\"set\" in p) {\n        \n            if (defSet) defSet(n, p.set);\n            else throw new Error(msg);\n        }\n        \n        if (\"value\" in p)\n            o[n] = p.value;\n        \n        return o;\n    },\n    \n    defineProperties(o, d) {\n    \n        Object.keys(d).forEach(function(k) { Object.defineProperty(o, k, d[k]); });\n        return o;\n    },\n    \n    getPrototypeOf(o) {\n    \n        return \"__proto__\" in o ? o.__proto__ : o.constructor.prototype;\n    },\n    \n    /*\n    \n    NOTE: getOwnPropertyNames is buggy since there is no way to get non-enumerable \n    ES3 properties.\n    \n    */\n    \n    getOwnProperyNames: keys,\n    \n    freeze: identity,\n    seal: identity,\n    preventExtensions: identity,\n    isFrozen: FALSE,\n    isSealed: FALSE,\n    isExtensible: TRUE\n    \n});\n\n\n// Add ES5 String extras\naddKeys(String.prototype, {\n\n    trim() { return this.replace(TRIM_S, \"\").replace(TRIM_E, \"\"); }\n});\n\n\n// Add ES5 Array extras\naddKeys(Array, {\n\n    isArray(obj) { return getClass(obj) === \"Array\"; }\n});\n\n\naddKeys(Array.prototype, {\n\n    indexOf(v, i) {\n    \n        var len = this.length >>> 0;\n        \n        i = i || 0;\n        if (i < 0) i = Math.max(len + i, 0);\n        \n        for (; i < len; ++i)\n            if (this[i] === v)\n                return i;\n        \n        return -1;\n    },\n    \n    lastIndexOf(v, i) {\n    \n        var len = this.length >>> 0;\n        \n        i = Math.min(i || 0, len - 1);\n        if (i < 0) i = len + i;\n        \n        for (; i >= 0; --i)\n            if (this[i] === v)\n                return i;\n        \n        return -1;\n    },\n    \n    every(fn, self) {\n    \n        var r = true;\n        \n        for (var i = 0, len = this.length >>> 0; i < len; ++i)\n            if (i in this && !(r = fn.call(self, this[i], i, this)))\n                break;\n        \n        return !!r;\n    },\n    \n    some(fn, self) {\n    \n        var r = false;\n        \n        for (var i = 0, len = this.length >>> 0; i < len; ++i)\n            if (i in this && (r = fn.call(self, this[i], i, this)))\n                break;\n        \n        return !!r;\n    },\n    \n    forEach(fn, self) {\n    \n        for (var i = 0, len = this.length >>> 0; i < len; ++i)\n            if (i in this)\n                fn.call(self, this[i], i, this);\n    },\n    \n    map(fn, self) {\n    \n        var a = [];\n        \n        for (var i = 0, len = this.length >>> 0; i < len; ++i)\n            if (i in this)\n                a[i] = fn.call(self, this[i], i, this);\n        \n        return a;\n    },\n    \n    filter(fn, self) {\n    \n        var a = [];\n        \n        for (var i = 0, len = this.length >>> 0; i < len; ++i)\n            if (i in this && fn.call(self, this[i], i, this))\n                a.push(this[i]);\n        \n        return a;\n    },\n    \n    reduce(fn) {\n    \n        var len = this.length >>> 0,\n            i = 0, \n            some = false,\n            ini = (arguments.length > 1),\n            val = (ini ? arguments[1] : this[i++]);\n        \n        for (; i < len; ++i) {\n        \n            if (i in this) {\n            \n                some = true;\n                val = fn(val, this[i], i, this);\n            }\n        }\n        \n        if (!some && !ini)\n            throw new TypeError(ERR_REDUCE);\n        \n        return val;\n    },\n    \n    reduceRight(fn) {\n    \n        var len = this.length >>> 0,\n            i = len - 1,\n            some = false,\n            ini = (arguments.length > 1),\n            val = (ini || i < 0  ? arguments[1] : this[i--]);\n        \n        for (; i >= 0; --i) {\n        \n            if (i in this) {\n            \n                some = true;\n                val = fn(val, this[i], i, this);\n            }\n        }\n        \n        if (!some && !ini)\n            throw new TypeError(ERR_REDUCE);\n        \n        return val;\n    }\n});\n\n// Add ES5 Function extras\naddKeys(Function.prototype, {\n\n    bind(self) {\n    \n        var f = this,\n            args = slice.call(arguments, 1),\n            noargs = (args.length === 0);\n        \n        bound.prototype = f.prototype;\n        return bound;\n        \n        function bound() {\n        \n            return f.apply(\n                this instanceof bound ? this : self, \n                noargs ? arguments : args.concat(slice.call(arguments, 0)));\n        }\n    }\n});\n\n// Add ES5 Date extras\naddKeys(Date, {\n\n    now() { return (new Date()).getTime(); }\n});\n\n// Add ES5 Date extras\naddKeys(Date.prototype, {\n\n    toISOString() {\n    \n        function pad(s) {\n        \n            if ((s = \"\" + s).length === 1) s = \"0\" + s;\n            return s;\n        }\n        \n        return this.getUTCFullYear() + \"-\" +\n            pad(this.getUTCMonth() + 1, 2) + \"-\" +\n            pad(this.getUTCDate(), 2) + \"T\" +\n            pad(this.getUTCHours(), 2) + \":\" +\n            pad(this.getUTCMinutes(), 2) + \":\" +\n            pad(this.getUTCSeconds(), 2) + \"Z\";\n    },\n    \n    toJSON() {\n    \n        return this.toISOString();\n    }\n});\n\n// Add ISO support to Date.parse\nif (Date.parse(new Date(0).toISOString()) !== 0) !function() {\n\n    /*\n    \n    In ES5 the Date constructor will also parse ISO dates, but overwritting \n    the Date function itself is too far.  Note that new Date(isoDateString)\n    is not backward-compatible.  Use the following instead:\n    \n    new Date(Date.parse(dateString));\n    \n    1: +/- year\n    2: month\n    3: day\n    4: hour\n    5: minute\n    6: second\n    7: fraction\n    8: +/- tz hour\n    9: tz minute\n    \n    */\n    \n    var isoRE = /^(?:((?:[+-]d{2})?d{4})(?:-(d{2})(?:-(d{2}))?)?)?(?:T(d{2}):(d{2})(?::(d{2})(?:.d{3})?)?)?(?:Z|([-+]d{2}):(d{2}))?$/,\n        dateParse = Date.parse;\n\n    Date.parse = function(s) {\n    \n        var t, m, hasDate, i, offset;\n        \n        if (!isNaN(t = dateParse(s)))\n            return t;\n        \n        if (s && (m = isoRE.exec(s))) {\n        \n            hasDate = m[1] !== undefined;\n            \n            // Convert matches to numbers (month and day default to 1)\n            for (i = 1; i <= 9; ++i)\n                m[i] = Number(m[i] || (i <= 3 ? 1 : 0));\n            \n            // Calculate ms directly if no date is provided\n            if (!hasDate)\n                return ((m[4] * 60 + m[5]) * 60 + m[6]) * 1000 + m[7];\n            \n            // Convert month to zero-indexed\n            m[2] -= 1;\n            \n            // Get TZ offset\n            offset = (m[8] * 60 + m[9]) * 60 * 1000;\n            \n            // Remove full match from array\n            m.shift();\n            \n            t = Date.UTC.apply(this, m) + offset;\n        }\n        \n        return t;\n    };\n            \n}();\n";
 
 var ES6 = 
 
@@ -1010,7 +1004,7 @@ var ES6 =
 
 var Class = 
 
-"var HOP = Object.prototype.hasOwnProperty,\n    STATIC = /^__static_/;\n\n// Returns true if the object has the specified property\nfunction hasOwn(obj, name) {\n\n    return HOP.call(obj, name);\n}\n\n// Returns true if the object has the specified property in\n// its prototype chain\nfunction has(obj, name) {\n\n    for (; obj; obj = Object.getPrototypeOf(obj))\n        if (HOP.call(obj, name))\n            return true;\n    \n    return false;\n}\n\n// Iterates over the descriptors for each own property of an object\nfunction forEachDesc(obj, fn) {\n\n    var names = Object.getOwnPropertyNames(obj);\n    \n    for (var i = 0, name; i < names.length; ++i)\n        fn(names[i], Object.getOwnPropertyDescriptor(obj, names[i]));\n    \n    return obj;\n}\n\n// Performs copy-based inheritance\nfunction inherit(to, from) {\n\n    for (; from; from = Object.getPrototypeOf(from)) {\n    \n        forEachDesc(from, (name, desc) => {\n        \n            if (!has(to, name))\n                Object.defineProperty(to, name, desc);\n        });\n    }\n    \n    return to;\n}\n\nfunction defineMethods(to, from, classMethods) {\n\n    forEachDesc(from, (name, desc) => {\n    \n        if (STATIC.test(name) === classMethods)\n            Object.defineProperty(to, classMethods ? name.replace(STATIC, \"\") : name, desc);\n    });\n    \n    return to;\n}\n\nfunction Class(base, def) {\n\n    function constructor() { \n    \n        if (parent && parent.constructor)\n            parent.constructor.apply(this, arguments);\n    }\n    \n    var parent;\n    \n    if (def === void 0) {\n    \n        // If no base class is specified, then Object.prototype\n        // is the parent prototype\n        def = base;\n        base = null;\n        parent = Object.prototype;\n    \n    } else if (base === null) {\n    \n        // If the base is null, then then then the parent prototype is null\n        parent = null;\n        \n    } else if (typeof base === \"function\") {\n    \n        parent = base.prototype;\n        \n        // Prototype must be null or an object\n        if (parent !== null && Object(parent) !== parent)\n            parent = void 0;\n    }\n    \n    if (parent === void 0)\n        throw new TypeError();\n    \n    // Generate the method collection, closing over \"super\"\n    var props = def(parent);\n    \n    // Get constructor\n    if (hasOwn(props, \"constructor\"))\n        constructor = props.constructor;\n    \n    // Make constructor non-enumerable and assign a default\n    // if none is provided\n    Object.defineProperty(props, \"constructor\", {\n    \n        enumerable: false,\n        writable: true,\n        configurable: true,\n        value: constructor\n    });\n    \n    // Create prototype object\n    var proto = defineMethods(Object.create(parent), props, false);\n    \n    // Set constructor's prototype\n    constructor.prototype = proto;\n    \n    // Set class \"static\" methods\n    defineMethods(constructor, props, true);\n    \n    // \"Inherit\" from base constructor\n    if (base) inherit(constructor, base);\n    \n    return constructor;\n}\n\nthis.__class = Class;\n";
+"var HOP = Object.prototype.hasOwnProperty,\n    STATIC = /^__static_/;\n\n// Returns true if the object has the specified property\nfunction hasOwn(obj, name) {\n\n    return HOP.call(obj, name);\n}\n\n// Returns true if the object has the specified property in\n// its prototype chain\nfunction has(obj, name) {\n\n    for (; obj; obj = Object.getPrototypeOf(obj))\n        if (HOP.call(obj, name))\n            return true;\n    \n    return false;\n}\n\n// Iterates over the descriptors for each own property of an object\nfunction forEachDesc(obj, fn) {\n\n    var names = Object.getOwnPropertyNames(obj);\n    \n    for (var i = 0, name; i < names.length; ++i)\n        fn(names[i], Object.getOwnPropertyDescriptor(obj, names[i]));\n    \n    return obj;\n}\n\n// Performs copy-based inheritance\nfunction inherit(to, from) {\n\n    for (; from; from = Object.getPrototypeOf(from)) {\n    \n        forEachDesc(from, (name, desc) => {\n        \n            if (!has(to, name))\n                Object.defineProperty(to, name, desc);\n        });\n    }\n    \n    return to;\n}\n\nfunction defineMethods(to, from, classMethods) {\n\n    forEachDesc(from, (name, desc) => {\n    \n        if (STATIC.test(name) === classMethods)\n            Object.defineProperty(to, classMethods ? name.replace(STATIC, \"\") : name, desc);\n    });\n}\n\nfunction Class(base, def) {\n\n    var parent;\n    \n    if (def === void 0) {\n    \n        // If no base class is specified, then Object.prototype\n        // is the parent prototype\n        def = base;\n        base = null;\n        parent = Object.prototype;\n    \n    } else if (base === null) {\n    \n        // If the base is null, then then then the parent prototype is null\n        parent = null;\n        \n    } else if (typeof base === \"function\") {\n    \n        parent = base.prototype;\n        \n        // Prototype must be null or an object\n        if (parent !== null && Object(parent) !== parent)\n            parent = void 0;\n    }\n    \n    if (parent === void 0)\n        throw new TypeError();\n    \n    var proto = Object.create(parent),\n        sup = prop => Object.getPrototypeOf(proto)[prop];\n    \n    // Generate the method collection, closing over \"__super\"\n    var props = def(sup),\n        constructor = props.constructor;\n    \n    if (!constructor)\n        throw new Error(\"No constructor specified.\");\n    \n    // Make constructor non-enumerable and assign a default\n    // if none is provided\n    Object.defineProperty(props, \"constructor\", {\n    \n        enumerable: false,\n        writable: true,\n        configurable: true,\n        value: constructor\n    });\n    \n    // Set prototype methods\n    defineMethods(proto, props, false);\n    \n    // Set constructor's prototype\n    constructor.prototype = proto;\n    \n    // Set class \"static\" methods\n    defineMethods(constructor, props, true);\n    \n    // \"Inherit\" from base constructor\n    if (base) inherit(constructor, base);\n    \n    return constructor;\n}\n\nthis.__class = Class;\n";
 
 var Promise = 
 
@@ -1063,789 +1057,774 @@ var Node = __class(function(__super) { return {
         }
     }
     
-}});
+} });
 
 var Script = __class(Node, function(__super) { return {
 
     constructor: function Script(statements, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.statements = statements;
     }
-}});
+} });
 
 var Module = __class(Node, function(__super) { return {
 
     constructor: function Module(statements, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.statements = statements;
     }
-}});
+} });
 
 var Identifier = __class(Node, function(__super) { return {
 
     constructor: function Identifier(value, context, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.value = value;
         this.context = context;
     }
-}});
+} });
 
 var Number = __class(Node, function(__super) { return {
 
     constructor: function Number(value, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.value = value;
     }
-}});
+} });
 
 var String = __class(Node, function(__super) { return {
 
     constructor: function String(value, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.value = value;
     }
-}});
+} });
 
 var Template = __class(Node, function(__super) { return {
 
     constructor: function Template(value, isEnd, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.value = value;
         this.templateEnd = isEnd;
     }
-}});
+} });
 
 var RegularExpression = __class(Node, function(__super) { return {
 
     constructor: function RegularExpression(value, flags, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.value = value;
         this.flags = flags;
     }
-}});
+} });
 
-var Null = __class(Node, function(__super) { return {
-
-    constructor: function Null(start, end) { __super.constructor.call(this, start, end) }
-}});
+var Null = __class(Node, function(__super) { return { constructor: function Null() { var c = __super("constructor"); if (c) return c.apply(this, arguments); } } });
 
 var Boolean = __class(Node, function(__super) { return {
 
     constructor: function Boolean(value, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.value = value;
     }
-}});
+} });
 
-var ThisExpression = __class(Node, function(__super) { return {
+var ThisExpression = __class(Node, function(__super) { return { constructor: function ThisExpression() { var c = __super("constructor"); if (c) return c.apply(this, arguments); } } });
 
-    constructor: function ThisExpression(start, end) { __super.constructor.call(this, start, end) }
-}});
-
-var SuperExpression = __class(Node, function(__super) { return {
-
-    constructor: function SuperExpression(start, end) { __super.constructor.call(this, start, end) }
-}});
+var SuperExpression = __class(Node, function(__super) { return { constructor: function SuperExpression() { var c = __super("constructor"); if (c) return c.apply(this, arguments); } } });
 
 var SequenceExpression = __class(Node, function(__super) { return {
 
     constructor: function SequenceExpression(list, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.expressions = list;
     }
-}});
+} });
 
 var AssignmentExpression = __class(Node, function(__super) { return {
 
     constructor: function AssignmentExpression(op, left, right, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.operator = op;
         this.left = left;
         this.right = right;
     }
-}});
+} });
 
 var SpreadExpression = __class(Node, function(__super) { return {
 
     constructor: function SpreadExpression(expr, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.expression = expr;
     }
-}});
+} });
 
 var YieldExpression = __class(Node, function(__super) { return {
 
     constructor: function YieldExpression(expr, delegate, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.delegate = delegate;
         this.expression = expr;
     }
-}});
+} });
 
 var AwaitExpression = __class(Node, function(__super) { return {
 
     constructor: function AwaitExpression(expression, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.expression = expression;
     }
-}});
+} });
 
 var ConditionalExpression = __class(Node, function(__super) { return {
 
     constructor: function ConditionalExpression(test, cons, alt, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.test = test;
         this.consequent = cons;
         this.alternate = alt;
     }
-}});
+} });
 
 var BinaryExpression = __class(Node, function(__super) { return {
 
     constructor: function BinaryExpression(op, left, right, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.operator = op;
         this.left = left;
         this.right = right;
     }
-}});
+} });
 
 var UpdateExpression = __class(Node, function(__super) { return {
 
     constructor: function UpdateExpression(op, expr, prefix, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.operator = op;
         this.expression = expr;
         this.prefix = prefix;
     }
-}});
+} });
 
 var UnaryExpression = __class(Node, function(__super) { return {
 
     constructor: function UnaryExpression(op, expr, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.operator = op;
         this.expression = expr;
     }
-}});
+} });
 
 var MemberExpression = __class(Node, function(__super) { return {
 
     constructor: function MemberExpression(obj, prop, computed, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.object = obj;
         this.property = prop;
         this.computed = computed;
     }
-}});
+} });
 
 var CallExpression = __class(Node, function(__super) { return {
 
     constructor: function CallExpression(callee, args, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.callee = callee;
         this.arguments = args;
     }
-}});
+} });
 
 var TaggedTemplateExpression = __class(Node, function(__super) { return {
 
     constructor: function TaggedTemplateExpression(tag, template, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.tag = tag;
         this.template = template;
     }
-}});
+} });
 
 var NewExpression = __class(Node, function(__super) { return {
 
     constructor: function NewExpression(callee, args, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.callee = callee;
         this.arguments = args;
     }
-}});
+} });
 
 var ParenExpression = __class(Node, function(__super) { return {
     
     constructor: function ParenExpression(expr, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.expression = expr;
     }
-}});
+} });
 
 var ObjectLiteral = __class(Node, function(__super) { return {
 
     constructor: function ObjectLiteral(props, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.properties = props;
     }
-}});
+} });
 
 var ComputedPropertyName = __class(Node, function(__super) { return {
 
     constructor: function ComputedPropertyName(expr, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.expression = expr;
     }
-}});
+} });
 
 var PropertyDefinition = __class(Node, function(__super) { return {
 
     constructor: function PropertyDefinition(name, expr, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.name = name;
         this.expression = expr;
     }
-}});
+} });
 
 var PatternProperty = __class(Node, function(__super) { return {
 
     constructor: function PatternProperty(name, pattern, initializer, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.name = name;
         this.pattern = pattern;
         this.initializer = initializer;
     }
-}});
+} });
 
 var PatternElement = __class(Node, function(__super) { return {
 
     constructor: function PatternElement(pattern, initializer, rest, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.pattern = pattern;
         this.initializer = initializer;
         this.rest = rest;
     }
-}});
+} });
 
 var MethodDefinition = __class(Node, function(__super) { return {
 
     constructor: function MethodDefinition(kind, name, params, body, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.kind = kind;
         this.name = name;
         this.params = params;
         this.body = body;
     }
-}});
+} });
 
 var ArrayLiteral = __class(Node, function(__super) { return {
 
     constructor: function ArrayLiteral(elements, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.elements = elements;
     }
-}});
+} });
 
 var ArrayComprehension = __class(Node, function(__super) { return {
 
     constructor: function ArrayComprehension(qualifiers, expr, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.qualifiers = qualifiers;
         this.expression = expr;
     }
-}});
+} });
 
 var GeneratorComprehension = __class(Node, function(__super) { return {
 
     constructor: function GeneratorComprehension(qualifiers, expr, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.qualifiers = qualifiers;
         this.expression = expr;
     }
-}});
+} });
 
 var ComprehensionFor = __class(Node, function(__super) { return {
 
     constructor: function ComprehensionFor(left, right, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.left = left;
         this.right = right;
     }
-}});
+} });
 
 var ComprehensionIf = __class(Node, function(__super) { return {
 
     constructor: function ComprehensionIf(test, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.test = test;
     }
-}});
+} });
 
 var TemplateExpression = __class(Node, function(__super) { return {
 
     constructor: function TemplateExpression(lits, subs, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.literals = lits;
         this.substitutions = subs;
     }
-}});
+} });
 
 var Block = __class(Node, function(__super) { return {
 
     constructor: function Block(statements, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.statements = statements;
     }
-}});
+} });
 
 var LabelledStatement = __class(Node, function(__super) { return {
 
     constructor: function LabelledStatement(label, statement, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.label = label;
         this.statement = statement;
     }
-}});
+} });
 
 var ExpressionStatement = __class(Node, function(__super) { return {
 
     constructor: function ExpressionStatement(expr, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.expression = expr;
         this.directive = null;
     }
-}});
+} });
 
-var EmptyStatement = __class(Node, function(__super) { return {
-
-    constructor: function EmptyStatement(start, end) { __super.constructor.call(this, start, end) }
-}});
+var EmptyStatement = __class(Node, function(__super) { return { constructor: function EmptyStatement() { var c = __super("constructor"); if (c) return c.apply(this, arguments); } } });
 
 var VariableDeclaration = __class(Node, function(__super) { return {
 
     constructor: function VariableDeclaration(kind, list, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.kind = kind;
         this.declarations = list;
     }
-}});
+} });
 
 var VariableDeclarator = __class(Node, function(__super) { return {
 
     constructor: function VariableDeclarator(pattern, initializer, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.pattern = pattern;
         this.initializer = initializer;
     }
-}});
+} });
 
 var ReturnStatement = __class(Node, function(__super) { return {
 
     constructor: function ReturnStatement(arg, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.argument = arg;
     }
-}});
+} });
 
 var BreakStatement = __class(Node, function(__super) { return {
 
     constructor: function BreakStatement(label, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.label = label;
     }
-}});
+} });
 
 var ContinueStatement = __class(Node, function(__super) { return {
 
     constructor: function ContinueStatement(label, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.label = label;
     }
-}});
+} });
 
 var ThrowStatement = __class(Node, function(__super) { return {
 
     constructor: function ThrowStatement(expr, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.expression = expr;
     }
-}});
+} });
 
-var DebuggerStatement = __class(Node, function(__super) { return {
-
-    constructor: function DebuggerStatement(start, end) { __super.constructor.call(this, start, end) }
-}});
+var DebuggerStatement = __class(Node, function(__super) { return { constructor: function DebuggerStatement() { var c = __super("constructor"); if (c) return c.apply(this, arguments); } } });
 
 var IfStatement = __class(Node, function(__super) { return {
 
     constructor: function IfStatement(test, cons, alt, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.test = test;
         this.consequent = cons;
         this.alternate = alt;
     }
-}});
+} });
 
 var DoWhileStatement = __class(Node, function(__super) { return {
 
     constructor: function DoWhileStatement(body, test, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.body = body;
         this.test = test;
     }
-}});
+} });
 
 var WhileStatement = __class(Node, function(__super) { return {
 
     constructor: function WhileStatement(test, body, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.test = test;
         this.body = body;
     }
-}});
+} });
 
 var ForStatement = __class(Node, function(__super) { return {
 
     constructor: function ForStatement(initializer, test, update, body, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.initializer = initializer;
         this.test = test;
         this.update = update;
         this.body = body;
     }
-}});
+} });
 
 var ForInStatement = __class(Node, function(__super) { return {
 
     constructor: function ForInStatement(left, right, body, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.left = left;
         this.right = right;
         this.body = body;
     }
-}});
+} });
 
 var ForOfStatement = __class(Node, function(__super) { return {
 
     constructor: function ForOfStatement(left, right, body, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.left = left;
         this.right = right;
         this.body = body;
     }
-}});
+} });
 
 var WithStatement = __class(Node, function(__super) { return {
 
     constructor: function WithStatement(object, body, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.object = object;
         this.body = body;
     }
-}});
+} });
 
 var SwitchStatement = __class(Node, function(__super) { return {
 
     constructor: function SwitchStatement(desc, cases, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.descriminant = desc;
         this.cases = cases;
     }
-}});
+} });
 
 var SwitchCase = __class(Node, function(__super) { return {
 
     constructor: function SwitchCase(test, cons, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.test = test;
         this.consequent = cons;
     }
-}});
+} });
 
 var TryStatement = __class(Node, function(__super) { return {
 
     constructor: function TryStatement(block, handler, fin, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.block = block;
         this.handler = handler;
         this.finalizer = fin;
     }
-}});
+} });
 
 var CatchClause = __class(Node, function(__super) { return {
 
     constructor: function CatchClause(param, body, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.param = param;
         this.body = body;
     }
-}});
+} });
 
 var FunctionDeclaration = __class(Node, function(__super) { return {
 
     constructor: function FunctionDeclaration(kind, identifier, params, body, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.kind = kind;
         this.identifier = identifier;
         this.params = params;
         this.body = body;
     }
-}});
+} });
 
 var FunctionExpression = __class(Node, function(__super) { return {
 
     constructor: function FunctionExpression(kind, identifier, params, body, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.kind = kind;
         this.identifier = identifier;
         this.params = params;
         this.body = body;
     }
-}});
+} });
 
 var FormalParameter = __class(Node, function(__super) { return {
 
     constructor: function FormalParameter(pattern, initializer, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.pattern = pattern;
         this.initializer = initializer;
     }
-}});
+} });
 
 var RestParameter = __class(Node, function(__super) { return {
 
     constructor: function RestParameter(identifier, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.identifier = identifier;
     }
-}});
+} });
 
 var FunctionBody = __class(Node, function(__super) { return {
 
     constructor: function FunctionBody(statements, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.statements = statements;
     }
-}});
+} });
 
 var ArrowFunctionHead = __class(Node, function(__super) { return {
 
     constructor: function ArrowFunctionHead(params, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.parameters = params;
     }
-}});
+} });
 
 var ArrowFunction = __class(Node, function(__super) { return {
 
     constructor: function ArrowFunction(kind, params, body, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.kind = kind;
         this.params = params;
         this.body = body;
     }
-}});
+} });
 
 var ModuleDeclaration = __class(Node, function(__super) { return {
 
     constructor: function ModuleDeclaration(identifier, body, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.identifier = identifier;
         this.body = body;
     }
-}});
+} });
 
 var ModuleBody = __class(Node, function(__super) { return {
 
     constructor: function ModuleBody(statements, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.statements = statements;
     }
-}});
+} });
 
 var ModuleImport = __class(Node, function(__super) { return {
 
     constructor: function ModuleImport(identifier, from, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.identifier = identifier;
         this.from = from;
     }
-}});
+} });
 
 var ModuleAlias = __class(Node, function(__super) { return {
 
     constructor: function ModuleAlias(identifier, path, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.identifier = identifier;
         this.path = path;
     }
-}});
+} });
 
 var ImportDefaultDeclaration = __class(Node, function(__super) { return {
 
     constructor: function ImportDefaultDeclaration(ident, from, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.identifier = ident;
         this.from = from;
     }
-}});
+} });
 
 var ImportDeclaration = __class(Node, function(__super) { return {
 
     constructor: function ImportDeclaration(specifiers, from, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.specifiers = specifiers;
         this.from = from;
     }
-}});
+} });
 
 var ImportSpecifier = __class(Node, function(__super) { return {
 
     constructor: function ImportSpecifier(remote, local, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.remote = remote;
         this.local = local;
     }
-}});
+} });
 
 var ExportDeclaration = __class(Node, function(__super) { return {
 
     constructor: function ExportDeclaration(binding, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.binding = binding;
     }
-}});
+} });
 
 var ExportsList = __class(Node, function(__super) { return {
 
     constructor: function ExportsList(list, from, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.specifiers = list;
         this.from = from;
     }
-}});
+} });
 
 var ExportSpecifier = __class(Node, function(__super) { return {
 
     constructor: function ExportSpecifier(local, remote, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.local = local;
         this.remote = remote;
     }
-}});
+} });
 
 var ModulePath = __class(Node, function(__super) { return {
     
     constructor: function ModulePath(list, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.elements = list;
     }
-}});
+} });
 
 var ClassDeclaration = __class(Node, function(__super) { return {
 
     constructor: function ClassDeclaration(identifier, base, body, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.identifier = identifier;
         this.base = base;
         this.body = body;
     }
-}});
+} });
 
 var ClassExpression = __class(Node, function(__super) { return {
 
     constructor: function ClassExpression(identifier, base, body, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.identifier = identifier;
         this.base = base;
         this.body = body;
     }
-}});
+} });
 
 var ClassBody = __class(Node, function(__super) { return {
 
     constructor: function ClassBody(elems, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.elements = elems;
     }
-}});
+} });
 
 var ClassElement = __class(Node, function(__super) { return {
 
     constructor: function ClassElement(isStatic, method, start, end) {
     
-        __super.constructor.call(this, start, end);
+        __super("constructor").call(this, start, end);
         this.static = isStatic;
         this.method = method;
     }
-}});
+} });
 
 
 exports.Node = Node; exports.Script = Script; exports.Module = Module; exports.Identifier = Identifier; exports.Number = Number; exports.String = String; exports.Template = Template; exports.RegularExpression = RegularExpression; exports.Null = Null; exports.Boolean = Boolean; exports.ThisExpression = ThisExpression; exports.SuperExpression = SuperExpression; exports.SequenceExpression = SequenceExpression; exports.AssignmentExpression = AssignmentExpression; exports.SpreadExpression = SpreadExpression; exports.YieldExpression = YieldExpression; exports.AwaitExpression = AwaitExpression; exports.ConditionalExpression = ConditionalExpression; exports.BinaryExpression = BinaryExpression; exports.UpdateExpression = UpdateExpression; exports.UnaryExpression = UnaryExpression; exports.MemberExpression = MemberExpression; exports.CallExpression = CallExpression; exports.TaggedTemplateExpression = TaggedTemplateExpression; exports.NewExpression = NewExpression; exports.ParenExpression = ParenExpression; exports.ObjectLiteral = ObjectLiteral; exports.ComputedPropertyName = ComputedPropertyName; exports.PropertyDefinition = PropertyDefinition; exports.PatternProperty = PatternProperty; exports.PatternElement = PatternElement; exports.MethodDefinition = MethodDefinition; exports.ArrayLiteral = ArrayLiteral; exports.ArrayComprehension = ArrayComprehension; exports.GeneratorComprehension = GeneratorComprehension; exports.ComprehensionFor = ComprehensionFor; exports.ComprehensionIf = ComprehensionIf; exports.TemplateExpression = TemplateExpression; exports.Block = Block; exports.LabelledStatement = LabelledStatement; exports.ExpressionStatement = ExpressionStatement; exports.EmptyStatement = EmptyStatement; exports.VariableDeclaration = VariableDeclaration; exports.VariableDeclarator = VariableDeclarator; exports.ReturnStatement = ReturnStatement; exports.BreakStatement = BreakStatement; exports.ContinueStatement = ContinueStatement; exports.ThrowStatement = ThrowStatement; exports.DebuggerStatement = DebuggerStatement; exports.IfStatement = IfStatement; exports.DoWhileStatement = DoWhileStatement; exports.WhileStatement = WhileStatement; exports.ForStatement = ForStatement; exports.ForInStatement = ForInStatement; exports.ForOfStatement = ForOfStatement; exports.WithStatement = WithStatement; exports.SwitchStatement = SwitchStatement; exports.SwitchCase = SwitchCase; exports.TryStatement = TryStatement; exports.CatchClause = CatchClause; exports.FunctionDeclaration = FunctionDeclaration; exports.FunctionExpression = FunctionExpression; exports.FormalParameter = FormalParameter; exports.RestParameter = RestParameter; exports.FunctionBody = FunctionBody; exports.ArrowFunctionHead = ArrowFunctionHead; exports.ArrowFunction = ArrowFunction; exports.ModuleDeclaration = ModuleDeclaration; exports.ModuleBody = ModuleBody; exports.ModuleImport = ModuleImport; exports.ModuleAlias = ModuleAlias; exports.ImportDefaultDeclaration = ImportDefaultDeclaration; exports.ImportDeclaration = ImportDeclaration; exports.ImportSpecifier = ImportSpecifier; exports.ExportDeclaration = ExportDeclaration; exports.ExportsList = ExportsList; exports.ExportSpecifier = ExportSpecifier; exports.ModulePath = ModulePath; exports.ClassDeclaration = ClassDeclaration; exports.ClassExpression = ClassExpression; exports.ClassBody = ClassBody; exports.ClassElement = ClassElement; return exports; }).call(this, {});
@@ -2770,7 +2749,7 @@ var Scanner = __class(function(__super) { return {
         return "ILLEGAL";
     }
     
-}});
+} });
 
 
 exports.Scanner = Scanner; return exports; }).call(this, {});
@@ -2934,9 +2913,9 @@ var Transform = __class(function(__super) { return {
         }
         
         return node;
-    }
+    }, constructor: function Transform() { var c = __super("constructor"); if (c) return c.apply(this, arguments); }
     
-}});
+} });
 
 
 
@@ -3184,9 +3163,9 @@ var Validate = __class(function(__super) { return {
         }
         
         context.invalidNodes = null;
-    }
+    }, constructor: function Validate() { var c = __super("constructor"); if (c) return c.apply(this, arguments); }
     
-}});
+} });
 
 exports.Validate = Validate; return exports; }).call(this, {});
 
@@ -3303,7 +3282,7 @@ var Token = __class(function(__super) { return {
         this.newlineBefore = s.newlineBefore;
         this.strictError = s.strictError;
     }
-}});
+} });
 
 var Context = __class(function(__super) { return {
 
@@ -3319,7 +3298,7 @@ var Context = __class(function(__super) { return {
         this.invalidNodes = null;
         this.strictError = null;
     }
-}});
+} });
 
 var Parser = __class(function(__super) { return {
 
@@ -5679,7 +5658,7 @@ var Parser = __class(function(__super) { return {
         return new AST.ClassElement(isStatic, method, start, this.endOffset);
     }
     
-}});
+} });
 
 
 function mixin(source) {
@@ -5769,10 +5748,10 @@ var RootNode = __class(AST.Node, function(__super) { return {
 
     constructor: function RootNode(root, end) {
     
-        __super.constructor.call(this, 0, end);
+        __super("constructor").call(this, 0, end);
         this.root = root;
     }
-}});
+} });
 
 var Replacer = __class(function(__super) { return {
 
@@ -6033,17 +6012,6 @@ var Replacer = __class(function(__super) { return {
         var callee = node.callee,
             args = node.arguments;
         
-        /*
-        // Translate CommonJS require calls
-        if (callee.type === "Identifier" && 
-            callee.value === "require" &&
-            args.length === 1 &&
-            args[0].type === "String") {
-        
-            return this.loadCall(this.requirePath(args[0].value));
-        }
-        */
-        
         if (node.isSuperCall) {
         
             var argText = "this";
@@ -6062,21 +6030,44 @@ var Replacer = __class(function(__super) { return {
         
         if (p.type === "CallExpression") {
         
+            // super(args);
+        
             p.isSuperCall = true;
             
             var m = this.parentFunction(p),
                 name = (m.type === "MethodDefinition" ? m.name.text : "constructor");
             
             // TODO: what if method name is not an identifier?
-            return "__super." + name;
+            return "__super(" + JSON.stringify(name) + ")";
+            
+        } else {
+        
+            // super.foo...
+            p.isSuperLookup = true;
         }
         
         p = p.parentNode;
         
-        if (p.type === "CallExpression")
+        if (p.type === "CallExpression") {
+        
+            // super.foo(args);
             p.isSuperCall = true;
+        }
         
         return "__super";
+    },
+    
+    MemberExpression: function(node) {
+    
+        if (node.isSuperLookup) {
+        
+            var prop = node.property.text;
+            
+            if (!node.computed)
+                prop = '"' + prop + '"';
+            
+            return node.object.text + "(" + prop + ")";
+        }
     },
     
     ArrowFunction: function(node) {
@@ -6126,7 +6117,7 @@ var Replacer = __class(function(__super) { return {
         return "var " + node.identifier.text + " = __class(" + 
             (node.base ? (node.base.text + ", ") : "") +
             "function(__super) { return " +
-            node.body.text + "});";
+            node.body.text + " });";
     },
     
     ClassExpression: function(node) {
@@ -6152,6 +6143,7 @@ var Replacer = __class(function(__super) { return {
     
         var classIdent = node.parentNode.identifier,
             elems = node.elements, 
+            hasCtor = false,
             e,
             i;
         
@@ -6163,9 +6155,14 @@ var Replacer = __class(function(__super) { return {
             
                 e.text = e.text.replace(/^static\s+/, "");
                 
-            } else if (e.method.name.value === "constructor" && classIdent) {
+            } else if (e.method.name.value === "constructor") {
             
-                e.text = e.text.replace(/function/, "function " + classIdent.value);
+                hasCtor = true;
+                
+                // Give the constructor function a name so that the
+                // class function's name property will be correct.
+                if (classIdent)
+                    e.text = e.text.replace(/:\s*function/, ": function " + classIdent.value);
             }
             
             if (i < elems.length - 1)
@@ -6173,6 +6170,18 @@ var Replacer = __class(function(__super) { return {
             
             // TODO: fix so that classes without a constructor still
             // have the right "name"
+        }
+        
+        if (classIdent && !hasCtor) {
+            
+            var ctor = "constructor: function " + classIdent.value + "() { " +
+                'var c = __super("constructor"); ' +
+                "if (c) return c.apply(this, arguments); }";
+            
+            if (elems.length === 0)
+                return "{ " + ctor + " }";
+                
+            elems[elems.length - 1].text += ", " + ctor;
         }
     },
     
@@ -6322,7 +6331,7 @@ var Replacer = __class(function(__super) { return {
         return text;
     }
 
-}});
+} });
 
 
 exports.Replacer = Replacer; return exports; }).call(this, {});
@@ -6625,7 +6634,7 @@ var ConsoleCommand = __class(function(__super) { return {
         return cmd.execute(parse(args, cmd.params));
     }
     
-}});
+} });
 
 /*
 
@@ -6728,7 +6737,7 @@ var ConsoleIO = __class(function(__super) { return {
         process.stdout.write(msg);
     }
     
-}});
+} });
 
 
 exports.ConsoleIO = ConsoleIO; return exports; }).call(this, {});
@@ -6792,7 +6801,7 @@ var StringMap = __class(function(__super) { return {
         for (i = 0; i < keys.length; ++i)
             fn.call(thisArg, this._map[keys[i]], keys[i], this);
     }
-}});
+} });
 
 exports.StringMap = StringMap; return exports; }).call(this, {});
 
@@ -6842,7 +6851,7 @@ var StringSet = __class(function(__super) { return {
     
         this._map.forEach((function(value, key) { return fn.call(thisArg, value, key, __this); }));
     }
-}});
+} });
 
 exports.StringSet = StringSet; return exports; }).call(this, {});
 
@@ -6863,9 +6872,9 @@ var PromiseExtensions = __class(function(__super) { return {
 
         var i = -1;
         return this.iterate((function(stop) { return (++i >= list.length) ? stop() : fn(list[i], i, list); }));
-    }
+    }, constructor: function PromiseExtensions() { var c = __super("constructor"); if (c) return c.apply(this, arguments); }
 
-}});
+} });
 
 exports.PromiseExtensions = PromiseExtensions; return exports; }).call(this, {});
 
