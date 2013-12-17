@@ -7057,7 +7057,7 @@ function startREPL() {
 
     var repl = REPL.start({ 
     
-        prompt: "es6> ",
+        prompt: "es6now> ",
         
         eval: function(input, context, filename, cb) {
         
@@ -7083,10 +7083,10 @@ function startREPL() {
                 
             } catch (x) {
             
-                cb(x);
+                return cb(x);
             }
             
-            cb(null, result);
+            return cb(null, result);
         }
     });
 }

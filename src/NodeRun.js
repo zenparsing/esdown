@@ -91,7 +91,7 @@ export function startREPL() {
 
     var repl = REPL.start({ 
     
-        prompt: "es6> ",
+        prompt: "es6now> ",
         
         eval(input, context, filename, cb) {
         
@@ -117,10 +117,10 @@ export function startREPL() {
                 
             } catch (x) {
             
-                cb(x);
+                return cb(x);
             }
             
-            cb(null, result);
+            return cb(null, result);
         }
     });
 }
