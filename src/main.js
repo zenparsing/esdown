@@ -1,24 +1,18 @@
 module FS from "node:fs";
 module Path from "node:path";
-module Runtime from "Runtime.js";
 
-import { runModule, startREPL } from "NodeAdapter.js";
+import { runModule, startREPL, formatSyntaxError } from "NodeRun.js";
 import { AsyncFS, ConsoleCommand } from "package:zen-bits";
 import { createBundle } from "package:js-bundle";
 import { translate } from "Translator.js";
 import { locatePackage } from "PackageLocator.js";
 
 
-function absolutePath(path) {
-
-    return Path.resolve(process.cwd(), path);
-}
-
 function getOutPath(inPath, outPath) {
 
     var stat;
     
-    outPath = absolutePath(outPath);
+    outPath = Path.resolve(process.cwd(), outPath);
     
     try { stat = FS.statSync(outPath); } catch (e) {}
     
@@ -26,11 +20,6 @@ function getOutPath(inPath, outPath) {
         return Path.resolve(outPath, Path.basename(inPath));
     
     return outPath;
-}
-
-function wrapRuntimeModule(text) {
-
-    return "(function() {\n\n" + text + "\n\n}).call(this);\n\n";
 }
 
 new ConsoleCommand({
@@ -85,28 +74,30 @@ new ConsoleCommand({
         
         promise.then(text => {
         
-            if (params.runtime) {
+            try {
             
-                text = "\n\n" +
-                    wrapRuntimeModule(Runtime.Class) + 
-                    wrapRuntimeModule(Runtime.ES5) +
-                    wrapRuntimeModule(Runtime.ES6) +
-                    wrapRuntimeModule(Runtime.Promise) +
-                    text;
+                text = translate(text, { 
+            
+                    global: params.global,
+                    runtime: params.runtime
+                });
+            
+            } catch (x) {
+            
+                if (x instanceof SyntaxError)
+                    x = new SyntaxError(formatSyntaxError(x, text));
+                
+                throw x;
             }
-            
-            return translate(text, { global: params.global });
         
-        }).then(text => {
-            
             if (params.output) {
             
                 var outPath = getOutPath(params.input, params.output);
-                FS.writeFileSync(outPath, text, "utf8");
+                return AsyncFS.writeFile(outPath, text, "utf8");
             
             } else {
             
-                console.log(text);
+                process.stdout.write(text + "\n");
             }
             
         }).catch(x => {

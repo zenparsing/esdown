@@ -1,3 +1,5 @@
+module Runtime from "Runtime.js";
+
 import { Replacer } from "Replacer.js";
 
 var SIGNATURE = "/*=es6now=*/";
@@ -47,6 +49,11 @@ function sanitize(text) {
     return text;
 }
 
+function wrapRuntimeModule(text) {
+
+    return "(function() {\n\n" + text + "\n\n}).call(this);\n\n";
+}
+
 export function translate(input, options) {
 
     options || (options = {});
@@ -55,6 +62,17 @@ export function translate(input, options) {
         output;
     
     input = sanitize(input);
+    
+    if (options.runtime) {
+            
+        input = "\n\n" +
+            wrapRuntimeModule(Runtime.Class) + 
+            wrapRuntimeModule(Runtime.ES5) +
+            wrapRuntimeModule(Runtime.ES6) +
+            wrapRuntimeModule(Runtime.Promise) +
+            input;
+    }
+            
     output = replacer.replace(input);
     
     if (options.wrap !== false)

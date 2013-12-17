@@ -6329,6 +6329,8 @@ exports.Replacer = Replacer; return exports; }).call(this, {});
 
 var Translator = (function(exports) {
 
+var Runtime = Runtime_;
+
 var Replacer = Replacer_.Replacer;
 
 var SIGNATURE = "/*=es6now=*/";
@@ -6378,6 +6380,11 @@ function sanitize(text) {
     return text;
 }
 
+function wrapRuntimeModule(text) {
+
+    return "(function() {\n\n" + text + "\n\n}).call(this);\n\n";
+}
+
 function translate(input, options) {
 
     options || (options = {});
@@ -6386,6 +6393,17 @@ function translate(input, options) {
         output;
     
     input = sanitize(input);
+    
+    if (options.runtime) {
+            
+        input = "\n\n" +
+            wrapRuntimeModule(Runtime.Class) + 
+            wrapRuntimeModule(Runtime.ES5) +
+            wrapRuntimeModule(Runtime.ES6) +
+            wrapRuntimeModule(Runtime.Promise) +
+            input;
+    }
+            
     output = replacer.replace(input);
     
     if (options.wrap !== false)
@@ -6944,7 +6962,7 @@ Object.keys(main___).forEach(function(k) { exports[k] = main___[k]; });
 
 return exports; }).call(this, {});
 
-var NodeAdapter = (function(exports) {
+var NodeRun = (function(exports) {
 
 var FS = _M1;
 var REPL = _M2;
@@ -7073,7 +7091,7 @@ function startREPL() {
     });
 }
 
-exports.runModule = runModule; exports.startREPL = startREPL; return exports; }).call(this, {});
+exports.formatSyntaxError = formatSyntaxError; exports.runModule = runModule; exports.startREPL = startREPL; return exports; }).call(this, {});
 
 var Analyzer = (function(exports) {
 
@@ -7379,25 +7397,19 @@ var main = (function(exports) {
 
 var FS = _M1;
 var Path = _M0;
-var Runtime = Runtime_;
 
-var runModule = NodeAdapter.runModule, startREPL = NodeAdapter.startREPL;
+var runModule = NodeRun.runModule, startREPL = NodeRun.startREPL, formatSyntaxError = NodeRun.formatSyntaxError;
 var AsyncFS = main_.AsyncFS, ConsoleCommand = main_.ConsoleCommand;
 var createBundle = main__.createBundle;
 var translate = Translator.translate;
 var locatePackage = PackageLocator.locatePackage;
 
 
-function absolutePath(path) {
-
-    return Path.resolve(process.cwd(), path);
-}
-
 function getOutPath(inPath, outPath) {
 
     var stat;
     
-    outPath = absolutePath(outPath);
+    outPath = Path.resolve(process.cwd(), outPath);
     
     try { stat = FS.statSync(outPath); } catch (e) {}
     
@@ -7405,11 +7417,6 @@ function getOutPath(inPath, outPath) {
         return Path.resolve(outPath, Path.basename(inPath));
     
     return outPath;
-}
-
-function wrapRuntimeModule(text) {
-
-    return "(function() {\n\n" + text + "\n\n}).call(this);\n\n";
 }
 
 new ConsoleCommand({
@@ -7464,28 +7471,30 @@ new ConsoleCommand({
         
         promise.then((function(text) {
         
-            if (params.runtime) {
+            try {
             
-                text = "\n\n" +
-                    wrapRuntimeModule(Runtime.Class) + 
-                    wrapRuntimeModule(Runtime.ES5) +
-                    wrapRuntimeModule(Runtime.ES6) +
-                    wrapRuntimeModule(Runtime.Promise) +
-                    text;
+                text = translate(text, { 
+            
+                    global: params.global,
+                    runtime: params.runtime
+                });
+            
+            } catch (x) {
+            
+                if (x instanceof SyntaxError)
+                    x = new SyntaxError(formatSyntaxError(x, text));
+                
+                throw x;
             }
-            
-            return translate(text, { global: params.global });
         
-        })).then((function(text) {
-            
             if (params.output) {
             
                 var outPath = getOutPath(params.input, params.output);
-                FS.writeFileSync(outPath, text, "utf8");
+                return AsyncFS.writeFile(outPath, text, "utf8");
             
             } else {
             
-                console.log(text);
+                process.stdout.write(text + "\n");
             }
             
         })).catch((function(x) {

@@ -11,7 +11,7 @@ import { ConsoleStyle as Style } from "package:zen-bits";
 var ES6_GUESS = /(?:^|\n)\s*(?:import|export|class)\s/;
 
 
-function formatSyntaxError(e, text, filename) {
+export function formatSyntaxError(e, text, filename) {
 
     var msg = e.message;
     
