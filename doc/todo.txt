@@ -5,6 +5,16 @@
   - Make super repect changes to an object's prototype
   - Make super work correctly in static functions (should refer to the
     prototype of the constructor, I think).
+  
+  We can do this by passing in a "__super" function instead of an object.
+  That function would just do a prototype lookup for the class prototype.
+  
+  var proto = Object.create(parent);
+  var __super = prop => Object.getPrototypeOf(proto)[prop];
+  
+  Since we are futzing with core runtime stuff, we need to be really careful.
+  We also need to take care that we are not incurring a performance regression
+  or creating unwanted dependencies on ES5.
 
 - Classes: Make sure that constructors for classes without an explicit
   constructor also get the correct name. 
