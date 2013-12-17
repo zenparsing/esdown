@@ -21,6 +21,8 @@ class A extends B {
     static S() {}
     
     static get T() {}
+    
+    static "U"() {}
 }
 
 class A {

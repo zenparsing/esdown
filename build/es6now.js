@@ -5863,12 +5863,10 @@ var Replacer = __class(function(__super) { return {
     
     MethodDefinition: function(node) {
     
-        // TODO: will fail if name is a string:  static "name"() {}
-    
         if (node.parentNode.type === "ClassElement" && 
             node.parentNode.static) {
             
-            node.name.text = "__static_" + node.name.text;
+            node.name.text = "__static_" + (node.name.value || "");
         }
         
         switch (node.kind) {
@@ -6019,7 +6017,6 @@ var Replacer = __class(function(__super) { return {
             if (args.length > 0)
                 argText += ", " + this.joinList(args);
             
-            // TODO: what if callee is of the form super["abc"]?
             return callee.text + ".call(" + argText + ")";
         }
     },
@@ -6037,7 +6034,6 @@ var Replacer = __class(function(__super) { return {
             var m = this.parentFunction(p),
                 name = (m.type === "MethodDefinition" ? m.name.text : "constructor");
             
-            // TODO: what if method name is not an identifier?
             return "__super(" + JSON.stringify(name) + ")";
             
         } else {

@@ -20,7 +20,9 @@ var A = __class(B, function(__super) { return {
     
     __static_S: function() {},
     
-    get __static_T() {}
+    get __static_T() {},
+    
+    __static_U: function() {}
 } });
 
 var A = __class(function(__super) { return {

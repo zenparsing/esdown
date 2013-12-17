@@ -1,9 +1,4 @@
 == TODO ==
 
-- Classes: Make sure that constructors for classes without an explicit
-  constructor also get the correct name.   We'll have to auto-insert a constructor
-  which just does: 
-  
-    __super("constructor").apply(this, arguments);
-
-- Arrow functions should close over arguments, too.
+- [M] Add list of features and caveats to README.
+- [L] Arrow functions should close over arguments, too.
