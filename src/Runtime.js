@@ -730,6 +730,11 @@ function isPromise(x) {
     return x && $status in Object(x);
 }
 
+function isThenable(x) {
+
+    return x && "then" in Object(x) && typeof x.then === "function";
+}
+
 function promiseResolve(promise, x) {
     
     promiseDone(promise, "resolved", x, promise[$onResolve]);
@@ -744,13 +749,13 @@ function promiseDone(promise, status, value, reactions) {
 
     if (promise[$status] !== "pending") 
         return;
-    
-    for (var i in reactions) 
-        promiseReact(reactions[i][0], reactions[i][1], value);
         
     promise[$status] = status;
     promise[$value] = value;
     promise[$onResolve] = promise[$onReject] = void 0;
+    
+    for (var i = 0; i < reactions.length; ++i) 
+        promiseReact(reactions[i][0], reactions[i][1], value);
 }
 
 function promiseReact(deferred, handler, x) {
@@ -764,7 +769,7 @@ function promiseReact(deferred, handler, x) {
             if (y === deferred.promise)
                 throw new TypeError;
             else if (isPromise(y))
-                y.chain(deferred.resolve, deferred.reject);
+                promiseChain(y, deferred.resolve, deferred.reject);
             else
                 deferred.resolve(y);
         
@@ -774,17 +779,10 @@ function promiseReact(deferred, handler, x) {
 
 function promiseCoerce(constructor, x) {
 
-    if (isPromise(x))
+    if (isPromise(x) || !isThenable(x))
         return x;
     
-    // [A+ compatibility]
-    // if (!(x && "then" in Object(x))
-    //    return x;
-        
-    if (!(x && "then" in Object(x) && typeof x.then === "function"))
-        return x;
-    
-    var deferred = promiseDeferred(constructor);
+    var deferred = getDeferred(constructor);
       
     try { x.then(deferred.resolve, deferred.reject) } 
     catch(e) { deferred.reject(e) }
@@ -792,7 +790,36 @@ function promiseCoerce(constructor, x) {
     return deferred.promise;
 }
 
-function promiseDeferred(constructor) {
+function promiseChain(promise, onResolve, onReject) {
+
+    if (typeof onResolve !== "function") onResolve = x => x;
+    if (typeof onReject !== "function") onReject = e => { throw e };
+
+    var deferred = getDeferred(promise.constructor);
+
+    switch (promise[$status]) {
+
+        case undefined:
+            throw new TypeError;
+        
+        case "pending":
+            promise[$onResolve].push([deferred, onResolve]);
+            promise[$onReject].push([deferred, onReject]);
+            break;
+    
+        case "resolved":
+            promiseReact(deferred, onResolve, promise[$value]);
+            break;
+        
+        case "rejected":
+            promiseReact(deferred, onReject, promise[$value]);
+            break;
+    }
+
+    return deferred.promise;
+}
+
+function getDeferred(constructor) {
 
     var result = {};
 
@@ -814,58 +841,16 @@ class Promise {
     
         init(x => promiseResolve(this, x), r => promiseReject(this, r));
     }
-    
-    chain(onResolve, onReject) {
-
-        // [A+ compatibility]
-        // onResolve = onResolve || (x => x);
-        // onReject = onReject || (e => { throw e });
-    
-        if (typeof onResolve !== "function") onResolve = x => x;
-        if (typeof onReject !== "function") onReject = e => { throw e };
-    
-        var deferred = promiseDeferred(this.constructor);
-    
-        switch (this[$status]) {
-    
-            case undefined:
-                throw new TypeError;
-            
-            case "pending":
-                this[$onResolve].push([deferred, onResolve]);
-                this[$onReject].push([deferred, onReject]);
-                break;
-        
-            case "resolved":
-                promiseReact(deferred, onResolve, this[$value]);
-                break;
-            
-            case "rejected":
-                promiseReact(deferred, onReject, this[$value]);
-                break;
-        }
-    
-        return deferred.promise;
-    }
-    
-    catch(onReject) {
-
-        // TODO: if !onReject, should it default to x => x?
-        return this.chain(undefined, onReject)
-    }
 
     then(onResolve, onReject) {
 
-        // [A+ compatibility]
-        // onResolve = onResolve || (x => x);
-    
         if (typeof onResolve !== "function") onResolve = x => x;
     
-        var constructor = this.constructor;
+        var c = this.constructor;
     
-        return this.chain(x => {
+        return promiseChain(this, x => {
     
-            x = promiseCoerce(constructor, x);
+            x = promiseCoerce(c, x);
         
             if (x === this)
                 throw new TypeError;
@@ -875,6 +860,11 @@ class Promise {
                 onResolve(x);
         
         }, onReject);
+    }
+    
+    catch(onReject) {
+
+        return this.then(undefined, onReject)
     }
     
     static resolve(x) { 
@@ -889,28 +879,25 @@ class Promise {
     
     static cast(x) {
 
-        if (x instanceof this)
+        if (isPromise(x) && x instanceof this)
             return x;
 
-        if (!isPromise(x))
-            return this.resolve(x);
-    
-        var result = promiseDeferred();
-        x.chain(result.resolve, result.reject);
+        var result = getDeferred(this);
+        result.resolve(x);
         return result.promise;
     }
 
     static all(values) {
 
-        var deferred = promiseDeferred(this),
+        var deferred = getDeferred(this),
             count = 0,
             resolutions = [];
         
-        for (var i in values) {
+        for (var i = 0; i < values.length; ++i) {
     
             ++count;
         
-            this.cast(values[i]).chain(onResolve(i), r => {
+            this.cast(values[i]).then(onResolve(count), r => {
         
                 if (count > 0) { 
             
@@ -943,7 +930,7 @@ class Promise {
         // TODO:  Use System.iterator
         var iter = iterable;
         
-        var deferred = promiseDeferred(this),
+        var deferred = getDeferred(this),
             constructor = this;
         
         function resume(value, error) {
