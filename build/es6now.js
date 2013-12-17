@@ -5883,7 +5883,6 @@ var Replacer = __class(function(__super) { return {
                 return node.name.text + ": function*(" + 
                     this.joinList(node.params) + ") " + 
                     node.body.text;
-                
         }
     },
     
@@ -5965,7 +5964,6 @@ var Replacer = __class(function(__super) { return {
             
                 binding.declarations.forEach((function(decl) {
             
-                    // TODO: Destructuring!
                     ident = decl.pattern.text;
                     exports[ident] = ident;
                 }));
@@ -6163,9 +6161,6 @@ var Replacer = __class(function(__super) { return {
             
             if (i < elems.length - 1)
                 e.text += ",";
-            
-            // TODO: fix so that classes without a constructor still
-            // have the right "name"
         }
         
         if (classIdent && !hasCtor) {
@@ -6201,14 +6196,14 @@ var Replacer = __class(function(__super) { return {
     
     asyncFunction: function(ident, params, body) {
     
-        // TODO: function.length is incorrect!
-        
         var head = "function";
         
         if (ident)
             head += " " + ident.text;
         
-        return "" + (head) + "() { " +
+        var outerParams = params.map((function(x, i) { return "__" + i; })).join(", ");
+        
+        return "" + (head) + "(" + (outerParams) + ") { " +
             "try { return Promise.__iterate(function*(" + (this.joinList(params)) + ") " + 
             "" + (body) + ".apply(this, arguments)); " +
             "} catch (x) { return Promise.reject(x); } }";

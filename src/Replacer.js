@@ -176,7 +176,6 @@ export class Replacer {
                 return node.name.text + ": function*(" + 
                     this.joinList(node.params) + ") " + 
                     node.body.text;
-                
         }
     }
     
@@ -258,7 +257,6 @@ export class Replacer {
             
                 binding.declarations.forEach(decl => {
             
-                    // TODO: Destructuring!
                     ident = decl.pattern.text;
                     exports[ident] = ident;
                 });
@@ -456,9 +454,6 @@ export class Replacer {
             
             if (i < elems.length - 1)
                 e.text += ",";
-            
-            // TODO: fix so that classes without a constructor still
-            // have the right "name"
         }
         
         if (classIdent && !hasCtor) {
@@ -494,14 +489,14 @@ export class Replacer {
     
     asyncFunction(ident, params, body) {
     
-        // TODO: function.length is incorrect!
-        
         var head = "function";
         
         if (ident)
             head += " " + ident.text;
         
-        return `${head}() { ` +
+        var outerParams = params.map((x, i) => "__" + i).join(", ");
+        
+        return `${head}(${outerParams}) { ` +
             `try { return Promise.__iterate(function*(${ this.joinList(params) }) ` + 
             `${ body }.apply(this, arguments)); ` +
             `} catch (x) { return Promise.reject(x); } }`;
