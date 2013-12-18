@@ -2,7 +2,7 @@
 
 es6now is a quick and dirty ES6 to ES3/5 transpiler.  It will translate 
 some ECMAScript 6 features, fairly accurately, for use in Node and browsers.  
-The emphasis here is not completeness.  The goal is to take advantage of 
+The emphasis here is not on completeness.  The goal is to take advantage of 
 important ES6 features while still retaining transparent debuggability,
 using straightforward source transformations.
 
