@@ -2900,7 +2900,7 @@ var Transform = __class(function(__super) { return {
         }
         
         return node;
-    }, constructor: function Transform() { var c = __super("constructor"); if (c) return c.apply(this, arguments); }
+    }, constructor: function Transform() {}
     
 } });
 
@@ -3150,7 +3150,7 @@ var Validate = __class(function(__super) { return {
         }
         
         context.invalidNodes = null;
-    }, constructor: function Validate() { var c = __super("constructor"); if (c) return c.apply(this, arguments); }
+    }, constructor: function Validate() {}
     
 } });
 
@@ -6139,6 +6139,7 @@ var Replacer = __class(function(__super) { return {
     ClassBody: function(node) {
     
         var classIdent = node.parentNode.identifier,
+            hasBase = !!node.parentNode.base,
             elems = node.elements, 
             hasCtor = false,
             e,
@@ -6174,9 +6175,17 @@ var Replacer = __class(function(__super) { return {
             if (classIdent)
                 ctor += " " + classIdent.value;
             
-            ctor += "() { " +
-                'var c = __super("constructor"); ' +
-                "if (c) return c.apply(this, arguments); }";
+            ctor += "() {";
+            
+            if (hasBase) {
+            
+                ctor += ' var c = __super("constructor"); ';
+                ctor += "if (c) return c.apply(this, arguments); }";
+                
+            } else {
+            
+                ctor += "}";
+            }
             
             if (elems.length === 0)
                 return "{ " + ctor + " }";
@@ -6872,7 +6881,7 @@ var PromiseExtensions = __class(function(__super) { return {
 
         var i = -1;
         return this.iterate((function(stop) { return (++i >= list.length) ? stop() : fn(list[i], i, list); }));
-    }, constructor: function PromiseExtensions() { var c = __super("constructor"); if (c) return c.apply(this, arguments); }
+    }, constructor: function PromiseExtensions() {}
 
 } });
 
@@ -7070,11 +7079,12 @@ function startREPL() {
         
         eval: function(input, context, filename, cb) {
         
-            var text, result;
+            var text, result, script, displayErrors = false;
             
             try {
             
                 text = translate(input, { wrap: false });
+                script = VM.createScript(text, { filename: filename, displayErrors: displayErrors });
             
             } catch (x) {
             
@@ -7087,8 +7097,8 @@ function startREPL() {
             try {
             
                 result = context === global ? 
-                    VM.runInThisContext(text, filename) : 
-                    VM.runInContext(text, context, filename);
+                    script.runInThisContext({ displayErrors: displayErrors }) : 
+                    script.runInContext(context, { displayErrors: displayErrors });
                 
             } catch (x) {
             

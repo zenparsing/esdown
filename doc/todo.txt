@@ -1,4 +1,6 @@
 == TODO ==
 
-- [M] Add list of features and caveats to README.
-- [L] Arrow functions should close over arguments, too.
+[M] Add list of features and caveats to README.
+[L] Arrow functions should close over arguments, too.
+[L] Should we add "use strict" to class translations?  We only translate
+    modules now, so classes are always strict anyway.

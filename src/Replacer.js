@@ -429,6 +429,7 @@ export class Replacer {
     ClassBody(node) {
     
         var classIdent = node.parentNode.identifier,
+            hasBase = !!node.parentNode.base,
             elems = node.elements, 
             hasCtor = false,
             e,
@@ -464,9 +465,17 @@ export class Replacer {
             if (classIdent)
                 ctor += " " + classIdent.value;
             
-            ctor += "() { " +
-                'var c = __super("constructor"); ' +
-                "if (c) return c.apply(this, arguments); }";
+            ctor += "() {";
+            
+            if (hasBase) {
+            
+                ctor += ' var c = __super("constructor"); ';
+                ctor += "if (c) return c.apply(this, arguments); }";
+                
+            } else {
+            
+                ctor += "}";
+            }
             
             if (elems.length === 0)
                 return "{ " + ctor + " }";

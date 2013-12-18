@@ -1,3 +1,3 @@
-import { startREPL } from "../src/NodeAdapter.js";
+import { startREPL } from "../src/NodeRun.js";
 
 startREPL();

@@ -95,11 +95,12 @@ export function startREPL() {
         
         eval(input, context, filename, cb) {
         
-            var text, result;
+            var text, result, script, displayErrors = false;
             
             try {
             
                 text = translate(input, { wrap: false });
+                script = VM.createScript(text, { filename, displayErrors });
             
             } catch (x) {
             
@@ -112,8 +113,8 @@ export function startREPL() {
             try {
             
                 result = context === global ? 
-                    VM.runInThisContext(text, filename) : 
-                    VM.runInContext(text, context, filename);
+                    script.runInThisContext({ displayErrors }) : 
+                    script.runInContext(context, { displayErrors });
                 
             } catch (x) {
             

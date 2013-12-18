@@ -27,7 +27,7 @@ var A = __class(B, function(__super) { return {
 
 var A = __class(function(__super) { return {
 
-    foo: function() {}, constructor: function A() { var c = __super("constructor"); if (c) return c.apply(this, arguments); }
+    foo: function() {}, constructor: function A() {}
 } });
 
 var A = __class(B, function(__super) { return {
@@ -39,6 +39,6 @@ var A = __class(B, function(__super) { return { constructor: function A() { var 
 
  });
 
-(((function() { var C = __class(function(__super) { return { constructor: function C() { var c = __super("constructor"); if (c) return c.apply(this, arguments); } } }); return C; })()));
+(((function() { var C = __class(function(__super) { return { constructor: function C() {} } }); return C; })()));
 
-new (__class(function(__super) { return { constructor: function() { var c = __super("constructor"); if (c) return c.apply(this, arguments); } } }));
+new (__class(function(__super) { return { constructor: function() {} } }));
