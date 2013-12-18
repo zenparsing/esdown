@@ -4,12 +4,12 @@ es6now is a quick and dirty ES6 to ES3/5 transpiler.  It will translate
 some ECMAScript 6 features, fairly accurately, for use in Node and browsers.  
 The emphasis here is not completeness.  The goal is to take advantage of 
 important ES6 features while still retaining transparent debuggability,
-using straightforward source tranformations.
+using straightforward source transformations.
 
 === Instructions ===
 
-Put build/* in your path and smoke it.  Node.js 0.11 or greater is
-required for async functions.  NPM not needed.
+Put build/* in your path and smoke it.  NPM not required.  You'll need 
+Node.js 0.11 or greater for async functions.
 
 Start a REPL by running it without any arguments:
 
