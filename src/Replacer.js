@@ -456,9 +456,15 @@ export class Replacer {
                 e.text += ",";
         }
         
-        if (classIdent && !hasCtor) {
+        // Add a default constructor if none was provided
+        if (!hasCtor) {
             
-            var ctor = "constructor: function " + classIdent.value + "() { " +
+            var ctor = "constructor: function";
+            
+            if (classIdent)
+                ctor += " " + classIdent.value;
+            
+            ctor += "() { " +
                 'var c = __super("constructor"); ' +
                 "if (c) return c.apply(this, arguments); }";
             

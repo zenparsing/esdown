@@ -40,3 +40,5 @@ class A extends B {
 }
 
 (class C {});
+
+new class {};

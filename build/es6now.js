@@ -3330,7 +3330,7 @@ var Parser = __class(function(__super) { return {
         this.endOffset = token.end;
         
         if (type && token.type !== type)
-            this.fail("Unexpected token " + token.type, token);
+            this.unexpected(token);
         
         return token;
     },
@@ -3382,6 +3382,17 @@ var Parser = __class(function(__super) { return {
         return tok !== "EOF" && tok !== type ? tok : null;
     },
     
+    unexpected: function(token) {
+    
+        var type = token.type, msg;
+        
+        msg = type === "EOF" ?
+            "Unexpected end of input" :
+            "Unexpected token " + token.type;
+        
+        this.fail(msg, token);
+    },
+    
     fail: function(msg, loc) {
     
         var pos = this.scanner.position(loc || this.peek0),
@@ -3403,7 +3414,7 @@ var Parser = __class(function(__super) { return {
         if (token.type === word || token.type === "IDENTIFIER" && token.value === word)
             return token;
         
-        this.fail("Unexpected token " + token.type, token);
+        this.unexpected(token);
     },
     
     peekKeyword: function(word) {
@@ -3969,8 +3980,8 @@ var Parser = __class(function(__super) { return {
     
     PrimaryExpression: function() {
     
-        var tok = this.peekToken(),
-            type = tok.type,
+        var token = this.peekToken(),
+            type = token.type,
             start = this.startOffset;
         
         switch (type) {
@@ -4006,23 +4017,28 @@ var Parser = __class(function(__super) { return {
             
             case "REGEX":
                 this.read();
-                return new AST.RegularExpression(tok.value, tok.regExpFlags, tok.start, tok.end);
+                
+                return new AST.RegularExpression(
+                    token.value, 
+                    token.regExpFlags, 
+                    token.start, 
+                    token.end);
             
             case "null":
                 this.read();
-                return new AST.Null(tok.start, tok.end);
+                return new AST.Null(token.start, token.end);
             
             case "true":
             case "false":
                 this.read();
-                return new AST.Boolean(type === "true", tok.start, tok.end);
+                return new AST.Boolean(type === "true", token.start, token.end);
             
             case "this":
                 this.read();
-                return new AST.ThisExpression(tok.start, tok.end);
+                return new AST.ThisExpression(token.start, token.end);
         }
         
-        this.fail("Unexpected token " + type);
+        this.unexpected(token);
     },
     
     Identifier: function(isVar) {
@@ -4243,9 +4259,9 @@ var Parser = __class(function(__super) { return {
     
     PropertyName: function() {
     
-        var type = this.peek("name");
+        var token = this.peekToken("name");
         
-        switch (type) {
+        switch (token.type) {
         
             case "IDENTIFIER": return this.Identifier();
             case "STRING": return this.String();
@@ -4253,7 +4269,7 @@ var Parser = __class(function(__super) { return {
             case "[": return this.ComputedPropertyName();
         }
         
-        this.fail("Unexpected token " + type);
+        this.unexpected(token);
     },
     
     ComputedPropertyName: function() {
@@ -6150,9 +6166,15 @@ var Replacer = __class(function(__super) { return {
                 e.text += ",";
         }
         
-        if (classIdent && !hasCtor) {
+        // Add a default constructor if none was provided
+        if (!hasCtor) {
             
-            var ctor = "constructor: function " + classIdent.value + "() { " +
+            var ctor = "constructor: function";
+            
+            if (classIdent)
+                ctor += " " + classIdent.value;
+            
+            ctor += "() { " +
                 'var c = __super("constructor"); ' +
                 "if (c) return c.apply(this, arguments); }";
             

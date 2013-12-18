@@ -40,3 +40,5 @@ var A = __class(B, function(__super) { return { constructor: function A() { var 
  });
 
 (((function() { var C = __class(function(__super) { return { constructor: function C() { var c = __super("constructor"); if (c) return c.apply(this, arguments); } } }); return C; })()));
+
+new (__class(function(__super) { return { constructor: function() { var c = __super("constructor"); if (c) return c.apply(this, arguments); } } }));
