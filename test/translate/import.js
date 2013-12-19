@@ -14,3 +14,4 @@ import { A }
 ;
 import {} from "A.js";
 import x from "A.js";
+import "C.js";

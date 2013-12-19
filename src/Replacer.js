@@ -219,17 +219,20 @@ export class Replacer {
         var moduleSpec = this.modulePath(node.from),
             list = [];
         
-        node.specifiers.forEach(spec => {
+        if (node.specifiers) {
         
-            var remote = spec.remote,
-                local = spec.local || remote;
+            node.specifiers.forEach(spec => {
+        
+                var remote = spec.remote,
+                    local = spec.local || remote;
             
-            list.push({
-                start: spec.start,
-                end: spec.end,
-                text: local.text + " = " + moduleSpec + "." + remote.text
+                list.push({
+                    start: spec.start,
+                    end: spec.end,
+                    text: local.text + " = " + moduleSpec + "." + remote.text
+                });
             });
-        });
+        }
         
         if (list.length === 0)
             return "";

@@ -2874,7 +2874,7 @@ var Transform = __class(function(__super) { return {
         switch (node.type) {
         
             case "Identifier":
-                if (binding) this.checkBindingIdent(node, true);
+                if (binding) this.checkBindingIdentifier(node, true);
                 else this.checkAssignTarget(node);
                 
                 break;
@@ -2921,8 +2921,17 @@ var strictReservedWord = new RegExp("^(?:" +
     "implements|private|public|interface|package|let|protected|static|yield" +
 ")$");
 
+// Returns true if the identifier is a reserved word in strict mode
+function isStrictReserved(word) {
+
+    return strictReservedWord.test(word);
+}
+
 // Encodes a string as a map key for use in regular object
-function mapKey(name) { return "." + (name || "") }
+function mapKey(name) { 
+
+    return "." + (name || "");
+}
 
 // Returns true if the specified name is a restricted identifier in strict mode
 function isPoisonIdent(name) {
@@ -2972,15 +2981,18 @@ var Validate = __class(function(__super) { return {
     
         var ident = node.value;
         
-        if (ident === "yield" && this.context.isGenerator)
+        if (ident === "yield" && this.context.functionType === "generator")
             this.fail("yield cannot be an identifier inside of a generator function", node);
-        else if (strictReservedWord.test(ident))
+        else if (isStrictReserved(ident))
             this.addStrictError(ident + " cannot be used as an identifier in strict mode", node);
     },
     
     // Checks a binding identifier for strict mode restrictions
-    checkBindingIdent: function(node, strict) {
+    checkBindingIdentifier: function(node, strict) {
     
+        // Perform basic identifier check
+        this.checkIdentifier(node);
+        
         // Mark identifier node as a declaration
         node.context = "declaration";
             
@@ -4048,7 +4060,6 @@ var Parser = __class(function(__super) { return {
             node;
             
         node = new AST.Identifier(token.value, context, token.start, token.end);
-        
         this.checkIdentifier(node);
         
         return node;
@@ -4095,9 +4106,10 @@ var Parser = __class(function(__super) { return {
     
     BindingIdentifier: function() {
     
-        var node = this.Identifier();
+        var token = this.readToken("IDENTIFIER", "name"),
+            node = new AST.Identifier(token.value, "", token.start, token.end);
         
-        this.checkBindingIdent(node);
+        this.checkBindingIdentifier(node);
         return node;
     },
     
@@ -5071,13 +5083,11 @@ var Parser = __class(function(__super) { return {
         this.pushContext(true);
         this.context.functionType = kind;
         
-        var ident = this.Identifier(),
+        var ident = this.BindingIdentifier(),
             params = this.FormalParameters(),
             body = this.FunctionBody();
-            
-        this.checkBindingIdent(ident);
+
         this.checkParameters(params);
-        
         this.popContext();
         
         return new AST.FunctionDeclaration(
@@ -5103,20 +5113,16 @@ var Parser = __class(function(__super) { return {
             kind = "generator";
         }
         
-        if (this.peek() !== "(") {
-        
-            ident = this.Identifier();
-            this.checkBindingIdent(ident);
-        }
-        
         this.pushContext(true);
         this.context.functionType = kind;
+        
+        if (this.peek() !== "(")
+            ident = this.BindingIdentifier();
         
         var params = this.FormalParameters(),
             body = this.FunctionBody();
         
         this.checkParameters(params);
-        
         this.popContext();
         
         return new AST.FunctionExpression(
@@ -5136,13 +5142,11 @@ var Parser = __class(function(__super) { return {
         this.pushContext(true);
         this.context.functionType = "async";
         
-        var ident = this.Identifier(),
+        var ident = this.BindingIdentifier(),
             params = this.FormalParameters(),
             body = this.FunctionBody();
             
-        this.checkBindingIdent(ident);
         this.checkParameters(params);
-        
         this.popContext();
         
         return new AST.FunctionDeclaration(
@@ -5162,13 +5166,11 @@ var Parser = __class(function(__super) { return {
         this.pushContext(true);
         this.context.functionType = "async";
         
-        var ident = this.Identifier(),
+        var ident = this.BindingIdentifier(),
             params = this.FormalParameters(),
             body = this.FunctionBody();
-            
-        this.checkBindingIdent(ident);
-        this.checkParameters(params);
-        
+
+        this.checkParameters(params);        
         this.popContext();
         
         return new AST.FunctionExpression(
@@ -5429,7 +5431,7 @@ var Parser = __class(function(__super) { return {
             
         } else {
         
-            this.checkBindingIdent(remote);
+            this.checkBindingIdentifier(remote);
         }
         
         return new AST.ImportSpecifier(remote, local, start, this.endOffset);
@@ -5929,17 +5931,20 @@ var Replacer = __class(function(__super) { return {
         var moduleSpec = this.modulePath(node.from),
             list = [];
         
-        node.specifiers.forEach((function(spec) {
+        if (node.specifiers) {
         
-            var remote = spec.remote,
-                local = spec.local || remote;
+            node.specifiers.forEach((function(spec) {
+        
+                var remote = spec.remote,
+                    local = spec.local || remote;
             
-            list.push({
-                start: spec.start,
-                end: spec.end,
-                text: local.text + " = " + moduleSpec + "." + remote.text
-            });
-        }));
+                list.push({
+                    start: spec.start,
+                    end: spec.end,
+                    text: local.text + " = " + moduleSpec + "." + remote.text
+                });
+            }));
+        }
         
         if (list.length === 0)
             return "";
