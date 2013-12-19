@@ -3,7 +3,7 @@
 es6now is an ES6 to ES3/5 compiler.  It will translate some ECMAScript 6 
 features, fairly accurately, for use in Node and browsers.  The emphasis 
 here is not on completeness.  The goal is to take advantage of important 
-ES6 features while still retaining transparent debuggability, using 
+ES6  features  while still  retaining  transparent debuggability,  using 
 straightforward source transformations.
 
 === Instructions ===
@@ -24,11 +24,12 @@ Translate a module by using a hyphen:
     you$ es6now - src/main.js build/es6now.js -b -r
 
     --input, -i  (1)    The file to translate.
-    --output, -o (2)    The file to write to.  If not set, then the output
+    --output, -o (2)    The file to write to. If not set, then the output
                         will be written to the console.
-    --bundle, -b        If preset, module dependencies will be bundled 
+    --bundle, -b        If present, module dependencies will be bundled 
                         together in the output.
     --runtime, -r       If present, the es6now runtime code will be bundled 
                         with the output.
-    --global, -g        If present, the name of the global variable to dump
-                        this module's exports into.
+    --global, -g        If specified, the name of the global variable to 
+                        dump this module's exports into, if the resulting
+                        script is not executed within any module system.
