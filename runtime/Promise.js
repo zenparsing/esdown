@@ -147,6 +147,9 @@ class Promise {
 
     constructor(init) {
     
+        if (typeof init !== "function")
+            throw new TypeError("Promise constructor called without resolver");
+        
         this[$status] = "pending";
         this[$onResolve] = [];
         this[$onReject] = [];
@@ -179,6 +182,11 @@ class Promise {
         return this.then(undefined, onReject)
     }
     
+    chain(onResolve, onReject) {
+    
+        return promiseChain(this, onResolve, onReject);
+    }
+    
     static resolve(x) { 
     
         return new this(resolve => resolve(x));
@@ -191,11 +199,16 @@ class Promise {
     
     static cast(x) {
 
-        if (isPromise(x) && x instanceof this)
+        if (x instanceof this)
             return x;
 
         var result = getDeferred(this);
-        result.resolve(x);
+        
+        if (isPromise(x))
+            promiseChain(x, result.resolve, result.reject);
+        else
+            result.resolve(x);
+        
         return result.promise;
     }
 
@@ -209,7 +222,7 @@ class Promise {
     
             ++count;
         
-            this.cast(values[i]).then(onResolve(count), r => {
+            promiseChain(this.cast(values[i]), onResolve(count), r => {
         
                 if (count > 0) { 
             
@@ -252,18 +265,13 @@ class Promise {
             
             try {
             
-                var result = error ? iter.throw(value) : iter.next(value);
+                var result = error ? iter.throw(value) : iter.next(value),
+                    promise = constructor.cast(result.value);
                 
-                if (result.done) {
-                
-                    deferred.resolve(result.value);
-                
-                } else {
-                
-                    constructor.cast(result.value).then(
-                        x => resume(x, false),
-                        x => resume(x, true));    
-                }
+                if (result.done)
+                    promiseChain(promise, deferred.resolve, deferred.reject);
+                else
+                    promiseChain(promise, x => resume(x, false), x => resume(x, true));
                 
             } catch (x) {
             
