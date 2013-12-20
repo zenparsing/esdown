@@ -70,36 +70,24 @@ function promiseDone(promise, status, value, reactions) {
         promiseReact(reactions[i][0], reactions[i][1], value);
 }
 
+function promiseUnwrap(deferred, x) {
+
+    if (x === deferred.promise)
+        throw new TypeError;
+    
+    if (isPromise(x))
+        promiseChain(x, deferred.resolve, deferred.reject);
+    else
+        deferred.resolve(x);
+}
+
 function promiseReact(deferred, handler, x) {
 
     queueTask($=> {
     
-        try {
-        
-            var y = handler(x);
-        
-            if (y === deferred.promise)
-                throw new TypeError;
-            else if (isPromise(y))
-                promiseChain(y, deferred.resolve, deferred.reject);
-            else
-                deferred.resolve(y);
-        
-        } catch(e) { deferred.reject(e) }
+        try { promiseUnwrap(deferred, handler(x)) } 
+        catch(e) { deferred.reject(e) }
     });
-}
-
-function promiseCoerce(constructor, x) {
-
-    if (isPromise(x) || !isThenable(x))
-        return x;
-    
-    var deferred = getDeferred(constructor);
-      
-    try { x.then(deferred.resolve, deferred.reject) } 
-    catch(e) { deferred.reject(e) }
-    
-    return deferred.promise;
 }
 
 function promiseChain(promise, onResolve, onReject) {
@@ -156,6 +144,12 @@ class Promise {
     
         init(x => promiseResolve(this, x), r => promiseReject(this, r));
     }
+    
+    // Experimental
+    __chain(onResolve, onReject) {
+    
+        return promiseChain(this, onResolve, onReject);
+    }
 
     then(onResolve, onReject) {
 
@@ -165,12 +159,10 @@ class Promise {
     
         return promiseChain(this, x => {
     
-            x = promiseCoerce(c, x);
-        
             if (x === this)
                 throw new TypeError;
-        
-            return isPromise(x) ?
+            
+            return isPromise(x) || isThenable(x) ?
                 x.then(onResolve, onReject) :
                 onResolve(x);
         
@@ -180,11 +172,6 @@ class Promise {
     catch(onReject) {
 
         return this.then(undefined, onReject)
-    }
-    
-    chain(onResolve, onReject) {
-    
-        return promiseChain(this, onResolve, onReject);
     }
     
     static resolve(x) { 
@@ -202,14 +189,9 @@ class Promise {
         if (x instanceof this)
             return x;
 
-        var result = getDeferred(this);
-        
-        if (isPromise(x))
-            promiseChain(x, result.resolve, result.reject);
-        else
-            result.resolve(x);
-        
-        return result.promise;
+        var deferred = getDeferred(this);
+        promiseUnwrap(deferred, x);
+        return deferred.promise;
     }
 
     static all(values) {
@@ -221,15 +203,7 @@ class Promise {
         for (var i = 0; i < values.length; ++i) {
     
             ++count;
-        
-            promiseChain(this.cast(values[i]), onResolve(count), r => {
-        
-                if (count > 0) { 
-            
-                    count = 0; 
-                    deferred.reject(r);
-                }
-            });
+            promiseChain(this.cast(values[i]), onResolve(i), onReject);
         }
     
         if (count === 0) 
@@ -246,6 +220,15 @@ class Promise {
                 if (--count === 0)
                     deferred.resolve(resolutions);
             };
+        }
+        
+        function onReject(r) {
+        
+            if (count > 0) { 
+        
+                count = 0; 
+                deferred.reject(r);
+            }
         }
     }
     
