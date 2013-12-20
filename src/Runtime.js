@@ -730,11 +730,6 @@ function isPromise(x) {
     return x && $status in Object(x);
 }
 
-function isThenable(x) {
-
-    return x && "then" in Object(x) && typeof x.then === "function";
-}
-
 function promiseResolve(promise, x) {
     
     promiseDone(promise, "resolved", x, promise[$onResolve]);
@@ -843,15 +838,13 @@ class Promise {
 
         if (typeof onResolve !== "function") onResolve = x => x;
     
-        var c = this.constructor;
-    
         return promiseChain(this, x => {
     
             if (x === this)
                 throw new TypeError;
             
-            return isPromise(x) || isThenable(x) ?
-                x.then(onResolve, onReject) :
+            return isPromise(x) ? 
+                x.then(onResolve, onReject) : 
                 onResolve(x);
         
         }, onReject);
