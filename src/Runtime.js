@@ -959,9 +959,9 @@ class Promise {
                     promise = constructor.cast(result.value);
                 
                 if (result.done)
-                    promiseChain(promise, deferred.resolve, deferred.reject);
+                    promise.then(deferred.resolve, deferred.reject);
                 else
-                    promiseChain(promise, x => resume(x, false), x => resume(x, true));
+                    promise.then(x => resume(x, false), x => resume(x, true));
                 
             } catch (x) {
             
