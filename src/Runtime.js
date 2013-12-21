@@ -881,11 +881,8 @@ class Promise {
             count = 0,
             resolutions = [];
         
-        for (var i = 0; i < values.length; ++i) {
-    
-            ++count;
-            promiseChain(this.cast(values[i]), onResolve(i), onReject);
-        }
+        for (var i = 0; i < values.length; ++i)
+            ++count, this.cast(values[i]).then(onResolve(i), onReject);
     
         if (count === 0) 
             deferred.resolve(resolutions);
@@ -908,6 +905,35 @@ class Promise {
             if (count > 0) { 
         
                 count = 0; 
+                deferred.reject(r);
+            }
+        }
+    }
+    
+    static race(values) {
+    
+        var deferred = getDeferred(this),
+            done = false;
+            
+        for (var i = 0; i < values.length; i++)
+            this.cast(values[i]).then(onResolve, onReject);
+            
+        return deferred.promise;
+        
+        function onResolve(x) {
+        
+            if (!done) {
+                
+                done = true;
+                deferred.resolve(x);
+            }
+        }
+        
+        function onReject(r) {
+        
+            if (!done) {
+            
+                done = true;
                 deferred.reject(r);
             }
         }
