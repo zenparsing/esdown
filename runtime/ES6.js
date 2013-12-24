@@ -18,7 +18,6 @@ function addProps(obj, props) {
     });
 }
 
-/*
 addProps(Object, {
 
     is(a, b) {
@@ -30,20 +29,10 @@ addProps(Object, {
     
         Object.keys(source).forEach(k => target[k] = source[k]);
         return target;
-    },
-    
-    mixin(target, source) {
-    
-        Object.getOwnPropertyNames(source).forEach(name => {
-        
-            var desc = Object.getOwnPropertyDescriptor(source, name);
-            Object.defineProperty(target, name, desc);
-        });
-        
-        return target;
     }
 });
-*/
+
+// TODO Math
 
 addProps(Number, {
 
@@ -92,15 +81,57 @@ addProps(Array, {
 
 });
 
+addProps(Array.prototype, {
+
+    copyWithin() {
+        // TODO
+    },
+    
+    keys() {
+        // TODO
+    },
+    
+    entries() {
+        // TODO
+    },
+    
+    fill() {
+        // TODO
+    },
+    
+    find() {
+        // TODO
+    },
+    
+    findIndex() {
+        // TODO
+    },
+    
+    values() {
+        // TODO
+    }
+    
+    // TODO:  ArrayIterator??
+});
+
+addProps(String, {
+
+    raw() {
+        // TODO
+    }
+});
+
 addProps(String.prototype, {
     
     repeat(count) {
     
+        // TODO
         return new Array(count + 1).join(this);
     },
     
     startsWith(search, start) {
     
+        // TODO
         start = start >>> 0;
         return this.indexOf(search, start) === start;
     },
@@ -118,6 +149,7 @@ addProps(String.prototype, {
     }
 });
 
+// TODO:  Should we even be going here?
 if (typeof Reflect === "undefined") global.Reflect = {
 
     hasOwn(obj, name) { return HAS_OWN.call(obj, name); }
