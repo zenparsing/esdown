@@ -7081,7 +7081,7 @@ function runModule(path) {
     var m = require(path);
 
     if (m && typeof m.main === "function")
-        Promise.cast(m.main()).catch((function(x) { return setTimeout((function($) { throw x }), 0); }));
+        Promise.cast(m.main()).then(null, (function(x) { return setTimeout((function($) { throw x }), 0); }));
 }
 
 function startREPL() {
@@ -7284,7 +7284,7 @@ function createBundle(rootPath, locatePackage) {
             if (pending === 0)
                 resolver.resolve(null);
         
-        })).catch((function(err) {
+        })).then(null, (function(err) {
         
             resolver.reject(err);
             
@@ -7531,7 +7531,7 @@ new ConsoleCommand({
                 process.stdout.write(text + "\n");
             }
             
-        })).catch((function(x) {
+        })).then(null, (function(x) {
         
             setTimeout((function($) { throw x }), 0);
         }));

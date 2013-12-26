@@ -69,11 +69,6 @@ addProps(Number, {
     
     isSafeInteger(val) {
         // TODO
-    },
-    
-    toInteger(val) {
-        
-        return val | 0;
     }
 });
 

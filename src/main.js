@@ -100,7 +100,7 @@ new ConsoleCommand({
                 process.stdout.write(text + "\n");
             }
             
-        }).catch(x => {
+        }).then(null, x => {
         
             setTimeout($=> { throw x }, 0);
         });
