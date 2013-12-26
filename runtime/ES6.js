@@ -3,15 +3,6 @@ var global = this,
 
 // TODO:  Not everything gets added with the same property attributes...
 
-/*
-
-== NOTES ==
-
-
-ToUint32:  x >>> 0
-ToInt32:  x | 0
-
-*/
 
 function addProps(obj, props) {
 
@@ -48,7 +39,7 @@ addProps(Object, {
 
 addProps(Number, {
 
-    EPSILON: $=> {
+    EPSILON: ($=> {
     
         var next, result;
         
@@ -56,11 +47,11 @@ addProps(Number, {
             result = next;
         
         return result;
-    }(),
+    })(),
     
     MAX_SAFE_INTEGER: 9007199254740992,
     
-    MIN_SAFE_INTEGER: −9007199254740991,
+    MIN_SAFE_INTEGER: -9007199254740991,
     
     isInteger(val) {
     

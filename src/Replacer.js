@@ -515,7 +515,7 @@ export class Replacer {
         var outerParams = params.map((x, i) => "__" + i).join(", ");
         
         return `${head}(${outerParams}) { ` +
-            `try { return Promise.__iterate(function*(${ this.joinList(params) }) ` + 
+            `try { return __async(function*(${ this.joinList(params) }) ` + 
             `${ body }.apply(this, arguments)); ` +
             `} catch (x) { return Promise.reject(x); } }`;
     }

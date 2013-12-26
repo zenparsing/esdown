@@ -5,7 +5,7 @@ var EXT = /\.[\S\s]+$/;
 
 var runtimePath = Path.resolve(__dirname, "../runtime/"),
     outPath = Path.resolve(__dirname, "../src/Runtime.js"),
-    files = [ "ES5.js", "ES6.js", "Class.js", "Promise.js" ];
+    files = [ "ES5.js", "ES6.js", "Class.js", "Promise.js", "Async.js" ];
 
 function run() {
 

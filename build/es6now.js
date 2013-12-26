@@ -567,6 +567,9 @@ if (Date.parse(new Date(0).toISOString()) !== 0) !function() {
 var global = this,
     HAS_OWN = Object.prototype.hasOwnProperty;
 
+// TODO:  Not everything gets added with the same property attributes...
+
+
 function addProps(obj, props) {
 
     Object.keys(props).forEach((function(k) {
@@ -584,36 +587,25 @@ function addProps(obj, props) {
     }));
 }
 
-/*
 addProps(Object, {
 
-    is(a, b) {
+    is: function(a, b) {
     
         // TODO
     },
     
-    assign(target, source) {
+    assign: function(target, source) {
     
-        Object.keys(source).forEach(k => target[k] = source[k]);
-        return target;
-    },
-    
-    mixin(target, source) {
-    
-        Object.getOwnPropertyNames(source).forEach(name => {
-        
-            var desc = Object.getOwnPropertyDescriptor(source, name);
-            Object.defineProperty(target, name, desc);
-        });
-        
+        Object.keys(source).forEach((function(k) { return target[k] = source[k]; }));
         return target;
     }
 });
-*/
+
+// TODO Math?
 
 addProps(Number, {
 
-    EPSILON: Number.EPSILON || (function() {
+    EPSILON: ((function($) {
     
         var next, result;
         
@@ -621,28 +613,28 @@ addProps(Number, {
             result = next;
         
         return result;
-    }()),
+    }))(),
     
-    MAX_INTEGER: 9007199254740992,
+    MAX_SAFE_INTEGER: 9007199254740992,
     
-    isFinite: function(val) {
-        
-        return typeof val === "number" && isFinite(val);
-    },
-    
-    isNaN: function(val) {
-    
-        return typeof val === "number" && isNaN(val);
-    },
+    MIN_SAFE_INTEGER: -9007199254740991,
     
     isInteger: function(val) {
     
         typeof val === "number" && val | 0 === val;
     },
     
-    toInteger: function(val) {
-        
-        return val | 0;
+    isSafeInteger: function(val) {
+        // TODO
+    }
+});
+
+addProps(Number.prototype, {
+
+    clz: function() {
+    
+        var n = this >>> 0; // uint32
+        // TODO:  Count leading bitwise zeros of n
     }
 });
 
@@ -658,15 +650,57 @@ addProps(Array, {
 
 });
 
+addProps(Array.prototype, {
+
+    copyWithin: function() {
+        // TODO
+    },
+    
+    keys: function() {
+        // TODO
+    },
+    
+    entries: function() {
+        // TODO
+    },
+    
+    fill: function() {
+        // TODO
+    },
+    
+    find: function() {
+        // TODO
+    },
+    
+    findIndex: function() {
+        // TODO
+    },
+    
+    values: function() {
+        // TODO
+    }
+    
+    // TODO:  ArrayIterator??
+});
+
+addProps(String, {
+
+    raw: function() {
+        // TODO
+    }
+});
+
 addProps(String.prototype, {
     
     repeat: function(count) {
     
+        // TODO
         return new Array(count + 1).join(this);
     },
     
     startsWith: function(search, start) {
     
+        // TODO
         start = start >>> 0;
         return this.indexOf(search, start) === start;
     },
@@ -684,6 +718,7 @@ addProps(String.prototype, {
     }
 });
 
+// TODO:  Should we even be going here?
 if (typeof Reflect === "undefined") global.Reflect = {
 
     hasOwn: function(obj, name) { return HAS_OWN.call(obj, name); }
@@ -738,6 +773,11 @@ function isPromise(x) {
     return x && $status in Object(x);
 }
 
+function isThenable(x) {
+
+    return x && "then" in Object(x) && typeof x.then === "function";
+}
+
 function promiseResolve(promise, x) {
     
     promiseDone(promise, "resolved", x, promise[$onResolve]);
@@ -767,7 +807,7 @@ function promiseUnwrap(deferred, x) {
         throw new TypeError;
     
     if (isPromise(x))
-        promiseChain(x, deferred.resolve, deferred.reject);
+        x.chain(deferred.resolve, deferred.reject);
     else
         deferred.resolve(x);
 }
@@ -779,35 +819,6 @@ function promiseReact(deferred, handler, x) {
         try { promiseUnwrap(deferred, handler(x)) } 
         catch(e) { deferred.reject(e) }
     }));
-}
-
-function promiseChain(promise, onResolve, onReject) {
-
-    if (typeof onResolve !== "function") onResolve = (function(x) { return x; });
-    if (typeof onReject !== "function") onReject = (function(e) { throw e });
-
-    var deferred = getDeferred(promise.constructor);
-
-    switch (promise[$status]) {
-
-        case undefined:
-            throw new TypeError;
-        
-        case "pending":
-            promise[$onResolve].push([deferred, onResolve]);
-            promise[$onReject].push([deferred, onReject]);
-            break;
-    
-        case "resolved":
-            promiseReact(deferred, onResolve, promise[$value]);
-            break;
-        
-        case "rejected":
-            promiseReact(deferred, onReject, promise[$value]);
-            break;
-    }
-
-    return deferred.promise;
 }
 
 function getDeferred(constructor) {
@@ -833,34 +844,55 @@ var Promise = __class(function(__super) { return {
         this[$onResolve] = [];
         this[$onReject] = [];
     
+        // [NOTE]  Do not report error asynchronously.  Use async functions instead.
         init((function(x) { return promiseResolve(__this, x); }), (function(r) { return promiseReject(__this, r); }));
     },
     
-    // Experimental
-    __chain: function(onResolve, onReject) {
+    // [NOTE]  "chain" is the core operation.  There is no AP2 without it.
+    chain: function(onResolve, onReject) {
     
-        return promiseChain(this, onResolve, onReject);
-    },
+        if (typeof onResolve !== "function") onResolve = (function(x) { return x; });
+        if (typeof onReject !== "function") onReject = (function(e) { throw e });
 
+        var deferred = getDeferred(this.constructor);
+
+        switch (this[$status]) {
+
+            case undefined:
+                throw new TypeError;
+        
+            case "pending":
+                this[$onResolve].push([deferred, onResolve]);
+                this[$onReject].push([deferred, onReject]);
+                break;
+    
+            case "resolved":
+                promiseReact(deferred, onResolve, this[$value]);
+                break;
+        
+            case "rejected":
+                promiseReact(deferred, onReject, this[$value]);
+                break;
+        }
+
+        return deferred.promise;
+    },
+    
+    // [NOTE] "then" is described in terms of "chain"
     then: function(onResolve, onReject) { var __this = this; 
 
         if (typeof onResolve !== "function") onResolve = (function(x) { return x; });
     
-        return promiseChain(this, (function(x) {
+        return this.chain((function(x) {
     
             if (x === __this)
                 throw new TypeError;
             
-            return isPromise(x) ? 
+            return isThenable(x) ? 
                 x.then(onResolve, onReject) : 
                 onResolve(x);
         
         }), onReject);
-    },
-    
-    catch: function(onReject) {
-
-        return this.then(undefined, onReject)
     },
     
     __static_resolve: function(x) { 
@@ -882,109 +914,82 @@ var Promise = __class(function(__super) { return {
         promiseUnwrap(deferred, x);
         return deferred.promise;
     },
-
-    __static_all: function(values) {
-
-        var deferred = getDeferred(this),
-            count = 0,
-            resolutions = [];
-        
-        for (var i = 0; i < values.length; ++i)
-            ++count, this.cast(values[i]).then(onResolve(i), onReject);
     
-        if (count === 0) 
-            deferred.resolve(resolutions);
+    // [NOTE] Nominal type test is essential for impementing when, etc.
+    __static_isPromise: function(x) {
         
-        return deferred.promise;
-    
-        function onResolve(i) {
-    
-            return (function(x) {
-        
-                resolutions[i] = x;
-            
-                if (--count === 0)
-                    deferred.resolve(resolutions);
-            });
-        }
-        
-        function onReject(r) {
-        
-            if (count > 0) { 
-        
-                count = 0; 
-                deferred.reject(r);
-            }
-        }
-    },
-    
-    __static_race: function(values) {
-    
-        var deferred = getDeferred(this),
-            done = false;
-            
-        for (var i = 0; i < values.length; i++)
-            this.cast(values[i]).then(onResolve, onReject);
-            
-        return deferred.promise;
-        
-        function onResolve(x) {
-        
-            if (!done) {
-                
-                done = true;
-                deferred.resolve(x);
-            }
-        }
-        
-        function onReject(r) {
-        
-            if (!done) {
-            
-                done = true;
-                deferred.reject(r);
-            }
-        }
-    },
-    
-    // Experimental
-    __static___iterate: function(iterable) {
-    
-        // TODO:  Use System.iterator
-        var iter = iterable;
-        
-        var deferred = getDeferred(this),
-            constructor = this;
-        
-        function resume(value, error) {
-        
-            if (error && !("throw" in iter))
-                return deferred.reject(value);
-            
-            try {
-            
-                var result = error ? iter.throw(value) : iter.next(value),
-                    promise = constructor.cast(result.value);
-                
-                if (result.done)
-                    promise.then(deferred.resolve, deferred.reject);
-                else
-                    promise.then((function(x) { return resume(x, false); }), (function(x) { return resume(x, true); }));
-                
-            } catch (x) {
-            
-                deferred.reject(x);
-            }
-        }
-        
-        resume(void 0, false);
-        
-        return deferred.promise;
+        return isPromise(x);
     }
-
+    
 } });
 
 this.Promise = Promise;
+
+
+}).call(this);
+
+(function() {
+
+function getDeferred(constructor) {
+
+    var result = {};
+
+    result.promise = new constructor((function(resolve, reject) {
+        result.resolve = resolve;
+        result.reject = reject;
+    }));
+
+    return result;
+}
+
+function promiseWhen(constructor, x) {
+
+    if (Promise.isPromise(x))
+        return x.chain((function(x) { return promiseWhen(constructor, x); }));
+    
+    var deferred = getDeferred(constructor);
+    deferred.resolve(x);
+    return deferred.promise;
+}
+
+function promiseIterate(iterable) {
+    
+    // TODO:  Use System.iterator
+    var iter = iterable;
+    
+    var constructor = Promise,
+        deferred = getDeferred(constructor);
+    
+    function resume(value, error) {
+    
+        if (error && !("throw" in iter))
+            return deferred.reject(value);
+        
+        try {
+        
+            // Invoke the iterator/generator
+            var result = error ? iter.throw(value) : iter.next(value);
+            
+            // Recursively unwrap the result value
+            var promise = promiseWhen(constructor, result.value);
+            
+            if (result.done)
+                promise.chain(deferred.resolve, deferred.reject);
+            else
+                promise.chain((function(x) { return resume(x, false); }), (function(x) { return resume(x, true); }));
+            
+        } catch (x) {
+        
+            deferred.reject(x);
+        }
+    }
+    
+    resume(void 0, false);
+    
+    return deferred.promise;
+}
+
+this.__async = promiseIterate;
 
 
 }).call(this);
@@ -997,7 +1002,7 @@ var ES5 =
 
 var ES6 = 
 
-"var global = this,\n    HAS_OWN = Object.prototype.hasOwnProperty;\n\nfunction addProps(obj, props) {\n\n    Object.keys(props).forEach(k => {\n    \n        if (typeof obj[k] !== \"undefined\")\n            return;\n        \n        Object.defineProperty(obj, k, {\n        \n            value: props[k],\n            configurable: true,\n            enumerable: false,\n            writable: true\n        });\n    });\n}\n\n/*\naddProps(Object, {\n\n    is(a, b) {\n    \n        // TODO\n    },\n    \n    assign(target, source) {\n    \n        Object.keys(source).forEach(k => target[k] = source[k]);\n        return target;\n    },\n    \n    mixin(target, source) {\n    \n        Object.getOwnPropertyNames(source).forEach(name => {\n        \n            var desc = Object.getOwnPropertyDescriptor(source, name);\n            Object.defineProperty(target, name, desc);\n        });\n        \n        return target;\n    }\n});\n*/\n\naddProps(Number, {\n\n    EPSILON: Number.EPSILON || (function() {\n    \n        var next, result;\n        \n        for (next = 1; 1 + next !== 1; next = next / 2)\n            result = next;\n        \n        return result;\n    }()),\n    \n    MAX_INTEGER: 9007199254740992,\n    \n    isFinite(val) {\n        \n        return typeof val === \"number\" && isFinite(val);\n    },\n    \n    isNaN(val) {\n    \n        return typeof val === \"number\" && isNaN(val);\n    },\n    \n    isInteger(val) {\n    \n        typeof val === \"number\" && val | 0 === val;\n    },\n    \n    toInteger(val) {\n        \n        return val | 0;\n    }\n});\n\naddProps(Array, {\n\n    from(arg) {\n        // TODO\n    },\n    \n    of() {\n        // ?\n    }\n\n});\n\naddProps(String.prototype, {\n    \n    repeat(count) {\n    \n        return new Array(count + 1).join(this);\n    },\n    \n    startsWith(search, start) {\n    \n        start = start >>> 0;\n        return this.indexOf(search, start) === start;\n    },\n    \n    endsWith(search, end) {\n    \n        // TODO\n        return this.slice(-search.length) === search;\n    },\n    \n    contains(search, pos) {\n    \n        // TODO\n        return this.indexOf(search, pos >>> 0) !== -1;\n    }\n});\n\nif (typeof Reflect === \"undefined\") global.Reflect = {\n\n    hasOwn(obj, name) { return HAS_OWN.call(obj, name); }\n};\n";
+"var global = this,\n    HAS_OWN = Object.prototype.hasOwnProperty;\n\n// TODO:  Not everything gets added with the same property attributes...\n\n\nfunction addProps(obj, props) {\n\n    Object.keys(props).forEach(k => {\n    \n        if (typeof obj[k] !== \"undefined\")\n            return;\n        \n        Object.defineProperty(obj, k, {\n        \n            value: props[k],\n            configurable: true,\n            enumerable: false,\n            writable: true\n        });\n    });\n}\n\naddProps(Object, {\n\n    is(a, b) {\n    \n        // TODO\n    },\n    \n    assign(target, source) {\n    \n        Object.keys(source).forEach(k => target[k] = source[k]);\n        return target;\n    }\n});\n\n// TODO Math?\n\naddProps(Number, {\n\n    EPSILON: ($=> {\n    \n        var next, result;\n        \n        for (next = 1; 1 + next !== 1; next = next / 2)\n            result = next;\n        \n        return result;\n    })(),\n    \n    MAX_SAFE_INTEGER: 9007199254740992,\n    \n    MIN_SAFE_INTEGER: -9007199254740991,\n    \n    isInteger(val) {\n    \n        typeof val === \"number\" && val | 0 === val;\n    },\n    \n    isSafeInteger(val) {\n        // TODO\n    }\n});\n\naddProps(Number.prototype, {\n\n    clz() {\n    \n        var n = this >>> 0; // uint32\n        // TODO:  Count leading bitwise zeros of n\n    }\n});\n\naddProps(Array, {\n\n    from(arg) {\n        // TODO\n    },\n    \n    of() {\n        // ?\n    }\n\n});\n\naddProps(Array.prototype, {\n\n    copyWithin() {\n        // TODO\n    },\n    \n    keys() {\n        // TODO\n    },\n    \n    entries() {\n        // TODO\n    },\n    \n    fill() {\n        // TODO\n    },\n    \n    find() {\n        // TODO\n    },\n    \n    findIndex() {\n        // TODO\n    },\n    \n    values() {\n        // TODO\n    }\n    \n    // TODO:  ArrayIterator??\n});\n\naddProps(String, {\n\n    raw() {\n        // TODO\n    }\n});\n\naddProps(String.prototype, {\n    \n    repeat(count) {\n    \n        // TODO\n        return new Array(count + 1).join(this);\n    },\n    \n    startsWith(search, start) {\n    \n        // TODO\n        start = start >>> 0;\n        return this.indexOf(search, start) === start;\n    },\n    \n    endsWith(search, end) {\n    \n        // TODO\n        return this.slice(-search.length) === search;\n    },\n    \n    contains(search, pos) {\n    \n        // TODO\n        return this.indexOf(search, pos >>> 0) !== -1;\n    }\n});\n\n// TODO:  Should we even be going here?\nif (typeof Reflect === \"undefined\") global.Reflect = {\n\n    hasOwn(obj, name) { return HAS_OWN.call(obj, name); }\n};\n";
 
 var Class = 
 
@@ -1005,11 +1010,15 @@ var Class =
 
 var Promise = 
 
-"var queueTask = ($=> {\n\n    var window = this.window,\n        process = this.process,\n        msgChannel = null,\n        list = [];\n    \n    if (typeof setImmediate === \"function\") {\n    \n        return window ?\n            window.setImmediate.bind(window) :\n            setImmediate;\n    \n    } else if (process && typeof process.nextTick === \"function\") {\n    \n        return process.nextTick;\n        \n    } else if (window && window.MessageChannel) {\n        \n        msgChannel = new window.MessageChannel();\n        msgChannel.port1.onmessage = $=> { if (list.length) list.shift()(); };\n    \n        return fn => {\n        \n            list.push(fn);\n            msgChannel.port2.postMessage(0);\n        };\n    }\n    \n    return fn => setTimeout(fn, 0);\n\n})();\n\n\nvar $status = \"Promise#status\",\n    $value = \"Promise#value\",\n    $onResolve = \"Promise#onResolve\",\n    $onReject = \"Promise#onReject\";\n\nfunction isPromise(x) { \n\n    return x && $status in Object(x);\n}\n\nfunction promiseResolve(promise, x) {\n    \n    promiseDone(promise, \"resolved\", x, promise[$onResolve]);\n}\n\nfunction promiseReject(promise, x) {\n    \n    promiseDone(promise, \"rejected\", x, promise[$onReject]);\n}\n\nfunction promiseDone(promise, status, value, reactions) {\n\n    if (promise[$status] !== \"pending\") \n        return;\n        \n    promise[$status] = status;\n    promise[$value] = value;\n    promise[$onResolve] = promise[$onReject] = void 0;\n    \n    for (var i = 0; i < reactions.length; ++i) \n        promiseReact(reactions[i][0], reactions[i][1], value);\n}\n\nfunction promiseUnwrap(deferred, x) {\n\n    if (x === deferred.promise)\n        throw new TypeError;\n    \n    if (isPromise(x))\n        promiseChain(x, deferred.resolve, deferred.reject);\n    else\n        deferred.resolve(x);\n}\n\nfunction promiseReact(deferred, handler, x) {\n\n    queueTask($=> {\n    \n        try { promiseUnwrap(deferred, handler(x)) } \n        catch(e) { deferred.reject(e) }\n    });\n}\n\nfunction promiseChain(promise, onResolve, onReject) {\n\n    if (typeof onResolve !== \"function\") onResolve = x => x;\n    if (typeof onReject !== \"function\") onReject = e => { throw e };\n\n    var deferred = getDeferred(promise.constructor);\n\n    switch (promise[$status]) {\n\n        case undefined:\n            throw new TypeError;\n        \n        case \"pending\":\n            promise[$onResolve].push([deferred, onResolve]);\n            promise[$onReject].push([deferred, onReject]);\n            break;\n    \n        case \"resolved\":\n            promiseReact(deferred, onResolve, promise[$value]);\n            break;\n        \n        case \"rejected\":\n            promiseReact(deferred, onReject, promise[$value]);\n            break;\n    }\n\n    return deferred.promise;\n}\n\nfunction getDeferred(constructor) {\n\n    var result = {};\n\n    result.promise = new constructor((resolve, reject) => {\n        result.resolve = resolve;\n        result.reject = reject;\n    });\n\n    return result;\n}\n\nclass Promise {\n\n    constructor(init) {\n    \n        if (typeof init !== \"function\")\n            throw new TypeError(\"Promise constructor called without resolver\");\n        \n        this[$status] = \"pending\";\n        this[$onResolve] = [];\n        this[$onReject] = [];\n    \n        init(x => promiseResolve(this, x), r => promiseReject(this, r));\n    }\n    \n    // Experimental\n    __chain(onResolve, onReject) {\n    \n        return promiseChain(this, onResolve, onReject);\n    }\n\n    then(onResolve, onReject) {\n\n        if (typeof onResolve !== \"function\") onResolve = x => x;\n    \n        return promiseChain(this, x => {\n    \n            if (x === this)\n                throw new TypeError;\n            \n            return isPromise(x) ? \n                x.then(onResolve, onReject) : \n                onResolve(x);\n        \n        }, onReject);\n    }\n    \n    catch(onReject) {\n\n        return this.then(undefined, onReject)\n    }\n    \n    static resolve(x) { \n    \n        return new this(resolve => resolve(x));\n    }\n    \n    static reject(x) { \n    \n        return new this((resolve, reject) => reject(x));\n    }\n    \n    static cast(x) {\n\n        if (x instanceof this)\n            return x;\n\n        var deferred = getDeferred(this);\n        promiseUnwrap(deferred, x);\n        return deferred.promise;\n    }\n\n    static all(values) {\n\n        var deferred = getDeferred(this),\n            count = 0,\n            resolutions = [];\n        \n        for (var i = 0; i < values.length; ++i)\n            ++count, this.cast(values[i]).then(onResolve(i), onReject);\n    \n        if (count === 0) \n            deferred.resolve(resolutions);\n        \n        return deferred.promise;\n    \n        function onResolve(i) {\n    \n            return x => {\n        \n                resolutions[i] = x;\n            \n                if (--count === 0)\n                    deferred.resolve(resolutions);\n            };\n        }\n        \n        function onReject(r) {\n        \n            if (count > 0) { \n        \n                count = 0; \n                deferred.reject(r);\n            }\n        }\n    }\n    \n    static race(values) {\n    \n        var deferred = getDeferred(this),\n            done = false;\n            \n        for (var i = 0; i < values.length; i++)\n            this.cast(values[i]).then(onResolve, onReject);\n            \n        return deferred.promise;\n        \n        function onResolve(x) {\n        \n            if (!done) {\n                \n                done = true;\n                deferred.resolve(x);\n            }\n        }\n        \n        function onReject(r) {\n        \n            if (!done) {\n            \n                done = true;\n                deferred.reject(r);\n            }\n        }\n    }\n    \n    // Experimental\n    static __iterate(iterable) {\n    \n        // TODO:  Use System.iterator\n        var iter = iterable;\n        \n        var deferred = getDeferred(this),\n            constructor = this;\n        \n        function resume(value, error) {\n        \n            if (error && !(\"throw\" in iter))\n                return deferred.reject(value);\n            \n            try {\n            \n                var result = error ? iter.throw(value) : iter.next(value),\n                    promise = constructor.cast(result.value);\n                \n                if (result.done)\n                    promise.then(deferred.resolve, deferred.reject);\n                else\n                    promise.then(x => resume(x, false), x => resume(x, true));\n                \n            } catch (x) {\n            \n                deferred.reject(x);\n            }\n        }\n        \n        resume(void 0, false);\n        \n        return deferred.promise;\n    }\n\n}\n\nthis.Promise = Promise;\n";
+"var queueTask = ($=> {\n\n    var window = this.window,\n        process = this.process,\n        msgChannel = null,\n        list = [];\n    \n    if (typeof setImmediate === \"function\") {\n    \n        return window ?\n            window.setImmediate.bind(window) :\n            setImmediate;\n    \n    } else if (process && typeof process.nextTick === \"function\") {\n    \n        return process.nextTick;\n        \n    } else if (window && window.MessageChannel) {\n        \n        msgChannel = new window.MessageChannel();\n        msgChannel.port1.onmessage = $=> { if (list.length) list.shift()(); };\n    \n        return fn => {\n        \n            list.push(fn);\n            msgChannel.port2.postMessage(0);\n        };\n    }\n    \n    return fn => setTimeout(fn, 0);\n\n})();\n\n\nvar $status = \"Promise#status\",\n    $value = \"Promise#value\",\n    $onResolve = \"Promise#onResolve\",\n    $onReject = \"Promise#onReject\";\n\nfunction isPromise(x) { \n\n    return x && $status in Object(x);\n}\n\nfunction isThenable(x) {\n\n    return x && \"then\" in Object(x) && typeof x.then === \"function\";\n}\n\nfunction promiseResolve(promise, x) {\n    \n    promiseDone(promise, \"resolved\", x, promise[$onResolve]);\n}\n\nfunction promiseReject(promise, x) {\n    \n    promiseDone(promise, \"rejected\", x, promise[$onReject]);\n}\n\nfunction promiseDone(promise, status, value, reactions) {\n\n    if (promise[$status] !== \"pending\") \n        return;\n        \n    promise[$status] = status;\n    promise[$value] = value;\n    promise[$onResolve] = promise[$onReject] = void 0;\n    \n    for (var i = 0; i < reactions.length; ++i) \n        promiseReact(reactions[i][0], reactions[i][1], value);\n}\n\nfunction promiseUnwrap(deferred, x) {\n\n    if (x === deferred.promise)\n        throw new TypeError;\n    \n    if (isPromise(x))\n        x.chain(deferred.resolve, deferred.reject);\n    else\n        deferred.resolve(x);\n}\n\nfunction promiseReact(deferred, handler, x) {\n\n    queueTask($=> {\n    \n        try { promiseUnwrap(deferred, handler(x)) } \n        catch(e) { deferred.reject(e) }\n    });\n}\n\nfunction getDeferred(constructor) {\n\n    var result = {};\n\n    result.promise = new constructor((resolve, reject) => {\n        result.resolve = resolve;\n        result.reject = reject;\n    });\n\n    return result;\n}\n\nclass Promise {\n\n    constructor(init) {\n    \n        if (typeof init !== \"function\")\n            throw new TypeError(\"Promise constructor called without resolver\");\n        \n        this[$status] = \"pending\";\n        this[$onResolve] = [];\n        this[$onReject] = [];\n    \n        // [NOTE]  Do not report error asynchronously.  Use async functions instead.\n        init(x => promiseResolve(this, x), r => promiseReject(this, r));\n    }\n    \n    // [NOTE]  \"chain\" is the core operation.  There is no AP2 without it.\n    chain(onResolve, onReject) {\n    \n        if (typeof onResolve !== \"function\") onResolve = x => x;\n        if (typeof onReject !== \"function\") onReject = e => { throw e };\n\n        var deferred = getDeferred(this.constructor);\n\n        switch (this[$status]) {\n\n            case undefined:\n                throw new TypeError;\n        \n            case \"pending\":\n                this[$onResolve].push([deferred, onResolve]);\n                this[$onReject].push([deferred, onReject]);\n                break;\n    \n            case \"resolved\":\n                promiseReact(deferred, onResolve, this[$value]);\n                break;\n        \n            case \"rejected\":\n                promiseReact(deferred, onReject, this[$value]);\n                break;\n        }\n\n        return deferred.promise;\n    }\n    \n    // [NOTE] \"then\" is described in terms of \"chain\"\n    then(onResolve, onReject) {\n\n        if (typeof onResolve !== \"function\") onResolve = x => x;\n    \n        return this.chain(x => {\n    \n            if (x === this)\n                throw new TypeError;\n            \n            return isThenable(x) ? \n                x.then(onResolve, onReject) : \n                onResolve(x);\n        \n        }, onReject);\n    }\n    \n    static resolve(x) { \n    \n        return new this(resolve => resolve(x));\n    }\n    \n    static reject(x) { \n    \n        return new this((resolve, reject) => reject(x));\n    }\n    \n    static cast(x) {\n\n        if (x instanceof this)\n            return x;\n\n        var deferred = getDeferred(this);\n        promiseUnwrap(deferred, x);\n        return deferred.promise;\n    }\n    \n    // [NOTE] Nominal type test is essential for impementing when, etc.\n    static isPromise(x) {\n        \n        return isPromise(x);\n    }\n    \n}\n\nthis.Promise = Promise;\n";
+
+var Async = 
+
+"function getDeferred(constructor) {\n\n    var result = {};\n\n    result.promise = new constructor((resolve, reject) => {\n        result.resolve = resolve;\n        result.reject = reject;\n    });\n\n    return result;\n}\n\nfunction promiseWhen(constructor, x) {\n\n    if (Promise.isPromise(x))\n        return x.chain(x => promiseWhen(constructor, x));\n    \n    var deferred = getDeferred(constructor);\n    deferred.resolve(x);\n    return deferred.promise;\n}\n\nfunction promiseIterate(iterable) {\n    \n    // TODO:  Use System.iterator\n    var iter = iterable;\n    \n    var constructor = Promise,\n        deferred = getDeferred(constructor);\n    \n    function resume(value, error) {\n    \n        if (error && !(\"throw\" in iter))\n            return deferred.reject(value);\n        \n        try {\n        \n            // Invoke the iterator/generator\n            var result = error ? iter.throw(value) : iter.next(value);\n            \n            // Recursively unwrap the result value\n            var promise = promiseWhen(constructor, result.value);\n            \n            if (result.done)\n                promise.chain(deferred.resolve, deferred.reject);\n            else\n                promise.chain(x => resume(x, false), x => resume(x, true));\n            \n        } catch (x) {\n        \n            deferred.reject(x);\n        }\n    }\n    \n    resume(void 0, false);\n    \n    return deferred.promise;\n}\n\nthis.__async = promiseIterate;\n";
 
 
 
-exports.ES5 = ES5; exports.ES6 = ES6; exports.Class = Class; exports.Promise = Promise; return exports; }).call(this, {});
+exports.ES5 = ES5; exports.ES6 = ES6; exports.Class = Class; exports.Promise = Promise; exports.Async = Async; return exports; }).call(this, {});
 
 var AST_ = (function(exports) {
 
@@ -6237,7 +6246,7 @@ var Replacer = __class(function(__super) { return {
         var outerParams = params.map((function(x, i) { return "__" + i; })).join(", ");
         
         return "" + (head) + "(" + (outerParams) + ") { " +
-            "try { return Promise.__iterate(function*(" + (this.joinList(params)) + ") " + 
+            "try { return __async(function*(" + (this.joinList(params)) + ") " + 
             "" + (body) + ".apply(this, arguments)); " +
             "} catch (x) { return Promise.reject(x); } }";
     },
@@ -6434,6 +6443,7 @@ function translate(input, options) {
             wrapRuntimeModule(Runtime.ES5) +
             wrapRuntimeModule(Runtime.ES6) +
             wrapRuntimeModule(Runtime.Promise) +
+            wrapRuntimeModule(Runtime.Async) +
             input;
     }
             

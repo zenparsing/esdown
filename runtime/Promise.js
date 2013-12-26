@@ -76,7 +76,7 @@ function promiseUnwrap(deferred, x) {
         throw new TypeError;
     
     if (isPromise(x))
-        promiseChain(x, deferred.resolve, deferred.reject);
+        x.chain(deferred.resolve, deferred.reject);
     else
         deferred.resolve(x);
 }
@@ -88,35 +88,6 @@ function promiseReact(deferred, handler, x) {
         try { promiseUnwrap(deferred, handler(x)) } 
         catch(e) { deferred.reject(e) }
     });
-}
-
-function promiseChain(promise, onResolve, onReject) {
-
-    if (typeof onResolve !== "function") onResolve = x => x;
-    if (typeof onReject !== "function") onReject = e => { throw e };
-
-    var deferred = getDeferred(promise.constructor);
-
-    switch (promise[$status]) {
-
-        case undefined:
-            throw new TypeError;
-        
-        case "pending":
-            promise[$onResolve].push([deferred, onResolve]);
-            promise[$onReject].push([deferred, onReject]);
-            break;
-    
-        case "resolved":
-            promiseReact(deferred, onResolve, promise[$value]);
-            break;
-        
-        case "rejected":
-            promiseReact(deferred, onReject, promise[$value]);
-            break;
-    }
-
-    return deferred.promise;
 }
 
 function getDeferred(constructor) {
@@ -142,15 +113,46 @@ class Promise {
         this[$onResolve] = [];
         this[$onReject] = [];
     
-        // [OPEN]:  Do not report error asynchronously
+        // [NOTE]  Do not report error asynchronously.  Use async functions instead.
         init(x => promiseResolve(this, x), r => promiseReject(this, r));
     }
     
+    // [NOTE]  "chain" is the core operation.  There is no AP2 without it.
+    chain(onResolve, onReject) {
+    
+        if (typeof onResolve !== "function") onResolve = x => x;
+        if (typeof onReject !== "function") onReject = e => { throw e };
+
+        var deferred = getDeferred(this.constructor);
+
+        switch (this[$status]) {
+
+            case undefined:
+                throw new TypeError;
+        
+            case "pending":
+                this[$onResolve].push([deferred, onResolve]);
+                this[$onReject].push([deferred, onReject]);
+                break;
+    
+            case "resolved":
+                promiseReact(deferred, onResolve, this[$value]);
+                break;
+        
+            case "rejected":
+                promiseReact(deferred, onReject, this[$value]);
+                break;
+        }
+
+        return deferred.promise;
+    }
+    
+    // [NOTE] "then" is described in terms of "chain"
     then(onResolve, onReject) {
 
         if (typeof onResolve !== "function") onResolve = x => x;
     
-        return promiseChain(this, x => {
+        return this.chain(x => {
     
             if (x === this)
                 throw new TypeError;
@@ -181,6 +183,13 @@ class Promise {
         promiseUnwrap(deferred, x);
         return deferred.promise;
     }
+    
+    // [NOTE] Nominal type test is essential for impementing when, etc.
+    static isPromise(x) {
+        
+        return isPromise(x);
+    }
+    
 }
 
 this.Promise = Promise;

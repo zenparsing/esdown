@@ -70,6 +70,7 @@ export function translate(input, options) {
             wrapRuntimeModule(Runtime.ES5) +
             wrapRuntimeModule(Runtime.ES6) +
             wrapRuntimeModule(Runtime.Promise) +
+            wrapRuntimeModule(Runtime.Async) +
             input;
     }
             
