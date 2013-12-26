@@ -437,6 +437,18 @@ export var ES6 =
 `var global = this,
     HAS_OWN = Object.prototype.hasOwnProperty;
 
+// TODO:  Not everything gets added with the same property attributes...
+
+/*
+
+== NOTES ==
+
+
+ToUint32:  x >>> 0
+ToInt32:  x | 0
+
+*/
+
 function addProps(obj, props) {
 
     Object.keys(props).forEach(k => {
@@ -454,7 +466,6 @@ function addProps(obj, props) {
     });
 }
 
-/*
 addProps(Object, {
 
     is(a, b) {
@@ -466,24 +477,14 @@ addProps(Object, {
     
         Object.keys(source).forEach(k => target[k] = source[k]);
         return target;
-    },
-    
-    mixin(target, source) {
-    
-        Object.getOwnPropertyNames(source).forEach(name => {
-        
-            var desc = Object.getOwnPropertyDescriptor(source, name);
-            Object.defineProperty(target, name, desc);
-        });
-        
-        return target;
     }
 });
-*/
+
+// TODO Math?
 
 addProps(Number, {
 
-    EPSILON: Number.EPSILON || (function() {
+    EPSILON: $=> {
     
         var next, result;
         
@@ -491,28 +492,28 @@ addProps(Number, {
             result = next;
         
         return result;
-    }()),
+    }(),
     
-    MAX_INTEGER: 9007199254740992,
+    MAX_SAFE_INTEGER: 9007199254740992,
     
-    isFinite(val) {
-        
-        return typeof val === "number" && isFinite(val);
-    },
-    
-    isNaN(val) {
-    
-        return typeof val === "number" && isNaN(val);
-    },
+    MIN_SAFE_INTEGER: −9007199254740991,
     
     isInteger(val) {
     
         typeof val === "number" && val | 0 === val;
     },
     
-    toInteger(val) {
-        
-        return val | 0;
+    isSafeInteger(val) {
+        // TODO
+    }
+});
+
+addProps(Number.prototype, {
+
+    clz() {
+    
+        var n = this >>> 0; // uint32
+        // TODO:  Count leading bitwise zeros of n
     }
 });
 
@@ -528,15 +529,57 @@ addProps(Array, {
 
 });
 
+addProps(Array.prototype, {
+
+    copyWithin() {
+        // TODO
+    },
+    
+    keys() {
+        // TODO
+    },
+    
+    entries() {
+        // TODO
+    },
+    
+    fill() {
+        // TODO
+    },
+    
+    find() {
+        // TODO
+    },
+    
+    findIndex() {
+        // TODO
+    },
+    
+    values() {
+        // TODO
+    }
+    
+    // TODO:  ArrayIterator??
+});
+
+addProps(String, {
+
+    raw() {
+        // TODO
+    }
+});
+
 addProps(String.prototype, {
     
     repeat(count) {
     
+        // TODO
         return new Array(count + 1).join(this);
     },
     
     startsWith(search, start) {
     
+        // TODO
         start = start >>> 0;
         return this.indexOf(search, start) === start;
     },
@@ -554,6 +597,7 @@ addProps(String.prototype, {
     }
 });
 
+// TODO:  Should we even be going here?
 if (typeof Reflect === "undefined") global.Reflect = {
 
     hasOwn(obj, name) { return HAS_OWN.call(obj, name); }
@@ -730,6 +774,11 @@ function isPromise(x) {
     return x && $status in Object(x);
 }
 
+function isThenable(x) {
+
+    return x && "then" in Object(x) && typeof x.then === "function";
+}
+
 function promiseResolve(promise, x) {
     
     promiseDone(promise, "resolved", x, promise[$onResolve]);
@@ -825,15 +874,10 @@ class Promise {
         this[$onResolve] = [];
         this[$onReject] = [];
     
+        // [OPEN]:  Do not report error asynchronously
         init(x => promiseResolve(this, x), r => promiseReject(this, r));
     }
     
-    // Experimental
-    __chain(onResolve, onReject) {
-    
-        return promiseChain(this, onResolve, onReject);
-    }
-
     then(onResolve, onReject) {
 
         if (typeof onResolve !== "function") onResolve = x => x;
@@ -843,16 +887,11 @@ class Promise {
             if (x === this)
                 throw new TypeError;
             
-            return isPromise(x) ? 
+            return isThenable(x) ? 
                 x.then(onResolve, onReject) : 
                 onResolve(x);
         
         }, onReject);
-    }
-    
-    catch(onReject) {
-
-        return this.then(undefined, onReject)
     }
     
     static resolve(x) { 
@@ -874,106 +913,6 @@ class Promise {
         promiseUnwrap(deferred, x);
         return deferred.promise;
     }
-
-    static all(values) {
-
-        var deferred = getDeferred(this),
-            count = 0,
-            resolutions = [];
-        
-        for (var i = 0; i < values.length; ++i)
-            ++count, this.cast(values[i]).then(onResolve(i), onReject);
-    
-        if (count === 0) 
-            deferred.resolve(resolutions);
-        
-        return deferred.promise;
-    
-        function onResolve(i) {
-    
-            return x => {
-        
-                resolutions[i] = x;
-            
-                if (--count === 0)
-                    deferred.resolve(resolutions);
-            };
-        }
-        
-        function onReject(r) {
-        
-            if (count > 0) { 
-        
-                count = 0; 
-                deferred.reject(r);
-            }
-        }
-    }
-    
-    static race(values) {
-    
-        var deferred = getDeferred(this),
-            done = false;
-            
-        for (var i = 0; i < values.length; i++)
-            this.cast(values[i]).then(onResolve, onReject);
-            
-        return deferred.promise;
-        
-        function onResolve(x) {
-        
-            if (!done) {
-                
-                done = true;
-                deferred.resolve(x);
-            }
-        }
-        
-        function onReject(r) {
-        
-            if (!done) {
-            
-                done = true;
-                deferred.reject(r);
-            }
-        }
-    }
-    
-    // Experimental
-    static __iterate(iterable) {
-    
-        // TODO:  Use System.iterator
-        var iter = iterable;
-        
-        var deferred = getDeferred(this),
-            constructor = this;
-        
-        function resume(value, error) {
-        
-            if (error && !("throw" in iter))
-                return deferred.reject(value);
-            
-            try {
-            
-                var result = error ? iter.throw(value) : iter.next(value),
-                    promise = constructor.cast(result.value);
-                
-                if (result.done)
-                    promise.then(deferred.resolve, deferred.reject);
-                else
-                    promise.then(x => resume(x, false), x => resume(x, true));
-                
-            } catch (x) {
-            
-                deferred.reject(x);
-            }
-        }
-        
-        resume(void 0, false);
-        
-        return deferred.promise;
-    }
-
 }
 
 this.Promise = Promise;

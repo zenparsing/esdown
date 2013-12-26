@@ -42,6 +42,11 @@ function isPromise(x) {
     return x && $status in Object(x);
 }
 
+function isThenable(x) {
+
+    return x && "then" in Object(x) && typeof x.then === "function";
+}
+
 function promiseResolve(promise, x) {
     
     promiseDone(promise, "resolved", x, promise[$onResolve]);
@@ -137,15 +142,10 @@ class Promise {
         this[$onResolve] = [];
         this[$onReject] = [];
     
+        // [OPEN]:  Do not report error asynchronously
         init(x => promiseResolve(this, x), r => promiseReject(this, r));
     }
     
-    // Experimental
-    __chain(onResolve, onReject) {
-    
-        return promiseChain(this, onResolve, onReject);
-    }
-
     then(onResolve, onReject) {
 
         if (typeof onResolve !== "function") onResolve = x => x;
@@ -155,16 +155,11 @@ class Promise {
             if (x === this)
                 throw new TypeError;
             
-            return isPromise(x) ? 
+            return isThenable(x) ? 
                 x.then(onResolve, onReject) : 
                 onResolve(x);
         
         }, onReject);
-    }
-    
-    catch(onReject) {
-
-        return this.then(undefined, onReject)
     }
     
     static resolve(x) { 
@@ -186,106 +181,6 @@ class Promise {
         promiseUnwrap(deferred, x);
         return deferred.promise;
     }
-
-    static all(values) {
-
-        var deferred = getDeferred(this),
-            count = 0,
-            resolutions = [];
-        
-        for (var i = 0; i < values.length; ++i)
-            ++count, this.cast(values[i]).then(onResolve(i), onReject);
-    
-        if (count === 0) 
-            deferred.resolve(resolutions);
-        
-        return deferred.promise;
-    
-        function onResolve(i) {
-    
-            return x => {
-        
-                resolutions[i] = x;
-            
-                if (--count === 0)
-                    deferred.resolve(resolutions);
-            };
-        }
-        
-        function onReject(r) {
-        
-            if (count > 0) { 
-        
-                count = 0; 
-                deferred.reject(r);
-            }
-        }
-    }
-    
-    static race(values) {
-    
-        var deferred = getDeferred(this),
-            done = false;
-            
-        for (var i = 0; i < values.length; i++)
-            this.cast(values[i]).then(onResolve, onReject);
-            
-        return deferred.promise;
-        
-        function onResolve(x) {
-        
-            if (!done) {
-                
-                done = true;
-                deferred.resolve(x);
-            }
-        }
-        
-        function onReject(r) {
-        
-            if (!done) {
-            
-                done = true;
-                deferred.reject(r);
-            }
-        }
-    }
-    
-    // Experimental
-    static __iterate(iterable) {
-    
-        // TODO:  Use System.iterator
-        var iter = iterable;
-        
-        var deferred = getDeferred(this),
-            constructor = this;
-        
-        function resume(value, error) {
-        
-            if (error && !("throw" in iter))
-                return deferred.reject(value);
-            
-            try {
-            
-                var result = error ? iter.throw(value) : iter.next(value),
-                    promise = constructor.cast(result.value);
-                
-                if (result.done)
-                    promise.then(deferred.resolve, deferred.reject);
-                else
-                    promise.then(x => resume(x, false), x => resume(x, true));
-                
-            } catch (x) {
-            
-                deferred.reject(x);
-            }
-        }
-        
-        resume(void 0, false);
-        
-        return deferred.promise;
-    }
-
 }
 
 this.Promise = Promise;
