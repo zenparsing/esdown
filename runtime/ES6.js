@@ -1,6 +1,18 @@
 var global = this,
     HAS_OWN = Object.prototype.hasOwnProperty;
 
+// TODO:  Not everything gets added with the same property attributes...
+
+/*
+
+== NOTES ==
+
+
+ToUint32:  x >>> 0
+ToInt32:  x | 0
+
+*/
+
 function addProps(obj, props) {
 
     Object.keys(props).forEach(k => {
@@ -32,11 +44,11 @@ addProps(Object, {
     }
 });
 
-// TODO Math
+// TODO Math?
 
 addProps(Number, {
 
-    EPSILON: Number.EPSILON || (function() {
+    EPSILON: $=> {
     
         var next, result;
         
@@ -44,28 +56,33 @@ addProps(Number, {
             result = next;
         
         return result;
-    }()),
+    }(),
     
-    MAX_INTEGER: 9007199254740992,
+    MAX_SAFE_INTEGER: 9007199254740992,
     
-    isFinite(val) {
-        
-        return typeof val === "number" && isFinite(val);
-    },
-    
-    isNaN(val) {
-    
-        return typeof val === "number" && isNaN(val);
-    },
+    MIN_SAFE_INTEGER: −9007199254740991,
     
     isInteger(val) {
     
         typeof val === "number" && val | 0 === val;
     },
     
+    isSafeInteger(val) {
+        // TODO
+    },
+    
     toInteger(val) {
         
         return val | 0;
+    }
+});
+
+addProps(Number.prototype, {
+
+    clz() {
+    
+        var n = this >>> 0; // uint32
+        // TODO:  Count leading bitwise zeros of n
     }
 });
 
