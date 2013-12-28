@@ -81,8 +81,13 @@ export function runModule(path) {
 
     var m = require(path);
 
-    if (m && typeof m.main === "function")
-        Promise.cast(m.main()).then(null, x => setTimeout($=> { throw x }, 0));
+    if (m && typeof m.main === "function") {
+    
+        var result = m.main();
+        
+        if (Promise.isPromise(result))
+            result.then(null, x => setTimeout($=> { throw x }, 0));
+    }
 }
 
 export function startREPL() {

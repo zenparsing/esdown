@@ -838,7 +838,7 @@ var Promise = __class(function(__super) { return {
     constructor: function Promise(init) { var __this = this; 
     
         if (typeof init !== "function")
-            throw new TypeError("Promise constructor called without resolver");
+            throw new TypeError("Promise constructor called without initializer");
         
         this[$status] = "pending";
         this[$onResolve] = [];
@@ -895,24 +895,16 @@ var Promise = __class(function(__super) { return {
         }), onReject);
     },
     
+    // [NOTE] Base-level convenience
     __static_resolve: function(x) { 
     
         return new this((function(resolve) { return resolve(x); }));
     },
     
+    // [NOTE] Base-level convenience
     __static_reject: function(x) { 
     
         return new this((function(resolve, reject) { return reject(x); }));
-    },
-    
-    __static_cast: function(x) {
-
-        if (x instanceof this)
-            return x;
-
-        var deferred = getDeferred(this);
-        promiseUnwrap(deferred, x);
-        return deferred.promise;
     },
     
     // [NOTE] Nominal type test is essential for impementing when, etc.
@@ -1010,7 +1002,7 @@ var Class =
 
 var Promise = 
 
-"var queueTask = ($=> {\n\n    var window = this.window,\n        process = this.process,\n        msgChannel = null,\n        list = [];\n    \n    if (typeof setImmediate === \"function\") {\n    \n        return window ?\n            window.setImmediate.bind(window) :\n            setImmediate;\n    \n    } else if (process && typeof process.nextTick === \"function\") {\n    \n        return process.nextTick;\n        \n    } else if (window && window.MessageChannel) {\n        \n        msgChannel = new window.MessageChannel();\n        msgChannel.port1.onmessage = $=> { if (list.length) list.shift()(); };\n    \n        return fn => {\n        \n            list.push(fn);\n            msgChannel.port2.postMessage(0);\n        };\n    }\n    \n    return fn => setTimeout(fn, 0);\n\n})();\n\n\nvar $status = \"Promise#status\",\n    $value = \"Promise#value\",\n    $onResolve = \"Promise#onResolve\",\n    $onReject = \"Promise#onReject\";\n\nfunction isPromise(x) { \n\n    return x && $status in Object(x);\n}\n\nfunction isThenable(x) {\n\n    return x && \"then\" in Object(x) && typeof x.then === \"function\";\n}\n\nfunction promiseResolve(promise, x) {\n    \n    promiseDone(promise, \"resolved\", x, promise[$onResolve]);\n}\n\nfunction promiseReject(promise, x) {\n    \n    promiseDone(promise, \"rejected\", x, promise[$onReject]);\n}\n\nfunction promiseDone(promise, status, value, reactions) {\n\n    if (promise[$status] !== \"pending\") \n        return;\n        \n    promise[$status] = status;\n    promise[$value] = value;\n    promise[$onResolve] = promise[$onReject] = void 0;\n    \n    for (var i = 0; i < reactions.length; ++i) \n        promiseReact(reactions[i][0], reactions[i][1], value);\n}\n\nfunction promiseUnwrap(deferred, x) {\n\n    if (x === deferred.promise)\n        throw new TypeError;\n    \n    if (isPromise(x))\n        x.chain(deferred.resolve, deferred.reject);\n    else\n        deferred.resolve(x);\n}\n\nfunction promiseReact(deferred, handler, x) {\n\n    queueTask($=> {\n    \n        try { promiseUnwrap(deferred, handler(x)) } \n        catch(e) { deferred.reject(e) }\n    });\n}\n\nfunction getDeferred(constructor) {\n\n    var result = {};\n\n    result.promise = new constructor((resolve, reject) => {\n        result.resolve = resolve;\n        result.reject = reject;\n    });\n\n    return result;\n}\n\nclass Promise {\n\n    constructor(init) {\n    \n        if (typeof init !== \"function\")\n            throw new TypeError(\"Promise constructor called without resolver\");\n        \n        this[$status] = \"pending\";\n        this[$onResolve] = [];\n        this[$onReject] = [];\n    \n        // [NOTE]  Do not report error asynchronously.  Use async functions instead.\n        init(x => promiseResolve(this, x), r => promiseReject(this, r));\n    }\n    \n    // [NOTE]  \"chain\" is the core operation.  There is no AP2 without it.\n    chain(onResolve, onReject) {\n    \n        if (typeof onResolve !== \"function\") onResolve = x => x;\n        if (typeof onReject !== \"function\") onReject = e => { throw e };\n\n        var deferred = getDeferred(this.constructor);\n\n        switch (this[$status]) {\n\n            case undefined:\n                throw new TypeError;\n        \n            case \"pending\":\n                this[$onResolve].push([deferred, onResolve]);\n                this[$onReject].push([deferred, onReject]);\n                break;\n    \n            case \"resolved\":\n                promiseReact(deferred, onResolve, this[$value]);\n                break;\n        \n            case \"rejected\":\n                promiseReact(deferred, onReject, this[$value]);\n                break;\n        }\n\n        return deferred.promise;\n    }\n    \n    // [NOTE] \"then\" is described in terms of \"chain\"\n    then(onResolve, onReject) {\n\n        if (typeof onResolve !== \"function\") onResolve = x => x;\n    \n        return this.chain(x => {\n    \n            if (x === this)\n                throw new TypeError;\n            \n            return isThenable(x) ? \n                x.then(onResolve, onReject) : \n                onResolve(x);\n        \n        }, onReject);\n    }\n    \n    static resolve(x) { \n    \n        return new this(resolve => resolve(x));\n    }\n    \n    static reject(x) { \n    \n        return new this((resolve, reject) => reject(x));\n    }\n    \n    static cast(x) {\n\n        if (x instanceof this)\n            return x;\n\n        var deferred = getDeferred(this);\n        promiseUnwrap(deferred, x);\n        return deferred.promise;\n    }\n    \n    // [NOTE] Nominal type test is essential for impementing when, etc.\n    static isPromise(x) {\n        \n        return isPromise(x);\n    }\n    \n}\n\nthis.Promise = Promise;\n";
+"var queueTask = ($=> {\n\n    var window = this.window,\n        process = this.process,\n        msgChannel = null,\n        list = [];\n    \n    if (typeof setImmediate === \"function\") {\n    \n        return window ?\n            window.setImmediate.bind(window) :\n            setImmediate;\n    \n    } else if (process && typeof process.nextTick === \"function\") {\n    \n        return process.nextTick;\n        \n    } else if (window && window.MessageChannel) {\n        \n        msgChannel = new window.MessageChannel();\n        msgChannel.port1.onmessage = $=> { if (list.length) list.shift()(); };\n    \n        return fn => {\n        \n            list.push(fn);\n            msgChannel.port2.postMessage(0);\n        };\n    }\n    \n    return fn => setTimeout(fn, 0);\n\n})();\n\n\nvar $status = \"Promise#status\",\n    $value = \"Promise#value\",\n    $onResolve = \"Promise#onResolve\",\n    $onReject = \"Promise#onReject\";\n\nfunction isPromise(x) { \n\n    return x && $status in Object(x);\n}\n\nfunction isThenable(x) {\n\n    return x && \"then\" in Object(x) && typeof x.then === \"function\";\n}\n\nfunction promiseResolve(promise, x) {\n    \n    promiseDone(promise, \"resolved\", x, promise[$onResolve]);\n}\n\nfunction promiseReject(promise, x) {\n    \n    promiseDone(promise, \"rejected\", x, promise[$onReject]);\n}\n\nfunction promiseDone(promise, status, value, reactions) {\n\n    if (promise[$status] !== \"pending\") \n        return;\n        \n    promise[$status] = status;\n    promise[$value] = value;\n    promise[$onResolve] = promise[$onReject] = void 0;\n    \n    for (var i = 0; i < reactions.length; ++i) \n        promiseReact(reactions[i][0], reactions[i][1], value);\n}\n\nfunction promiseUnwrap(deferred, x) {\n\n    if (x === deferred.promise)\n        throw new TypeError;\n    \n    if (isPromise(x))\n        x.chain(deferred.resolve, deferred.reject);\n    else\n        deferred.resolve(x);\n}\n\nfunction promiseReact(deferred, handler, x) {\n\n    queueTask($=> {\n    \n        try { promiseUnwrap(deferred, handler(x)) } \n        catch(e) { deferred.reject(e) }\n    });\n}\n\nfunction getDeferred(constructor) {\n\n    var result = {};\n\n    result.promise = new constructor((resolve, reject) => {\n        result.resolve = resolve;\n        result.reject = reject;\n    });\n\n    return result;\n}\n\nclass Promise {\n\n    constructor(init) {\n    \n        if (typeof init !== \"function\")\n            throw new TypeError(\"Promise constructor called without initializer\");\n        \n        this[$status] = \"pending\";\n        this[$onResolve] = [];\n        this[$onReject] = [];\n    \n        // [NOTE]  Do not report error asynchronously.  Use async functions instead.\n        init(x => promiseResolve(this, x), r => promiseReject(this, r));\n    }\n    \n    // [NOTE]  \"chain\" is the core operation.  There is no AP2 without it.\n    chain(onResolve, onReject) {\n    \n        if (typeof onResolve !== \"function\") onResolve = x => x;\n        if (typeof onReject !== \"function\") onReject = e => { throw e };\n\n        var deferred = getDeferred(this.constructor);\n\n        switch (this[$status]) {\n\n            case undefined:\n                throw new TypeError;\n        \n            case \"pending\":\n                this[$onResolve].push([deferred, onResolve]);\n                this[$onReject].push([deferred, onReject]);\n                break;\n    \n            case \"resolved\":\n                promiseReact(deferred, onResolve, this[$value]);\n                break;\n        \n            case \"rejected\":\n                promiseReact(deferred, onReject, this[$value]);\n                break;\n        }\n\n        return deferred.promise;\n    }\n    \n    // [NOTE] \"then\" is described in terms of \"chain\"\n    then(onResolve, onReject) {\n\n        if (typeof onResolve !== \"function\") onResolve = x => x;\n    \n        return this.chain(x => {\n    \n            if (x === this)\n                throw new TypeError;\n            \n            return isThenable(x) ? \n                x.then(onResolve, onReject) : \n                onResolve(x);\n        \n        }, onReject);\n    }\n    \n    // [NOTE] Base-level convenience\n    static resolve(x) { \n    \n        return new this(resolve => resolve(x));\n    }\n    \n    // [NOTE] Base-level convenience\n    static reject(x) { \n    \n        return new this((resolve, reject) => reject(x));\n    }\n    \n    // [NOTE] Nominal type test is essential for impementing when, etc.\n    static isPromise(x) {\n        \n        return isPromise(x);\n    }\n    \n}\n\nthis.Promise = Promise;\n";
 
 var Async = 
 
@@ -7090,8 +7082,13 @@ function runModule(path) {
 
     var m = require(path);
 
-    if (m && typeof m.main === "function")
-        Promise.cast(m.main()).then(null, (function(x) { return setTimeout((function($) { throw x }), 0); }));
+    if (m && typeof m.main === "function") {
+    
+        var result = m.main();
+        
+        if (Promise.isPromise(result))
+            result.then(null, (function(x) { return setTimeout((function($) { throw x }), 0); }));
+    }
 }
 
 function startREPL() {

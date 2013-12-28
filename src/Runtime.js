@@ -830,7 +830,7 @@ class Promise {
     constructor(init) {
     
         if (typeof init !== "function")
-            throw new TypeError("Promise constructor called without resolver");
+            throw new TypeError("Promise constructor called without initializer");
         
         this[$status] = "pending";
         this[$onResolve] = [];
@@ -887,24 +887,16 @@ class Promise {
         }, onReject);
     }
     
+    // [NOTE] Base-level convenience
     static resolve(x) { 
     
         return new this(resolve => resolve(x));
     }
     
+    // [NOTE] Base-level convenience
     static reject(x) { 
     
         return new this((resolve, reject) => reject(x));
-    }
-    
-    static cast(x) {
-
-        if (x instanceof this)
-            return x;
-
-        var deferred = getDeferred(this);
-        promiseUnwrap(deferred, x);
-        return deferred.promise;
     }
     
     // [NOTE] Nominal type test is essential for impementing when, etc.
