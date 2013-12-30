@@ -1,4 +1,4 @@
-var queueTask = ($=> {
+var enqueueMicrotask = ($=> {
 
     var window = this.window,
         process = this.process,
@@ -39,12 +39,7 @@ var $status = "Promise#status",
 
 function isPromise(x) { 
 
-    return x && $status in Object(x);
-}
-
-function isThenable(x) {
-
-    return x && "then" in Object(x) && typeof x.then === "function";
+    return !!x && $status in Object(x);
 }
 
 function promiseResolve(promise, x) {
@@ -73,7 +68,7 @@ function promiseDone(promise, status, value, reactions) {
 function promiseUnwrap(deferred, x) {
 
     if (x === deferred.promise)
-        throw new TypeError;
+        throw new TypeError("Promise cannot wrap itself");
     
     if (isPromise(x))
         x.chain(deferred.resolve, deferred.reject);
@@ -83,7 +78,7 @@ function promiseUnwrap(deferred, x) {
 
 function promiseReact(deferred, handler, x) {
 
-    queueTask($=> {
+    enqueueMicrotask($=> {
     
         try { promiseUnwrap(deferred, handler(x)) } 
         catch(e) { deferred.reject(e) }
@@ -113,11 +108,9 @@ class Promise {
         this[$onResolve] = [];
         this[$onReject] = [];
     
-        // [NOTE]  Do not report error asynchronously.  Use async functions instead.
         init(x => promiseResolve(this, x), r => promiseReject(this, r));
     }
     
-    // [NOTE]  "chain" is the core operation.  There is no AP2 without it.
     chain(onResolve, onReject) {
     
         if (typeof onResolve !== "function") onResolve = x => x;
@@ -128,7 +121,7 @@ class Promise {
         switch (this[$status]) {
 
             case undefined:
-                throw new TypeError;
+                throw new TypeError("Promise method called on a non-promise");
         
             case "pending":
                 this[$onResolve].push([deferred, onResolve]);
@@ -147,36 +140,35 @@ class Promise {
         return deferred.promise;
     }
     
-    // [NOTE] "then" is described in terms of "chain"
     then(onResolve, onReject) {
 
         if (typeof onResolve !== "function") onResolve = x => x;
     
         return this.chain(x => {
     
-            if (x === this)
-                throw new TypeError;
+            if (x && typeof x === "object") {
             
-            return isThenable(x) ? 
-                x.then(onResolve, onReject) : 
-                onResolve(x);
+                var maybeThen = x.then;
+                
+                if (typeof maybeThen === "function")
+                    return maybeThen.call(x, onResolve, onReject);
+            }
+            
+            return onResolve(x);
         
         }, onReject);
     }
     
-    // [NOTE] Base-level convenience
     static resolve(x) { 
     
         return new this(resolve => resolve(x));
     }
     
-    // [NOTE] Base-level convenience
     static reject(x) { 
     
         return new this((resolve, reject) => reject(x));
     }
     
-    // [NOTE] Nominal type test is essential for impementing when, etc.
     static isPromise(x) {
         
         return isPromise(x);
