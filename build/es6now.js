@@ -823,11 +823,15 @@ var Promise = __class(function(__super) { return {
         if (typeof init !== "function")
             throw new TypeError("Promise constructor called without initializer");
         
+        this[$value] = void 0;
         this[$status] = "pending";
         this[$onResolve] = [];
         this[$onReject] = [];
     
-        init((function(x) { return promiseResolve(__this, x); }), (function(r) { return promiseReject(__this, r); }));
+        var resolve = (function(x) { return promiseResolve(__this, x); }),
+            reject = (function(r) { return promiseReject(__this, r); });
+        
+        try { init(resolve, reject) } catch (x) { reject(x) }
     },
     
     chain: function(onResolve, onReject) {
@@ -878,20 +882,6 @@ var Promise = __class(function(__super) { return {
         }), onReject);
     },
     
-    __static_resolve: function(x) { 
-    
-        var d = this.deferred();
-        d.resolve(x);
-        return d.promise;
-    },
-    
-    __static_reject: function(x) { 
-    
-        var d = this.deferred();
-        d.reject(x);
-        return d.promise;
-    },
-    
     __static_isPromise: function(x) {
         
         return isPromise(x);
@@ -907,6 +897,20 @@ var Promise = __class(function(__super) { return {
         }));
 
         return d;
+    },
+    
+    __static_resolve: function(x) { 
+    
+        var d = this.deferred();
+        d.resolve(x);
+        return d.promise;
+    },
+    
+    __static_reject: function(x) { 
+    
+        var d = this.deferred();
+        d.reject(x);
+        return d.promise;
     }
     
 } });
@@ -999,7 +1003,7 @@ var Class =
 
 var Promise = 
 
-"var enqueueMicrotask = ($=> {\n\n    var window = this.window,\n        process = this.process,\n        msgChannel = null,\n        list = [];\n    \n    if (typeof setImmediate === \"function\") {\n    \n        return window ?\n            window.setImmediate.bind(window) :\n            setImmediate;\n    \n    } else if (process && typeof process.nextTick === \"function\") {\n    \n        return process.nextTick;\n        \n    } else if (window && window.MessageChannel) {\n        \n        msgChannel = new window.MessageChannel();\n        msgChannel.port1.onmessage = $=> { if (list.length) list.shift()(); };\n    \n        return fn => {\n        \n            list.push(fn);\n            msgChannel.port2.postMessage(0);\n        };\n    }\n    \n    return fn => setTimeout(fn, 0);\n\n})();\n\n\nvar $status = \"Promise#status\",\n    $value = \"Promise#value\",\n    $onResolve = \"Promise#onResolve\",\n    $onReject = \"Promise#onReject\";\n\nfunction isPromise(x) { \n\n    return !!x && $status in Object(x);\n}\n\nfunction promiseResolve(promise, x) {\n    \n    promiseDone(promise, \"resolved\", x, promise[$onResolve]);\n}\n\nfunction promiseReject(promise, x) {\n    \n    promiseDone(promise, \"rejected\", x, promise[$onReject]);\n}\n\nfunction promiseDone(promise, status, value, reactions) {\n\n    if (promise[$status] !== \"pending\") \n        return;\n        \n    promise[$status] = status;\n    promise[$value] = value;\n    promise[$onResolve] = promise[$onReject] = void 0;\n    \n    for (var i = 0; i < reactions.length; ++i) \n        promiseReact(reactions[i][0], reactions[i][1], value);\n}\n\nfunction promiseUnwrap(deferred, x) {\n\n    if (x === deferred.promise)\n        throw new TypeError(\"Promise cannot wrap itself\");\n    \n    if (isPromise(x))\n        x.chain(deferred.resolve, deferred.reject);\n    else\n        deferred.resolve(x);\n}\n\nfunction promiseReact(deferred, handler, x) {\n\n    enqueueMicrotask($=> {\n    \n        try { promiseUnwrap(deferred, handler(x)) } \n        catch(e) { deferred.reject(e) }\n    });\n}\n\nclass Promise {\n\n    constructor(init) {\n    \n        if (typeof init !== \"function\")\n            throw new TypeError(\"Promise constructor called without initializer\");\n        \n        this[$status] = \"pending\";\n        this[$onResolve] = [];\n        this[$onReject] = [];\n    \n        init(x => promiseResolve(this, x), r => promiseReject(this, r));\n    }\n    \n    chain(onResolve, onReject) {\n    \n        if (typeof onResolve !== \"function\") onResolve = x => x;\n        if (typeof onReject !== \"function\") onReject = e => { throw e };\n\n        var deferred = this.constructor.deferred();\n\n        switch (this[$status]) {\n\n            case undefined:\n                throw new TypeError(\"Promise method called on a non-promise\");\n        \n            case \"pending\":\n                this[$onResolve].push([deferred, onResolve]);\n                this[$onReject].push([deferred, onReject]);\n                break;\n    \n            case \"resolved\":\n                promiseReact(deferred, onResolve, this[$value]);\n                break;\n        \n            case \"rejected\":\n                promiseReact(deferred, onReject, this[$value]);\n                break;\n        }\n\n        return deferred.promise;\n    }\n    \n    then(onResolve, onReject) {\n\n        if (typeof onResolve !== \"function\") onResolve = x => x;\n    \n        return this.chain(x => {\n    \n            if (x && typeof x === \"object\") {\n            \n                var maybeThen = x.then;\n                \n                if (typeof maybeThen === \"function\")\n                    return maybeThen.call(x, onResolve, onReject);\n            }\n            \n            return onResolve(x);\n        \n        }, onReject);\n    }\n    \n    static resolve(x) { \n    \n        var d = this.deferred();\n        d.resolve(x);\n        return d.promise;\n    }\n    \n    static reject(x) { \n    \n        var d = this.deferred();\n        d.reject(x);\n        return d.promise;\n    }\n    \n    static isPromise(x) {\n        \n        return isPromise(x);\n    }\n    \n    static deferred() {\n    \n        var d = {};\n\n        d.promise = new this((resolve, reject) => {\n            d.resolve = resolve;\n            d.reject = reject;\n        });\n\n        return d;\n    }\n    \n}\n\nthis.Promise = Promise;\n\n";
+"var enqueueMicrotask = ($=> {\n\n    var window = this.window,\n        process = this.process,\n        msgChannel = null,\n        list = [];\n    \n    if (typeof setImmediate === \"function\") {\n    \n        return window ?\n            window.setImmediate.bind(window) :\n            setImmediate;\n    \n    } else if (process && typeof process.nextTick === \"function\") {\n    \n        return process.nextTick;\n        \n    } else if (window && window.MessageChannel) {\n        \n        msgChannel = new window.MessageChannel();\n        msgChannel.port1.onmessage = $=> { if (list.length) list.shift()(); };\n    \n        return fn => {\n        \n            list.push(fn);\n            msgChannel.port2.postMessage(0);\n        };\n    }\n    \n    return fn => setTimeout(fn, 0);\n\n})();\n\n\nvar $status = \"Promise#status\",\n    $value = \"Promise#value\",\n    $onResolve = \"Promise#onResolve\",\n    $onReject = \"Promise#onReject\";\n\nfunction isPromise(x) { \n\n    return !!x && $status in Object(x);\n}\n\nfunction promiseResolve(promise, x) {\n    \n    promiseDone(promise, \"resolved\", x, promise[$onResolve]);\n}\n\nfunction promiseReject(promise, x) {\n    \n    promiseDone(promise, \"rejected\", x, promise[$onReject]);\n}\n\nfunction promiseDone(promise, status, value, reactions) {\n\n    if (promise[$status] !== \"pending\") \n        return;\n        \n    promise[$status] = status;\n    promise[$value] = value;\n    promise[$onResolve] = promise[$onReject] = void 0;\n    \n    for (var i = 0; i < reactions.length; ++i) \n        promiseReact(reactions[i][0], reactions[i][1], value);\n}\n\nfunction promiseUnwrap(deferred, x) {\n\n    if (x === deferred.promise)\n        throw new TypeError(\"Promise cannot wrap itself\");\n    \n    if (isPromise(x))\n        x.chain(deferred.resolve, deferred.reject);\n    else\n        deferred.resolve(x);\n}\n\nfunction promiseReact(deferred, handler, x) {\n\n    enqueueMicrotask($=> {\n    \n        try { promiseUnwrap(deferred, handler(x)) } \n        catch(e) { deferred.reject(e) }\n    });\n}\n\nclass Promise {\n\n    constructor(init) {\n    \n        if (typeof init !== \"function\")\n            throw new TypeError(\"Promise constructor called without initializer\");\n        \n        this[$value] = void 0;\n        this[$status] = \"pending\";\n        this[$onResolve] = [];\n        this[$onReject] = [];\n    \n        var resolve = x => promiseResolve(this, x),\n            reject = r => promiseReject(this, r);\n        \n        try { init(resolve, reject) } catch (x) { reject(x) }\n    }\n    \n    chain(onResolve, onReject) {\n    \n        if (typeof onResolve !== \"function\") onResolve = x => x;\n        if (typeof onReject !== \"function\") onReject = e => { throw e };\n\n        var deferred = this.constructor.deferred();\n\n        switch (this[$status]) {\n\n            case undefined:\n                throw new TypeError(\"Promise method called on a non-promise\");\n        \n            case \"pending\":\n                this[$onResolve].push([deferred, onResolve]);\n                this[$onReject].push([deferred, onReject]);\n                break;\n    \n            case \"resolved\":\n                promiseReact(deferred, onResolve, this[$value]);\n                break;\n        \n            case \"rejected\":\n                promiseReact(deferred, onReject, this[$value]);\n                break;\n        }\n\n        return deferred.promise;\n    }\n    \n    then(onResolve, onReject) {\n\n        if (typeof onResolve !== \"function\") onResolve = x => x;\n    \n        return this.chain(x => {\n    \n            if (x && typeof x === \"object\") {\n            \n                var maybeThen = x.then;\n                \n                if (typeof maybeThen === \"function\")\n                    return maybeThen.call(x, onResolve, onReject);\n            }\n            \n            return onResolve(x);\n        \n        }, onReject);\n    }\n    \n    static isPromise(x) {\n        \n        return isPromise(x);\n    }\n    \n    static deferred() {\n    \n        var d = {};\n\n        d.promise = new this((resolve, reject) => {\n            d.resolve = resolve;\n            d.reject = reject;\n        });\n\n        return d;\n    }\n    \n    static resolve(x) { \n    \n        var d = this.deferred();\n        d.resolve(x);\n        return d.promise;\n    }\n    \n    static reject(x) { \n    \n        var d = this.deferred();\n        d.reject(x);\n        return d.promise;\n    }\n    \n}\n\nthis.Promise = Promise;\n\n";
 
 var Async = 
 

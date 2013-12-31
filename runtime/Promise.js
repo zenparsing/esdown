@@ -92,11 +92,15 @@ class Promise {
         if (typeof init !== "function")
             throw new TypeError("Promise constructor called without initializer");
         
+        this[$value] = void 0;
         this[$status] = "pending";
         this[$onResolve] = [];
         this[$onReject] = [];
     
-        init(x => promiseResolve(this, x), r => promiseReject(this, r));
+        var resolve = x => promiseResolve(this, x),
+            reject = r => promiseReject(this, r);
+        
+        try { init(resolve, reject) } catch (x) { reject(x) }
     }
     
     chain(onResolve, onReject) {
@@ -147,20 +151,6 @@ class Promise {
         }, onReject);
     }
     
-    static resolve(x) { 
-    
-        var d = this.deferred();
-        d.resolve(x);
-        return d.promise;
-    }
-    
-    static reject(x) { 
-    
-        var d = this.deferred();
-        d.reject(x);
-        return d.promise;
-    }
-    
     static isPromise(x) {
         
         return isPromise(x);
@@ -176,6 +166,20 @@ class Promise {
         });
 
         return d;
+    }
+    
+    static resolve(x) { 
+    
+        var d = this.deferred();
+        d.resolve(x);
+        return d.promise;
+    }
+    
+    static reject(x) { 
+    
+        var d = this.deferred();
+        d.reject(x);
+        return d.promise;
     }
     
 }
