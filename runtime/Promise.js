@@ -65,23 +65,23 @@ function promiseDone(promise, status, value, reactions) {
         promiseReact(reactions[i][0], reactions[i][1], value);
 }
 
-function promiseUnwrap(defer, x) {
+function promiseUnwrap(deferred, x) {
 
-    if (x === defer.promise)
+    if (x === deferred.promise)
         throw new TypeError("Promise cannot wrap itself");
     
     if (isPromise(x))
-        x.chain(defer.resolve, defer.reject);
+        x.chain(deferred.resolve, deferred.reject);
     else
-        defer.resolve(x);
+        deferred.resolve(x);
 }
 
-function promiseReact(defer, handler, x) {
+function promiseReact(deferred, handler, x) {
 
     enqueueMicrotask($=> {
     
-        try { promiseUnwrap(defer, handler(x)) } 
-        catch(e) { defer.reject(e) }
+        try { promiseUnwrap(deferred, handler(x)) } 
+        catch(e) { deferred.reject(e) }
     });
 }
 
@@ -108,7 +108,7 @@ class Promise {
         if (typeof onResolve !== "function") onResolve = x => x;
         if (typeof onReject !== "function") onReject = e => { throw e };
 
-        var defer = this.constructor.defer();
+        var deferred = this.constructor.defer();
 
         switch (this[$status]) {
 
@@ -116,20 +116,20 @@ class Promise {
                 throw new TypeError("Promise method called on a non-promise");
         
             case "pending":
-                this[$onResolve].push([defer, onResolve]);
-                this[$onReject].push([defer, onReject]);
+                this[$onResolve].push([deferred, onResolve]);
+                this[$onReject].push([deferred, onReject]);
                 break;
     
             case "resolved":
-                promiseReact(defer, onResolve, this[$value]);
+                promiseReact(deferred, onResolve, this[$value]);
                 break;
         
             case "rejected":
-                promiseReact(defer, onReject, this[$value]);
+                promiseReact(deferred, onReject, this[$value]);
                 break;
         }
 
-        return defer.promise;
+        return deferred.promise;
     }
     
     then(onResolve, onReject) {
