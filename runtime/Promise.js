@@ -85,18 +85,6 @@ function promiseReact(deferred, handler, x) {
     });
 }
 
-function getDeferred(constructor) {
-
-    var result = {};
-
-    result.promise = new constructor((resolve, reject) => {
-        result.resolve = resolve;
-        result.reject = reject;
-    });
-
-    return result;
-}
-
 class Promise {
 
     constructor(init) {
@@ -116,7 +104,7 @@ class Promise {
         if (typeof onResolve !== "function") onResolve = x => x;
         if (typeof onReject !== "function") onReject = e => { throw e };
 
-        var deferred = getDeferred(this.constructor);
+        var deferred = this.constructor.deferred();
 
         switch (this[$status]) {
 
@@ -174,6 +162,19 @@ class Promise {
         return isPromise(x);
     }
     
+    static deferred() {
+    
+        var d = {};
+
+        d.promise = new this((resolve, reject) => {
+            d.resolve = resolve;
+            d.reject = reject;
+        });
+
+        return d;
+    }
+    
 }
 
 this.Promise = Promise;
+
