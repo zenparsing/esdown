@@ -149,12 +149,16 @@ class Promise {
     
     static resolve(x) { 
     
-        return new this(resolve => resolve(x));
+        var d = this.deferred();
+        d.resolve(x);
+        return d.promise;
     }
     
     static reject(x) { 
     
-        return new this((resolve, reject) => reject(x));
+        var d = this.deferred();
+        d.reject(x);
+        return d.promise;
     }
     
     static isPromise(x) {
