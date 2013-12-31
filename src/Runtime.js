@@ -788,23 +788,23 @@ function promiseDone(promise, status, value, reactions) {
         promiseReact(reactions[i][0], reactions[i][1], value);
 }
 
-function promiseUnwrap(deferred, x) {
+function promiseUnwrap(defer, x) {
 
-    if (x === deferred.promise)
+    if (x === defer.promise)
         throw new TypeError("Promise cannot wrap itself");
     
     if (isPromise(x))
-        x.chain(deferred.resolve, deferred.reject);
+        x.chain(defer.resolve, defer.reject);
     else
-        deferred.resolve(x);
+        defer.resolve(x);
 }
 
-function promiseReact(deferred, handler, x) {
+function promiseReact(defer, handler, x) {
 
     enqueueMicrotask($=> {
     
-        try { promiseUnwrap(deferred, handler(x)) } 
-        catch(e) { deferred.reject(e) }
+        try { promiseUnwrap(defer, handler(x)) } 
+        catch(e) { defer.reject(e) }
     });
 }
 
@@ -831,7 +831,7 @@ class Promise {
         if (typeof onResolve !== "function") onResolve = x => x;
         if (typeof onReject !== "function") onReject = e => { throw e };
 
-        var deferred = this.constructor.deferred();
+        var defer = this.constructor.defer();
 
         switch (this[$status]) {
 
@@ -839,20 +839,20 @@ class Promise {
                 throw new TypeError("Promise method called on a non-promise");
         
             case "pending":
-                this[$onResolve].push([deferred, onResolve]);
-                this[$onReject].push([deferred, onReject]);
+                this[$onResolve].push([defer, onResolve]);
+                this[$onReject].push([defer, onReject]);
                 break;
     
             case "resolved":
-                promiseReact(deferred, onResolve, this[$value]);
+                promiseReact(defer, onResolve, this[$value]);
                 break;
         
             case "rejected":
-                promiseReact(deferred, onReject, this[$value]);
+                promiseReact(defer, onReject, this[$value]);
                 break;
         }
 
-        return deferred.promise;
+        return defer.promise;
     }
     
     then(onResolve, onReject) {
@@ -879,7 +879,7 @@ class Promise {
         return isPromise(x);
     }
     
-    static deferred() {
+    static defer() {
     
         var d = {};
 
@@ -893,14 +893,14 @@ class Promise {
     
     static resolve(x) { 
     
-        var d = this.deferred();
+        var d = this.defer();
         d.resolve(x);
         return d.promise;
     }
     
     static reject(x) { 
     
-        var d = this.deferred();
+        var d = this.defer();
         d.reject(x);
         return d.promise;
     }
