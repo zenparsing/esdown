@@ -762,6 +762,8 @@ var enqueueMicrotask = ((function($) {
 
 }))();
 
+// The following property names are used to simulate the internal data
+// slots that are defined for Promise objects.
 
 var $status = "Promise#status",
     $value = "Promise#value",
@@ -796,23 +798,23 @@ function promiseDone(promise, status, value, reactions) {
         promiseReact(reactions[i][0], reactions[i][1], value);
 }
 
-function promiseUnwrap(defer, x) {
+function promiseUnwrap(deferred, x) {
 
-    if (x === defer.promise)
+    if (x === deferred.promise)
         throw new TypeError("Promise cannot wrap itself");
     
     if (isPromise(x))
-        x.chain(defer.resolve, defer.reject);
+        x.chain(deferred.resolve, deferred.reject);
     else
-        defer.resolve(x);
+        deferred.resolve(x);
 }
 
-function promiseReact(defer, handler, x) {
+function promiseReact(deferred, handler, x) {
 
     enqueueMicrotask((function($) {
     
-        try { promiseUnwrap(defer, handler(x)) } 
-        catch(e) { defer.reject(e) }
+        try { promiseUnwrap(deferred, handler(x)) } 
+        catch(e) { deferred.reject(e) }
     }));
 }
 
@@ -839,7 +841,7 @@ var Promise = __class(function(__super) { return {
         if (typeof onResolve !== "function") onResolve = (function(x) { return x; });
         if (typeof onReject !== "function") onReject = (function(e) { throw e });
 
-        var defer = this.constructor.defer();
+        var deferred = this.constructor.defer();
 
         switch (this[$status]) {
 
@@ -847,20 +849,20 @@ var Promise = __class(function(__super) { return {
                 throw new TypeError("Promise method called on a non-promise");
         
             case "pending":
-                this[$onResolve].push([defer, onResolve]);
-                this[$onReject].push([defer, onReject]);
+                this[$onResolve].push([deferred, onResolve]);
+                this[$onReject].push([deferred, onReject]);
                 break;
     
             case "resolved":
-                promiseReact(defer, onResolve, this[$value]);
+                promiseReact(deferred, onResolve, this[$value]);
                 break;
         
             case "rejected":
-                promiseReact(defer, onReject, this[$value]);
+                promiseReact(deferred, onReject, this[$value]);
                 break;
         }
 
-        return defer.promise;
+        return deferred.promise;
     },
     
     then: function(onResolve, onReject) {
@@ -1003,7 +1005,7 @@ var Class =
 
 var Promise = 
 
-"var enqueueMicrotask = ($=> {\n\n    var window = this.window,\n        process = this.process,\n        msgChannel = null,\n        list = [];\n    \n    if (typeof setImmediate === \"function\") {\n    \n        return window ?\n            window.setImmediate.bind(window) :\n            setImmediate;\n    \n    } else if (process && typeof process.nextTick === \"function\") {\n    \n        return process.nextTick;\n        \n    } else if (window && window.MessageChannel) {\n        \n        msgChannel = new window.MessageChannel();\n        msgChannel.port1.onmessage = $=> { if (list.length) list.shift()(); };\n    \n        return fn => {\n        \n            list.push(fn);\n            msgChannel.port2.postMessage(0);\n        };\n    }\n    \n    return fn => setTimeout(fn, 0);\n\n})();\n\n\nvar $status = \"Promise#status\",\n    $value = \"Promise#value\",\n    $onResolve = \"Promise#onResolve\",\n    $onReject = \"Promise#onReject\";\n\nfunction isPromise(x) { \n\n    return !!x && $status in Object(x);\n}\n\nfunction promiseResolve(promise, x) {\n    \n    promiseDone(promise, \"resolved\", x, promise[$onResolve]);\n}\n\nfunction promiseReject(promise, x) {\n    \n    promiseDone(promise, \"rejected\", x, promise[$onReject]);\n}\n\nfunction promiseDone(promise, status, value, reactions) {\n\n    if (promise[$status] !== \"pending\") \n        return;\n        \n    promise[$status] = status;\n    promise[$value] = value;\n    promise[$onResolve] = promise[$onReject] = void 0;\n    \n    for (var i = 0; i < reactions.length; ++i) \n        promiseReact(reactions[i][0], reactions[i][1], value);\n}\n\nfunction promiseUnwrap(defer, x) {\n\n    if (x === defer.promise)\n        throw new TypeError(\"Promise cannot wrap itself\");\n    \n    if (isPromise(x))\n        x.chain(defer.resolve, defer.reject);\n    else\n        defer.resolve(x);\n}\n\nfunction promiseReact(defer, handler, x) {\n\n    enqueueMicrotask($=> {\n    \n        try { promiseUnwrap(defer, handler(x)) } \n        catch(e) { defer.reject(e) }\n    });\n}\n\nclass Promise {\n\n    constructor(init) {\n    \n        if (typeof init !== \"function\")\n            throw new TypeError(\"Promise constructor called without initializer\");\n        \n        this[$value] = void 0;\n        this[$status] = \"pending\";\n        this[$onResolve] = [];\n        this[$onReject] = [];\n    \n        var resolve = x => promiseResolve(this, x),\n            reject = r => promiseReject(this, r);\n        \n        try { init(resolve, reject) } catch (x) { reject(x) }\n    }\n    \n    chain(onResolve, onReject) {\n    \n        if (typeof onResolve !== \"function\") onResolve = x => x;\n        if (typeof onReject !== \"function\") onReject = e => { throw e };\n\n        var defer = this.constructor.defer();\n\n        switch (this[$status]) {\n\n            case undefined:\n                throw new TypeError(\"Promise method called on a non-promise\");\n        \n            case \"pending\":\n                this[$onResolve].push([defer, onResolve]);\n                this[$onReject].push([defer, onReject]);\n                break;\n    \n            case \"resolved\":\n                promiseReact(defer, onResolve, this[$value]);\n                break;\n        \n            case \"rejected\":\n                promiseReact(defer, onReject, this[$value]);\n                break;\n        }\n\n        return defer.promise;\n    }\n    \n    then(onResolve, onReject) {\n\n        if (typeof onResolve !== \"function\") onResolve = x => x;\n    \n        return this.chain(x => {\n    \n            if (x && typeof x === \"object\") {\n            \n                var maybeThen = x.then;\n                \n                if (typeof maybeThen === \"function\")\n                    return maybeThen.call(x, onResolve, onReject);\n            }\n            \n            return onResolve(x);\n        \n        }, onReject);\n    }\n    \n    static isPromise(x) {\n        \n        return isPromise(x);\n    }\n    \n    static defer() {\n    \n        var d = {};\n\n        d.promise = new this((resolve, reject) => {\n            d.resolve = resolve;\n            d.reject = reject;\n        });\n\n        return d;\n    }\n    \n    static resolve(x) { \n    \n        var d = this.defer();\n        d.resolve(x);\n        return d.promise;\n    }\n    \n    static reject(x) { \n    \n        var d = this.defer();\n        d.reject(x);\n        return d.promise;\n    }\n    \n}\n\nthis.Promise = Promise;\n\n";
+"var enqueueMicrotask = ($=> {\n\n    var window = this.window,\n        process = this.process,\n        msgChannel = null,\n        list = [];\n    \n    if (typeof setImmediate === \"function\") {\n    \n        return window ?\n            window.setImmediate.bind(window) :\n            setImmediate;\n    \n    } else if (process && typeof process.nextTick === \"function\") {\n    \n        return process.nextTick;\n        \n    } else if (window && window.MessageChannel) {\n        \n        msgChannel = new window.MessageChannel();\n        msgChannel.port1.onmessage = $=> { if (list.length) list.shift()(); };\n    \n        return fn => {\n        \n            list.push(fn);\n            msgChannel.port2.postMessage(0);\n        };\n    }\n    \n    return fn => setTimeout(fn, 0);\n\n})();\n\n// The following property names are used to simulate the internal data\n// slots that are defined for Promise objects.\n\nvar $status = \"Promise#status\",\n    $value = \"Promise#value\",\n    $onResolve = \"Promise#onResolve\",\n    $onReject = \"Promise#onReject\";\n\nfunction isPromise(x) { \n\n    return !!x && $status in Object(x);\n}\n\nfunction promiseResolve(promise, x) {\n    \n    promiseDone(promise, \"resolved\", x, promise[$onResolve]);\n}\n\nfunction promiseReject(promise, x) {\n    \n    promiseDone(promise, \"rejected\", x, promise[$onReject]);\n}\n\nfunction promiseDone(promise, status, value, reactions) {\n\n    if (promise[$status] !== \"pending\") \n        return;\n        \n    promise[$status] = status;\n    promise[$value] = value;\n    promise[$onResolve] = promise[$onReject] = void 0;\n    \n    for (var i = 0; i < reactions.length; ++i) \n        promiseReact(reactions[i][0], reactions[i][1], value);\n}\n\nfunction promiseUnwrap(deferred, x) {\n\n    if (x === deferred.promise)\n        throw new TypeError(\"Promise cannot wrap itself\");\n    \n    if (isPromise(x))\n        x.chain(deferred.resolve, deferred.reject);\n    else\n        deferred.resolve(x);\n}\n\nfunction promiseReact(deferred, handler, x) {\n\n    enqueueMicrotask($=> {\n    \n        try { promiseUnwrap(deferred, handler(x)) } \n        catch(e) { deferred.reject(e) }\n    });\n}\n\nclass Promise {\n\n    constructor(init) {\n    \n        if (typeof init !== \"function\")\n            throw new TypeError(\"Promise constructor called without initializer\");\n        \n        this[$value] = void 0;\n        this[$status] = \"pending\";\n        this[$onResolve] = [];\n        this[$onReject] = [];\n    \n        var resolve = x => promiseResolve(this, x),\n            reject = r => promiseReject(this, r);\n        \n        try { init(resolve, reject) } catch (x) { reject(x) }\n    }\n    \n    chain(onResolve, onReject) {\n    \n        if (typeof onResolve !== \"function\") onResolve = x => x;\n        if (typeof onReject !== \"function\") onReject = e => { throw e };\n\n        var deferred = this.constructor.defer();\n\n        switch (this[$status]) {\n\n            case undefined:\n                throw new TypeError(\"Promise method called on a non-promise\");\n        \n            case \"pending\":\n                this[$onResolve].push([deferred, onResolve]);\n                this[$onReject].push([deferred, onReject]);\n                break;\n    \n            case \"resolved\":\n                promiseReact(deferred, onResolve, this[$value]);\n                break;\n        \n            case \"rejected\":\n                promiseReact(deferred, onReject, this[$value]);\n                break;\n        }\n\n        return deferred.promise;\n    }\n    \n    then(onResolve, onReject) {\n\n        if (typeof onResolve !== \"function\") onResolve = x => x;\n    \n        return this.chain(x => {\n    \n            if (x && typeof x === \"object\") {\n            \n                var maybeThen = x.then;\n                \n                if (typeof maybeThen === \"function\")\n                    return maybeThen.call(x, onResolve, onReject);\n            }\n            \n            return onResolve(x);\n        \n        }, onReject);\n    }\n    \n    static isPromise(x) {\n        \n        return isPromise(x);\n    }\n    \n    static defer() {\n    \n        var d = {};\n\n        d.promise = new this((resolve, reject) => {\n            d.resolve = resolve;\n            d.reject = reject;\n        });\n\n        return d;\n    }\n    \n    static resolve(x) { \n    \n        var d = this.defer();\n        d.resolve(x);\n        return d.promise;\n    }\n    \n    static reject(x) { \n    \n        var d = this.defer();\n        d.reject(x);\n        return d.promise;\n    }\n    \n}\n\nthis.Promise = Promise;\n\n";
 
 var Async = 
 
@@ -4287,7 +4289,7 @@ var Parser = __class(function(__super) { return {
         
         switch (token.type) {
         
-            case "IDENTIFIER": return this.Identifier();
+            case "IDENTIFIER": return this.IdentifierName();
             case "STRING": return this.String();
             case "NUMBER": return this.Number();
             case "[": return this.ComputedPropertyName();
@@ -6905,6 +6907,136 @@ var PromiseExtensions = __class(function(__super) { return {
 
 exports.PromiseExtensions = PromiseExtensions; return exports; }).call(this, {});
 
+var EventTarget = (function(exports) {
+
+/*
+
+This EventTarget implementation differs from DOM3 EventTargets in the following
+ways:
+
+- There is no capture phase.
+- Listeners must be functions.  They cannot be EventListener objects.
+- There is no way to tell if a DOM event has been stopped by a handler.
+  Instead, we check a "propagationStopped" property on the event object.
+- stopImmediatePropagation is not implemented.
+
+*/
+
+function listeners(obj, type) {
+
+	var list = obj.eventListeners[type];
+	
+	if (!list) 
+	    list = obj.eventListeners[type] = [];
+	
+	return list;
+}
+
+function fire(obj, evt) {
+
+	var list = listeners(obj, evt.type),
+	    len = list.length,
+	    i,
+	    x;
+	
+	for (i = 0; i < len; ++i) {
+	
+	    x = list[i].call(obj, evt);
+	    
+	    if (Promise.isPromise(x))
+	        x.then(null, (function(x) { return setTimeout((function($) { throw x }), 0); }));
+	}
+}
+
+var EventTarget = __class(function(__super) { return {
+
+    constructor: function EventTarget() {
+    
+        this.eventListeners = {};
+        this.parentEventTarget = null;
+    },
+    
+    on: function(type, handler) {
+    
+        return this.addEventListener(type, handler);
+    },
+    
+    addEventListener: function(type, handler) {
+    
+        if (typeof handler !== "function")
+            throw new Error("Listener is not a function");
+        
+        var a = listeners(this, type), 
+            i = a.indexOf(handler);
+            
+        if (i === -1) 
+            a.push(handler);
+    },
+    
+    removeEventListener: function(type, handler) {
+    
+        var a = list(this, type), 
+            i = a.indexOf(handler);
+        
+    	if (i !== -1) 
+    	    a.splice(i, 1);
+    },
+    
+    dispatchEvent: function(evt) {
+    
+        evt.target = this;
+        
+        // At target phase
+        fire(evt.currentTarget = this, evt);
+        
+        // Bubble phase
+        if (evt.bubbles) {
+        
+            for (var target = this.parentEventTarget; 
+                 target && !evt.propagationStopped; 
+                 target = target.parentEventTarget) {
+                
+                fire(evt.currentTarget = target, evt);
+            }
+        }
+        
+        // Reset current target for default actions
+        evt.currentTarget = null;
+        
+        return !evt.defaultPrevented;
+    }
+} });
+
+var Event = __class(function(__super) { return {
+
+    constructor: function Event(type, bubbles, cancellable) {
+    
+        this.type = type;
+        this.timeStamp = new Date();
+        this.bubbles = !!bubbles;
+        this.cancelable = !!cancellable;
+        this.currentTarget = null;
+        this.target = null;
+        this.defaultPrevented = false;
+        this.propagationStopped = false;
+    },
+    
+    stopPropagation: function() {
+    
+        this.propagationStopped = true;
+    },
+    
+    preventDefault: function() {
+    
+        this.defaultPrevented = true;
+    }
+    
+} });
+
+
+
+exports.EventTarget = EventTarget; exports.Event = Event; return exports; }).call(this, {});
+
 var AsyncFS_ = (function(exports) {
 
 var FS = _M1;
@@ -6981,6 +7113,7 @@ Object.keys(ConsoleIO).forEach(function(k) { exports[k] = ConsoleIO[k]; });
 Object.keys(StringSet).forEach(function(k) { exports[k] = StringSet[k]; });
 Object.keys(StringMap_).forEach(function(k) { exports[k] = StringMap_[k]; });
 Object.keys(PromiseExtensions).forEach(function(k) { exports[k] = PromiseExtensions[k]; });
+Object.keys(EventTarget).forEach(function(k) { exports[k] = EventTarget[k]; });
 
 var ConsoleStyle = ConsoleStyle_;
 

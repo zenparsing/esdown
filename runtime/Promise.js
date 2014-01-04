@@ -31,6 +31,8 @@ var enqueueMicrotask = ($=> {
 
 })();
 
+// The following property names are used to simulate the internal data
+// slots that are defined for Promise objects.
 
 var $status = "Promise#status",
     $value = "Promise#value",
