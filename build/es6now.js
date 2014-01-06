@@ -3425,7 +3425,7 @@ var Parser = __class(function(__super) { return {
             err = new SyntaxError(msg);
         
         err.line = pos.line;
-        err.column = err.column;
+        err.column = pos.column;
         err.lineOffset = pos.lineOffset;
         err.startOffset = pos.startOffset;
         err.endOffset = pos.endOffset;
