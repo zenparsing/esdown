@@ -39,9 +39,12 @@ var $status = "Promise#status",
     $onResolve = "Promise#onResolve",
     $onReject = "Promise#onReject";
 
+// The following property name is used to simulate the built-in symbol @@isPromise
+var $$isPromise = "@@isPromise";
+
 function isPromise(x) { 
 
-    return !!x && $status in Object(x);
+    return !!x && $$isPromise in Object(x);
 }
 
 function promiseResolve(promise, x) {
@@ -137,7 +140,20 @@ class Promise {
     then(onResolve, onReject) {
 
         if (typeof onResolve !== "function") onResolve = x => x;
-    
+        
+        /*
+        
+        return this.chain(x => {
+        
+            if (isPromise(x))
+                return x.then(onResolve, onReject);
+            
+            return onResolve(x);
+            
+        }, onReject);
+        
+        */
+        
         return this.chain(x => {
     
             if (x && typeof x === "object") {
@@ -147,10 +163,11 @@ class Promise {
                 if (typeof maybeThen === "function")
                     return maybeThen.call(x, onResolve, onReject);
             }
-            
+                        
             return onResolve(x);
         
         }, onReject);
+        
     }
     
     static isPromise(x) {
@@ -186,5 +203,6 @@ class Promise {
     
 }
 
-this.Promise = Promise;
+Promise.prototype[$$isPromise] = true;
 
+this.Promise = Promise;

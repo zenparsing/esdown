@@ -770,9 +770,12 @@ var $status = "Promise#status",
     $onResolve = "Promise#onResolve",
     $onReject = "Promise#onReject";
 
+// The following property name is used to simulate the built-in symbol @@isPromise
+var $$isPromise = "@@isPromise";
+
 function isPromise(x) { 
 
-    return !!x && $status in Object(x);
+    return !!x && $$isPromise in Object(x);
 }
 
 function promiseResolve(promise, x) {
@@ -868,7 +871,20 @@ var Promise = __class(function(__super) { return {
     then: function(onResolve, onReject) {
 
         if (typeof onResolve !== "function") onResolve = (function(x) { return x; });
-    
+        
+        /*
+        
+        return this.chain(x => {
+        
+            if (isPromise(x))
+                return x.then(onResolve, onReject);
+            
+            return onResolve(x);
+            
+        }, onReject);
+        
+        */
+        
         return this.chain((function(x) {
     
             if (x && typeof x === "object") {
@@ -878,10 +894,11 @@ var Promise = __class(function(__super) { return {
                 if (typeof maybeThen === "function")
                     return maybeThen.call(x, onResolve, onReject);
             }
-            
+                        
             return onResolve(x);
         
         }), onReject);
+        
     },
     
     __static_isPromise: function(x) {
@@ -917,43 +934,29 @@ var Promise = __class(function(__super) { return {
     
 } });
 
-this.Promise = Promise;
+Promise.prototype[$$isPromise] = true;
 
+this.Promise = Promise;
 
 
 }).call(this);
 
 (function() {
 
-function getDeferred(constructor) {
-
-    var result = {};
-
-    result.promise = new constructor((function(resolve, reject) {
-        result.resolve = resolve;
-        result.reject = reject;
-    }));
-
-    return result;
+function unwrap(x) {
+    
+    return Promise.isPromise(x) ? x.chain(unwrap) : x;
 }
 
-function promiseWhen(constructor, x) {
-
-    if (Promise.isPromise(x))
-        return x.chain((function(x) { return promiseWhen(constructor, x); }));
+function iterate(iterable) {
     
-    var deferred = getDeferred(constructor);
-    deferred.resolve(x);
-    return deferred.promise;
-}
-
-function promiseIterate(iterable) {
+    // TODO:  Use Symbol.iterator
     
-    // TODO:  Use System.iterator
     var iter = iterable;
     
-    var constructor = Promise,
-        deferred = getDeferred(constructor);
+    var deferred = Promise.defer();
+    resume(void 0, false);
+    return deferred.promise;
     
     function resume(value, error) {
     
@@ -963,28 +966,37 @@ function promiseIterate(iterable) {
         try {
         
             // Invoke the iterator/generator
-            var result = error ? iter.throw(value) : iter.next(value);
+            var result = error ? iter.throw(value) : iter.next(value),
+                value = result.value,
+                done = result.done;
             
-            // Recursively unwrap the result value
-            var promise = promiseWhen(constructor, result.value);
+            if (Promise.isPromise(value)) {
             
-            if (result.done)
-                promise.chain(deferred.resolve, deferred.reject);
-            else
-                promise.chain((function(x) { return resume(x, false); }), (function(x) { return resume(x, true); }));
+                // Recursively unwrap the result value
+                value = value.chain(unwrap);
+                
+                if (done)
+                    value.chain(deferred.resolve, deferred.reject);
+                else
+                    value.chain((function(x) { return resume(x, false); }), (function(x) { return resume(x, true); }));
+            
+            } else if (done) {
+                
+                deferred.resolve(value);
+                
+            } else {
+            
+                resume(value, false);
+            }
             
         } catch (x) {
         
             deferred.reject(x);
         }
     }
-    
-    resume(void 0, false);
-    
-    return deferred.promise;
 }
 
-this.__async = promiseIterate;
+this.__async = iterate;
 
 
 }).call(this);
@@ -1005,11 +1017,11 @@ var Class =
 
 var Promise = 
 
-"var enqueueMicrotask = ($=> {\n\n    var window = this.window,\n        process = this.process,\n        msgChannel = null,\n        list = [];\n    \n    if (typeof setImmediate === \"function\") {\n    \n        return window ?\n            window.setImmediate.bind(window) :\n            setImmediate;\n    \n    } else if (process && typeof process.nextTick === \"function\") {\n    \n        return process.nextTick;\n        \n    } else if (window && window.MessageChannel) {\n        \n        msgChannel = new window.MessageChannel();\n        msgChannel.port1.onmessage = $=> { if (list.length) list.shift()(); };\n    \n        return fn => {\n        \n            list.push(fn);\n            msgChannel.port2.postMessage(0);\n        };\n    }\n    \n    return fn => setTimeout(fn, 0);\n\n})();\n\n// The following property names are used to simulate the internal data\n// slots that are defined for Promise objects.\n\nvar $status = \"Promise#status\",\n    $value = \"Promise#value\",\n    $onResolve = \"Promise#onResolve\",\n    $onReject = \"Promise#onReject\";\n\nfunction isPromise(x) { \n\n    return !!x && $status in Object(x);\n}\n\nfunction promiseResolve(promise, x) {\n    \n    promiseDone(promise, \"resolved\", x, promise[$onResolve]);\n}\n\nfunction promiseReject(promise, x) {\n    \n    promiseDone(promise, \"rejected\", x, promise[$onReject]);\n}\n\nfunction promiseDone(promise, status, value, reactions) {\n\n    if (promise[$status] !== \"pending\") \n        return;\n        \n    promise[$status] = status;\n    promise[$value] = value;\n    promise[$onResolve] = promise[$onReject] = void 0;\n    \n    for (var i = 0; i < reactions.length; ++i) \n        promiseReact(reactions[i][0], reactions[i][1], value);\n}\n\nfunction promiseUnwrap(deferred, x) {\n\n    if (x === deferred.promise)\n        throw new TypeError(\"Promise cannot wrap itself\");\n    \n    if (isPromise(x))\n        x.chain(deferred.resolve, deferred.reject);\n    else\n        deferred.resolve(x);\n}\n\nfunction promiseReact(deferred, handler, x) {\n\n    enqueueMicrotask($=> {\n    \n        try { promiseUnwrap(deferred, handler(x)) } \n        catch(e) { deferred.reject(e) }\n    });\n}\n\nclass Promise {\n\n    constructor(init) {\n    \n        if (typeof init !== \"function\")\n            throw new TypeError(\"Promise constructor called without initializer\");\n        \n        this[$value] = void 0;\n        this[$status] = \"pending\";\n        this[$onResolve] = [];\n        this[$onReject] = [];\n    \n        var resolve = x => promiseResolve(this, x),\n            reject = r => promiseReject(this, r);\n        \n        try { init(resolve, reject) } catch (x) { reject(x) }\n    }\n    \n    chain(onResolve, onReject) {\n    \n        if (typeof onResolve !== \"function\") onResolve = x => x;\n        if (typeof onReject !== \"function\") onReject = e => { throw e };\n\n        var deferred = this.constructor.defer();\n\n        switch (this[$status]) {\n\n            case undefined:\n                throw new TypeError(\"Promise method called on a non-promise\");\n        \n            case \"pending\":\n                this[$onResolve].push([deferred, onResolve]);\n                this[$onReject].push([deferred, onReject]);\n                break;\n    \n            case \"resolved\":\n                promiseReact(deferred, onResolve, this[$value]);\n                break;\n        \n            case \"rejected\":\n                promiseReact(deferred, onReject, this[$value]);\n                break;\n        }\n\n        return deferred.promise;\n    }\n    \n    then(onResolve, onReject) {\n\n        if (typeof onResolve !== \"function\") onResolve = x => x;\n    \n        return this.chain(x => {\n    \n            if (x && typeof x === \"object\") {\n            \n                var maybeThen = x.then;\n                \n                if (typeof maybeThen === \"function\")\n                    return maybeThen.call(x, onResolve, onReject);\n            }\n            \n            return onResolve(x);\n        \n        }, onReject);\n    }\n    \n    static isPromise(x) {\n        \n        return isPromise(x);\n    }\n    \n    static defer() {\n    \n        var d = {};\n\n        d.promise = new this((resolve, reject) => {\n            d.resolve = resolve;\n            d.reject = reject;\n        });\n\n        return d;\n    }\n    \n    static resolve(x) { \n    \n        var d = this.defer();\n        d.resolve(x);\n        return d.promise;\n    }\n    \n    static reject(x) { \n    \n        var d = this.defer();\n        d.reject(x);\n        return d.promise;\n    }\n    \n}\n\nthis.Promise = Promise;\n\n";
+"var enqueueMicrotask = ($=> {\n\n    var window = this.window,\n        process = this.process,\n        msgChannel = null,\n        list = [];\n    \n    if (typeof setImmediate === \"function\") {\n    \n        return window ?\n            window.setImmediate.bind(window) :\n            setImmediate;\n    \n    } else if (process && typeof process.nextTick === \"function\") {\n    \n        return process.nextTick;\n        \n    } else if (window && window.MessageChannel) {\n        \n        msgChannel = new window.MessageChannel();\n        msgChannel.port1.onmessage = $=> { if (list.length) list.shift()(); };\n    \n        return fn => {\n        \n            list.push(fn);\n            msgChannel.port2.postMessage(0);\n        };\n    }\n    \n    return fn => setTimeout(fn, 0);\n\n})();\n\n// The following property names are used to simulate the internal data\n// slots that are defined for Promise objects.\n\nvar $status = \"Promise#status\",\n    $value = \"Promise#value\",\n    $onResolve = \"Promise#onResolve\",\n    $onReject = \"Promise#onReject\";\n\n// The following property name is used to simulate the built-in symbol @@isPromise\nvar $$isPromise = \"@@isPromise\";\n\nfunction isPromise(x) { \n\n    return !!x && $$isPromise in Object(x);\n}\n\nfunction promiseResolve(promise, x) {\n    \n    promiseDone(promise, \"resolved\", x, promise[$onResolve]);\n}\n\nfunction promiseReject(promise, x) {\n    \n    promiseDone(promise, \"rejected\", x, promise[$onReject]);\n}\n\nfunction promiseDone(promise, status, value, reactions) {\n\n    if (promise[$status] !== \"pending\") \n        return;\n        \n    promise[$status] = status;\n    promise[$value] = value;\n    promise[$onResolve] = promise[$onReject] = void 0;\n    \n    for (var i = 0; i < reactions.length; ++i) \n        promiseReact(reactions[i][0], reactions[i][1], value);\n}\n\nfunction promiseUnwrap(deferred, x) {\n\n    if (x === deferred.promise)\n        throw new TypeError(\"Promise cannot wrap itself\");\n    \n    if (isPromise(x))\n        x.chain(deferred.resolve, deferred.reject);\n    else\n        deferred.resolve(x);\n}\n\nfunction promiseReact(deferred, handler, x) {\n\n    enqueueMicrotask($=> {\n    \n        try { promiseUnwrap(deferred, handler(x)) } \n        catch(e) { deferred.reject(e) }\n    });\n}\n\nclass Promise {\n\n    constructor(init) {\n    \n        if (typeof init !== \"function\")\n            throw new TypeError(\"Promise constructor called without initializer\");\n        \n        this[$value] = void 0;\n        this[$status] = \"pending\";\n        this[$onResolve] = [];\n        this[$onReject] = [];\n    \n        var resolve = x => promiseResolve(this, x),\n            reject = r => promiseReject(this, r);\n        \n        try { init(resolve, reject) } catch (x) { reject(x) }\n    }\n    \n    chain(onResolve, onReject) {\n    \n        if (typeof onResolve !== \"function\") onResolve = x => x;\n        if (typeof onReject !== \"function\") onReject = e => { throw e };\n\n        var deferred = this.constructor.defer();\n\n        switch (this[$status]) {\n\n            case undefined:\n                throw new TypeError(\"Promise method called on a non-promise\");\n        \n            case \"pending\":\n                this[$onResolve].push([deferred, onResolve]);\n                this[$onReject].push([deferred, onReject]);\n                break;\n    \n            case \"resolved\":\n                promiseReact(deferred, onResolve, this[$value]);\n                break;\n        \n            case \"rejected\":\n                promiseReact(deferred, onReject, this[$value]);\n                break;\n        }\n\n        return deferred.promise;\n    }\n    \n    then(onResolve, onReject) {\n\n        if (typeof onResolve !== \"function\") onResolve = x => x;\n        \n        /*\n        \n        return this.chain(x => {\n        \n            if (isPromise(x))\n                return x.then(onResolve, onReject);\n            \n            return onResolve(x);\n            \n        }, onReject);\n        \n        */\n        \n        return this.chain(x => {\n    \n            if (x && typeof x === \"object\") {\n            \n                var maybeThen = x.then;\n                \n                if (typeof maybeThen === \"function\")\n                    return maybeThen.call(x, onResolve, onReject);\n            }\n                        \n            return onResolve(x);\n        \n        }, onReject);\n        \n    }\n    \n    static isPromise(x) {\n        \n        return isPromise(x);\n    }\n    \n    static defer() {\n    \n        var d = {};\n\n        d.promise = new this((resolve, reject) => {\n            d.resolve = resolve;\n            d.reject = reject;\n        });\n\n        return d;\n    }\n    \n    static resolve(x) { \n    \n        var d = this.defer();\n        d.resolve(x);\n        return d.promise;\n    }\n    \n    static reject(x) { \n    \n        var d = this.defer();\n        d.reject(x);\n        return d.promise;\n    }\n    \n}\n\nPromise.prototype[$$isPromise] = true;\n\nthis.Promise = Promise;\n";
 
 var Async = 
 
-"function getDeferred(constructor) {\n\n    var result = {};\n\n    result.promise = new constructor((resolve, reject) => {\n        result.resolve = resolve;\n        result.reject = reject;\n    });\n\n    return result;\n}\n\nfunction promiseWhen(constructor, x) {\n\n    if (Promise.isPromise(x))\n        return x.chain(x => promiseWhen(constructor, x));\n    \n    var deferred = getDeferred(constructor);\n    deferred.resolve(x);\n    return deferred.promise;\n}\n\nfunction promiseIterate(iterable) {\n    \n    // TODO:  Use System.iterator\n    var iter = iterable;\n    \n    var constructor = Promise,\n        deferred = getDeferred(constructor);\n    \n    function resume(value, error) {\n    \n        if (error && !(\"throw\" in iter))\n            return deferred.reject(value);\n        \n        try {\n        \n            // Invoke the iterator/generator\n            var result = error ? iter.throw(value) : iter.next(value);\n            \n            // Recursively unwrap the result value\n            var promise = promiseWhen(constructor, result.value);\n            \n            if (result.done)\n                promise.chain(deferred.resolve, deferred.reject);\n            else\n                promise.chain(x => resume(x, false), x => resume(x, true));\n            \n        } catch (x) {\n        \n            deferred.reject(x);\n        }\n    }\n    \n    resume(void 0, false);\n    \n    return deferred.promise;\n}\n\nthis.__async = promiseIterate;\n";
+"function unwrap(x) {\n    \n    return Promise.isPromise(x) ? x.chain(unwrap) : x;\n}\n\nfunction iterate(iterable) {\n    \n    // TODO:  Use Symbol.iterator\n    \n    var iter = iterable;\n    \n    var deferred = Promise.defer();\n    resume(void 0, false);\n    return deferred.promise;\n    \n    function resume(value, error) {\n    \n        if (error && !(\"throw\" in iter))\n            return deferred.reject(value);\n        \n        try {\n        \n            // Invoke the iterator/generator\n            var result = error ? iter.throw(value) : iter.next(value),\n                value = result.value,\n                done = result.done;\n            \n            if (Promise.isPromise(value)) {\n            \n                // Recursively unwrap the result value\n                value = value.chain(unwrap);\n                \n                if (done)\n                    value.chain(deferred.resolve, deferred.reject);\n                else\n                    value.chain(x => resume(x, false), x => resume(x, true));\n            \n            } else if (done) {\n                \n                deferred.resolve(value);\n                \n            } else {\n            \n                resume(value, false);\n            }\n            \n        } catch (x) {\n        \n            deferred.reject(x);\n        }\n    }\n}\n\nthis.__async = iterate;\n";
 
 
 
@@ -1177,15 +1189,6 @@ var YieldExpression = __class(Node, function(__super) { return {
         __super("constructor").call(this, start, end);
         this.delegate = delegate;
         this.expression = expr;
-    }
-} });
-
-var AwaitExpression = __class(Node, function(__super) { return {
-
-    constructor: function AwaitExpression(expression, start, end) {
-    
-        __super("constructor").call(this, start, end);
-        this.expression = expression;
     }
 } });
 
@@ -1828,7 +1831,7 @@ var ClassElement = __class(Node, function(__super) { return {
 } });
 
 
-exports.Node = Node; exports.Script = Script; exports.Module = Module; exports.Identifier = Identifier; exports.Number = Number; exports.String = String; exports.Template = Template; exports.RegularExpression = RegularExpression; exports.Null = Null; exports.Boolean = Boolean; exports.ThisExpression = ThisExpression; exports.SuperExpression = SuperExpression; exports.SequenceExpression = SequenceExpression; exports.AssignmentExpression = AssignmentExpression; exports.SpreadExpression = SpreadExpression; exports.YieldExpression = YieldExpression; exports.AwaitExpression = AwaitExpression; exports.ConditionalExpression = ConditionalExpression; exports.BinaryExpression = BinaryExpression; exports.UpdateExpression = UpdateExpression; exports.UnaryExpression = UnaryExpression; exports.MemberExpression = MemberExpression; exports.CallExpression = CallExpression; exports.TaggedTemplateExpression = TaggedTemplateExpression; exports.NewExpression = NewExpression; exports.ParenExpression = ParenExpression; exports.ObjectLiteral = ObjectLiteral; exports.ComputedPropertyName = ComputedPropertyName; exports.PropertyDefinition = PropertyDefinition; exports.PatternProperty = PatternProperty; exports.PatternElement = PatternElement; exports.MethodDefinition = MethodDefinition; exports.ArrayLiteral = ArrayLiteral; exports.ArrayComprehension = ArrayComprehension; exports.GeneratorComprehension = GeneratorComprehension; exports.ComprehensionFor = ComprehensionFor; exports.ComprehensionIf = ComprehensionIf; exports.TemplateExpression = TemplateExpression; exports.Block = Block; exports.LabelledStatement = LabelledStatement; exports.ExpressionStatement = ExpressionStatement; exports.EmptyStatement = EmptyStatement; exports.VariableDeclaration = VariableDeclaration; exports.VariableDeclarator = VariableDeclarator; exports.ReturnStatement = ReturnStatement; exports.BreakStatement = BreakStatement; exports.ContinueStatement = ContinueStatement; exports.ThrowStatement = ThrowStatement; exports.DebuggerStatement = DebuggerStatement; exports.IfStatement = IfStatement; exports.DoWhileStatement = DoWhileStatement; exports.WhileStatement = WhileStatement; exports.ForStatement = ForStatement; exports.ForInStatement = ForInStatement; exports.ForOfStatement = ForOfStatement; exports.WithStatement = WithStatement; exports.SwitchStatement = SwitchStatement; exports.SwitchCase = SwitchCase; exports.TryStatement = TryStatement; exports.CatchClause = CatchClause; exports.FunctionDeclaration = FunctionDeclaration; exports.FunctionExpression = FunctionExpression; exports.FormalParameter = FormalParameter; exports.RestParameter = RestParameter; exports.FunctionBody = FunctionBody; exports.ArrowFunctionHead = ArrowFunctionHead; exports.ArrowFunction = ArrowFunction; exports.ModuleDeclaration = ModuleDeclaration; exports.ModuleBody = ModuleBody; exports.ModuleImport = ModuleImport; exports.ModuleAlias = ModuleAlias; exports.ImportDefaultDeclaration = ImportDefaultDeclaration; exports.ImportDeclaration = ImportDeclaration; exports.ImportSpecifier = ImportSpecifier; exports.ExportDeclaration = ExportDeclaration; exports.ExportsList = ExportsList; exports.ExportSpecifier = ExportSpecifier; exports.ModulePath = ModulePath; exports.ClassDeclaration = ClassDeclaration; exports.ClassExpression = ClassExpression; exports.ClassBody = ClassBody; exports.ClassElement = ClassElement; return exports; }).call(this, {});
+exports.Node = Node; exports.Script = Script; exports.Module = Module; exports.Identifier = Identifier; exports.Number = Number; exports.String = String; exports.Template = Template; exports.RegularExpression = RegularExpression; exports.Null = Null; exports.Boolean = Boolean; exports.ThisExpression = ThisExpression; exports.SuperExpression = SuperExpression; exports.SequenceExpression = SequenceExpression; exports.AssignmentExpression = AssignmentExpression; exports.SpreadExpression = SpreadExpression; exports.YieldExpression = YieldExpression; exports.ConditionalExpression = ConditionalExpression; exports.BinaryExpression = BinaryExpression; exports.UpdateExpression = UpdateExpression; exports.UnaryExpression = UnaryExpression; exports.MemberExpression = MemberExpression; exports.CallExpression = CallExpression; exports.TaggedTemplateExpression = TaggedTemplateExpression; exports.NewExpression = NewExpression; exports.ParenExpression = ParenExpression; exports.ObjectLiteral = ObjectLiteral; exports.ComputedPropertyName = ComputedPropertyName; exports.PropertyDefinition = PropertyDefinition; exports.PatternProperty = PatternProperty; exports.PatternElement = PatternElement; exports.MethodDefinition = MethodDefinition; exports.ArrayLiteral = ArrayLiteral; exports.ArrayComprehension = ArrayComprehension; exports.GeneratorComprehension = GeneratorComprehension; exports.ComprehensionFor = ComprehensionFor; exports.ComprehensionIf = ComprehensionIf; exports.TemplateExpression = TemplateExpression; exports.Block = Block; exports.LabelledStatement = LabelledStatement; exports.ExpressionStatement = ExpressionStatement; exports.EmptyStatement = EmptyStatement; exports.VariableDeclaration = VariableDeclaration; exports.VariableDeclarator = VariableDeclarator; exports.ReturnStatement = ReturnStatement; exports.BreakStatement = BreakStatement; exports.ContinueStatement = ContinueStatement; exports.ThrowStatement = ThrowStatement; exports.DebuggerStatement = DebuggerStatement; exports.IfStatement = IfStatement; exports.DoWhileStatement = DoWhileStatement; exports.WhileStatement = WhileStatement; exports.ForStatement = ForStatement; exports.ForInStatement = ForInStatement; exports.ForOfStatement = ForOfStatement; exports.WithStatement = WithStatement; exports.SwitchStatement = SwitchStatement; exports.SwitchCase = SwitchCase; exports.TryStatement = TryStatement; exports.CatchClause = CatchClause; exports.FunctionDeclaration = FunctionDeclaration; exports.FunctionExpression = FunctionExpression; exports.FormalParameter = FormalParameter; exports.RestParameter = RestParameter; exports.FunctionBody = FunctionBody; exports.ArrowFunctionHead = ArrowFunctionHead; exports.ArrowFunction = ArrowFunction; exports.ModuleDeclaration = ModuleDeclaration; exports.ModuleBody = ModuleBody; exports.ModuleImport = ModuleImport; exports.ModuleAlias = ModuleAlias; exports.ImportDefaultDeclaration = ImportDefaultDeclaration; exports.ImportDeclaration = ImportDeclaration; exports.ImportSpecifier = ImportSpecifier; exports.ExportDeclaration = ExportDeclaration; exports.ExportsList = ExportsList; exports.ExportSpecifier = ExportSpecifier; exports.ModulePath = ModulePath; exports.ClassDeclaration = ClassDeclaration; exports.ClassExpression = ClassExpression; exports.ClassBody = ClassBody; exports.ClassElement = ClassElement; return exports; }).call(this, {});
 
 var Scanner_ = (function(exports) {
 
@@ -3265,6 +3268,7 @@ function isUnary(op) {
     
     switch (op) {
     
+        case "await":
         case "delete":
         case "void": 
         case "typeof":
@@ -3830,9 +3834,8 @@ var Parser = __class(function(__super) { return {
             return new AST.UpdateExpression(type, expr, true, start, this.endOffset);
         }
         
-        // [Async Functions]
         if (this.peekAwait())
-            return this.AwaitExpression();
+            type = "await";
         
         if (isUnary(type)) {
         
@@ -3859,23 +3862,6 @@ var Parser = __class(function(__super) { return {
         }
         
         return expr;
-    },
-    
-    // [Async Functions]
-    AwaitExpression: function() {
-    
-        var start = this.startOffset,
-            expr = null;
-        
-        this.readKeyword("await");
-        
-        if (!this.maybeEnd())
-            expr = this.UnaryExpression();
-        
-        return new AST.AwaitExpression(
-            expr,
-            start,
-            this.endOffset);
     },
     
     MemberExpression: function(allowCall) {
@@ -6110,9 +6096,12 @@ var Replacer = __class(function(__super) { return {
         }
     },
     
-    AwaitExpression: function(node) {
+    UnaryExpression: function(node) {
     
-        return node.expression ? "(yield " + node.expression.text + ")" : "yield";
+        if (node.operator !== "await")
+            return;
+        
+        return "(yield " + node.expression.text + ")";
     },
     
     FunctionDeclaration: function(node) {

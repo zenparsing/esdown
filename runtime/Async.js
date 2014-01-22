@@ -1,32 +1,17 @@
-function getDeferred(constructor) {
-
-    var result = {};
-
-    result.promise = new constructor((resolve, reject) => {
-        result.resolve = resolve;
-        result.reject = reject;
-    });
-
-    return result;
+function unwrap(x) {
+    
+    return Promise.isPromise(x) ? x.chain(unwrap) : x;
 }
 
-function promiseWhen(constructor, x) {
-
-    if (Promise.isPromise(x))
-        return x.chain(x => promiseWhen(constructor, x));
+function iterate(iterable) {
     
-    var deferred = getDeferred(constructor);
-    deferred.resolve(x);
-    return deferred.promise;
-}
-
-function promiseIterate(iterable) {
+    // TODO:  Use Symbol.iterator
     
-    // TODO:  Use System.iterator
     var iter = iterable;
     
-    var constructor = Promise,
-        deferred = getDeferred(constructor);
+    var deferred = Promise.defer();
+    resume(void 0, false);
+    return deferred.promise;
     
     function resume(value, error) {
     
@@ -36,25 +21,34 @@ function promiseIterate(iterable) {
         try {
         
             // Invoke the iterator/generator
-            var result = error ? iter.throw(value) : iter.next(value);
+            var result = error ? iter.throw(value) : iter.next(value),
+                value = result.value,
+                done = result.done;
             
-            // Recursively unwrap the result value
-            var promise = promiseWhen(constructor, result.value);
+            if (Promise.isPromise(value)) {
             
-            if (result.done)
-                promise.chain(deferred.resolve, deferred.reject);
-            else
-                promise.chain(x => resume(x, false), x => resume(x, true));
+                // Recursively unwrap the result value
+                value = value.chain(unwrap);
+                
+                if (done)
+                    value.chain(deferred.resolve, deferred.reject);
+                else
+                    value.chain(x => resume(x, false), x => resume(x, true));
+            
+            } else if (done) {
+                
+                deferred.resolve(value);
+                
+            } else {
+            
+                resume(value, false);
+            }
             
         } catch (x) {
         
             deferred.reject(x);
         }
     }
-    
-    resume(void 0, false);
-    
-    return deferred.promise;
 }
 
-this.__async = promiseIterate;
+this.__async = iterate;

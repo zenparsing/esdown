@@ -385,9 +385,12 @@ export class Replacer {
         }
     }
     
-    AwaitExpression(node) {
+    UnaryExpression(node) {
     
-        return node.expression ? "(yield " + node.expression.text + ")" : "yield";
+        if (node.operator !== "await")
+            return;
+        
+        return "(yield " + node.expression.text + ")";
     }
     
     FunctionDeclaration(node) {
