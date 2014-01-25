@@ -924,6 +924,56 @@ class Promise {
         return d.promise;
     }
     
+    static cast(x) {
+
+        if (x instanceof this)
+            return x;
+
+        var deferred = this.defer();
+        promiseUnwrap(deferred, x);
+        return deferred.promise;
+    }
+
+    static all(values) {
+
+        var deferred = this.defer(),
+            count = 0,
+            resolutions = [];
+        
+        for (var i = 0; i < values.length; ++i) {
+        
+            count += 1;
+            this.cast(values[i]).then(onResolve(i), onReject);
+        }
+    
+        if (count === 0) 
+            deferred.resolve(resolutions);
+        
+        return deferred.promise;
+    
+        function onResolve(i) {
+    
+            resolutions[i] = void 0;
+            
+            return x => {
+        
+                resolutions[i] = x;
+            
+                if (--count === 0)
+                    deferred.resolve(resolutions);
+            };
+        }
+        
+        function onReject(r) {
+        
+            if (count > 0) { 
+        
+                count = 0; 
+                deferred.reject(r);
+            }
+        }
+    }
+    
 }
 
 Promise.prototype[$$isPromise] = true;
