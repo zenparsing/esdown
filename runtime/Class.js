@@ -118,4 +118,3 @@ function Class(base, def) {
 }
 
 this.es6now._class = Class;
-this.__class = Class;

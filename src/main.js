@@ -68,9 +68,10 @@ new ConsoleCommand({
     
     execute(params) {
         
-        var promise = params.bundle ?
-            createBundle(params.input, locatePackage) :
-            AsyncFS.readFile(params.input, { encoding: "utf8" });
+        var promise = 
+            params.bundle ? createBundle(params.input, locatePackage) :
+            params.input ? AsyncFS.readFile(params.input, { encoding: "utf8" }) :
+            Promise.resolve("");
         
         promise.then(text => {
         

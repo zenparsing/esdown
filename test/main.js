@@ -21,7 +21,7 @@ function getFilePaths(dir) {
         .map(item => item.path);
 }
 
-export function main() {
+export function main(args) {
 
     var inputFiles = [],
         outputFiles = [],
