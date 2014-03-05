@@ -407,7 +407,7 @@ export class Replacer {
     
     ClassDeclaration(node) {
     
-        return "var " + node.identifier.text + " = __class(" + 
+        return "var " + node.identifier.text + " = es6now._class(" + 
             (node.base ? (node.base.text + ", ") : "") +
             "function(__super) { return " +
             node.body.text + " });";
@@ -425,7 +425,7 @@ export class Replacer {
         }
         
         return "(" + before + 
-            "__class(" + 
+            "es6now._class(" + 
             (node.base ? (node.base.text + ", ") : "") +
             "function(__super) { return " +
             node.body.text + " })" +
@@ -518,7 +518,7 @@ export class Replacer {
         var outerParams = params.map((x, i) => "__" + i).join(", ");
         
         return `${head}(${outerParams}) { ` +
-            `try { return __async(function*(${ this.joinList(params) }) ` + 
+            `try { return es6now._async(function*(${ this.joinList(params) }) ` + 
             `${ body }.apply(this, arguments)); ` +
             `} catch (x) { return Promise.reject(x); } }`;
     }

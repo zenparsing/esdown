@@ -66,6 +66,7 @@ export function translate(input, options) {
     if (options.runtime) {
             
         input = "\n\n" +
+            "this.es6now = {};\n\n" +
             wrapRuntimeModule(Runtime.Class) + 
             wrapRuntimeModule(Runtime.ES5) +
             wrapRuntimeModule(Runtime.ES6) +

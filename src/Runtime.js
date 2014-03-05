@@ -716,12 +716,13 @@ function Class(base, def) {
     return constructor;
 }
 
+this.es6now._class = Class;
 this.__class = Class;
 `;
 
 export var Promise = 
 
-`var schedule = ($=> {
+`var enqueueMicrotask = ($=> {
 
     var window = this.window,
         process = this.process,
@@ -753,28 +754,6 @@ export var Promise =
     return fn => setTimeout(fn, 0);
 
 })();
-
-var taskQueue = null;
-
-function enqueueMicrotask(fn) {
-
-    if (!taskQueue) {
-    
-        taskQueue = [];
-        
-        schedule($=> {
-        
-            var list = taskQueue;
-            
-            taskQueue = null;
-            
-            for (var i = 0; i < list.length; ++i)
-                list[i]();
-        });
-    }
-    
-    taskQueue.push(fn);
-}
 
 // The following property names are used to simulate the internal data
 // slots that are defined for Promise objects.
@@ -1059,6 +1038,7 @@ function iterate(iterable) {
     }
 }
 
+this.es6now._async = iterate;
 this.__async = iterate;
 `;
 

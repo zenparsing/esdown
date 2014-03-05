@@ -52,4 +52,5 @@ function iterate(iterable) {
     }
 }
 
+this.es6now._async = iterate;
 this.__async = iterate;

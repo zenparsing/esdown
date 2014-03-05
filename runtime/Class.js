@@ -117,4 +117,5 @@ function Class(base, def) {
     return constructor;
 }
 
+this.es6now._class = Class;
 this.__class = Class;

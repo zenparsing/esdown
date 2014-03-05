@@ -1,6 +1,8 @@
 /*=es6now=*/(function(fn, deps, name) { if (typeof exports !== 'undefined') fn.call(typeof global === 'object' ? global : this, require, exports); else if (typeof __MODULE === 'function') __MODULE(fn, deps); else if (typeof define === 'function' && define.amd) define(['require', 'exports'].concat(deps), fn); else if (typeof window !== 'undefined' && name) fn.call(window, null, window[name] = {}); else fn.call(window || this, null, {}); })(function(require, exports) { 'use strict'; function __load(p) { var e = require(p); return typeof e === 'object' ? e : { 'default': e }; } var _M0 = __load("path"), _M1 = __load("fs"), _M2 = __load("repl"), _M3 = __load("vm"); 
 
-var __this = this; (function() {
+var __this = this; this.es6now = {};
+
+(function() {
 
 var HOP = Object.prototype.hasOwnProperty,
     STATIC = /^__static_/;
@@ -121,6 +123,7 @@ function Class(base, def) {
     return constructor;
 }
 
+this.es6now._class = Class;
 this.__class = Class;
 
 
@@ -729,7 +732,7 @@ if (typeof Reflect === "undefined") global.Reflect = {
 
 (function() { var __this = this; 
 
-var schedule = ((function($) {
+var enqueueMicrotask = ((function($) {
 
     var window = __this.window,
         process = __this.process,
@@ -761,28 +764,6 @@ var schedule = ((function($) {
     return (function(fn) { return setTimeout(fn, 0); });
 
 }))();
-
-var taskQueue = null;
-
-function enqueueMicrotask(fn) {
-
-    if (!taskQueue) {
-    
-        taskQueue = [];
-        
-        schedule((function($) {
-        
-            var list = taskQueue;
-            
-            taskQueue = null;
-            
-            for (var i = 0; i < list.length; ++i)
-                list[i]();
-        }));
-    }
-    
-    taskQueue.push(fn);
-}
 
 // The following property names are used to simulate the internal data
 // slots that are defined for Promise objects.
@@ -843,7 +824,7 @@ function promiseReact(deferred, handler, x) {
     }));
 }
 
-var Promise = __class(function(__super) { return {
+var Promise = es6now._class(function(__super) { return {
 
     constructor: function Promise(init) { var __this = this; 
     
@@ -1069,6 +1050,7 @@ function iterate(iterable) {
     }
 }
 
+this.es6now._async = iterate;
 this.__async = iterate;
 
 
@@ -1086,15 +1068,15 @@ var ES6 =
 
 var Class = 
 
-"var HOP = Object.prototype.hasOwnProperty,\n    STATIC = /^__static_/;\n\n// Returns true if the object has the specified property\nfunction hasOwn(obj, name) {\n\n    return HOP.call(obj, name);\n}\n\n// Returns true if the object has the specified property in\n// its prototype chain\nfunction has(obj, name) {\n\n    for (; obj; obj = Object.getPrototypeOf(obj))\n        if (HOP.call(obj, name))\n            return true;\n    \n    return false;\n}\n\n// Iterates over the descriptors for each own property of an object\nfunction forEachDesc(obj, fn) {\n\n    var names = Object.getOwnPropertyNames(obj);\n    \n    for (var i = 0, name; i < names.length; ++i)\n        fn(names[i], Object.getOwnPropertyDescriptor(obj, names[i]));\n    \n    return obj;\n}\n\n// Performs copy-based inheritance\nfunction inherit(to, from) {\n\n    for (; from; from = Object.getPrototypeOf(from)) {\n    \n        forEachDesc(from, (name, desc) => {\n        \n            if (!has(to, name))\n                Object.defineProperty(to, name, desc);\n        });\n    }\n    \n    return to;\n}\n\nfunction defineMethods(to, from, classMethods) {\n\n    forEachDesc(from, (name, desc) => {\n    \n        if (STATIC.test(name) === classMethods)\n            Object.defineProperty(to, classMethods ? name.replace(STATIC, \"\") : name, desc);\n    });\n}\n\nfunction Class(base, def) {\n\n    var parent;\n    \n    if (def === void 0) {\n    \n        // If no base class is specified, then Object.prototype\n        // is the parent prototype\n        def = base;\n        base = null;\n        parent = Object.prototype;\n    \n    } else if (base === null) {\n    \n        // If the base is null, then then then the parent prototype is null\n        parent = null;\n        \n    } else if (typeof base === \"function\") {\n    \n        parent = base.prototype;\n        \n        // Prototype must be null or an object\n        if (parent !== null && Object(parent) !== parent)\n            parent = void 0;\n    }\n    \n    if (parent === void 0)\n        throw new TypeError();\n    \n    var proto = Object.create(parent),\n        sup = prop => Object.getPrototypeOf(proto)[prop];\n    \n    // Generate the method collection, closing over \"__super\"\n    var props = def(sup),\n        constructor = props.constructor;\n    \n    if (!constructor)\n        throw new Error(\"No constructor specified.\");\n    \n    // Make constructor non-enumerable and assign a default\n    // if none is provided\n    Object.defineProperty(props, \"constructor\", {\n    \n        enumerable: false,\n        writable: true,\n        configurable: true,\n        value: constructor\n    });\n    \n    // Set prototype methods\n    defineMethods(proto, props, false);\n    \n    // Set constructor's prototype\n    constructor.prototype = proto;\n    \n    // Set class \"static\" methods\n    defineMethods(constructor, props, true);\n    \n    // \"Inherit\" from base constructor\n    if (base) inherit(constructor, base);\n    \n    return constructor;\n}\n\nthis.__class = Class;\n";
+"var HOP = Object.prototype.hasOwnProperty,\n    STATIC = /^__static_/;\n\n// Returns true if the object has the specified property\nfunction hasOwn(obj, name) {\n\n    return HOP.call(obj, name);\n}\n\n// Returns true if the object has the specified property in\n// its prototype chain\nfunction has(obj, name) {\n\n    for (; obj; obj = Object.getPrototypeOf(obj))\n        if (HOP.call(obj, name))\n            return true;\n    \n    return false;\n}\n\n// Iterates over the descriptors for each own property of an object\nfunction forEachDesc(obj, fn) {\n\n    var names = Object.getOwnPropertyNames(obj);\n    \n    for (var i = 0, name; i < names.length; ++i)\n        fn(names[i], Object.getOwnPropertyDescriptor(obj, names[i]));\n    \n    return obj;\n}\n\n// Performs copy-based inheritance\nfunction inherit(to, from) {\n\n    for (; from; from = Object.getPrototypeOf(from)) {\n    \n        forEachDesc(from, (name, desc) => {\n        \n            if (!has(to, name))\n                Object.defineProperty(to, name, desc);\n        });\n    }\n    \n    return to;\n}\n\nfunction defineMethods(to, from, classMethods) {\n\n    forEachDesc(from, (name, desc) => {\n    \n        if (STATIC.test(name) === classMethods)\n            Object.defineProperty(to, classMethods ? name.replace(STATIC, \"\") : name, desc);\n    });\n}\n\nfunction Class(base, def) {\n\n    var parent;\n    \n    if (def === void 0) {\n    \n        // If no base class is specified, then Object.prototype\n        // is the parent prototype\n        def = base;\n        base = null;\n        parent = Object.prototype;\n    \n    } else if (base === null) {\n    \n        // If the base is null, then then then the parent prototype is null\n        parent = null;\n        \n    } else if (typeof base === \"function\") {\n    \n        parent = base.prototype;\n        \n        // Prototype must be null or an object\n        if (parent !== null && Object(parent) !== parent)\n            parent = void 0;\n    }\n    \n    if (parent === void 0)\n        throw new TypeError();\n    \n    var proto = Object.create(parent),\n        sup = prop => Object.getPrototypeOf(proto)[prop];\n    \n    // Generate the method collection, closing over \"__super\"\n    var props = def(sup),\n        constructor = props.constructor;\n    \n    if (!constructor)\n        throw new Error(\"No constructor specified.\");\n    \n    // Make constructor non-enumerable and assign a default\n    // if none is provided\n    Object.defineProperty(props, \"constructor\", {\n    \n        enumerable: false,\n        writable: true,\n        configurable: true,\n        value: constructor\n    });\n    \n    // Set prototype methods\n    defineMethods(proto, props, false);\n    \n    // Set constructor's prototype\n    constructor.prototype = proto;\n    \n    // Set class \"static\" methods\n    defineMethods(constructor, props, true);\n    \n    // \"Inherit\" from base constructor\n    if (base) inherit(constructor, base);\n    \n    return constructor;\n}\n\nthis.es6now._class = Class;\nthis.__class = Class;\n";
 
 var Promise = 
 
-"var schedule = ($=> {\n\n    var window = this.window,\n        process = this.process,\n        msgChannel = null,\n        list = [];\n    \n    if (typeof setImmediate === \"function\") {\n    \n        return window ?\n            window.setImmediate.bind(window) :\n            setImmediate;\n    \n    } else if (process && typeof process.nextTick === \"function\") {\n    \n        return process.nextTick;\n        \n    } else if (window && window.MessageChannel) {\n        \n        msgChannel = new window.MessageChannel();\n        msgChannel.port1.onmessage = $=> { if (list.length) list.shift()(); };\n    \n        return fn => {\n        \n            list.push(fn);\n            msgChannel.port2.postMessage(0);\n        };\n    }\n    \n    return fn => setTimeout(fn, 0);\n\n})();\n\nvar taskQueue = null;\n\nfunction enqueueMicrotask(fn) {\n\n    if (!taskQueue) {\n    \n        taskQueue = [];\n        \n        schedule($=> {\n        \n            var list = taskQueue;\n            \n            taskQueue = null;\n            \n            for (var i = 0; i < list.length; ++i)\n                list[i]();\n        });\n    }\n    \n    taskQueue.push(fn);\n}\n\n// The following property names are used to simulate the internal data\n// slots that are defined for Promise objects.\n\nvar $status = \"Promise#status\",\n    $value = \"Promise#value\",\n    $onResolve = \"Promise#onResolve\",\n    $onReject = \"Promise#onReject\";\n\n// The following property name is used to simulate the built-in symbol @@isPromise\nvar $$isPromise = \"@@isPromise\";\n\nfunction isPromise(x) { \n\n    return !!x && $$isPromise in Object(x);\n}\n\nfunction promiseResolve(promise, x) {\n    \n    promiseDone(promise, \"resolved\", x, promise[$onResolve]);\n}\n\nfunction promiseReject(promise, x) {\n    \n    promiseDone(promise, \"rejected\", x, promise[$onReject]);\n}\n\nfunction promiseDone(promise, status, value, reactions) {\n\n    if (promise[$status] !== \"pending\") \n        return;\n        \n    promise[$status] = status;\n    promise[$value] = value;\n    promise[$onResolve] = promise[$onReject] = void 0;\n    \n    for (var i = 0; i < reactions.length; ++i) \n        promiseReact(reactions[i][0], reactions[i][1], value);\n}\n\nfunction promiseUnwrap(deferred, x) {\n\n    if (x === deferred.promise)\n        throw new TypeError(\"Promise cannot wrap itself\");\n    \n    if (isPromise(x))\n        x.chain(deferred.resolve, deferred.reject);\n    else\n        deferred.resolve(x);\n}\n\nfunction promiseReact(deferred, handler, x) {\n\n    enqueueMicrotask($=> {\n    \n        try { promiseUnwrap(deferred, handler(x)) } \n        catch(e) { deferred.reject(e) }\n    });\n}\n\nclass Promise {\n\n    constructor(init) {\n    \n        if (typeof init !== \"function\")\n            throw new TypeError(\"Promise constructor called without initializer\");\n        \n        this[$value] = void 0;\n        this[$status] = \"pending\";\n        this[$onResolve] = [];\n        this[$onReject] = [];\n    \n        var resolve = x => promiseResolve(this, x),\n            reject = r => promiseReject(this, r);\n        \n        try { init(resolve, reject) } catch (x) { reject(x) }\n    }\n    \n    chain(onResolve, onReject) {\n    \n        if (typeof onResolve !== \"function\") onResolve = x => x;\n        if (typeof onReject !== \"function\") onReject = e => { throw e };\n\n        var deferred = this.constructor.defer();\n\n        switch (this[$status]) {\n\n            case undefined:\n                throw new TypeError(\"Promise method called on a non-promise\");\n        \n            case \"pending\":\n                this[$onResolve].push([deferred, onResolve]);\n                this[$onReject].push([deferred, onReject]);\n                break;\n    \n            case \"resolved\":\n                promiseReact(deferred, onResolve, this[$value]);\n                break;\n        \n            case \"rejected\":\n                promiseReact(deferred, onReject, this[$value]);\n                break;\n        }\n\n        return deferred.promise;\n    }\n    \n    then(onResolve, onReject) {\n\n        if (typeof onResolve !== \"function\") onResolve = x => x;\n        \n        /*\n        \n        return this.chain(x => {\n        \n            if (isPromise(x))\n                return x.then(onResolve, onReject);\n            \n            return onResolve(x);\n            \n        }, onReject);\n        \n        */\n        \n        return this.chain(x => {\n    \n            if (x && typeof x === \"object\") {\n            \n                var maybeThen = x.then;\n                \n                if (typeof maybeThen === \"function\")\n                    return maybeThen.call(x, onResolve, onReject);\n            }\n                        \n            return onResolve(x);\n        \n        }, onReject);\n        \n    }\n    \n    static isPromise(x) {\n        \n        return isPromise(x);\n    }\n    \n    static defer() {\n    \n        var d = {};\n\n        d.promise = new this((resolve, reject) => {\n            d.resolve = resolve;\n            d.reject = reject;\n        });\n\n        return d;\n    }\n    \n    static resolve(x) { \n    \n        var d = this.defer();\n        d.resolve(x);\n        return d.promise;\n    }\n    \n    static reject(x) { \n    \n        var d = this.defer();\n        d.reject(x);\n        return d.promise;\n    }\n    \n    static cast(x) {\n\n        if (x instanceof this)\n            return x;\n\n        var deferred = this.defer();\n        promiseUnwrap(deferred, x);\n        return deferred.promise;\n    }\n\n    static all(values) {\n\n        var deferred = this.defer(),\n            count = 0,\n            resolutions;\n        \n        for (var i = 0; i < values.length; ++i) {\n        \n            count += 1;\n            this.cast(values[i]).then(onResolve(i), onReject);\n        }\n        \n        resolutions = new Array(count);\n    \n        if (count === 0) \n            deferred.resolve(resolutions);\n        \n        return deferred.promise;\n    \n        function onResolve(i) {\n    \n            return x => {\n        \n                resolutions[i] = x;\n            \n                if (--count === 0)\n                    deferred.resolve(resolutions);\n            };\n        }\n        \n        function onReject(r) {\n        \n            if (count > 0) { \n        \n                count = 0; \n                deferred.reject(r);\n            }\n        }\n    }\n    \n}\n\nPromise.prototype[$$isPromise] = true;\n\nthis.Promise = Promise;\n";
+"var enqueueMicrotask = ($=> {\n\n    var window = this.window,\n        process = this.process,\n        msgChannel = null,\n        list = [];\n    \n    if (typeof setImmediate === \"function\") {\n    \n        return window ?\n            window.setImmediate.bind(window) :\n            setImmediate;\n    \n    } else if (process && typeof process.nextTick === \"function\") {\n    \n        return process.nextTick;\n        \n    } else if (window && window.MessageChannel) {\n        \n        msgChannel = new window.MessageChannel();\n        msgChannel.port1.onmessage = $=> { if (list.length) list.shift()(); };\n    \n        return fn => {\n        \n            list.push(fn);\n            msgChannel.port2.postMessage(0);\n        };\n    }\n    \n    return fn => setTimeout(fn, 0);\n\n})();\n\n// The following property names are used to simulate the internal data\n// slots that are defined for Promise objects.\n\nvar $status = \"Promise#status\",\n    $value = \"Promise#value\",\n    $onResolve = \"Promise#onResolve\",\n    $onReject = \"Promise#onReject\";\n\n// The following property name is used to simulate the built-in symbol @@isPromise\nvar $$isPromise = \"@@isPromise\";\n\nfunction isPromise(x) { \n\n    return !!x && $$isPromise in Object(x);\n}\n\nfunction promiseResolve(promise, x) {\n    \n    promiseDone(promise, \"resolved\", x, promise[$onResolve]);\n}\n\nfunction promiseReject(promise, x) {\n    \n    promiseDone(promise, \"rejected\", x, promise[$onReject]);\n}\n\nfunction promiseDone(promise, status, value, reactions) {\n\n    if (promise[$status] !== \"pending\") \n        return;\n        \n    promise[$status] = status;\n    promise[$value] = value;\n    promise[$onResolve] = promise[$onReject] = void 0;\n    \n    for (var i = 0; i < reactions.length; ++i) \n        promiseReact(reactions[i][0], reactions[i][1], value);\n}\n\nfunction promiseUnwrap(deferred, x) {\n\n    if (x === deferred.promise)\n        throw new TypeError(\"Promise cannot wrap itself\");\n    \n    if (isPromise(x))\n        x.chain(deferred.resolve, deferred.reject);\n    else\n        deferred.resolve(x);\n}\n\nfunction promiseReact(deferred, handler, x) {\n\n    enqueueMicrotask($=> {\n    \n        try { promiseUnwrap(deferred, handler(x)) } \n        catch(e) { deferred.reject(e) }\n    });\n}\n\nclass Promise {\n\n    constructor(init) {\n    \n        if (typeof init !== \"function\")\n            throw new TypeError(\"Promise constructor called without initializer\");\n        \n        this[$value] = void 0;\n        this[$status] = \"pending\";\n        this[$onResolve] = [];\n        this[$onReject] = [];\n    \n        var resolve = x => promiseResolve(this, x),\n            reject = r => promiseReject(this, r);\n        \n        try { init(resolve, reject) } catch (x) { reject(x) }\n    }\n    \n    chain(onResolve, onReject) {\n    \n        if (typeof onResolve !== \"function\") onResolve = x => x;\n        if (typeof onReject !== \"function\") onReject = e => { throw e };\n\n        var deferred = this.constructor.defer();\n\n        switch (this[$status]) {\n\n            case undefined:\n                throw new TypeError(\"Promise method called on a non-promise\");\n        \n            case \"pending\":\n                this[$onResolve].push([deferred, onResolve]);\n                this[$onReject].push([deferred, onReject]);\n                break;\n    \n            case \"resolved\":\n                promiseReact(deferred, onResolve, this[$value]);\n                break;\n        \n            case \"rejected\":\n                promiseReact(deferred, onReject, this[$value]);\n                break;\n        }\n\n        return deferred.promise;\n    }\n    \n    then(onResolve, onReject) {\n\n        if (typeof onResolve !== \"function\") onResolve = x => x;\n        \n        /*\n        \n        return this.chain(x => {\n        \n            if (isPromise(x))\n                return x.then(onResolve, onReject);\n            \n            return onResolve(x);\n            \n        }, onReject);\n        \n        */\n        \n        return this.chain(x => {\n    \n            if (x && typeof x === \"object\") {\n            \n                var maybeThen = x.then;\n                \n                if (typeof maybeThen === \"function\")\n                    return maybeThen.call(x, onResolve, onReject);\n            }\n                        \n            return onResolve(x);\n        \n        }, onReject);\n        \n    }\n    \n    static isPromise(x) {\n        \n        return isPromise(x);\n    }\n    \n    static defer() {\n    \n        var d = {};\n\n        d.promise = new this((resolve, reject) => {\n            d.resolve = resolve;\n            d.reject = reject;\n        });\n\n        return d;\n    }\n    \n    static resolve(x) { \n    \n        var d = this.defer();\n        d.resolve(x);\n        return d.promise;\n    }\n    \n    static reject(x) { \n    \n        var d = this.defer();\n        d.reject(x);\n        return d.promise;\n    }\n    \n    static cast(x) {\n\n        if (x instanceof this)\n            return x;\n\n        var deferred = this.defer();\n        promiseUnwrap(deferred, x);\n        return deferred.promise;\n    }\n\n    static all(values) {\n\n        var deferred = this.defer(),\n            count = 0,\n            resolutions;\n        \n        for (var i = 0; i < values.length; ++i) {\n        \n            count += 1;\n            this.cast(values[i]).then(onResolve(i), onReject);\n        }\n        \n        resolutions = new Array(count);\n    \n        if (count === 0) \n            deferred.resolve(resolutions);\n        \n        return deferred.promise;\n    \n        function onResolve(i) {\n    \n            return x => {\n        \n                resolutions[i] = x;\n            \n                if (--count === 0)\n                    deferred.resolve(resolutions);\n            };\n        }\n        \n        function onReject(r) {\n        \n            if (count > 0) { \n        \n                count = 0; \n                deferred.reject(r);\n            }\n        }\n    }\n    \n}\n\nPromise.prototype[$$isPromise] = true;\n\nthis.Promise = Promise;\n";
 
 var Async = 
 
-"function unwrap(x) {\n    \n    return Promise.isPromise(x) ? x.chain(unwrap) : x;\n}\n\nfunction iterate(iterable) {\n    \n    // TODO: Use \"iterable\" interface to get an iterator\n    // var iter = iterable[Symbol.iterator]\n    \n    var iter = iterable;\n    \n    var deferred = Promise.defer();\n    resume(void 0, false);\n    return deferred.promise;\n    \n    function resume(value, error) {\n    \n        if (error && !(\"throw\" in iter))\n            return deferred.reject(value);\n        \n        try {\n        \n            // Invoke the iterator/generator\n            var result = error ? iter.throw(value) : iter.next(value),\n                value = result.value,\n                done = result.done;\n            \n            if (Promise.isPromise(value)) {\n            \n                // Recursively unwrap the result value\n                value = value.chain(unwrap);\n                \n                if (done)\n                    value.chain(deferred.resolve, deferred.reject);\n                else\n                    value.chain(x => resume(x, false), x => resume(x, true));\n            \n            } else if (done) {\n                \n                deferred.resolve(value);\n                \n            } else {\n            \n                resume(value, false);\n            }\n            \n        } catch (x) {\n        \n            deferred.reject(x);\n        }\n    }\n}\n\nthis.__async = iterate;\n";
+"function unwrap(x) {\n    \n    return Promise.isPromise(x) ? x.chain(unwrap) : x;\n}\n\nfunction iterate(iterable) {\n    \n    // TODO: Use \"iterable\" interface to get an iterator\n    // var iter = iterable[Symbol.iterator]\n    \n    var iter = iterable;\n    \n    var deferred = Promise.defer();\n    resume(void 0, false);\n    return deferred.promise;\n    \n    function resume(value, error) {\n    \n        if (error && !(\"throw\" in iter))\n            return deferred.reject(value);\n        \n        try {\n        \n            // Invoke the iterator/generator\n            var result = error ? iter.throw(value) : iter.next(value),\n                value = result.value,\n                done = result.done;\n            \n            if (Promise.isPromise(value)) {\n            \n                // Recursively unwrap the result value\n                value = value.chain(unwrap);\n                \n                if (done)\n                    value.chain(deferred.resolve, deferred.reject);\n                else\n                    value.chain(x => resume(x, false), x => resume(x, true));\n            \n            } else if (done) {\n                \n                deferred.resolve(value);\n                \n            } else {\n            \n                resume(value, false);\n            }\n            \n        } catch (x) {\n        \n            deferred.reject(x);\n        }\n    }\n}\n\nthis.es6now._async = iterate;\nthis.__async = iterate;\n";
 
 
 
@@ -1102,7 +1084,7 @@ exports.ES5 = ES5; exports.ES6 = ES6; exports.Class = Class; exports.Promise = P
 
 var AST_ = (function(exports) {
 
-var Node = __class(function(__super) { return {
+var Node = es6now._class(function(__super) { return {
 
     constructor: function Node(start, end) {
     
@@ -1145,7 +1127,7 @@ var Node = __class(function(__super) { return {
     
 } });
 
-var Script = __class(Node, function(__super) { return {
+var Script = es6now._class(Node, function(__super) { return {
 
     constructor: function Script(statements, start, end) {
     
@@ -1154,7 +1136,7 @@ var Script = __class(Node, function(__super) { return {
     }
 } });
 
-var Module = __class(Node, function(__super) { return {
+var Module = es6now._class(Node, function(__super) { return {
 
     constructor: function Module(statements, start, end) {
     
@@ -1163,7 +1145,7 @@ var Module = __class(Node, function(__super) { return {
     }
 } });
 
-var Identifier = __class(Node, function(__super) { return {
+var Identifier = es6now._class(Node, function(__super) { return {
 
     constructor: function Identifier(value, context, start, end) {
     
@@ -1173,7 +1155,7 @@ var Identifier = __class(Node, function(__super) { return {
     }
 } });
 
-var Number = __class(Node, function(__super) { return {
+var Number = es6now._class(Node, function(__super) { return {
 
     constructor: function Number(value, start, end) {
     
@@ -1182,7 +1164,7 @@ var Number = __class(Node, function(__super) { return {
     }
 } });
 
-var String = __class(Node, function(__super) { return {
+var String = es6now._class(Node, function(__super) { return {
 
     constructor: function String(value, start, end) {
     
@@ -1191,7 +1173,7 @@ var String = __class(Node, function(__super) { return {
     }
 } });
 
-var Template = __class(Node, function(__super) { return {
+var Template = es6now._class(Node, function(__super) { return {
 
     constructor: function Template(value, isEnd, start, end) {
     
@@ -1201,7 +1183,7 @@ var Template = __class(Node, function(__super) { return {
     }
 } });
 
-var RegularExpression = __class(Node, function(__super) { return {
+var RegularExpression = es6now._class(Node, function(__super) { return {
 
     constructor: function RegularExpression(value, flags, start, end) {
     
@@ -1211,9 +1193,9 @@ var RegularExpression = __class(Node, function(__super) { return {
     }
 } });
 
-var Null = __class(Node, function(__super) { return { constructor: function Null() { var c = __super("constructor"); if (c) return c.apply(this, arguments); } } });
+var Null = es6now._class(Node, function(__super) { return { constructor: function Null() { var c = __super("constructor"); if (c) return c.apply(this, arguments); } } });
 
-var Boolean = __class(Node, function(__super) { return {
+var Boolean = es6now._class(Node, function(__super) { return {
 
     constructor: function Boolean(value, start, end) {
     
@@ -1222,11 +1204,11 @@ var Boolean = __class(Node, function(__super) { return {
     }
 } });
 
-var ThisExpression = __class(Node, function(__super) { return { constructor: function ThisExpression() { var c = __super("constructor"); if (c) return c.apply(this, arguments); } } });
+var ThisExpression = es6now._class(Node, function(__super) { return { constructor: function ThisExpression() { var c = __super("constructor"); if (c) return c.apply(this, arguments); } } });
 
-var SuperExpression = __class(Node, function(__super) { return { constructor: function SuperExpression() { var c = __super("constructor"); if (c) return c.apply(this, arguments); } } });
+var SuperExpression = es6now._class(Node, function(__super) { return { constructor: function SuperExpression() { var c = __super("constructor"); if (c) return c.apply(this, arguments); } } });
 
-var SequenceExpression = __class(Node, function(__super) { return {
+var SequenceExpression = es6now._class(Node, function(__super) { return {
 
     constructor: function SequenceExpression(list, start, end) {
     
@@ -1235,7 +1217,7 @@ var SequenceExpression = __class(Node, function(__super) { return {
     }
 } });
 
-var AssignmentExpression = __class(Node, function(__super) { return {
+var AssignmentExpression = es6now._class(Node, function(__super) { return {
 
     constructor: function AssignmentExpression(op, left, right, start, end) {
     
@@ -1246,7 +1228,7 @@ var AssignmentExpression = __class(Node, function(__super) { return {
     }
 } });
 
-var SpreadExpression = __class(Node, function(__super) { return {
+var SpreadExpression = es6now._class(Node, function(__super) { return {
 
     constructor: function SpreadExpression(expr, start, end) {
     
@@ -1255,7 +1237,7 @@ var SpreadExpression = __class(Node, function(__super) { return {
     }
 } });
 
-var YieldExpression = __class(Node, function(__super) { return {
+var YieldExpression = es6now._class(Node, function(__super) { return {
 
     constructor: function YieldExpression(expr, delegate, start, end) {
     
@@ -1265,7 +1247,7 @@ var YieldExpression = __class(Node, function(__super) { return {
     }
 } });
 
-var ConditionalExpression = __class(Node, function(__super) { return {
+var ConditionalExpression = es6now._class(Node, function(__super) { return {
 
     constructor: function ConditionalExpression(test, cons, alt, start, end) {
     
@@ -1276,7 +1258,7 @@ var ConditionalExpression = __class(Node, function(__super) { return {
     }
 } });
 
-var BinaryExpression = __class(Node, function(__super) { return {
+var BinaryExpression = es6now._class(Node, function(__super) { return {
 
     constructor: function BinaryExpression(op, left, right, start, end) {
     
@@ -1287,7 +1269,7 @@ var BinaryExpression = __class(Node, function(__super) { return {
     }
 } });
 
-var UpdateExpression = __class(Node, function(__super) { return {
+var UpdateExpression = es6now._class(Node, function(__super) { return {
 
     constructor: function UpdateExpression(op, expr, prefix, start, end) {
     
@@ -1298,7 +1280,7 @@ var UpdateExpression = __class(Node, function(__super) { return {
     }
 } });
 
-var UnaryExpression = __class(Node, function(__super) { return {
+var UnaryExpression = es6now._class(Node, function(__super) { return {
 
     constructor: function UnaryExpression(op, expr, start, end) {
     
@@ -1308,7 +1290,7 @@ var UnaryExpression = __class(Node, function(__super) { return {
     }
 } });
 
-var MemberExpression = __class(Node, function(__super) { return {
+var MemberExpression = es6now._class(Node, function(__super) { return {
 
     constructor: function MemberExpression(obj, prop, computed, start, end) {
     
@@ -1319,7 +1301,7 @@ var MemberExpression = __class(Node, function(__super) { return {
     }
 } });
 
-var CallExpression = __class(Node, function(__super) { return {
+var CallExpression = es6now._class(Node, function(__super) { return {
 
     constructor: function CallExpression(callee, args, start, end) {
     
@@ -1329,7 +1311,7 @@ var CallExpression = __class(Node, function(__super) { return {
     }
 } });
 
-var TaggedTemplateExpression = __class(Node, function(__super) { return {
+var TaggedTemplateExpression = es6now._class(Node, function(__super) { return {
 
     constructor: function TaggedTemplateExpression(tag, template, start, end) {
     
@@ -1339,7 +1321,7 @@ var TaggedTemplateExpression = __class(Node, function(__super) { return {
     }
 } });
 
-var NewExpression = __class(Node, function(__super) { return {
+var NewExpression = es6now._class(Node, function(__super) { return {
 
     constructor: function NewExpression(callee, args, start, end) {
     
@@ -1349,7 +1331,7 @@ var NewExpression = __class(Node, function(__super) { return {
     }
 } });
 
-var ParenExpression = __class(Node, function(__super) { return {
+var ParenExpression = es6now._class(Node, function(__super) { return {
     
     constructor: function ParenExpression(expr, start, end) {
     
@@ -1358,7 +1340,7 @@ var ParenExpression = __class(Node, function(__super) { return {
     }
 } });
 
-var ObjectLiteral = __class(Node, function(__super) { return {
+var ObjectLiteral = es6now._class(Node, function(__super) { return {
 
     constructor: function ObjectLiteral(props, start, end) {
     
@@ -1367,7 +1349,7 @@ var ObjectLiteral = __class(Node, function(__super) { return {
     }
 } });
 
-var ComputedPropertyName = __class(Node, function(__super) { return {
+var ComputedPropertyName = es6now._class(Node, function(__super) { return {
 
     constructor: function ComputedPropertyName(expr, start, end) {
     
@@ -1376,7 +1358,7 @@ var ComputedPropertyName = __class(Node, function(__super) { return {
     }
 } });
 
-var PropertyDefinition = __class(Node, function(__super) { return {
+var PropertyDefinition = es6now._class(Node, function(__super) { return {
 
     constructor: function PropertyDefinition(name, expr, start, end) {
     
@@ -1386,7 +1368,7 @@ var PropertyDefinition = __class(Node, function(__super) { return {
     }
 } });
 
-var PatternProperty = __class(Node, function(__super) { return {
+var PatternProperty = es6now._class(Node, function(__super) { return {
 
     constructor: function PatternProperty(name, pattern, initializer, start, end) {
     
@@ -1397,7 +1379,7 @@ var PatternProperty = __class(Node, function(__super) { return {
     }
 } });
 
-var PatternElement = __class(Node, function(__super) { return {
+var PatternElement = es6now._class(Node, function(__super) { return {
 
     constructor: function PatternElement(pattern, initializer, rest, start, end) {
     
@@ -1408,7 +1390,7 @@ var PatternElement = __class(Node, function(__super) { return {
     }
 } });
 
-var MethodDefinition = __class(Node, function(__super) { return {
+var MethodDefinition = es6now._class(Node, function(__super) { return {
 
     constructor: function MethodDefinition(kind, name, params, body, start, end) {
     
@@ -1420,7 +1402,7 @@ var MethodDefinition = __class(Node, function(__super) { return {
     }
 } });
 
-var ArrayLiteral = __class(Node, function(__super) { return {
+var ArrayLiteral = es6now._class(Node, function(__super) { return {
 
     constructor: function ArrayLiteral(elements, start, end) {
     
@@ -1429,7 +1411,7 @@ var ArrayLiteral = __class(Node, function(__super) { return {
     }
 } });
 
-var ArrayComprehension = __class(Node, function(__super) { return {
+var ArrayComprehension = es6now._class(Node, function(__super) { return {
 
     constructor: function ArrayComprehension(qualifiers, expr, start, end) {
     
@@ -1439,7 +1421,7 @@ var ArrayComprehension = __class(Node, function(__super) { return {
     }
 } });
 
-var GeneratorComprehension = __class(Node, function(__super) { return {
+var GeneratorComprehension = es6now._class(Node, function(__super) { return {
 
     constructor: function GeneratorComprehension(qualifiers, expr, start, end) {
     
@@ -1449,7 +1431,7 @@ var GeneratorComprehension = __class(Node, function(__super) { return {
     }
 } });
 
-var ComprehensionFor = __class(Node, function(__super) { return {
+var ComprehensionFor = es6now._class(Node, function(__super) { return {
 
     constructor: function ComprehensionFor(left, right, start, end) {
     
@@ -1459,7 +1441,7 @@ var ComprehensionFor = __class(Node, function(__super) { return {
     }
 } });
 
-var ComprehensionIf = __class(Node, function(__super) { return {
+var ComprehensionIf = es6now._class(Node, function(__super) { return {
 
     constructor: function ComprehensionIf(test, start, end) {
     
@@ -1468,7 +1450,7 @@ var ComprehensionIf = __class(Node, function(__super) { return {
     }
 } });
 
-var TemplateExpression = __class(Node, function(__super) { return {
+var TemplateExpression = es6now._class(Node, function(__super) { return {
 
     constructor: function TemplateExpression(lits, subs, start, end) {
     
@@ -1478,7 +1460,7 @@ var TemplateExpression = __class(Node, function(__super) { return {
     }
 } });
 
-var Block = __class(Node, function(__super) { return {
+var Block = es6now._class(Node, function(__super) { return {
 
     constructor: function Block(statements, start, end) {
     
@@ -1487,7 +1469,7 @@ var Block = __class(Node, function(__super) { return {
     }
 } });
 
-var LabelledStatement = __class(Node, function(__super) { return {
+var LabelledStatement = es6now._class(Node, function(__super) { return {
 
     constructor: function LabelledStatement(label, statement, start, end) {
     
@@ -1497,7 +1479,7 @@ var LabelledStatement = __class(Node, function(__super) { return {
     }
 } });
 
-var ExpressionStatement = __class(Node, function(__super) { return {
+var ExpressionStatement = es6now._class(Node, function(__super) { return {
 
     constructor: function ExpressionStatement(expr, start, end) {
     
@@ -1507,9 +1489,9 @@ var ExpressionStatement = __class(Node, function(__super) { return {
     }
 } });
 
-var EmptyStatement = __class(Node, function(__super) { return { constructor: function EmptyStatement() { var c = __super("constructor"); if (c) return c.apply(this, arguments); } } });
+var EmptyStatement = es6now._class(Node, function(__super) { return { constructor: function EmptyStatement() { var c = __super("constructor"); if (c) return c.apply(this, arguments); } } });
 
-var VariableDeclaration = __class(Node, function(__super) { return {
+var VariableDeclaration = es6now._class(Node, function(__super) { return {
 
     constructor: function VariableDeclaration(kind, list, start, end) {
     
@@ -1519,7 +1501,7 @@ var VariableDeclaration = __class(Node, function(__super) { return {
     }
 } });
 
-var VariableDeclarator = __class(Node, function(__super) { return {
+var VariableDeclarator = es6now._class(Node, function(__super) { return {
 
     constructor: function VariableDeclarator(pattern, initializer, start, end) {
     
@@ -1529,7 +1511,7 @@ var VariableDeclarator = __class(Node, function(__super) { return {
     }
 } });
 
-var ReturnStatement = __class(Node, function(__super) { return {
+var ReturnStatement = es6now._class(Node, function(__super) { return {
 
     constructor: function ReturnStatement(arg, start, end) {
     
@@ -1538,7 +1520,7 @@ var ReturnStatement = __class(Node, function(__super) { return {
     }
 } });
 
-var BreakStatement = __class(Node, function(__super) { return {
+var BreakStatement = es6now._class(Node, function(__super) { return {
 
     constructor: function BreakStatement(label, start, end) {
     
@@ -1547,7 +1529,7 @@ var BreakStatement = __class(Node, function(__super) { return {
     }
 } });
 
-var ContinueStatement = __class(Node, function(__super) { return {
+var ContinueStatement = es6now._class(Node, function(__super) { return {
 
     constructor: function ContinueStatement(label, start, end) {
     
@@ -1556,7 +1538,7 @@ var ContinueStatement = __class(Node, function(__super) { return {
     }
 } });
 
-var ThrowStatement = __class(Node, function(__super) { return {
+var ThrowStatement = es6now._class(Node, function(__super) { return {
 
     constructor: function ThrowStatement(expr, start, end) {
     
@@ -1565,9 +1547,9 @@ var ThrowStatement = __class(Node, function(__super) { return {
     }
 } });
 
-var DebuggerStatement = __class(Node, function(__super) { return { constructor: function DebuggerStatement() { var c = __super("constructor"); if (c) return c.apply(this, arguments); } } });
+var DebuggerStatement = es6now._class(Node, function(__super) { return { constructor: function DebuggerStatement() { var c = __super("constructor"); if (c) return c.apply(this, arguments); } } });
 
-var IfStatement = __class(Node, function(__super) { return {
+var IfStatement = es6now._class(Node, function(__super) { return {
 
     constructor: function IfStatement(test, cons, alt, start, end) {
     
@@ -1578,7 +1560,7 @@ var IfStatement = __class(Node, function(__super) { return {
     }
 } });
 
-var DoWhileStatement = __class(Node, function(__super) { return {
+var DoWhileStatement = es6now._class(Node, function(__super) { return {
 
     constructor: function DoWhileStatement(body, test, start, end) {
     
@@ -1588,7 +1570,7 @@ var DoWhileStatement = __class(Node, function(__super) { return {
     }
 } });
 
-var WhileStatement = __class(Node, function(__super) { return {
+var WhileStatement = es6now._class(Node, function(__super) { return {
 
     constructor: function WhileStatement(test, body, start, end) {
     
@@ -1598,7 +1580,7 @@ var WhileStatement = __class(Node, function(__super) { return {
     }
 } });
 
-var ForStatement = __class(Node, function(__super) { return {
+var ForStatement = es6now._class(Node, function(__super) { return {
 
     constructor: function ForStatement(initializer, test, update, body, start, end) {
     
@@ -1610,7 +1592,7 @@ var ForStatement = __class(Node, function(__super) { return {
     }
 } });
 
-var ForInStatement = __class(Node, function(__super) { return {
+var ForInStatement = es6now._class(Node, function(__super) { return {
 
     constructor: function ForInStatement(left, right, body, start, end) {
     
@@ -1621,7 +1603,7 @@ var ForInStatement = __class(Node, function(__super) { return {
     }
 } });
 
-var ForOfStatement = __class(Node, function(__super) { return {
+var ForOfStatement = es6now._class(Node, function(__super) { return {
 
     constructor: function ForOfStatement(left, right, body, start, end) {
     
@@ -1632,7 +1614,7 @@ var ForOfStatement = __class(Node, function(__super) { return {
     }
 } });
 
-var WithStatement = __class(Node, function(__super) { return {
+var WithStatement = es6now._class(Node, function(__super) { return {
 
     constructor: function WithStatement(object, body, start, end) {
     
@@ -1642,7 +1624,7 @@ var WithStatement = __class(Node, function(__super) { return {
     }
 } });
 
-var SwitchStatement = __class(Node, function(__super) { return {
+var SwitchStatement = es6now._class(Node, function(__super) { return {
 
     constructor: function SwitchStatement(desc, cases, start, end) {
     
@@ -1652,7 +1634,7 @@ var SwitchStatement = __class(Node, function(__super) { return {
     }
 } });
 
-var SwitchCase = __class(Node, function(__super) { return {
+var SwitchCase = es6now._class(Node, function(__super) { return {
 
     constructor: function SwitchCase(test, cons, start, end) {
     
@@ -1662,7 +1644,7 @@ var SwitchCase = __class(Node, function(__super) { return {
     }
 } });
 
-var TryStatement = __class(Node, function(__super) { return {
+var TryStatement = es6now._class(Node, function(__super) { return {
 
     constructor: function TryStatement(block, handler, fin, start, end) {
     
@@ -1673,7 +1655,7 @@ var TryStatement = __class(Node, function(__super) { return {
     }
 } });
 
-var CatchClause = __class(Node, function(__super) { return {
+var CatchClause = es6now._class(Node, function(__super) { return {
 
     constructor: function CatchClause(param, body, start, end) {
     
@@ -1683,7 +1665,7 @@ var CatchClause = __class(Node, function(__super) { return {
     }
 } });
 
-var FunctionDeclaration = __class(Node, function(__super) { return {
+var FunctionDeclaration = es6now._class(Node, function(__super) { return {
 
     constructor: function FunctionDeclaration(kind, identifier, params, body, start, end) {
     
@@ -1695,7 +1677,7 @@ var FunctionDeclaration = __class(Node, function(__super) { return {
     }
 } });
 
-var FunctionExpression = __class(Node, function(__super) { return {
+var FunctionExpression = es6now._class(Node, function(__super) { return {
 
     constructor: function FunctionExpression(kind, identifier, params, body, start, end) {
     
@@ -1707,7 +1689,7 @@ var FunctionExpression = __class(Node, function(__super) { return {
     }
 } });
 
-var FormalParameter = __class(Node, function(__super) { return {
+var FormalParameter = es6now._class(Node, function(__super) { return {
 
     constructor: function FormalParameter(pattern, initializer, start, end) {
     
@@ -1717,7 +1699,7 @@ var FormalParameter = __class(Node, function(__super) { return {
     }
 } });
 
-var RestParameter = __class(Node, function(__super) { return {
+var RestParameter = es6now._class(Node, function(__super) { return {
 
     constructor: function RestParameter(identifier, start, end) {
     
@@ -1726,7 +1708,7 @@ var RestParameter = __class(Node, function(__super) { return {
     }
 } });
 
-var FunctionBody = __class(Node, function(__super) { return {
+var FunctionBody = es6now._class(Node, function(__super) { return {
 
     constructor: function FunctionBody(statements, start, end) {
     
@@ -1735,7 +1717,7 @@ var FunctionBody = __class(Node, function(__super) { return {
     }
 } });
 
-var ArrowFunctionHead = __class(Node, function(__super) { return {
+var ArrowFunctionHead = es6now._class(Node, function(__super) { return {
 
     constructor: function ArrowFunctionHead(params, start, end) {
     
@@ -1744,7 +1726,7 @@ var ArrowFunctionHead = __class(Node, function(__super) { return {
     }
 } });
 
-var ArrowFunction = __class(Node, function(__super) { return {
+var ArrowFunction = es6now._class(Node, function(__super) { return {
 
     constructor: function ArrowFunction(kind, params, body, start, end) {
     
@@ -1755,7 +1737,7 @@ var ArrowFunction = __class(Node, function(__super) { return {
     }
 } });
 
-var ModuleDeclaration = __class(Node, function(__super) { return {
+var ModuleDeclaration = es6now._class(Node, function(__super) { return {
 
     constructor: function ModuleDeclaration(identifier, body, start, end) {
     
@@ -1765,7 +1747,7 @@ var ModuleDeclaration = __class(Node, function(__super) { return {
     }
 } });
 
-var ModuleBody = __class(Node, function(__super) { return {
+var ModuleBody = es6now._class(Node, function(__super) { return {
 
     constructor: function ModuleBody(statements, start, end) {
     
@@ -1774,7 +1756,7 @@ var ModuleBody = __class(Node, function(__super) { return {
     }
 } });
 
-var ModuleImport = __class(Node, function(__super) { return {
+var ModuleImport = es6now._class(Node, function(__super) { return {
 
     constructor: function ModuleImport(identifier, from, start, end) {
     
@@ -1784,7 +1766,7 @@ var ModuleImport = __class(Node, function(__super) { return {
     }
 } });
 
-var ModuleAlias = __class(Node, function(__super) { return {
+var ModuleAlias = es6now._class(Node, function(__super) { return {
 
     constructor: function ModuleAlias(identifier, path, start, end) {
     
@@ -1794,7 +1776,7 @@ var ModuleAlias = __class(Node, function(__super) { return {
     }
 } });
 
-var ImportDefaultDeclaration = __class(Node, function(__super) { return {
+var ImportDefaultDeclaration = es6now._class(Node, function(__super) { return {
 
     constructor: function ImportDefaultDeclaration(ident, from, start, end) {
     
@@ -1804,7 +1786,7 @@ var ImportDefaultDeclaration = __class(Node, function(__super) { return {
     }
 } });
 
-var ImportDeclaration = __class(Node, function(__super) { return {
+var ImportDeclaration = es6now._class(Node, function(__super) { return {
 
     constructor: function ImportDeclaration(specifiers, from, start, end) {
     
@@ -1814,7 +1796,7 @@ var ImportDeclaration = __class(Node, function(__super) { return {
     }
 } });
 
-var ImportSpecifier = __class(Node, function(__super) { return {
+var ImportSpecifier = es6now._class(Node, function(__super) { return {
 
     constructor: function ImportSpecifier(remote, local, start, end) {
     
@@ -1824,7 +1806,7 @@ var ImportSpecifier = __class(Node, function(__super) { return {
     }
 } });
 
-var ExportDeclaration = __class(Node, function(__super) { return {
+var ExportDeclaration = es6now._class(Node, function(__super) { return {
 
     constructor: function ExportDeclaration(binding, start, end) {
     
@@ -1833,7 +1815,7 @@ var ExportDeclaration = __class(Node, function(__super) { return {
     }
 } });
 
-var ExportsList = __class(Node, function(__super) { return {
+var ExportsList = es6now._class(Node, function(__super) { return {
 
     constructor: function ExportsList(list, from, start, end) {
     
@@ -1843,7 +1825,7 @@ var ExportsList = __class(Node, function(__super) { return {
     }
 } });
 
-var ExportSpecifier = __class(Node, function(__super) { return {
+var ExportSpecifier = es6now._class(Node, function(__super) { return {
 
     constructor: function ExportSpecifier(local, remote, start, end) {
     
@@ -1853,7 +1835,7 @@ var ExportSpecifier = __class(Node, function(__super) { return {
     }
 } });
 
-var ModulePath = __class(Node, function(__super) { return {
+var ModulePath = es6now._class(Node, function(__super) { return {
     
     constructor: function ModulePath(list, start, end) {
     
@@ -1862,7 +1844,7 @@ var ModulePath = __class(Node, function(__super) { return {
     }
 } });
 
-var ClassDeclaration = __class(Node, function(__super) { return {
+var ClassDeclaration = es6now._class(Node, function(__super) { return {
 
     constructor: function ClassDeclaration(identifier, base, body, start, end) {
     
@@ -1873,7 +1855,7 @@ var ClassDeclaration = __class(Node, function(__super) { return {
     }
 } });
 
-var ClassExpression = __class(Node, function(__super) { return {
+var ClassExpression = es6now._class(Node, function(__super) { return {
 
     constructor: function ClassExpression(identifier, base, body, start, end) {
     
@@ -1884,7 +1866,7 @@ var ClassExpression = __class(Node, function(__super) { return {
     }
 } });
 
-var ClassBody = __class(Node, function(__super) { return {
+var ClassBody = es6now._class(Node, function(__super) { return {
 
     constructor: function ClassBody(elems, start, end) {
     
@@ -1893,7 +1875,7 @@ var ClassBody = __class(Node, function(__super) { return {
     }
 } });
 
-var ClassElement = __class(Node, function(__super) { return {
+var ClassElement = es6now._class(Node, function(__super) { return {
 
     constructor: function ClassElement(isStatic, method, start, end) {
     
@@ -2082,7 +2064,7 @@ function isNumberFollow(c) {
     );
 }
 
-var Scanner = __class(function(__super) { return {
+var Scanner = es6now._class(function(__super) { return {
 
     constructor: function Scanner(input, offset) {
 
@@ -2835,7 +2817,7 @@ var Transform_ = (function(exports) {
 
 var AST = AST_;
 
-var Transform = __class(function(__super) { return {
+var Transform = es6now._class(function(__super) { return {
 
     // Transform an expression into a formal parameter list
     transformFormals: function(expr, rest) {
@@ -3029,7 +3011,7 @@ function isPoisonIdent(name) {
     return name === "eval" || name === "arguments";
 }
 
-var Validate = __class(function(__super) { return {
+var Validate = es6now._class(function(__super) { return {
 
     // Checks an assignment target for strict mode restrictions
     checkAssignTarget: function(node, simple) {
@@ -3358,7 +3340,7 @@ function isUnary(op) {
 // Encodes a string as a map key for use in regular object
 function mapKey(name) { return "." + (name || "") }
 
-var Token = __class(function(__super) { return {
+var Token = es6now._class(function(__super) { return {
 
     constructor: function Token(s) {
     
@@ -3374,7 +3356,7 @@ var Token = __class(function(__super) { return {
     }
 } });
 
-var Context = __class(function(__super) { return {
+var Context = es6now._class(function(__super) { return {
 
     constructor: function Context(parent, isStrict, isFunction) {
     
@@ -3390,7 +3372,7 @@ var Context = __class(function(__super) { return {
     }
 } });
 
-var Parser = __class(function(__super) { return {
+var Parser = es6now._class(function(__super) { return {
 
     constructor: function Parser(input, offset) {
 
@@ -5822,7 +5804,7 @@ function preserveNewlines(text, height) {
     return text;
 }
 
-var RootNode = __class(AST.Node, function(__super) { return {
+var RootNode = es6now._class(AST.Node, function(__super) { return {
 
     constructor: function RootNode(root, end) {
     
@@ -5831,7 +5813,7 @@ var RootNode = __class(AST.Node, function(__super) { return {
     }
 } });
 
-var Replacer = __class(function(__super) { return {
+var Replacer = es6now._class(function(__super) { return {
 
     constructor: function Replacer(options) {
         
@@ -6192,7 +6174,7 @@ var Replacer = __class(function(__super) { return {
     
     ClassDeclaration: function(node) {
     
-        return "var " + node.identifier.text + " = __class(" + 
+        return "var " + node.identifier.text + " = es6now._class(" + 
             (node.base ? (node.base.text + ", ") : "") +
             "function(__super) { return " +
             node.body.text + " });";
@@ -6210,7 +6192,7 @@ var Replacer = __class(function(__super) { return {
         }
         
         return "(" + before + 
-            "__class(" + 
+            "es6now._class(" + 
             (node.base ? (node.base.text + ", ") : "") +
             "function(__super) { return " +
             node.body.text + " })" +
@@ -6303,7 +6285,7 @@ var Replacer = __class(function(__super) { return {
         var outerParams = params.map((function(x, i) { return "__" + i; })).join(", ");
         
         return "" + (head) + "(" + (outerParams) + ") { " +
-            "try { return __async(function*(" + (this.joinList(params)) + ") " + 
+            "try { return es6now._async(function*(" + (this.joinList(params)) + ") " + 
             "" + (body) + ".apply(this, arguments)); " +
             "} catch (x) { return Promise.reject(x); } }";
     },
@@ -6496,6 +6478,7 @@ function translate(input, options) {
     if (options.runtime) {
             
         input = "\n\n" +
+            "this.es6now = {};\n\n" +
             wrapRuntimeModule(Runtime.Class) + 
             wrapRuntimeModule(Runtime.ES5) +
             wrapRuntimeModule(Runtime.ES6) +
@@ -6691,7 +6674,7 @@ function parse(argv, params) {
     return values;
 }
 
-var ConsoleCommand = __class(function(__super) { return {
+var ConsoleCommand = es6now._class(function(__super) { return {
 
     constructor: function ConsoleCommand(cmd) {
     
@@ -6768,7 +6751,7 @@ var ConsoleIO = (function(exports) {
 
 var Style = ConsoleStyle_;
 
-var ConsoleIO = __class(function(__super) { return {
+var ConsoleIO = es6now._class(function(__super) { return {
 
     constructor: function ConsoleIO() {
     
@@ -6837,7 +6820,7 @@ var StringMap_ = (function(exports) {
 
 var HAS = Object.prototype.hasOwnProperty;
 
-var StringMap = __class(function(__super) { return {
+var StringMap = es6now._class(function(__super) { return {
 
     constructor: function StringMap() {
     
@@ -6900,7 +6883,7 @@ var StringSet = (function(exports) {
 
 var StringMap = StringMap_.StringMap;
 
-var StringSet = __class(function(__super) { return {
+var StringSet = es6now._class(function(__super) { return {
 
     constructor: function StringSet() {
     
@@ -6948,7 +6931,7 @@ exports.StringSet = StringSet; return exports; }).call(this, {});
 
 var PromiseExtensions = (function(exports) {
 
-var PromiseExtensions = __class(function(__super) { return {
+var PromiseExtensions = es6now._class(function(__super) { return {
 
     __static_iterate: function(fn) {
 
@@ -7010,7 +6993,7 @@ function fire(obj, evt) {
 	}
 }
 
-var EventTarget = __class(function(__super) { return {
+var EventTarget = es6now._class(function(__super) { return {
 
     constructor: function EventTarget() {
     
@@ -7069,7 +7052,7 @@ var EventTarget = __class(function(__super) { return {
     }
 } });
 
-var Event = __class(function(__super) { return {
+var Event = es6now._class(function(__super) { return {
 
     constructor: function Event(type, bubbles, cancellable) {
     
