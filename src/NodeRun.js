@@ -7,13 +7,15 @@ import { translate } from "Translator.js";
 import { isPackageURI, locatePackage } from "PackageLocator.js";
 import { ConsoleStyle as Style } from "package:zen-bits";
 
-
 var ES6_GUESS = /(?:^|\n)\s*(?:import|export|class)\s/;
 
+export function formatSyntaxError(e, filename) {
 
-export function formatSyntaxError(e, text, filename) {
-
-    var msg = e.message;
+    var msg = e.message,
+        text = e.sourceText;
+    
+    if (filename === void 0 && e.filename !== void 0)
+        filename = e.filename;
     
     if (filename)
         msg += "\n    at " + filename + ":" + e.line;
@@ -57,7 +59,7 @@ function addExtension() {
         } catch (e) {
         
             if (e instanceof SyntaxError)
-                e = new SyntaxError(formatSyntaxError(e, source, filename));
+                e = new SyntaxError(formatSyntaxError(e, filename));
             
             throw e;
         }
@@ -110,7 +112,7 @@ export function startREPL() {
             } catch (x) {
             
                 if (x instanceof SyntaxError)
-                    x = new SyntaxError(formatSyntaxError(x, input));
+                    x = new SyntaxError(formatSyntaxError(x));
                 
                 return cb(x);
             }

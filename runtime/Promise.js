@@ -215,13 +215,15 @@ class Promise {
 
         var deferred = this.defer(),
             count = 0,
-            resolutions = [];
+            resolutions;
         
         for (var i = 0; i < values.length; ++i) {
         
             count += 1;
             this.cast(values[i]).then(onResolve(i), onReject);
         }
+        
+        resolutions = new Array(count);
     
         if (count === 0) 
             deferred.resolve(resolutions);
@@ -230,8 +232,6 @@ class Promise {
     
         function onResolve(i) {
     
-            resolutions[i] = void 0;
-            
             return x => {
         
                 resolutions[i] = x;

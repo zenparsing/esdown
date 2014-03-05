@@ -5,7 +5,8 @@ function unwrap(x) {
 
 function iterate(iterable) {
     
-    // TODO:  Use Symbol.iterator
+    // TODO: Use "iterable" interface to get an iterator
+    // var iter = iterable[Symbol.iterator]
     
     var iter = iterable;
     

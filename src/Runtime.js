@@ -721,7 +721,7 @@ this.__class = Class;
 
 export var Promise = 
 
-`var enqueueMicrotask = ($=> {
+`var schedule = ($=> {
 
     var window = this.window,
         process = this.process,
@@ -753,6 +753,28 @@ export var Promise =
     return fn => setTimeout(fn, 0);
 
 })();
+
+var taskQueue = null;
+
+function enqueueMicrotask(fn) {
+
+    if (!taskQueue) {
+    
+        taskQueue = [];
+        
+        schedule($=> {
+        
+            var list = taskQueue;
+            
+            taskQueue = null;
+            
+            for (var i = 0; i < list.length; ++i)
+                list[i]();
+        });
+    }
+    
+    taskQueue.push(fn);
+}
 
 // The following property names are used to simulate the internal data
 // slots that are defined for Promise objects.
@@ -938,13 +960,15 @@ class Promise {
 
         var deferred = this.defer(),
             count = 0,
-            resolutions = [];
+            resolutions;
         
         for (var i = 0; i < values.length; ++i) {
         
             count += 1;
             this.cast(values[i]).then(onResolve(i), onReject);
         }
+        
+        resolutions = new Array(count);
     
         if (count === 0) 
             deferred.resolve(resolutions);
@@ -953,8 +977,6 @@ class Promise {
     
         function onResolve(i) {
     
-            resolutions[i] = void 0;
-            
             return x => {
         
                 resolutions[i] = x;
@@ -990,7 +1012,8 @@ export var Async =
 
 function iterate(iterable) {
     
-    // TODO:  Use Symbol.iterator
+    // TODO: Use "iterable" interface to get an iterator
+    // var iter = iterable[Symbol.iterator]
     
     var iter = iterable;
     

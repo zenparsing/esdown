@@ -74,21 +74,11 @@ new ConsoleCommand({
         
         promise.then(text => {
         
-            try {
-            
-                text = translate(text, { 
-            
-                    global: params.global,
-                    runtime: params.runtime
-                });
-            
-            } catch (x) {
-            
-                if (x instanceof SyntaxError)
-                    x = new SyntaxError(formatSyntaxError(x, text));
-                
-                throw x;
-            }
+            text = translate(text, { 
+        
+                global: params.global,
+                runtime: params.runtime
+            });
         
             if (params.output) {
             
@@ -101,7 +91,17 @@ new ConsoleCommand({
             }
             
         }).then(null, x => {
-        
+            
+            if (x instanceof SyntaxError) {
+            
+                var filename;
+                
+                if (!params.bundle) 
+                    filename = Path.resolve(params.input);
+                    
+                x = new SyntaxError(formatSyntaxError(x, filename));
+            }
+            
             setTimeout($=> { throw x }, 0);
         });
     }
