@@ -13,22 +13,30 @@ export function formatSyntaxError(e, filename) {
 
     var msg = e.message,
         text = e.sourceText;
-    
+        
     if (filename === void 0 && e.filename !== void 0)
         filename = e.filename;
     
     if (filename)
-        msg += "\n    at " + filename + ":" + e.line;
+        msg += `\n    ${filename}:${e.line}`;
     
     if (e.lineOffset < text.length) {
     
-        msg += "\n\n" +
+        var code = "\n\n" +
             text.slice(e.lineOffset, e.startOffset) +
             Style.bold(Style.red(text.slice(e.startOffset, e.endOffset))) + 
-            text.slice(e.endOffset, text.indexOf("\n", e.endOffset)) + "\n";
+            text.slice(e.endOffset, text.indexOf("\n", e.endOffset)) +
+            "\n";
+        
+        msg += code.replace(/\n/g, "\n    ");
     }
     
     return msg;
+}
+
+function foldErrorStack(x) {
+
+    x.stack = x.stack.replace(/\n.*?Parser\..+/g, "");
 }
 
 function addExtension() {
@@ -107,17 +115,19 @@ export function startREPL() {
             try {
             
                 text = translate(input, { wrap: false });
-                script = VM.createScript(text, { filename, displayErrors });
             
             } catch (x) {
             
+                // Regenerate syntax error to eliminate parser stack
                 if (x instanceof SyntaxError)
-                    x = new SyntaxError(formatSyntaxError(x));
+                    x = new SyntaxError(x.message);
                 
                 return cb(x);
             }
             
             try {
+            
+                script = VM.createScript(text, { filename, displayErrors });
             
                 result = context === global ? 
                     script.runInThisContext({ displayErrors }) : 

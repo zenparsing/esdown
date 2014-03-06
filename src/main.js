@@ -99,8 +99,9 @@ new ConsoleCommand({
                 
                 if (!params.bundle) 
                     filename = Path.resolve(params.input);
-                    
-                x = new SyntaxError(formatSyntaxError(x, filename));
+                
+                process.stdout.write(`\nSyntax Error: ${formatSyntaxError(x, filename)}\n`);
+                return;
             }
             
             setTimeout($=> { throw x }, 0);
