@@ -149,9 +149,33 @@ export class Replacer {
     }
     
     FunctionBody(node) {
+        
+        var inserted = [],
+            p = node.parentNode;
+        
+        if (p.createThisBinding)
+            inserted.push("var __this = this;");
+        
+        if (p.createRestArg)
+            inserted.push(this.restParamVar(p));
+        
+        if (inserted.length > 0)
+            return "{ " + inserted.join(" ") + this.stringify(node).slice(1);
+    }
     
-        if (node.parentNode.createThisBinding)
-            return "{ var __this = this; " + this.stringify(node).slice(1);
+    RestParameter(node) {
+    
+        node.parentNode.createRestArg = true;
+        
+        var p = node.parentNode.params;
+        
+        if (p.length > 1) {
+        
+            var prev = p[p.length - 2];
+            node.start = prev.end;
+        }
+        
+        return "";
     }
     
     MethodDefinition(node) {
@@ -362,9 +386,13 @@ export class Replacer {
     
     ArrowFunction(node) {
     
-        var body = node.body.type === "FunctionBody" ?
-            node.body.text :
-            "{ return " + node.body.text + "; }";
+        var body = node.body.text;
+        
+        if (node.body.type !== "FunctionBody") {
+        
+            var rest = node.createRestArg ? (this.restParamVar(node) + " ") : "";
+            body = "{ " + rest + "return " + body + "; }";
+        }
         
         return node.kind === "async" ?
             "(" + this.asyncFunction(null, node.params, body) + ")" :
@@ -616,6 +644,14 @@ export class Replacer {
             text += input.slice(offset, node.end);
         
         return text;
+    }
+    
+    restParamVar(node) {
+    
+        var name = node.params[node.params.length - 1].identifier.value,
+            pos = node.params.length - 1;
+        
+        return "var " + name + " = [].slice.call(arguments, " + pos + ");";
     }
     
     joinList(list) {

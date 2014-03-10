@@ -34,11 +34,6 @@ export function formatSyntaxError(e, filename) {
     return msg;
 }
 
-function foldErrorStack(x) {
-
-    x.stack = x.stack.replace(/\n.*?Parser\..+/g, "");
-}
-
 function addExtension() {
 
     var Module = module.constructor,
@@ -93,7 +88,7 @@ export function runModule(path) {
 
     if (m && typeof m.main === "function") {
     
-        var result = m.main();
+        var result = m.main(process.argv);
         
         if (Promise.isPromise(result))
             result.then(null, x => setTimeout($=> { throw x }, 0));
