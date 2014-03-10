@@ -138,14 +138,21 @@ export class Replacer {
     
     Module(node) {
     
+        var inserted = [];
+        
         if (node.createThisBinding)
-            return "var __this = this; " + this.stringify(node);
+            inserted.push("var __this = this;");
+        
+        if (node.createSpreadBinding)
+            inserted.push("var __spread;");
+        
+        if (inserted.length > 0)
+            return inserted.join(" ") + " " + this.stringify(node);
     }
     
     Script(node) {
     
-        if (node.createThisBinding)
-            return "var __this = this; " + this.stringify(node);
+        return this.Module(node);
     }
     
     FunctionBody(node) {
@@ -156,8 +163,11 @@ export class Replacer {
         if (p.createThisBinding)
             inserted.push("var __this = this;");
         
-        if (p.createRestArg)
+        if (p.createRestBinding)
             inserted.push(this.restParamVar(p));
+        
+        if (p.createSpreadBinding)
+            inserted.push("var __spread;");
         
         if (inserted.length > 0)
             return "{ " + inserted.join(" ") + this.stringify(node).slice(1);
@@ -165,7 +175,7 @@ export class Replacer {
     
     RestParameter(node) {
     
-        node.parentNode.createRestArg = true;
+        node.parentNode.createRestBinding = true;
         
         var p = node.parentNode.params;
         
@@ -326,16 +336,53 @@ export class Replacer {
     CallExpression(node) {
     
         var callee = node.callee,
-            args = node.arguments;
+            args = node.arguments,
+            spread = null,
+            calleeText,
+            argText;
+        
+        if (node.hasSpreadArg) {
+        
+            spread = args.pop().expression.text;
+            
+            if (args.length > 0)
+                spread = "[" + this.joinList(args) + "].concat(" + spread + ")";
+        }
         
         if (node.isSuperCall) {
         
-            var argText = "this";
+            if (spread)
+                argText = "this, " + spread;
+            else if (args.length > 0)
+                argText = "this, " + this.joinList(args);
+            else
+                argText = "this";
             
-            if (args.length > 0)
-                argText += ", " + this.joinList(args);
+            return callee.text + "." + (spread ? "apply" : "call") + "(" + argText + ")";
+        }
+        
+        if (spread) {
+        
+            argText = "void 0";
             
-            return callee.text + ".call(" + argText + ")";
+            if (node.callee.type === "MemberExpression") {
+            
+                callee.object.text = "(__spread = " + callee.object.text + ")";
+                callee.text = this.MemberExpression(callee) || this.stringify(callee);
+                
+                argText = "__spread";
+            }
+            
+            return callee.text + ".apply(" + argText + ", " + spread + ")";
+        }
+    }
+    
+    SpreadExpression(node) {
+    
+        if (node.parentNode.type === "CallExpression") {
+        
+            this.parentFunction(node).createSpreadBinding = true;
+            node.parentNode.hasSpreadArg = true;
         }
     }
     
@@ -390,7 +437,7 @@ export class Replacer {
         
         if (node.body.type !== "FunctionBody") {
         
-            var rest = node.createRestArg ? (this.restParamVar(node) + " ") : "";
+            var rest = node.createRestBinding ? (this.restParamVar(node) + " ") : "";
             body = "{ " + rest + "return " + body + "; }";
         }
         
