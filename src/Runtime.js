@@ -434,7 +434,7 @@ if (Date.parse(new Date(0).toISOString()) !== 0) !function() {
 
 export var ES6 = 
 
-`es6now.iterator = "@iterator";
+`var global = this;
 
 function eachKey(obj, fn) {
 
@@ -689,18 +689,23 @@ class ArrayIterator {
 
 }
 
-ArrayIterator.prototype[es6now.iterator] = function() { return this };
-
-var arrayMethods = {
+addMethods(Array.prototype, {
 
     values()  { return new ArrayIterator(this, "values") },
     entries() { return new ArrayIterator(this, "entries") },
     keys()    { return new ArrayIterator(this, "keys") }
+});
+
+this.es6now.iterator = function(obj) {
+
+    if (global.Symbol && Symbol.iterator)
+        return obj[Symbol.iterator];
+    
+    if (Array.isArray(obj))
+        return obj.values();
+    
+    return obj;
 };
-
-arrayMethods[es6now.iterator] = function() { return this.values() };
-
-addMethods(Array.prototype, arrayMethods);
 `;
 
 export var Class = 
@@ -1098,13 +1103,11 @@ export var Async =
 
 function iterate(iterable) {
     
-    // TODO: Use "iterable" interface to get an iterator
-    // var iter = iterable[Symbol.iterator]
-    
-    var iter = iterable;
-    
-    var deferred = Promise.defer();
+    var iter = es6now.iterator(iterable),
+        deferred = Promise.defer();
+        
     resume(void 0, false);
+    
     return deferred.promise;
     
     function resume(value, error) {

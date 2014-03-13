@@ -99,7 +99,7 @@ export function startREPL() {
 
     addExtension();
     
-    // TODO: Polyfills are working in the REPL
+    // TODO: Polyfills are not working in the REPL
     
     var repl = REPL.start({ 
     

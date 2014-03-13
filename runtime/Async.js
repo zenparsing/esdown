@@ -5,13 +5,11 @@ function unwrap(x) {
 
 function iterate(iterable) {
     
-    // TODO: Use "iterable" interface to get an iterator
-    // var iter = iterable[Symbol.iterator]
-    
-    var iter = iterable;
-    
-    var deferred = Promise.defer();
+    var iter = es6now.iterator(iterable),
+        deferred = Promise.defer();
+        
     resume(void 0, false);
+    
     return deferred.promise;
     
     function resume(value, error) {

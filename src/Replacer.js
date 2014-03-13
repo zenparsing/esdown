@@ -142,7 +142,7 @@ export class Replacer {
             value = "",
             out = "";
         
-        out += `${ iter } = (${ node.right.text })[es6now.iterator](); `;
+        out += `${ iter } = es6now.iterator(${ node.right.text }); `;
         out += "for (";
         
         if (node.left.type === "VariableDeclaration") {

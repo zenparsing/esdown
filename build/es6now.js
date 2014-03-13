@@ -566,7 +566,7 @@ if (Date.parse(new Date(0).toISOString()) !== 0) !function() {
 
 (function() {
 
-es6now.iterator = "@iterator";
+var global = this;
 
 function eachKey(obj, fn) {
 
@@ -821,18 +821,23 @@ var ArrayIterator = es6now.Class(function(__super) { return {
 
 } });
 
-ArrayIterator.prototype[es6now.iterator] = function() { return this };
-
-var arrayMethods = {
+addMethods(Array.prototype, {
 
     values: function() { return new ArrayIterator(this, "values") },
     entries: function() { return new ArrayIterator(this, "entries") },
     keys: function() { return new ArrayIterator(this, "keys") }
+});
+
+this.es6now.iterator = function(obj) {
+
+    if (global.Symbol && Symbol.iterator)
+        return obj[Symbol.iterator];
+    
+    if (Array.isArray(obj))
+        return obj.values();
+    
+    return obj;
 };
-
-arrayMethods[es6now.iterator] = function() { return this.values() };
-
-addMethods(Array.prototype, arrayMethods);
 
 
 }).call(this);
@@ -1110,13 +1115,11 @@ function unwrap(x) {
 
 function iterate(iterable) {
     
-    // TODO: Use "iterable" interface to get an iterator
-    // var iter = iterable[Symbol.iterator]
-    
-    var iter = iterable;
-    
-    var deferred = Promise.defer();
+    var iter = es6now.iterator(iterable),
+        deferred = Promise.defer();
+        
     resume(void 0, false);
+    
     return deferred.promise;
     
     function resume(value, error) {
@@ -1170,7 +1173,7 @@ var ES5 =
 
 var ES6 = 
 
-"es6now.iterator = \"@iterator\";\n\nfunction eachKey(obj, fn) {\n\n    var keys = Object.getOwnPropertyNames(obj),\n        i;\n    \n    for (i = 0; i < keys.length; ++i)\n        fn(keys[i]);\n    \n    if (!Object.getOwnPropertySymbols)\n        return;\n    \n    keys = Object.getOwnPropertySymbols(obj);\n    \n    for (i = 0; i < keys.length; ++i)\n        fn(keys[i]);\n}\n\nfunction addMethods(obj, methods) {\n\n    eachKey(methods, key => {\n    \n        if (key in obj)\n            return;\n        \n        Object.defineProperty(obj, key, {\n        \n            value: methods[key],\n            configurable: true,\n            enumerable: false,\n            writable: true\n        });\n    });\n}\n\n// === Object ===\n\naddMethods(Object, {\n\n    is(left, right) {\n    \n        if (left === right)\n            return left !== 0 || 1 / left === 1 / right;\n        \n        return left !== left && right !== right;\n    },\n    \n    assign(target, source) {\n    \n        Object.keys(source).forEach(key => target[key] = source[key]);\n        return target;\n    }\n    \n});\n\n// === Number ===\n\naddMethods(Number, {\n\n    EPSILON: ($=> {\n    \n        var next, result;\n        \n        for (next = 1; 1 + next !== 1; next = next / 2)\n            result = next;\n        \n        return result;\n        \n    })(),\n    \n    MAX_SAFE_INTEGER: 9007199254740992,\n    \n    MIN_SAFE_INTEGER: -9007199254740991,\n    \n    isInteger(val) {\n    \n        typeof val === \"number\" && val | 0 === val;\n    }\n    \n    // TODO: isSafeInteger\n    \n});\n\n// === String === \n\naddMethods(String, {\n\n    raw(callsite, ...args) {\n    \n        var raw = callsite.raw,\n            len = raw.length >>> 0;\n        \n        if (len === 0)\n            return \"\";\n            \n        var s = \"\", i = 0;\n        \n        while (true) {\n        \n            s += raw[i];\n        \n            if (i + 1 === len)\n                return s;\n        \n            s += args[i++];\n        }\n    }\n    \n    // TODO:  fromCodePoint\n    \n});\n\naddMethods(String.prototype, {\n    \n    repeat(count) {\n    \n        if (this == null)\n            throw TypeError();\n        \n        var n = count ? Number(count) : 0;\n        \n        if (isNaN(n))\n            n = 0;\n        \n        // Account for out-of-bounds indices\n        if (n < 0 || n == Infinity)\n            throw RangeError();\n        \n        if (n == 0)\n            return \"\";\n            \n        var result = \"\";\n        \n        while (n--)\n            result += this;\n        \n        return result;\n    },\n    \n    startsWith(search) {\n    \n        var string = String(this);\n        \n        if (this == null || Object.toString.call(search) == \"[object RegExp]\")\n            throw TypeError();\n            \n        var stringLength = this.length,\n            searchString = String(search),\n            searchLength = searchString.length,\n            position = arguments.length > 1 ? arguments[1] : undefined,\n            pos = position ? Number(position) : 0;\n            \n        if (isNaN(pos))\n            pos = 0;\n        \n        var start = Math.min(Math.max(pos, 0), stringLength);\n        \n        return this.indexOf(searchString, pos) == start;\n    },\n    \n    endsWith(search) {\n    \n        if (this == null || Object.toString.call(search) == '[object RegExp]')\n            throw TypeError();\n        \n        var stringLength = this.length,\n            searchString = String(search),\n            searchLength = searchString.length,\n            pos = stringLength;\n        \n        if (arguments.length > 1) {\n        \n            var position = arguments[1];\n        \n            if (position !== undefined) {\n        \n                pos = position ? Number(position) : 0;\n                \n                if (isNaN(pos))\n                    pos = 0;\n            }\n        }\n        \n        var end = Math.min(Math.max(pos, 0), stringLength),\n            start = end - searchLength;\n        \n        if (start < 0)\n            return false;\n            \n        return this.lastIndexOf(searchString, start) == start;\n    },\n    \n    contains(search) {\n    \n        if (this == null)\n            throw TypeError();\n            \n        var stringLength = this.length,\n            searchString = String(search),\n            searchLength = searchString.length,\n            position = arguments.length > 1 ? arguments[1] : undefined,\n            pos = position ? Number(position) : 0;\n        \n        if (isNaN(pos))\n            pos = 0;\n            \n        var start = Math.min(Math.max(pos, 0), stringLength);\n        \n        return this.indexOf(string, searchString, pos) != -1;\n    }\n    \n    // TODO: codePointAt\n    \n});\n\n// === Array ===\n\nclass ArrayIterator {\n\n    constructor(array, kind) {\n    \n        this.array = array;\n        this.current = 0;\n        this.kind = kind;\n    }\n    \n    next() {\n    \n        var length = this.array.length >>> 0,\n            index = this.current;\n        \n        if (index >= length) {\n        \n            this.current = Infinity;\n            return { value: void 0, done: true };\n        }\n        \n        this.current += 1;\n        \n        switch (this.kind) {\n        \n            case \"values\":\n                return { value: this.array[index], done: false };\n            \n            case \"entries\":\n                return { value: [ index, this.array[index] ], done: false };\n            \n            default:\n                return { value: index, done: false };\n        }\n    }\n\n}\n\nArrayIterator.prototype[es6now.iterator] = function() { return this };\n\nvar arrayMethods = {\n\n    values()  { return new ArrayIterator(this, \"values\") },\n    entries() { return new ArrayIterator(this, \"entries\") },\n    keys()    { return new ArrayIterator(this, \"keys\") }\n};\n\narrayMethods[es6now.iterator] = function() { return this.values() };\n\naddMethods(Array.prototype, arrayMethods);\n";
+"var global = this;\n\nfunction eachKey(obj, fn) {\n\n    var keys = Object.getOwnPropertyNames(obj),\n        i;\n    \n    for (i = 0; i < keys.length; ++i)\n        fn(keys[i]);\n    \n    if (!Object.getOwnPropertySymbols)\n        return;\n    \n    keys = Object.getOwnPropertySymbols(obj);\n    \n    for (i = 0; i < keys.length; ++i)\n        fn(keys[i]);\n}\n\nfunction addMethods(obj, methods) {\n\n    eachKey(methods, key => {\n    \n        if (key in obj)\n            return;\n        \n        Object.defineProperty(obj, key, {\n        \n            value: methods[key],\n            configurable: true,\n            enumerable: false,\n            writable: true\n        });\n    });\n}\n\n// === Object ===\n\naddMethods(Object, {\n\n    is(left, right) {\n    \n        if (left === right)\n            return left !== 0 || 1 / left === 1 / right;\n        \n        return left !== left && right !== right;\n    },\n    \n    assign(target, source) {\n    \n        Object.keys(source).forEach(key => target[key] = source[key]);\n        return target;\n    }\n    \n});\n\n// === Number ===\n\naddMethods(Number, {\n\n    EPSILON: ($=> {\n    \n        var next, result;\n        \n        for (next = 1; 1 + next !== 1; next = next / 2)\n            result = next;\n        \n        return result;\n        \n    })(),\n    \n    MAX_SAFE_INTEGER: 9007199254740992,\n    \n    MIN_SAFE_INTEGER: -9007199254740991,\n    \n    isInteger(val) {\n    \n        typeof val === \"number\" && val | 0 === val;\n    }\n    \n    // TODO: isSafeInteger\n    \n});\n\n// === String === \n\naddMethods(String, {\n\n    raw(callsite, ...args) {\n    \n        var raw = callsite.raw,\n            len = raw.length >>> 0;\n        \n        if (len === 0)\n            return \"\";\n            \n        var s = \"\", i = 0;\n        \n        while (true) {\n        \n            s += raw[i];\n        \n            if (i + 1 === len)\n                return s;\n        \n            s += args[i++];\n        }\n    }\n    \n    // TODO:  fromCodePoint\n    \n});\n\naddMethods(String.prototype, {\n    \n    repeat(count) {\n    \n        if (this == null)\n            throw TypeError();\n        \n        var n = count ? Number(count) : 0;\n        \n        if (isNaN(n))\n            n = 0;\n        \n        // Account for out-of-bounds indices\n        if (n < 0 || n == Infinity)\n            throw RangeError();\n        \n        if (n == 0)\n            return \"\";\n            \n        var result = \"\";\n        \n        while (n--)\n            result += this;\n        \n        return result;\n    },\n    \n    startsWith(search) {\n    \n        var string = String(this);\n        \n        if (this == null || Object.toString.call(search) == \"[object RegExp]\")\n            throw TypeError();\n            \n        var stringLength = this.length,\n            searchString = String(search),\n            searchLength = searchString.length,\n            position = arguments.length > 1 ? arguments[1] : undefined,\n            pos = position ? Number(position) : 0;\n            \n        if (isNaN(pos))\n            pos = 0;\n        \n        var start = Math.min(Math.max(pos, 0), stringLength);\n        \n        return this.indexOf(searchString, pos) == start;\n    },\n    \n    endsWith(search) {\n    \n        if (this == null || Object.toString.call(search) == '[object RegExp]')\n            throw TypeError();\n        \n        var stringLength = this.length,\n            searchString = String(search),\n            searchLength = searchString.length,\n            pos = stringLength;\n        \n        if (arguments.length > 1) {\n        \n            var position = arguments[1];\n        \n            if (position !== undefined) {\n        \n                pos = position ? Number(position) : 0;\n                \n                if (isNaN(pos))\n                    pos = 0;\n            }\n        }\n        \n        var end = Math.min(Math.max(pos, 0), stringLength),\n            start = end - searchLength;\n        \n        if (start < 0)\n            return false;\n            \n        return this.lastIndexOf(searchString, start) == start;\n    },\n    \n    contains(search) {\n    \n        if (this == null)\n            throw TypeError();\n            \n        var stringLength = this.length,\n            searchString = String(search),\n            searchLength = searchString.length,\n            position = arguments.length > 1 ? arguments[1] : undefined,\n            pos = position ? Number(position) : 0;\n        \n        if (isNaN(pos))\n            pos = 0;\n            \n        var start = Math.min(Math.max(pos, 0), stringLength);\n        \n        return this.indexOf(string, searchString, pos) != -1;\n    }\n    \n    // TODO: codePointAt\n    \n});\n\n// === Array ===\n\nclass ArrayIterator {\n\n    constructor(array, kind) {\n    \n        this.array = array;\n        this.current = 0;\n        this.kind = kind;\n    }\n    \n    next() {\n    \n        var length = this.array.length >>> 0,\n            index = this.current;\n        \n        if (index >= length) {\n        \n            this.current = Infinity;\n            return { value: void 0, done: true };\n        }\n        \n        this.current += 1;\n        \n        switch (this.kind) {\n        \n            case \"values\":\n                return { value: this.array[index], done: false };\n            \n            case \"entries\":\n                return { value: [ index, this.array[index] ], done: false };\n            \n            default:\n                return { value: index, done: false };\n        }\n    }\n\n}\n\naddMethods(Array.prototype, {\n\n    values()  { return new ArrayIterator(this, \"values\") },\n    entries() { return new ArrayIterator(this, \"entries\") },\n    keys()    { return new ArrayIterator(this, \"keys\") }\n});\n\nthis.es6now.iterator = function(obj) {\n\n    if (global.Symbol && Symbol.iterator)\n        return obj[Symbol.iterator];\n    \n    if (Array.isArray(obj))\n        return obj.values();\n    \n    return obj;\n};\n";
 
 var Class = 
 
@@ -1182,7 +1185,7 @@ var Promise =
 
 var Async = 
 
-"function unwrap(x) {\n    \n    return Promise.isPromise(x) ? x.chain(unwrap) : x;\n}\n\nfunction iterate(iterable) {\n    \n    // TODO: Use \"iterable\" interface to get an iterator\n    // var iter = iterable[Symbol.iterator]\n    \n    var iter = iterable;\n    \n    var deferred = Promise.defer();\n    resume(void 0, false);\n    return deferred.promise;\n    \n    function resume(value, error) {\n    \n        if (error && !(\"throw\" in iter))\n            return deferred.reject(value);\n        \n        try {\n        \n            // Invoke the iterator/generator\n            var result = error ? iter.throw(value) : iter.next(value),\n                value = result.value,\n                done = result.done;\n            \n            if (Promise.isPromise(value)) {\n            \n                // Recursively unwrap the result value\n                value = value.chain(unwrap);\n                \n                if (done)\n                    value.chain(deferred.resolve, deferred.reject);\n                else\n                    value.chain(x => resume(x, false), x => resume(x, true));\n            \n            } else if (done) {\n                \n                deferred.resolve(value);\n                \n            } else {\n            \n                resume(value, false);\n            }\n            \n        } catch (x) {\n        \n            deferred.reject(x);\n        }\n    }\n}\n\nthis.es6now.async = iterate;\n";
+"function unwrap(x) {\n    \n    return Promise.isPromise(x) ? x.chain(unwrap) : x;\n}\n\nfunction iterate(iterable) {\n    \n    var iter = es6now.iterator(iterable),\n        deferred = Promise.defer();\n        \n    resume(void 0, false);\n    \n    return deferred.promise;\n    \n    function resume(value, error) {\n    \n        if (error && !(\"throw\" in iter))\n            return deferred.reject(value);\n        \n        try {\n        \n            // Invoke the iterator/generator\n            var result = error ? iter.throw(value) : iter.next(value),\n                value = result.value,\n                done = result.done;\n            \n            if (Promise.isPromise(value)) {\n            \n                // Recursively unwrap the result value\n                value = value.chain(unwrap);\n                \n                if (done)\n                    value.chain(deferred.resolve, deferred.reject);\n                else\n                    value.chain(x => resume(x, false), x => resume(x, true));\n            \n            } else if (done) {\n                \n                deferred.resolve(value);\n                \n            } else {\n            \n                resume(value, false);\n            }\n            \n        } catch (x) {\n        \n            deferred.reject(x);\n        }\n    }\n}\n\nthis.es6now.async = iterate;\n";
 
 
 
@@ -5989,7 +5992,7 @@ var Replacer = es6now.Class(function(__super) { return {
             value = "",
             out = "";
         
-        out += "" + (iter) + " = (" + (node.right.text) + ")[es6now.iterator](); ";
+        out += "" + (iter) + " = es6now.iterator(" + (node.right.text) + "); ";
         out += "for (";
         
         if (node.left.type === "VariableDeclaration") {
@@ -7504,7 +7507,9 @@ function runModule(path) {
 function startREPL() {
 
     addExtension();
-
+    
+    // TODO: Polyfills are not working in the REPL
+    
     var repl = REPL.start({ 
     
         prompt: "es6now> ",

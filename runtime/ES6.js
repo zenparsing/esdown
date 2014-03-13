@@ -1,4 +1,4 @@
-es6now.iterator = "@iterator";
+var global = this;
 
 function eachKey(obj, fn) {
 
@@ -253,15 +253,20 @@ class ArrayIterator {
 
 }
 
-ArrayIterator.prototype[es6now.iterator] = function() { return this };
-
-var arrayMethods = {
+addMethods(Array.prototype, {
 
     values()  { return new ArrayIterator(this, "values") },
     entries() { return new ArrayIterator(this, "entries") },
     keys()    { return new ArrayIterator(this, "keys") }
+});
+
+this.es6now.iterator = function(obj) {
+
+    if (global.Symbol && Symbol.iterator)
+        return obj[Symbol.iterator];
+    
+    if (Array.isArray(obj))
+        return obj.values();
+    
+    return obj;
 };
-
-arrayMethods[es6now.iterator] = function() { return this.values() };
-
-addMethods(Array.prototype, arrayMethods);
