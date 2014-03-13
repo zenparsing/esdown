@@ -57,16 +57,17 @@ export class Replacer {
     }
     
     replace(input) {
-    
+        
+        var parser = new Parser(input),
+            scanner = parser.scanner,
+            root = parser.Module();
+        
+        this.input = input;
+        this.scanner = scanner;
         this.exportStack = [this.exports = {}];
         this.imports = {};
         this.dependencies = [];
         this.uid = 0;
-        this.input = input;
-
-        var parser = new Parser(input),
-            scanner = parser.scanner,
-            root = parser.Module();
         
         var visit = node => {
         
@@ -92,9 +93,7 @@ export class Replacer {
             if (text === null || text === void 0)
                 text = this.stringify(node);
             
-            var height = scanner.lineNumber(node.end - 1) - scanner.lineNumber(node.start);
-            
-            return node.text = preserveNewlines(text, height);
+            return node.text = this.syncNewlines(node.start, node.end, text);
         };
         
         var output = visit(new RootNode(root, input.length)),
@@ -136,6 +135,36 @@ export class Replacer {
             return text + ";";
     }
     
+    ForOfStatement(node) {
+    
+        var iter = this.addTempVar(node),
+            iterResult = this.addTempVar(node),
+            value = "",
+            out = "";
+        
+        out += `${ iter } = (${ node.right.text })[es6now.iterator](); `;
+        out += "for (";
+        
+        if (node.left.type === "VariableDeclaration") {
+        
+            out += node.left.text;
+            value = node.left.declarations[0].pattern.value;
+        
+        } else {
+        
+            value = node.left.text;
+        }
+        
+        out += `; ${ iterResult } = ${ iter }.next()`;
+        out += `, ${ value } = ${ iterResult }.value`;
+        out += `, !${ iterResult }.done`;
+        out += ";) ";
+        
+        out = this.syncNewlines(node.left.start, node.body.start, out);
+        
+        return out + node.body.text;
+    }
+    
     Module(node) {
     
         var inserted = [];
@@ -166,8 +195,8 @@ export class Replacer {
         if (p.createRestBinding)
             inserted.push(this.restParamVar(p));
         
-        if (node.tempVars)
-            inserted.push(this.tempVars(node));
+        if (p.tempVars)
+            inserted.push(this.tempVars(p));
         
         if (inserted.length > 0)
             return "{ " + inserted.join(" ") + this.stringify(node).slice(1);
@@ -479,7 +508,7 @@ export class Replacer {
     
     ClassDeclaration(node) {
     
-        return "var " + node.identifier.text + " = es6now._class(" + 
+        return "var " + node.identifier.text + " = es6now.Class(" + 
             (node.base ? (node.base.text + ", ") : "") +
             "function(__super) { return " +
             node.body.text + " });";
@@ -497,7 +526,7 @@ export class Replacer {
         }
         
         return "(" + before + 
-            "es6now._class(" + 
+            "es6now.Class(" + 
             (node.base ? (node.base.text + ", ") : "") +
             "function(__super) { return " +
             node.body.text + " })" +
@@ -590,7 +619,7 @@ export class Replacer {
         var outerParams = params.map((x, i) => "__" + i).join(", ");
         
         return `${head}(${outerParams}) { ` +
-            `try { return es6now._async(function*(${ this.joinList(params) }) ` + 
+            `try { return es6now.async(function*(${ this.joinList(params) }) ` + 
             `${ body }.apply(this, arguments)); ` +
             `} catch (x) { return Promise.reject(x); } }`;
     }
@@ -727,6 +756,12 @@ export class Replacer {
             return out;
         
         }).join(", ") + ";";
+    }
+    
+    syncNewlines(start, end, text) {
+    
+        var height = this.scanner.lineNumber(end - 1) - this.scanner.lineNumber(start);
+        return preserveNewlines(text, height);
     }
     
     joinList(list) {

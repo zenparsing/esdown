@@ -98,7 +98,9 @@ export function runModule(path) {
 export function startREPL() {
 
     addExtension();
-
+    
+    // TODO: Polyfills are working in the REPL
+    
     var repl = REPL.start({ 
     
         prompt: "es6now> ",

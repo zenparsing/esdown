@@ -123,8 +123,7 @@ function Class(base, def) {
     return constructor;
 }
 
-this.es6now._class = Class;
-this.__class = Class;
+this.es6now.Class = Class;
 
 
 }).call(this);
@@ -567,22 +566,35 @@ if (Date.parse(new Date(0).toISOString()) !== 0) !function() {
 
 (function() {
 
-var global = this,
-    HAS_OWN = Object.prototype.hasOwnProperty;
+es6now.iterator = "@iterator";
 
-// TODO:  Not everything gets added with the same property attributes...
+function eachKey(obj, fn) {
 
-
-function addProps(obj, props) {
-
-    Object.keys(props).forEach((function(k) {
+    var keys = Object.getOwnPropertyNames(obj),
+        i;
     
-        if (typeof obj[k] !== "undefined")
+    for (i = 0; i < keys.length; ++i)
+        fn(keys[i]);
+    
+    if (!Object.getOwnPropertySymbols)
+        return;
+    
+    keys = Object.getOwnPropertySymbols(obj);
+    
+    for (i = 0; i < keys.length; ++i)
+        fn(keys[i]);
+}
+
+function addMethods(obj, methods) {
+
+    eachKey(methods, (function(key) {
+    
+        if (key in obj)
             return;
         
-        Object.defineProperty(obj, k, {
+        Object.defineProperty(obj, key, {
         
-            value: props[k],
+            value: methods[key],
             configurable: true,
             enumerable: false,
             writable: true
@@ -590,23 +602,29 @@ function addProps(obj, props) {
     }));
 }
 
-addProps(Object, {
+// === Object ===
 
-    is: function(a, b) {
+addMethods(Object, {
+
+    is: function(left, right) {
     
-        // TODO
+        if (left === right)
+            return left !== 0 || 1 / left === 1 / right;
+        
+        return left !== left && right !== right;
     },
     
     assign: function(target, source) {
     
-        Object.keys(source).forEach((function(k) { return target[k] = source[k]; }));
+        Object.keys(source).forEach((function(key) { return target[key] = source[key]; }));
         return target;
     }
+    
 });
 
-// TODO Math?
+// === Number ===
 
-addProps(Number, {
+addMethods(Number, {
 
     EPSILON: ((function($) {
     
@@ -616,6 +634,7 @@ addProps(Number, {
             result = next;
         
         return result;
+        
     }))(),
     
     MAX_SAFE_INTEGER: 9007199254740992,
@@ -625,107 +644,195 @@ addProps(Number, {
     isInteger: function(val) {
     
         typeof val === "number" && val | 0 === val;
-    },
-    
-    isSafeInteger: function(val) {
-        // TODO
-    }
-});
-
-addProps(Number.prototype, {
-
-    clz: function() {
-    
-        var n = this >>> 0; // uint32
-        // TODO:  Count leading bitwise zeros of n
-    }
-});
-
-addProps(Array, {
-
-    from: function(arg) {
-        // TODO
-    },
-    
-    of: function() {
-        // ?
-    }
-
-});
-
-addProps(Array.prototype, {
-
-    copyWithin: function() {
-        // TODO
-    },
-    
-    keys: function() {
-        // TODO
-    },
-    
-    entries: function() {
-        // TODO
-    },
-    
-    fill: function() {
-        // TODO
-    },
-    
-    find: function() {
-        // TODO
-    },
-    
-    findIndex: function() {
-        // TODO
-    },
-    
-    values: function() {
-        // TODO
     }
     
-    // TODO:  ArrayIterator??
+    // TODO: isSafeInteger
+    
 });
 
-addProps(String, {
+// === String === 
 
-    raw: function() {
-        // TODO
+addMethods(String, {
+
+    raw: function(callsite) { var args = [].slice.call(arguments, 1);
+    
+        var raw = callsite.raw,
+            len = raw.length >>> 0;
+        
+        if (len === 0)
+            return "";
+            
+        var s = "", i = 0;
+        
+        while (true) {
+        
+            s += raw[i];
+        
+            if (i + 1 === len)
+                return s;
+        
+            s += args[i++];
+        }
     }
+    
+    // TODO:  fromCodePoint
+    
 });
 
-addProps(String.prototype, {
+addMethods(String.prototype, {
     
     repeat: function(count) {
     
-        // TODO
-        return new Array(count + 1).join(this);
+        if (this == null)
+            throw TypeError();
+        
+        var n = count ? Number(count) : 0;
+        
+        if (isNaN(n))
+            n = 0;
+        
+        // Account for out-of-bounds indices
+        if (n < 0 || n == Infinity)
+            throw RangeError();
+        
+        if (n == 0)
+            return "";
+            
+        var result = "";
+        
+        while (n--)
+            result += this;
+        
+        return result;
     },
     
-    startsWith: function(search, start) {
+    startsWith: function(search) {
     
-        // TODO
-        start = start >>> 0;
-        return this.indexOf(search, start) === start;
+        var string = String(this);
+        
+        if (this == null || Object.toString.call(search) == "[object RegExp]")
+            throw TypeError();
+            
+        var stringLength = this.length,
+            searchString = String(search),
+            searchLength = searchString.length,
+            position = arguments.length > 1 ? arguments[1] : undefined,
+            pos = position ? Number(position) : 0;
+            
+        if (isNaN(pos))
+            pos = 0;
+        
+        var start = Math.min(Math.max(pos, 0), stringLength);
+        
+        return this.indexOf(searchString, pos) == start;
     },
     
-    endsWith: function(search, end) {
+    endsWith: function(search) {
     
-        // TODO
-        return this.slice(-search.length) === search;
+        if (this == null || Object.toString.call(search) == '[object RegExp]')
+            throw TypeError();
+        
+        var stringLength = this.length,
+            searchString = String(search),
+            searchLength = searchString.length,
+            pos = stringLength;
+        
+        if (arguments.length > 1) {
+        
+            var position = arguments[1];
+        
+            if (position !== undefined) {
+        
+                pos = position ? Number(position) : 0;
+                
+                if (isNaN(pos))
+                    pos = 0;
+            }
+        }
+        
+        var end = Math.min(Math.max(pos, 0), stringLength),
+            start = end - searchLength;
+        
+        if (start < 0)
+            return false;
+            
+        return this.lastIndexOf(searchString, start) == start;
     },
     
-    contains: function(search, pos) {
+    contains: function(search) {
     
-        // TODO
-        return this.indexOf(search, pos >>> 0) !== -1;
+        if (this == null)
+            throw TypeError();
+            
+        var stringLength = this.length,
+            searchString = String(search),
+            searchLength = searchString.length,
+            position = arguments.length > 1 ? arguments[1] : undefined,
+            pos = position ? Number(position) : 0;
+        
+        if (isNaN(pos))
+            pos = 0;
+            
+        var start = Math.min(Math.max(pos, 0), stringLength);
+        
+        return this.indexOf(string, searchString, pos) != -1;
     }
+    
+    // TODO: codePointAt
+    
 });
 
-// TODO:  Should we even be going here?
-if (typeof Reflect === "undefined") global.Reflect = {
+// === Array ===
 
-    hasOwn: function(obj, name) { return HAS_OWN.call(obj, name); }
+var ArrayIterator = es6now.Class(function(__super) { return {
+
+    constructor: function ArrayIterator(array, kind) {
+    
+        this.array = array;
+        this.current = 0;
+        this.kind = kind;
+    },
+    
+    next: function() {
+    
+        var length = this.array.length >>> 0,
+            index = this.current;
+        
+        if (index >= length) {
+        
+            this.current = Infinity;
+            return { value: void 0, done: true };
+        }
+        
+        this.current += 1;
+        
+        switch (this.kind) {
+        
+            case "values":
+                return { value: this.array[index], done: false };
+            
+            case "entries":
+                return { value: [ index, this.array[index] ], done: false };
+            
+            default:
+                return { value: index, done: false };
+        }
+    }
+
+} });
+
+ArrayIterator.prototype[es6now.iterator] = function() { return this };
+
+var arrayMethods = {
+
+    values: function() { return new ArrayIterator(this, "values") },
+    entries: function() { return new ArrayIterator(this, "entries") },
+    keys: function() { return new ArrayIterator(this, "keys") }
 };
+
+arrayMethods[es6now.iterator] = function() { return this.values() };
+
+addMethods(Array.prototype, arrayMethods);
 
 
 }).call(this);
@@ -824,7 +931,7 @@ function promiseReact(deferred, handler, x) {
     }));
 }
 
-var Promise = es6now._class(function(__super) { return {
+var Promise = es6now.Class(function(__super) { return {
 
     constructor: function Promise(init) { var __this = this;
     
@@ -1050,8 +1157,7 @@ function iterate(iterable) {
     }
 }
 
-this.es6now._async = iterate;
-this.__async = iterate;
+this.es6now.async = iterate;
 
 
 }).call(this);

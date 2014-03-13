@@ -1,19 +1,32 @@
-var global = this,
-    HAS_OWN = Object.prototype.hasOwnProperty;
+es6now.iterator = "@iterator";
 
-// TODO:  Not everything gets added with the same property attributes...
+function eachKey(obj, fn) {
 
-
-function addProps(obj, props) {
-
-    Object.keys(props).forEach(k => {
+    var keys = Object.getOwnPropertyNames(obj),
+        i;
     
-        if (typeof obj[k] !== "undefined")
+    for (i = 0; i < keys.length; ++i)
+        fn(keys[i]);
+    
+    if (!Object.getOwnPropertySymbols)
+        return;
+    
+    keys = Object.getOwnPropertySymbols(obj);
+    
+    for (i = 0; i < keys.length; ++i)
+        fn(keys[i]);
+}
+
+function addMethods(obj, methods) {
+
+    eachKey(methods, key => {
+    
+        if (key in obj)
             return;
         
-        Object.defineProperty(obj, k, {
+        Object.defineProperty(obj, key, {
         
-            value: props[k],
+            value: methods[key],
             configurable: true,
             enumerable: false,
             writable: true
@@ -21,23 +34,29 @@ function addProps(obj, props) {
     });
 }
 
-addProps(Object, {
+// === Object ===
 
-    is(a, b) {
+addMethods(Object, {
+
+    is(left, right) {
     
-        // TODO
+        if (left === right)
+            return left !== 0 || 1 / left === 1 / right;
+        
+        return left !== left && right !== right;
     },
     
     assign(target, source) {
     
-        Object.keys(source).forEach(k => target[k] = source[k]);
+        Object.keys(source).forEach(key => target[key] = source[key]);
         return target;
     }
+    
 });
 
-// TODO Math?
+// === Number ===
 
-addProps(Number, {
+addMethods(Number, {
 
     EPSILON: ($=> {
     
@@ -47,6 +66,7 @@ addProps(Number, {
             result = next;
         
         return result;
+        
     })(),
     
     MAX_SAFE_INTEGER: 9007199254740992,
@@ -56,104 +76,192 @@ addProps(Number, {
     isInteger(val) {
     
         typeof val === "number" && val | 0 === val;
-    },
-    
-    isSafeInteger(val) {
-        // TODO
-    }
-});
-
-addProps(Number.prototype, {
-
-    clz() {
-    
-        var n = this >>> 0; // uint32
-        // TODO:  Count leading bitwise zeros of n
-    }
-});
-
-addProps(Array, {
-
-    from(arg) {
-        // TODO
-    },
-    
-    of() {
-        // ?
-    }
-
-});
-
-addProps(Array.prototype, {
-
-    copyWithin() {
-        // TODO
-    },
-    
-    keys() {
-        // TODO
-    },
-    
-    entries() {
-        // TODO
-    },
-    
-    fill() {
-        // TODO
-    },
-    
-    find() {
-        // TODO
-    },
-    
-    findIndex() {
-        // TODO
-    },
-    
-    values() {
-        // TODO
     }
     
-    // TODO:  ArrayIterator??
+    // TODO: isSafeInteger
+    
 });
 
-addProps(String, {
+// === String === 
 
-    raw() {
-        // TODO
+addMethods(String, {
+
+    raw(callsite, ...args) {
+    
+        var raw = callsite.raw,
+            len = raw.length >>> 0;
+        
+        if (len === 0)
+            return "";
+            
+        var s = "", i = 0;
+        
+        while (true) {
+        
+            s += raw[i];
+        
+            if (i + 1 === len)
+                return s;
+        
+            s += args[i++];
+        }
     }
+    
+    // TODO:  fromCodePoint
+    
 });
 
-addProps(String.prototype, {
+addMethods(String.prototype, {
     
     repeat(count) {
     
-        // TODO
-        return new Array(count + 1).join(this);
+        if (this == null)
+            throw TypeError();
+        
+        var n = count ? Number(count) : 0;
+        
+        if (isNaN(n))
+            n = 0;
+        
+        // Account for out-of-bounds indices
+        if (n < 0 || n == Infinity)
+            throw RangeError();
+        
+        if (n == 0)
+            return "";
+            
+        var result = "";
+        
+        while (n--)
+            result += this;
+        
+        return result;
     },
     
-    startsWith(search, start) {
+    startsWith(search) {
     
-        // TODO
-        start = start >>> 0;
-        return this.indexOf(search, start) === start;
+        var string = String(this);
+        
+        if (this == null || Object.toString.call(search) == "[object RegExp]")
+            throw TypeError();
+            
+        var stringLength = this.length,
+            searchString = String(search),
+            searchLength = searchString.length,
+            position = arguments.length > 1 ? arguments[1] : undefined,
+            pos = position ? Number(position) : 0;
+            
+        if (isNaN(pos))
+            pos = 0;
+        
+        var start = Math.min(Math.max(pos, 0), stringLength);
+        
+        return this.indexOf(searchString, pos) == start;
     },
     
-    endsWith(search, end) {
+    endsWith(search) {
     
-        // TODO
-        return this.slice(-search.length) === search;
+        if (this == null || Object.toString.call(search) == '[object RegExp]')
+            throw TypeError();
+        
+        var stringLength = this.length,
+            searchString = String(search),
+            searchLength = searchString.length,
+            pos = stringLength;
+        
+        if (arguments.length > 1) {
+        
+            var position = arguments[1];
+        
+            if (position !== undefined) {
+        
+                pos = position ? Number(position) : 0;
+                
+                if (isNaN(pos))
+                    pos = 0;
+            }
+        }
+        
+        var end = Math.min(Math.max(pos, 0), stringLength),
+            start = end - searchLength;
+        
+        if (start < 0)
+            return false;
+            
+        return this.lastIndexOf(searchString, start) == start;
     },
     
-    contains(search, pos) {
+    contains(search) {
     
-        // TODO
-        return this.indexOf(search, pos >>> 0) !== -1;
+        if (this == null)
+            throw TypeError();
+            
+        var stringLength = this.length,
+            searchString = String(search),
+            searchLength = searchString.length,
+            position = arguments.length > 1 ? arguments[1] : undefined,
+            pos = position ? Number(position) : 0;
+        
+        if (isNaN(pos))
+            pos = 0;
+            
+        var start = Math.min(Math.max(pos, 0), stringLength);
+        
+        return this.indexOf(string, searchString, pos) != -1;
     }
+    
+    // TODO: codePointAt
+    
 });
 
-// TODO:  Should we even be going here?
-if (typeof Reflect === "undefined") global.Reflect = {
+// === Array ===
 
-    hasOwn(obj, name) { return HAS_OWN.call(obj, name); }
+class ArrayIterator {
+
+    constructor(array, kind) {
+    
+        this.array = array;
+        this.current = 0;
+        this.kind = kind;
+    }
+    
+    next() {
+    
+        var length = this.array.length >>> 0,
+            index = this.current;
+        
+        if (index >= length) {
+        
+            this.current = Infinity;
+            return { value: void 0, done: true };
+        }
+        
+        this.current += 1;
+        
+        switch (this.kind) {
+        
+            case "values":
+                return { value: this.array[index], done: false };
+            
+            case "entries":
+                return { value: [ index, this.array[index] ], done: false };
+            
+            default:
+                return { value: index, done: false };
+        }
+    }
+
+}
+
+ArrayIterator.prototype[es6now.iterator] = function() { return this };
+
+var arrayMethods = {
+
+    values()  { return new ArrayIterator(this, "values") },
+    entries() { return new ArrayIterator(this, "entries") },
+    keys()    { return new ArrayIterator(this, "keys") }
 };
+
+arrayMethods[es6now.iterator] = function() { return this.values() };
+
+addMethods(Array.prototype, arrayMethods);

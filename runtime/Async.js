@@ -52,4 +52,4 @@ function iterate(iterable) {
     }
 }
 
-this.es6now._async = iterate;
+this.es6now.async = iterate;
