@@ -143,8 +143,8 @@ export class Replacer {
         if (node.createThisBinding)
             inserted.push("var __this = this;");
         
-        if (node.createSpreadBinding)
-            inserted.push("var __spread;");
+        if (node.tempVars)
+            inserted.push(this.tempVars(node));
         
         if (inserted.length > 0)
             return inserted.join(" ") + " " + this.stringify(node);
@@ -166,8 +166,8 @@ export class Replacer {
         if (p.createRestBinding)
             inserted.push(this.restParamVar(p));
         
-        if (p.createSpreadBinding)
-            inserted.push("var __spread;");
+        if (node.tempVars)
+            inserted.push(this.tempVars(node));
         
         if (inserted.length > 0)
             return "{ " + inserted.join(" ") + this.stringify(node).slice(1);
@@ -367,10 +367,10 @@ export class Replacer {
             
             if (node.callee.type === "MemberExpression") {
             
-                callee.object.text = "(__spread = " + callee.object.text + ")";
-                callee.text = this.MemberExpression(callee) || this.stringify(callee);
+                argText = this.addTempVar(node);
                 
-                argText = "__spread";
+                callee.object.text = `(${ argText } = ${ callee.object.text })`;
+                callee.text = this.MemberExpression(callee) || this.stringify(callee);
             }
             
             return callee.text + ".apply(" + argText + ", " + spread + ")";
@@ -379,11 +379,8 @@ export class Replacer {
     
     SpreadExpression(node) {
     
-        if (node.parentNode.type === "CallExpression") {
-        
-            this.parentFunction(node).createSpreadBinding = true;
+        if (node.parentNode.type === "CallExpression")
             node.parentNode.hasSpreadArg = true;
-        }
     }
     
     SuperExpression(node) {
@@ -699,6 +696,37 @@ export class Replacer {
             pos = node.params.length - 1;
         
         return "var " + name + " = [].slice.call(arguments, " + pos + ");";
+    }
+    
+    addTempVar(node, value) {
+    
+        var p = this.parentFunction(node);
+        
+        if (!p.tempVars)
+            p.tempVars = [];
+        
+        var name = "__$" + p.tempVars.length;
+        
+        p.tempVars.push({ name, value });
+        
+        return name;
+    }
+    
+    tempVars(node) {
+    
+        if (!node.tempVars || node.tempVars.length === 0)
+            return null;
+        
+        return "var " + node.tempVars.map(item => {
+        
+            var out = item.name;
+            
+            if (typeof item.value === "string")
+                out += " = " + item.value;
+            
+            return out;
+        
+        }).join(", ") + ";";
     }
     
     joinList(list) {
