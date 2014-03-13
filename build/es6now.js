@@ -3563,7 +3563,7 @@ var Parser = es6now._class(function(__super) { return {
         if (this.peekKeyword("async")) {
         
             var token = this.peekToken("div", 1);
-            return (!token.newlineBefore && token.type === "IDENTIFIER");
+            return (!token.newlineBefore && token.type === "function");
         }
         
         return false;
@@ -5123,14 +5123,17 @@ var Parser = es6now._class(function(__super) { return {
     
     // === Functions ===
     
-    FunctionDeclaration: function() {
+    FunctionDeclaration: function(kind, start) {
     
-        var start = this.startOffset,
+        if (kind === void 0)
             kind = "";
+        
+        if (start === void 0)
+            start = this.startOffset;
         
         this.read("function");
         
-        if (this.peek() === "*") {
+        if (!kind && this.peek() === "*") {
             
             this.read();
             kind = "generator";
@@ -5155,15 +5158,19 @@ var Parser = es6now._class(function(__super) { return {
             this.endOffset);
     },
     
-    FunctionExpression: function() {
+    FunctionExpression: function(kind, start) {
     
-        var start = this.startOffset,
-            kind = "",
-            ident = null;
+        if (kind === void 0)
+            kind = "";
+        
+        if (start === void 0)
+            start = this.startOffset;
+            
+        var ident = null;
         
         this.read("function");
         
-        if (this.peek() === "*") {
+        if (!kind && this.peek() === "*") {
             
             this.read();
             kind = "generator";
@@ -5193,49 +5200,15 @@ var Parser = es6now._class(function(__super) { return {
     AsyncDeclaration: function() {
     
         var start = this.startOffset;
-        
         this.readKeyword("async");
-        this.pushContext(true);
-        this.context.functionType = "async";
-        
-        var ident = this.BindingIdentifier(),
-            params = this.FormalParameters(),
-            body = this.FunctionBody();
-            
-        this.checkParameters(params);
-        this.popContext();
-        
-        return new AST.FunctionDeclaration(
-            "async",
-            ident,
-            params,
-            body,
-            start,
-            this.endOffset);
+        return this.FunctionDeclaration("async", start);
     },
     
     AsyncExpression: function() {
     
         var start = this.startOffset;
-        
         this.readKeyword("async");
-        this.pushContext(true);
-        this.context.functionType = "async";
-        
-        var ident = this.BindingIdentifier(),
-            params = this.FormalParameters(),
-            body = this.FunctionBody();
-
-        this.checkParameters(params);        
-        this.popContext();
-        
-        return new AST.FunctionExpression(
-            "async",
-            ident,
-            params,
-            body,
-            start,
-            this.endOffset);
+        return this.FunctionExpression("async", start);
     },
     
     FormalParameters: function() {

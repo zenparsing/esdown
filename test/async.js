@@ -1,13 +1,13 @@
-import { AsyncFS } from "package:zen-bits";
+import { File } from "package:afs";
 
 export function main() {
 
-    async gen() {
+    async function gen() {
     
-        return await AsyncFS.readFile(__filename, { encoding: "utf8" });
+        return await File.readText(__filename);
     }
     
-    async asap() {
+    async function asap() {
     
         console.log(new Date >>> 0);
         await 0;

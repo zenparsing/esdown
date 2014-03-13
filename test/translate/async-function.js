@@ -1,4 +1,4 @@
-async f(a, b, c) {
+async function f(a, b, c) {
 
     await 0;
 }
