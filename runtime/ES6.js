@@ -1,5 +1,53 @@
 var global = this;
 
+// === Symbols ===
+
+var symbolCounter = 0;
+
+function fakeSymbol() {
+
+    return "__$" + Math.floor(Math.random() * 1e9) + "$" + (++symbolCounter) + "$__";
+}
+
+// NOTE:  As of Node 0.11.12, V8's Symbol implementation is a little wonky.
+// There is no Object.getOwnPropertySymbols, so reflection doesn't seem to
+// work like it should.  Furthermore, Node blows up when trying to inspect
+// Symbol objects.  We expect to replace this override when V8's symbols
+// catch up with the ES6 specification.
+
+global.Symbol = fakeSymbol;
+Symbol.iterator = Symbol("iterator");
+
+this.es6now.iterator = function(obj) {
+
+    if (global.Symbol && Symbol.iterator && obj[Symbol.iterator] !== void 0)
+        return obj[Symbol.iterator]();
+    
+    if (Array.isArray(obj))
+        return obj.values();
+    
+    return obj;
+};
+
+this.es6now.computed = function(obj, ...values) {
+
+    var name, desc, i;
+    
+    for (i = 0; i < values.length; ++i) {
+    
+        name = "__$" + i;
+        desc = Object.getOwnPropertyDescriptor(obj, name);
+        
+        if (!desc)
+            continue;
+        
+        Object.defineProperty(obj, values[i], desc);
+        delete obj[name];
+    }
+    
+    return obj;
+};
+
 function eachKey(obj, fn) {
 
     var keys = Object.getOwnPropertyNames(obj),
@@ -33,21 +81,6 @@ function addMethods(obj, methods) {
         });
     });
 }
-
-// === Symbol ===
-
-if (!global.Symbol) {
-
-    var symbolID = 0;
-    
-    global.Symbol = function(name) {
-    
-        return "__$" + Math.floor(Math.random() * 1e9) + "$" + (++symbolID) + "$__";
-    };
-}
-
-if (!Symbol.iterator)
-    Symbol.iterator = Symbol("iterator");
 
 
 // === Object ===
@@ -266,6 +299,8 @@ class ArrayIterator {
                 return { value: index, done: false };
         }
     }
+    
+    [Symbol.iterator]() { return this }
 
 }
 
@@ -273,35 +308,6 @@ addMethods(Array.prototype, {
 
     values()  { return new ArrayIterator(this, "values") },
     entries() { return new ArrayIterator(this, "entries") },
-    keys()    { return new ArrayIterator(this, "keys") }
+    keys()    { return new ArrayIterator(this, "keys") },
+    [Symbol.iterator]() { return this.values() }
 });
-
-this.es6now.iterator = function(obj) {
-
-    if (global.Symbol && Symbol.iterator)
-        return obj[Symbol.iterator]();
-    
-    if (Array.isArray(obj))
-        return obj.values();
-    
-    return obj;
-};
-
-this.es6now.computed = function(obj, ...values) {
-
-    var name, desc, i;
-    
-    for (i = 0; i < values.length; ++i) {
-    
-        name = "__$" + i;
-        desc = Object.getOwnPropertyDescriptor(obj, name);
-        
-        if (!desc)
-            continue;
-        
-        Object.defineProperty(obj, values[i], desc);
-        delete obj[name];
-    }
-    
-    return obj;
-};

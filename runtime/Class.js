@@ -26,6 +26,14 @@ function forEachDesc(obj, fn) {
     for (i = 0; i < names.length; ++i)
         fn(names[i], Object.getOwnPropertyDescriptor(obj, names[i]));
     
+    if (Object.getOwnPropertySymbols) {
+    
+        names = Object.getOwnPropertySymbols(obj);
+        
+        for (i = 0; i < names.length; ++i)
+            fn(names[i], Object.getOwnPropertyDescriptor(obj, names[i]));
+    }
+    
     return obj;
 }
 
@@ -48,7 +56,7 @@ function defineMethods(to, from) {
 
     forEachDesc(from, (name, desc) => {
     
-        if (!STATIC.test(name))
+        if (typeof name !== "string" || !STATIC.test(name))
             Object.defineProperty(to, name, desc);
     });
 }
@@ -57,8 +65,13 @@ function defineStatic(to, from) {
 
     forEachDesc(from, (name, desc) => {
     
-        if (STATIC.test(name) && typeof desc.value === "object" && desc.value)
+        if (typeof name === "string" &&
+            STATIC.test(name) && 
+            typeof desc.value === "object" && 
+            desc.value) {
+            
             defineMethods(to, desc.value);
+        }
     });
 }
 

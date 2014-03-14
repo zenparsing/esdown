@@ -4,132 +4,6 @@ var __this = this; this.es6now = {};
 
 (function() {
 
-var HOP = Object.prototype.hasOwnProperty,
-    STATIC = /^__static_/;
-
-// Returns true if the object has the specified property
-function hasOwn(obj, name) {
-
-    return HOP.call(obj, name);
-}
-
-// Returns true if the object has the specified property in
-// its prototype chain
-function has(obj, name) {
-
-    for (; obj; obj = Object.getPrototypeOf(obj))
-        if (HOP.call(obj, name))
-            return true;
-    
-    return false;
-}
-
-// Iterates over the descriptors for each own property of an object
-function forEachDesc(obj, fn) {
-
-    var names = Object.getOwnPropertyNames(obj);
-    
-    for (var i = 0, name; i < names.length; ++i)
-        fn(names[i], Object.getOwnPropertyDescriptor(obj, names[i]));
-    
-    return obj;
-}
-
-// Performs copy-based inheritance
-function inherit(to, from) {
-
-    for (; from; from = Object.getPrototypeOf(from)) {
-    
-        forEachDesc(from, (function(name, desc) {
-        
-            if (!has(to, name))
-                Object.defineProperty(to, name, desc);
-        }));
-    }
-    
-    return to;
-}
-
-function defineMethods(to, from, classMethods) {
-
-    forEachDesc(from, (function(name, desc) {
-    
-        if ((typeof name === "string" && STATIC.test(name)) === classMethods)
-            Object.defineProperty(to, classMethods ? name.replace(STATIC, "") : name, desc);
-    }));
-}
-
-function Class(base, def) {
-
-    var parent;
-    
-    if (def === void 0) {
-    
-        // If no base class is specified, then Object.prototype
-        // is the parent prototype
-        def = base;
-        base = null;
-        parent = Object.prototype;
-    
-    } else if (base === null) {
-    
-        // If the base is null, then then then the parent prototype is null
-        parent = null;
-        
-    } else if (typeof base === "function") {
-    
-        parent = base.prototype;
-        
-        // Prototype must be null or an object
-        if (parent !== null && Object(parent) !== parent)
-            parent = void 0;
-    }
-    
-    if (parent === void 0)
-        throw new TypeError();
-    
-    var proto = Object.create(parent),
-        sup = (function(prop) { return Object.getPrototypeOf(proto)[prop]; });
-    
-    // Generate the method collection, closing over "__super"
-    var props = def(sup),
-        constructor = props.constructor;
-    
-    if (!constructor)
-        throw new Error("No constructor specified.");
-    
-    // Make constructor non-enumerable
-    // if none is provided
-    Object.defineProperty(props, "constructor", {
-    
-        enumerable: false,
-        writable: true,
-        configurable: true,
-        value: constructor
-    });
-    
-    // Set prototype methods
-    defineMethods(proto, props, false);
-    
-    // Set constructor's prototype
-    constructor.prototype = proto;
-    
-    // Set class "static" methods
-    defineMethods(constructor, props, true);
-    
-    // "Inherit" from base constructor
-    if (base) inherit(constructor, base);
-    
-    return constructor;
-}
-
-this.es6now.Class = Class;
-
-
-}).call(this);
-
-(function() {
-
 /*
 
 Provides basic support for methods added in EcmaScript 5 for EcmaScript 4 browsers.
@@ -566,7 +440,203 @@ if (Date.parse(new Date(0).toISOString()) !== 0) !function() {
 
 (function() {
 
+var HOP = Object.prototype.hasOwnProperty,
+    STATIC = /^__static_/;
+
+// Returns true if the object has the specified property
+function hasOwn(obj, name) {
+
+    return HOP.call(obj, name);
+}
+
+// Returns true if the object has the specified property in
+// its prototype chain
+function has(obj, name) {
+
+    for (; obj; obj = Object.getPrototypeOf(obj))
+        if (HOP.call(obj, name))
+            return true;
+    
+    return false;
+}
+
+// Iterates over the descriptors for each own property of an object
+function forEachDesc(obj, fn) {
+
+    var names = Object.getOwnPropertyNames(obj), i;
+    
+    for (i = 0; i < names.length; ++i)
+        fn(names[i], Object.getOwnPropertyDescriptor(obj, names[i]));
+    
+    if (Object.getOwnPropertySymbols) {
+    
+        names = Object.getOwnPropertySymbols(obj);
+        
+        for (i = 0; i < names.length; ++i)
+            fn(names[i], Object.getOwnPropertyDescriptor(obj, names[i]));
+    }
+    
+    return obj;
+}
+
+// Performs copy-based inheritance
+function inherit(to, from) {
+
+    for (; from; from = Object.getPrototypeOf(from)) {
+    
+        forEachDesc(from, (function(name, desc) {
+        
+            if (!has(to, name))
+                Object.defineProperty(to, name, desc);
+        }));
+    }
+    
+    return to;
+}
+
+function defineMethods(to, from) {
+
+    forEachDesc(from, (function(name, desc) {
+    
+        if (typeof name !== "string" || !STATIC.test(name))
+            Object.defineProperty(to, name, desc);
+    }));
+}
+
+function defineStatic(to, from) {
+
+    forEachDesc(from, (function(name, desc) {
+    
+        if (typeof name === "string" &&
+            STATIC.test(name) && 
+            typeof desc.value === "object" && 
+            desc.value) {
+            
+            defineMethods(to, desc.value);
+        }
+    }));
+}
+
+function Class(base, def) {
+
+    var parent;
+    
+    if (def === void 0) {
+    
+        // If no base class is specified, then Object.prototype
+        // is the parent prototype
+        def = base;
+        base = null;
+        parent = Object.prototype;
+    
+    } else if (base === null) {
+    
+        // If the base is null, then then then the parent prototype is null
+        parent = null;
+        
+    } else if (typeof base === "function") {
+    
+        parent = base.prototype;
+        
+        // Prototype must be null or an object
+        if (parent !== null && Object(parent) !== parent)
+            parent = void 0;
+    }
+    
+    if (parent === void 0)
+        throw new TypeError();
+    
+    var proto = Object.create(parent),
+        sup = (function(prop) { return Object.getPrototypeOf(proto)[prop]; });
+    
+    // Generate the method collection, closing over "__super"
+    var props = def(sup),
+        constructor = props.constructor;
+    
+    if (!constructor)
+        throw new Error("No constructor specified.");
+    
+    // Make constructor non-enumerable
+    // if none is provided
+    Object.defineProperty(props, "constructor", {
+    
+        enumerable: false,
+        writable: true,
+        configurable: true,
+        value: constructor
+    });
+    
+    // Set prototype methods
+    defineMethods(proto, props);
+    
+    // Set constructor's prototype
+    constructor.prototype = proto;
+    
+    // Set class "static" methods
+    defineStatic(constructor, props);
+    
+    // "Inherit" from base constructor
+    if (base) inherit(constructor, base);
+    
+    return constructor;
+}
+
+this.es6now.Class = Class;
+
+
+}).call(this);
+
+(function() {
+
 var global = this;
+
+// === Symbols ===
+
+var symbolCounter = 0;
+
+function fakeSymbol() {
+
+    return "__$" + Math.floor(Math.random() * 1e9) + "$" + (++symbolCounter) + "$__";
+}
+
+// NOTE:  As of Node 0.11.12, V8's Symbol implementation is a little wonky.
+// There is no Object.getOwnPropertySymbols, so reflection doesn't seem to
+// work like it should.  Furthermore, Node blows up when trying to inspect
+// Symbol objects.  We expect to replace this override when V8's symbols
+// catch up with the ES6 specification.
+
+global.Symbol = fakeSymbol;
+Symbol.iterator = Symbol("iterator");
+
+this.es6now.iterator = function(obj) {
+
+    if (global.Symbol && Symbol.iterator && obj[Symbol.iterator] !== void 0)
+        return obj[Symbol.iterator]();
+    
+    if (Array.isArray(obj))
+        return obj.values();
+    
+    return obj;
+};
+
+this.es6now.computed = function(obj) { var values = [].slice.call(arguments, 1);
+
+    var name, desc, i;
+    
+    for (i = 0; i < values.length; ++i) {
+    
+        name = "__$" + i;
+        desc = Object.getOwnPropertyDescriptor(obj, name);
+        
+        if (!desc)
+            continue;
+        
+        Object.defineProperty(obj, values[i], desc);
+        delete obj[name];
+    }
+    
+    return obj;
+};
 
 function eachKey(obj, fn) {
 
@@ -601,21 +671,6 @@ function addMethods(obj, methods) {
         });
     }));
 }
-
-// === Symbol ===
-
-if (!global.Symbol) {
-
-    var symbolID = 0;
-    
-    global.Symbol = function(name) {
-    
-        return "__$" + Math.floor(Math.random() * 1e9) + "$" + (++symbolID) + "$__";
-    };
-}
-
-if (!Symbol.iterator)
-    Symbol.iterator = Symbol("iterator");
 
 
 // === Object ===
@@ -800,7 +855,7 @@ addMethods(String.prototype, {
 
 // === Array ===
 
-var ArrayIterator = es6now.Class(function(__super) { return {
+var ArrayIterator = es6now.Class(function(__super) { return es6now.computed({
 
     constructor: function ArrayIterator(array, kind) {
     
@@ -833,46 +888,19 @@ var ArrayIterator = es6now.Class(function(__super) { return {
             default:
                 return { value: index, done: false };
         }
-    }
+    },
+    
+    __$0: function() { return this }
 
-} });
+}, Symbol.iterator) });
 
-addMethods(Array.prototype, {
+addMethods(Array.prototype, es6now.computed({
 
     values: function() { return new ArrayIterator(this, "values") },
     entries: function() { return new ArrayIterator(this, "entries") },
-    keys: function() { return new ArrayIterator(this, "keys") }
-});
-
-this.es6now.iterator = function(obj) {
-
-    if (global.Symbol && Symbol.iterator)
-        return obj[Symbol.iterator]();
-    
-    if (Array.isArray(obj))
-        return obj.values();
-    
-    return obj;
-};
-
-this.es6now.computed = function(obj) { var values = [].slice.call(arguments, 1);
-
-    var name, desc, i;
-    
-    for (i = 0; i < values.length; ++i) {
-    
-        name = "__$" + i;
-        desc = Object.getOwnPropertyDescriptor(obj, name);
-        
-        if (!desc)
-            continue;
-        
-        Object.defineProperty(obj, values[i], desc);
-        delete obj[name];
-    }
-    
-    return obj;
-};
+    keys: function() { return new ArrayIterator(this, "keys") },
+    __$0: function() { return this.values() }
+}, Symbol.iterator));
 
 
 }).call(this);
@@ -1051,12 +1079,12 @@ var Promise = es6now.Class(function(__super) { return {
         
     },
     
-    __static_isPromise: function(x) {
+    __static_0: { isPromise: function(x) {
         
         return isPromise(x);
-    },
+    } },
     
-    __static_defer: function() {
+    __static_1: { defer: function() {
     
         var d = {};
 
@@ -1066,23 +1094,23 @@ var Promise = es6now.Class(function(__super) { return {
         }));
 
         return d;
-    },
+    } },
     
-    __static_resolve: function(x) { 
+    __static_2: { resolve: function(x) { 
     
         var d = this.defer();
         d.resolve(x);
         return d.promise;
-    },
+    } },
     
-    __static_reject: function(x) { 
+    __static_3: { reject: function(x) { 
     
         var d = this.defer();
         d.reject(x);
         return d.promise;
-    },
+    } },
     
-    __static_cast: function(x) {
+    __static_4: { cast: function(x) {
 
         if (x instanceof this)
             return x;
@@ -1090,9 +1118,9 @@ var Promise = es6now.Class(function(__super) { return {
         var deferred = this.defer();
         promiseUnwrap(deferred, x);
         return deferred.promise;
-    },
+    } },
 
-    __static_all: function(values) {
+    __static_5: { all: function(values) {
 
         var deferred = this.defer(),
             count = 0,
@@ -1130,7 +1158,7 @@ var Promise = es6now.Class(function(__super) { return {
                 deferred.reject(r);
             }
         }
-    }
+    } }
     
 } });
 

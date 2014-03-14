@@ -67,8 +67,8 @@ export function translate(input, options) {
             
         input = "\n\n" +
             "this.es6now = {};\n\n" +
-            wrapRuntimeModule(Runtime.Class) + 
             wrapRuntimeModule(Runtime.ES5) +
+            wrapRuntimeModule(Runtime.Class) + 
             wrapRuntimeModule(Runtime.ES6) +
             wrapRuntimeModule(Runtime.Promise) +
             wrapRuntimeModule(Runtime.Async) +

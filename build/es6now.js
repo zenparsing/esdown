@@ -4,141 +4,6 @@ var __this = this; this.es6now = {};
 
 (function() {
 
-var HOP = Object.prototype.hasOwnProperty,
-    STATIC = /^__static_/;
-
-// Returns true if the object has the specified property
-function hasOwn(obj, name) {
-
-    return HOP.call(obj, name);
-}
-
-// Returns true if the object has the specified property in
-// its prototype chain
-function has(obj, name) {
-
-    for (; obj; obj = Object.getPrototypeOf(obj))
-        if (HOP.call(obj, name))
-            return true;
-    
-    return false;
-}
-
-// Iterates over the descriptors for each own property of an object
-function forEachDesc(obj, fn) {
-
-    var names = Object.getOwnPropertyNames(obj), i;
-    
-    for (i = 0; i < names.length; ++i)
-        fn(names[i], Object.getOwnPropertyDescriptor(obj, names[i]));
-    
-    return obj;
-}
-
-// Performs copy-based inheritance
-function inherit(to, from) {
-
-    for (; from; from = Object.getPrototypeOf(from)) {
-    
-        forEachDesc(from, (function(name, desc) {
-        
-            if (!has(to, name))
-                Object.defineProperty(to, name, desc);
-        }));
-    }
-    
-    return to;
-}
-
-function defineMethods(to, from) {
-
-    forEachDesc(from, (function(name, desc) {
-    
-        if (!STATIC.test(name))
-            Object.defineProperty(to, name, desc);
-    }));
-}
-
-function defineStatic(to, from) {
-
-    forEachDesc(from, (function(name, desc) {
-    
-        if (STATIC.test(name) && typeof desc.value === "object" && desc.value)
-            defineMethods(to, desc.value);
-    }));
-}
-
-function Class(base, def) {
-
-    var parent;
-    
-    if (def === void 0) {
-    
-        // If no base class is specified, then Object.prototype
-        // is the parent prototype
-        def = base;
-        base = null;
-        parent = Object.prototype;
-    
-    } else if (base === null) {
-    
-        // If the base is null, then then then the parent prototype is null
-        parent = null;
-        
-    } else if (typeof base === "function") {
-    
-        parent = base.prototype;
-        
-        // Prototype must be null or an object
-        if (parent !== null && Object(parent) !== parent)
-            parent = void 0;
-    }
-    
-    if (parent === void 0)
-        throw new TypeError();
-    
-    var proto = Object.create(parent),
-        sup = (function(prop) { return Object.getPrototypeOf(proto)[prop]; });
-    
-    // Generate the method collection, closing over "__super"
-    var props = def(sup),
-        constructor = props.constructor;
-    
-    if (!constructor)
-        throw new Error("No constructor specified.");
-    
-    // Make constructor non-enumerable
-    // if none is provided
-    Object.defineProperty(props, "constructor", {
-    
-        enumerable: false,
-        writable: true,
-        configurable: true,
-        value: constructor
-    });
-    
-    // Set prototype methods
-    defineMethods(proto, props);
-    
-    // Set constructor's prototype
-    constructor.prototype = proto;
-    
-    // Set class "static" methods
-    defineStatic(constructor, props);
-    
-    // "Inherit" from base constructor
-    if (base) inherit(constructor, base);
-    
-    return constructor;
-}
-
-this.es6now.Class = Class;
-
-
-}).call(this);
-
-(function() {
-
 /*
 
 Provides basic support for methods added in EcmaScript 5 for EcmaScript 4 browsers.
@@ -575,7 +440,203 @@ if (Date.parse(new Date(0).toISOString()) !== 0) !function() {
 
 (function() {
 
+var HOP = Object.prototype.hasOwnProperty,
+    STATIC = /^__static_/;
+
+// Returns true if the object has the specified property
+function hasOwn(obj, name) {
+
+    return HOP.call(obj, name);
+}
+
+// Returns true if the object has the specified property in
+// its prototype chain
+function has(obj, name) {
+
+    for (; obj; obj = Object.getPrototypeOf(obj))
+        if (HOP.call(obj, name))
+            return true;
+    
+    return false;
+}
+
+// Iterates over the descriptors for each own property of an object
+function forEachDesc(obj, fn) {
+
+    var names = Object.getOwnPropertyNames(obj), i;
+    
+    for (i = 0; i < names.length; ++i)
+        fn(names[i], Object.getOwnPropertyDescriptor(obj, names[i]));
+    
+    if (Object.getOwnPropertySymbols) {
+    
+        names = Object.getOwnPropertySymbols(obj);
+        
+        for (i = 0; i < names.length; ++i)
+            fn(names[i], Object.getOwnPropertyDescriptor(obj, names[i]));
+    }
+    
+    return obj;
+}
+
+// Performs copy-based inheritance
+function inherit(to, from) {
+
+    for (; from; from = Object.getPrototypeOf(from)) {
+    
+        forEachDesc(from, (function(name, desc) {
+        
+            if (!has(to, name))
+                Object.defineProperty(to, name, desc);
+        }));
+    }
+    
+    return to;
+}
+
+function defineMethods(to, from) {
+
+    forEachDesc(from, (function(name, desc) {
+    
+        if (typeof name !== "string" || !STATIC.test(name))
+            Object.defineProperty(to, name, desc);
+    }));
+}
+
+function defineStatic(to, from) {
+
+    forEachDesc(from, (function(name, desc) {
+    
+        if (typeof name === "string" &&
+            STATIC.test(name) && 
+            typeof desc.value === "object" && 
+            desc.value) {
+            
+            defineMethods(to, desc.value);
+        }
+    }));
+}
+
+function Class(base, def) {
+
+    var parent;
+    
+    if (def === void 0) {
+    
+        // If no base class is specified, then Object.prototype
+        // is the parent prototype
+        def = base;
+        base = null;
+        parent = Object.prototype;
+    
+    } else if (base === null) {
+    
+        // If the base is null, then then then the parent prototype is null
+        parent = null;
+        
+    } else if (typeof base === "function") {
+    
+        parent = base.prototype;
+        
+        // Prototype must be null or an object
+        if (parent !== null && Object(parent) !== parent)
+            parent = void 0;
+    }
+    
+    if (parent === void 0)
+        throw new TypeError();
+    
+    var proto = Object.create(parent),
+        sup = (function(prop) { return Object.getPrototypeOf(proto)[prop]; });
+    
+    // Generate the method collection, closing over "__super"
+    var props = def(sup),
+        constructor = props.constructor;
+    
+    if (!constructor)
+        throw new Error("No constructor specified.");
+    
+    // Make constructor non-enumerable
+    // if none is provided
+    Object.defineProperty(props, "constructor", {
+    
+        enumerable: false,
+        writable: true,
+        configurable: true,
+        value: constructor
+    });
+    
+    // Set prototype methods
+    defineMethods(proto, props);
+    
+    // Set constructor's prototype
+    constructor.prototype = proto;
+    
+    // Set class "static" methods
+    defineStatic(constructor, props);
+    
+    // "Inherit" from base constructor
+    if (base) inherit(constructor, base);
+    
+    return constructor;
+}
+
+this.es6now.Class = Class;
+
+
+}).call(this);
+
+(function() {
+
 var global = this;
+
+// === Symbols ===
+
+var symbolCounter = 0;
+
+function fakeSymbol() {
+
+    return "__$" + Math.floor(Math.random() * 1e9) + "$" + (++symbolCounter) + "$__";
+}
+
+// NOTE:  As of Node 0.11.12, V8's Symbol implementation is a little wonky.
+// There is no Object.getOwnPropertySymbols, so reflection doesn't seem to
+// work like it should.  Furthermore, Node blows up when trying to inspect
+// Symbol objects.  We expect to replace this override when V8's symbols
+// catch up with the ES6 specification.
+
+global.Symbol = fakeSymbol;
+Symbol.iterator = Symbol("iterator");
+
+this.es6now.iterator = function(obj) {
+
+    if (global.Symbol && Symbol.iterator && obj[Symbol.iterator] !== void 0)
+        return obj[Symbol.iterator]();
+    
+    if (Array.isArray(obj))
+        return obj.values();
+    
+    return obj;
+};
+
+this.es6now.computed = function(obj) { var values = [].slice.call(arguments, 1);
+
+    var name, desc, i;
+    
+    for (i = 0; i < values.length; ++i) {
+    
+        name = "__$" + i;
+        desc = Object.getOwnPropertyDescriptor(obj, name);
+        
+        if (!desc)
+            continue;
+        
+        Object.defineProperty(obj, values[i], desc);
+        delete obj[name];
+    }
+    
+    return obj;
+};
 
 function eachKey(obj, fn) {
 
@@ -610,21 +671,6 @@ function addMethods(obj, methods) {
         });
     }));
 }
-
-// === Symbol ===
-
-if (!global.Symbol) {
-
-    var symbolID = 0;
-    
-    global.Symbol = function(name) {
-    
-        return "__$" + Math.floor(Math.random() * 1e9) + "$" + (++symbolID) + "$__";
-    };
-}
-
-if (!Symbol.iterator)
-    Symbol.iterator = Symbol("iterator");
 
 
 // === Object ===
@@ -809,7 +855,7 @@ addMethods(String.prototype, {
 
 // === Array ===
 
-var ArrayIterator = es6now.Class(function(__super) { return {
+var ArrayIterator = es6now.Class(function(__super) { return es6now.computed({
 
     constructor: function ArrayIterator(array, kind) {
     
@@ -842,46 +888,19 @@ var ArrayIterator = es6now.Class(function(__super) { return {
             default:
                 return { value: index, done: false };
         }
-    }
+    },
+    
+    __$0: function() { return this }
 
-} });
+}, Symbol.iterator) });
 
-addMethods(Array.prototype, {
+addMethods(Array.prototype, es6now.computed({
 
     values: function() { return new ArrayIterator(this, "values") },
     entries: function() { return new ArrayIterator(this, "entries") },
-    keys: function() { return new ArrayIterator(this, "keys") }
-});
-
-this.es6now.iterator = function(obj) {
-
-    if (global.Symbol && Symbol.iterator)
-        return obj[Symbol.iterator]();
-    
-    if (Array.isArray(obj))
-        return obj.values();
-    
-    return obj;
-};
-
-this.es6now.computed = function(obj) { var values = [].slice.call(arguments, 1);
-
-    var name, desc, i;
-    
-    for (i = 0; i < values.length; ++i) {
-    
-        name = "__$" + i;
-        desc = Object.getOwnPropertyDescriptor(obj, name);
-        
-        if (!desc)
-            continue;
-        
-        Object.defineProperty(obj, values[i], desc);
-        delete obj[name];
-    }
-    
-    return obj;
-};
+    keys: function() { return new ArrayIterator(this, "keys") },
+    __$0: function() { return this.values() }
+}, Symbol.iterator));
 
 
 }).call(this);
@@ -1217,11 +1236,11 @@ var ES5 =
 
 var ES6 = 
 
-"var global = this;\n\nfunction eachKey(obj, fn) {\n\n    var keys = Object.getOwnPropertyNames(obj),\n        i;\n    \n    for (i = 0; i < keys.length; ++i)\n        fn(keys[i]);\n    \n    if (!Object.getOwnPropertySymbols)\n        return;\n    \n    keys = Object.getOwnPropertySymbols(obj);\n    \n    for (i = 0; i < keys.length; ++i)\n        fn(keys[i]);\n}\n\nfunction addMethods(obj, methods) {\n\n    eachKey(methods, key => {\n    \n        if (key in obj)\n            return;\n        \n        Object.defineProperty(obj, key, {\n        \n            value: methods[key],\n            configurable: true,\n            enumerable: false,\n            writable: true\n        });\n    });\n}\n\n// === Symbol ===\n\nif (!global.Symbol) {\n\n    var symbolID = 0;\n    \n    global.Symbol = function(name) {\n    \n        return \"__$\" + Math.floor(Math.random() * 1e9) + \"$\" + (++symbolID) + \"$__\";\n    };\n}\n\nif (!Symbol.iterator)\n    Symbol.iterator = Symbol(\"iterator\");\n\n\n// === Object ===\n\naddMethods(Object, {\n\n    is(left, right) {\n    \n        if (left === right)\n            return left !== 0 || 1 / left === 1 / right;\n        \n        return left !== left && right !== right;\n    },\n    \n    assign(target, source) {\n    \n        Object.keys(source).forEach(key => target[key] = source[key]);\n        return target;\n    }\n    \n});\n\n// === Number ===\n\naddMethods(Number, {\n\n    EPSILON: ($=> {\n    \n        var next, result;\n        \n        for (next = 1; 1 + next !== 1; next = next / 2)\n            result = next;\n        \n        return result;\n        \n    })(),\n    \n    MAX_SAFE_INTEGER: 9007199254740992,\n    \n    MIN_SAFE_INTEGER: -9007199254740991,\n    \n    isInteger(val) {\n    \n        typeof val === \"number\" && val | 0 === val;\n    }\n    \n    // TODO: isSafeInteger\n    \n});\n\n// === String === \n\naddMethods(String, {\n\n    raw(callsite, ...args) {\n    \n        var raw = callsite.raw,\n            len = raw.length >>> 0;\n        \n        if (len === 0)\n            return \"\";\n            \n        var s = \"\", i = 0;\n        \n        while (true) {\n        \n            s += raw[i];\n        \n            if (i + 1 === len)\n                return s;\n        \n            s += args[i++];\n        }\n    }\n    \n    // TODO:  fromCodePoint\n    \n});\n\naddMethods(String.prototype, {\n    \n    repeat(count) {\n    \n        if (this == null)\n            throw TypeError();\n        \n        var n = count ? Number(count) : 0;\n        \n        if (isNaN(n))\n            n = 0;\n        \n        // Account for out-of-bounds indices\n        if (n < 0 || n == Infinity)\n            throw RangeError();\n        \n        if (n == 0)\n            return \"\";\n            \n        var result = \"\";\n        \n        while (n--)\n            result += this;\n        \n        return result;\n    },\n    \n    startsWith(search) {\n    \n        var string = String(this);\n        \n        if (this == null || Object.toString.call(search) == \"[object RegExp]\")\n            throw TypeError();\n            \n        var stringLength = this.length,\n            searchString = String(search),\n            searchLength = searchString.length,\n            position = arguments.length > 1 ? arguments[1] : undefined,\n            pos = position ? Number(position) : 0;\n            \n        if (isNaN(pos))\n            pos = 0;\n        \n        var start = Math.min(Math.max(pos, 0), stringLength);\n        \n        return this.indexOf(searchString, pos) == start;\n    },\n    \n    endsWith(search) {\n    \n        if (this == null || Object.toString.call(search) == '[object RegExp]')\n            throw TypeError();\n        \n        var stringLength = this.length,\n            searchString = String(search),\n            searchLength = searchString.length,\n            pos = stringLength;\n        \n        if (arguments.length > 1) {\n        \n            var position = arguments[1];\n        \n            if (position !== undefined) {\n        \n                pos = position ? Number(position) : 0;\n                \n                if (isNaN(pos))\n                    pos = 0;\n            }\n        }\n        \n        var end = Math.min(Math.max(pos, 0), stringLength),\n            start = end - searchLength;\n        \n        if (start < 0)\n            return false;\n            \n        return this.lastIndexOf(searchString, start) == start;\n    },\n    \n    contains(search) {\n    \n        if (this == null)\n            throw TypeError();\n            \n        var stringLength = this.length,\n            searchString = String(search),\n            searchLength = searchString.length,\n            position = arguments.length > 1 ? arguments[1] : undefined,\n            pos = position ? Number(position) : 0;\n        \n        if (isNaN(pos))\n            pos = 0;\n            \n        var start = Math.min(Math.max(pos, 0), stringLength);\n        \n        return this.indexOf(string, searchString, pos) != -1;\n    }\n    \n    // TODO: codePointAt\n    \n});\n\n// === Array ===\n\nclass ArrayIterator {\n\n    constructor(array, kind) {\n    \n        this.array = array;\n        this.current = 0;\n        this.kind = kind;\n    }\n    \n    next() {\n    \n        var length = this.array.length >>> 0,\n            index = this.current;\n        \n        if (index >= length) {\n        \n            this.current = Infinity;\n            return { value: void 0, done: true };\n        }\n        \n        this.current += 1;\n        \n        switch (this.kind) {\n        \n            case \"values\":\n                return { value: this.array[index], done: false };\n            \n            case \"entries\":\n                return { value: [ index, this.array[index] ], done: false };\n            \n            default:\n                return { value: index, done: false };\n        }\n    }\n\n}\n\naddMethods(Array.prototype, {\n\n    values()  { return new ArrayIterator(this, \"values\") },\n    entries() { return new ArrayIterator(this, \"entries\") },\n    keys()    { return new ArrayIterator(this, \"keys\") }\n});\n\nthis.es6now.iterator = function(obj) {\n\n    if (global.Symbol && Symbol.iterator)\n        return obj[Symbol.iterator]();\n    \n    if (Array.isArray(obj))\n        return obj.values();\n    \n    return obj;\n};\n\nthis.es6now.computed = function(obj, ...values) {\n\n    var name, desc, i;\n    \n    for (i = 0; i < values.length; ++i) {\n    \n        name = \"__$\" + i;\n        desc = Object.getOwnPropertyDescriptor(obj, name);\n        \n        if (!desc)\n            continue;\n        \n        Object.defineProperty(obj, values[i], desc);\n        delete obj[name];\n    }\n    \n    return obj;\n};\n";
+"var global = this;\n\n// === Symbols ===\n\nvar symbolCounter = 0;\n\nfunction fakeSymbol() {\n\n    return \"__$\" + Math.floor(Math.random() * 1e9) + \"$\" + (++symbolCounter) + \"$__\";\n}\n\n// NOTE:  As of Node 0.11.12, V8's Symbol implementation is a little wonky.\n// There is no Object.getOwnPropertySymbols, so reflection doesn't seem to\n// work like it should.  Furthermore, Node blows up when trying to inspect\n// Symbol objects.  We expect to replace this override when V8's symbols\n// catch up with the ES6 specification.\n\nglobal.Symbol = fakeSymbol;\nSymbol.iterator = Symbol(\"iterator\");\n\nthis.es6now.iterator = function(obj) {\n\n    if (global.Symbol && Symbol.iterator && obj[Symbol.iterator] !== void 0)\n        return obj[Symbol.iterator]();\n    \n    if (Array.isArray(obj))\n        return obj.values();\n    \n    return obj;\n};\n\nthis.es6now.computed = function(obj, ...values) {\n\n    var name, desc, i;\n    \n    for (i = 0; i < values.length; ++i) {\n    \n        name = \"__$\" + i;\n        desc = Object.getOwnPropertyDescriptor(obj, name);\n        \n        if (!desc)\n            continue;\n        \n        Object.defineProperty(obj, values[i], desc);\n        delete obj[name];\n    }\n    \n    return obj;\n};\n\nfunction eachKey(obj, fn) {\n\n    var keys = Object.getOwnPropertyNames(obj),\n        i;\n    \n    for (i = 0; i < keys.length; ++i)\n        fn(keys[i]);\n    \n    if (!Object.getOwnPropertySymbols)\n        return;\n    \n    keys = Object.getOwnPropertySymbols(obj);\n    \n    for (i = 0; i < keys.length; ++i)\n        fn(keys[i]);\n}\n\nfunction addMethods(obj, methods) {\n\n    eachKey(methods, key => {\n    \n        if (key in obj)\n            return;\n        \n        Object.defineProperty(obj, key, {\n        \n            value: methods[key],\n            configurable: true,\n            enumerable: false,\n            writable: true\n        });\n    });\n}\n\n\n// === Object ===\n\naddMethods(Object, {\n\n    is(left, right) {\n    \n        if (left === right)\n            return left !== 0 || 1 / left === 1 / right;\n        \n        return left !== left && right !== right;\n    },\n    \n    assign(target, source) {\n    \n        Object.keys(source).forEach(key => target[key] = source[key]);\n        return target;\n    }\n    \n});\n\n// === Number ===\n\naddMethods(Number, {\n\n    EPSILON: ($=> {\n    \n        var next, result;\n        \n        for (next = 1; 1 + next !== 1; next = next / 2)\n            result = next;\n        \n        return result;\n        \n    })(),\n    \n    MAX_SAFE_INTEGER: 9007199254740992,\n    \n    MIN_SAFE_INTEGER: -9007199254740991,\n    \n    isInteger(val) {\n    \n        typeof val === \"number\" && val | 0 === val;\n    }\n    \n    // TODO: isSafeInteger\n    \n});\n\n// === String === \n\naddMethods(String, {\n\n    raw(callsite, ...args) {\n    \n        var raw = callsite.raw,\n            len = raw.length >>> 0;\n        \n        if (len === 0)\n            return \"\";\n            \n        var s = \"\", i = 0;\n        \n        while (true) {\n        \n            s += raw[i];\n        \n            if (i + 1 === len)\n                return s;\n        \n            s += args[i++];\n        }\n    }\n    \n    // TODO:  fromCodePoint\n    \n});\n\naddMethods(String.prototype, {\n    \n    repeat(count) {\n    \n        if (this == null)\n            throw TypeError();\n        \n        var n = count ? Number(count) : 0;\n        \n        if (isNaN(n))\n            n = 0;\n        \n        // Account for out-of-bounds indices\n        if (n < 0 || n == Infinity)\n            throw RangeError();\n        \n        if (n == 0)\n            return \"\";\n            \n        var result = \"\";\n        \n        while (n--)\n            result += this;\n        \n        return result;\n    },\n    \n    startsWith(search) {\n    \n        var string = String(this);\n        \n        if (this == null || Object.toString.call(search) == \"[object RegExp]\")\n            throw TypeError();\n            \n        var stringLength = this.length,\n            searchString = String(search),\n            searchLength = searchString.length,\n            position = arguments.length > 1 ? arguments[1] : undefined,\n            pos = position ? Number(position) : 0;\n            \n        if (isNaN(pos))\n            pos = 0;\n        \n        var start = Math.min(Math.max(pos, 0), stringLength);\n        \n        return this.indexOf(searchString, pos) == start;\n    },\n    \n    endsWith(search) {\n    \n        if (this == null || Object.toString.call(search) == '[object RegExp]')\n            throw TypeError();\n        \n        var stringLength = this.length,\n            searchString = String(search),\n            searchLength = searchString.length,\n            pos = stringLength;\n        \n        if (arguments.length > 1) {\n        \n            var position = arguments[1];\n        \n            if (position !== undefined) {\n        \n                pos = position ? Number(position) : 0;\n                \n                if (isNaN(pos))\n                    pos = 0;\n            }\n        }\n        \n        var end = Math.min(Math.max(pos, 0), stringLength),\n            start = end - searchLength;\n        \n        if (start < 0)\n            return false;\n            \n        return this.lastIndexOf(searchString, start) == start;\n    },\n    \n    contains(search) {\n    \n        if (this == null)\n            throw TypeError();\n            \n        var stringLength = this.length,\n            searchString = String(search),\n            searchLength = searchString.length,\n            position = arguments.length > 1 ? arguments[1] : undefined,\n            pos = position ? Number(position) : 0;\n        \n        if (isNaN(pos))\n            pos = 0;\n            \n        var start = Math.min(Math.max(pos, 0), stringLength);\n        \n        return this.indexOf(string, searchString, pos) != -1;\n    }\n    \n    // TODO: codePointAt\n    \n});\n\n// === Array ===\n\nclass ArrayIterator {\n\n    constructor(array, kind) {\n    \n        this.array = array;\n        this.current = 0;\n        this.kind = kind;\n    }\n    \n    next() {\n    \n        var length = this.array.length >>> 0,\n            index = this.current;\n        \n        if (index >= length) {\n        \n            this.current = Infinity;\n            return { value: void 0, done: true };\n        }\n        \n        this.current += 1;\n        \n        switch (this.kind) {\n        \n            case \"values\":\n                return { value: this.array[index], done: false };\n            \n            case \"entries\":\n                return { value: [ index, this.array[index] ], done: false };\n            \n            default:\n                return { value: index, done: false };\n        }\n    }\n    \n    [Symbol.iterator]() { return this }\n\n}\n\naddMethods(Array.prototype, {\n\n    values()  { return new ArrayIterator(this, \"values\") },\n    entries() { return new ArrayIterator(this, \"entries\") },\n    keys()    { return new ArrayIterator(this, \"keys\") },\n    [Symbol.iterator]() { return this.values() }\n});\n";
 
 var Class = 
 
-"var HOP = Object.prototype.hasOwnProperty,\n    STATIC = /^__static_/;\n\n// Returns true if the object has the specified property\nfunction hasOwn(obj, name) {\n\n    return HOP.call(obj, name);\n}\n\n// Returns true if the object has the specified property in\n// its prototype chain\nfunction has(obj, name) {\n\n    for (; obj; obj = Object.getPrototypeOf(obj))\n        if (HOP.call(obj, name))\n            return true;\n    \n    return false;\n}\n\n// Iterates over the descriptors for each own property of an object\nfunction forEachDesc(obj, fn) {\n\n    var names = Object.getOwnPropertyNames(obj), i;\n    \n    for (i = 0; i < names.length; ++i)\n        fn(names[i], Object.getOwnPropertyDescriptor(obj, names[i]));\n    \n    return obj;\n}\n\n// Performs copy-based inheritance\nfunction inherit(to, from) {\n\n    for (; from; from = Object.getPrototypeOf(from)) {\n    \n        forEachDesc(from, (name, desc) => {\n        \n            if (!has(to, name))\n                Object.defineProperty(to, name, desc);\n        });\n    }\n    \n    return to;\n}\n\nfunction defineMethods(to, from) {\n\n    forEachDesc(from, (name, desc) => {\n    \n        if (!STATIC.test(name))\n            Object.defineProperty(to, name, desc);\n    });\n}\n\nfunction defineStatic(to, from) {\n\n    forEachDesc(from, (name, desc) => {\n    \n        if (STATIC.test(name) && typeof desc.value === \"object\" && desc.value)\n            defineMethods(to, desc.value);\n    });\n}\n\nfunction Class(base, def) {\n\n    var parent;\n    \n    if (def === void 0) {\n    \n        // If no base class is specified, then Object.prototype\n        // is the parent prototype\n        def = base;\n        base = null;\n        parent = Object.prototype;\n    \n    } else if (base === null) {\n    \n        // If the base is null, then then then the parent prototype is null\n        parent = null;\n        \n    } else if (typeof base === \"function\") {\n    \n        parent = base.prototype;\n        \n        // Prototype must be null or an object\n        if (parent !== null && Object(parent) !== parent)\n            parent = void 0;\n    }\n    \n    if (parent === void 0)\n        throw new TypeError();\n    \n    var proto = Object.create(parent),\n        sup = prop => Object.getPrototypeOf(proto)[prop];\n    \n    // Generate the method collection, closing over \"__super\"\n    var props = def(sup),\n        constructor = props.constructor;\n    \n    if (!constructor)\n        throw new Error(\"No constructor specified.\");\n    \n    // Make constructor non-enumerable\n    // if none is provided\n    Object.defineProperty(props, \"constructor\", {\n    \n        enumerable: false,\n        writable: true,\n        configurable: true,\n        value: constructor\n    });\n    \n    // Set prototype methods\n    defineMethods(proto, props);\n    \n    // Set constructor's prototype\n    constructor.prototype = proto;\n    \n    // Set class \"static\" methods\n    defineStatic(constructor, props);\n    \n    // \"Inherit\" from base constructor\n    if (base) inherit(constructor, base);\n    \n    return constructor;\n}\n\nthis.es6now.Class = Class;\n";
+"var HOP = Object.prototype.hasOwnProperty,\n    STATIC = /^__static_/;\n\n// Returns true if the object has the specified property\nfunction hasOwn(obj, name) {\n\n    return HOP.call(obj, name);\n}\n\n// Returns true if the object has the specified property in\n// its prototype chain\nfunction has(obj, name) {\n\n    for (; obj; obj = Object.getPrototypeOf(obj))\n        if (HOP.call(obj, name))\n            return true;\n    \n    return false;\n}\n\n// Iterates over the descriptors for each own property of an object\nfunction forEachDesc(obj, fn) {\n\n    var names = Object.getOwnPropertyNames(obj), i;\n    \n    for (i = 0; i < names.length; ++i)\n        fn(names[i], Object.getOwnPropertyDescriptor(obj, names[i]));\n    \n    if (Object.getOwnPropertySymbols) {\n    \n        names = Object.getOwnPropertySymbols(obj);\n        \n        for (i = 0; i < names.length; ++i)\n            fn(names[i], Object.getOwnPropertyDescriptor(obj, names[i]));\n    }\n    \n    return obj;\n}\n\n// Performs copy-based inheritance\nfunction inherit(to, from) {\n\n    for (; from; from = Object.getPrototypeOf(from)) {\n    \n        forEachDesc(from, (name, desc) => {\n        \n            if (!has(to, name))\n                Object.defineProperty(to, name, desc);\n        });\n    }\n    \n    return to;\n}\n\nfunction defineMethods(to, from) {\n\n    forEachDesc(from, (name, desc) => {\n    \n        if (typeof name !== \"string\" || !STATIC.test(name))\n            Object.defineProperty(to, name, desc);\n    });\n}\n\nfunction defineStatic(to, from) {\n\n    forEachDesc(from, (name, desc) => {\n    \n        if (typeof name === \"string\" &&\n            STATIC.test(name) && \n            typeof desc.value === \"object\" && \n            desc.value) {\n            \n            defineMethods(to, desc.value);\n        }\n    });\n}\n\nfunction Class(base, def) {\n\n    var parent;\n    \n    if (def === void 0) {\n    \n        // If no base class is specified, then Object.prototype\n        // is the parent prototype\n        def = base;\n        base = null;\n        parent = Object.prototype;\n    \n    } else if (base === null) {\n    \n        // If the base is null, then then then the parent prototype is null\n        parent = null;\n        \n    } else if (typeof base === \"function\") {\n    \n        parent = base.prototype;\n        \n        // Prototype must be null or an object\n        if (parent !== null && Object(parent) !== parent)\n            parent = void 0;\n    }\n    \n    if (parent === void 0)\n        throw new TypeError();\n    \n    var proto = Object.create(parent),\n        sup = prop => Object.getPrototypeOf(proto)[prop];\n    \n    // Generate the method collection, closing over \"__super\"\n    var props = def(sup),\n        constructor = props.constructor;\n    \n    if (!constructor)\n        throw new Error(\"No constructor specified.\");\n    \n    // Make constructor non-enumerable\n    // if none is provided\n    Object.defineProperty(props, \"constructor\", {\n    \n        enumerable: false,\n        writable: true,\n        configurable: true,\n        value: constructor\n    });\n    \n    // Set prototype methods\n    defineMethods(proto, props);\n    \n    // Set constructor's prototype\n    constructor.prototype = proto;\n    \n    // Set class \"static\" methods\n    defineStatic(constructor, props);\n    \n    // \"Inherit\" from base constructor\n    if (base) inherit(constructor, base);\n    \n    return constructor;\n}\n\nthis.es6now.Class = Class;\n";
 
 var Promise = 
 
@@ -6810,8 +6829,8 @@ function translate(input, options) {
             
         input = "\n\n" +
             "this.es6now = {};\n\n" +
-            wrapRuntimeModule(Runtime.Class) + 
             wrapRuntimeModule(Runtime.ES5) +
+            wrapRuntimeModule(Runtime.Class) + 
             wrapRuntimeModule(Runtime.ES6) +
             wrapRuntimeModule(Runtime.Promise) +
             wrapRuntimeModule(Runtime.Async) +
