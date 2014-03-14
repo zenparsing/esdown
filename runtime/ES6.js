@@ -1,4 +1,5 @@
-var global = this;
+var global = this, 
+    arraySlice = Array.prototype.slice;
 
 // === Symbols ===
 
@@ -15,7 +16,7 @@ function fakeSymbol() {
 // Symbol objects.  We expect to replace this override when V8's symbols
 // catch up with the ES6 specification.
 
-global.Symbol = fakeSymbol;
+this.Symbol = fakeSymbol;
 Symbol.iterator = Symbol("iterator");
 
 this.es6now.iterator = function(obj) {
@@ -29,23 +30,28 @@ this.es6now.iterator = function(obj) {
     return obj;
 };
 
-this.es6now.computed = function(obj, ...values) {
+this.es6now.computed = function(obj) {
 
     var name, desc, i;
     
-    for (i = 0; i < values.length; ++i) {
+    for (i = 1; i < arguments.length; ++i) {
     
-        name = "__$" + i;
+        name = "__$" + (i - 1);
         desc = Object.getOwnPropertyDescriptor(obj, name);
         
         if (!desc)
             continue;
         
-        Object.defineProperty(obj, values[i], desc);
+        Object.defineProperty(obj, arguments[i], desc);
         delete obj[name];
     }
     
     return obj;
+};
+
+this.es6now.rest = function(args, pos) {
+
+    return arraySlice.call(args, pos);
 };
 
 function eachKey(obj, fn) {

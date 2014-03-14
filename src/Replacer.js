@@ -747,9 +747,10 @@ export class Replacer {
     restParamVar(node) {
     
         var name = node.params[node.params.length - 1].identifier.value,
-            pos = node.params.length - 1;
+            pos = node.params.length - 1,
+            slice = pos === 0 ? "arguments" : "es6now.rest(arguments, " + pos + ")";
         
-        return "var " + name + " = [].slice.call(arguments, " + pos + ");";
+        return "var " + name + " = " + slice + ";";
     }
     
     addComputedName(node) {
