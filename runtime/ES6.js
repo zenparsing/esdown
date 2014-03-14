@@ -270,3 +270,22 @@ this.es6now.iterator = function(obj) {
     
     return obj;
 };
+
+this.es6now.computed = function(obj, ...values) {
+
+    var name, desc, i;
+    
+    for (i = 0; i < values.length; ++i) {
+    
+        name = "__$" + i;
+        desc = Object.getOwnPropertyDescriptor(obj, name);
+        
+        if (!desc)
+            continue;
+        
+        Object.defineProperty(obj, values[i], desc);
+        delete obj[name];
+    }
+    
+    return obj;
+};

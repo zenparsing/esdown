@@ -217,11 +217,24 @@ export class Replacer {
         return "";
     }
     
+    ComputedPropertyName(node) {
+    
+        return this.addComputedName(node);
+    }
+    
+    ObjectLiteral(node) {
+    
+        if (node.computedNames)
+            return this.wrapComputed(node);
+    }
+    
     MethodDefinition(node) {
     
         if (node.parentNode.type === "ClassElement" && 
             node.parentNode.static) {
             
+            // TODO:  Breaks if name is a string whose value is not
+            // an IdentifierName
             node.name.text = "__static_" + (node.name.value || "");
         }
         
@@ -589,6 +602,9 @@ export class Replacer {
                 
             elems[elems.length - 1].text += ", " + ctor;
         }
+        
+        if (node.computedNames)
+            return this.wrapComputed(node);
     }
     
     TemplateExpression(node) {
@@ -725,6 +741,36 @@ export class Replacer {
             pos = node.params.length - 1;
         
         return "var " + name + " = [].slice.call(arguments, " + pos + ");";
+    }
+    
+    addComputedName(node) {
+    
+        var name, p;
+        
+        for (p = node.parentNode; p; p = p.parentNode) {
+        
+            switch (p.type) {
+            
+                case "ObjectLiteral":
+                case "ClassBody":
+                
+                    if (!p.computedNames)
+                        p.computedNames = [];
+                    
+                    var id = "__$" + p.computedNames.length;
+                    p.computedNames.push(node.expression.text);
+                    
+                    return id;
+            }
+        }
+        
+        return null;
+    }
+    
+    wrapComputed(node) {
+    
+        if (node.computedNames)
+            return "es6now.computed(" + this.stringify(node) + ", " + node.computedNames.join(",") + ")";
     }
     
     addTempVar(node, value) {
