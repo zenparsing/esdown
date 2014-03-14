@@ -23,6 +23,8 @@ class A extends B {
     static get T() {}
     
     static "U"() {}
+    
+    static "Hello World"() {}
 }
 
 class A {

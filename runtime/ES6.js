@@ -34,6 +34,22 @@ function addMethods(obj, methods) {
     });
 }
 
+// === Symbol ===
+
+if (!global.Symbol) {
+
+    var symbolID = 0;
+    
+    global.Symbol = function(name) {
+    
+        return "__$" + Math.floor(Math.random() * 1e9) + "$" + (++symbolID) + "$__";
+    };
+}
+
+if (!Symbol.iterator)
+    Symbol.iterator = Symbol("iterator");
+
+
 // === Object ===
 
 addMethods(Object, {
@@ -263,7 +279,7 @@ addMethods(Array.prototype, {
 this.es6now.iterator = function(obj) {
 
     if (global.Symbol && Symbol.iterator)
-        return obj[Symbol.iterator];
+        return obj[Symbol.iterator]();
     
     if (Array.isArray(obj))
         return obj.values();

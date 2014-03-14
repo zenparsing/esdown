@@ -18,11 +18,13 @@ var A = es6now.Class(B, function(__super) { return {
         (function(x) { __super("foo") })
     },
     
-    __static_S: function() {},
+    __static_0: { S: function() {} },
     
-    get __static_T() {},
+    __static_1: { get T() {} },
     
-    __static_U: function() {}
+    __static_2: { "U": function() {} },
+    
+    __static_3: { "Hello World": function() {} }
 } });
 
 var A = es6now.Class(function(__super) { return {

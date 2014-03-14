@@ -22,18 +22,10 @@ function targetName() {
     
     name += [now.getFullYear(), pad2(now.getMonth() + 1), pad2(now.getDate())].join("");
     
-    if (files.indexOf(name + ".js") !== -1) {
+    while (files.indexOf(name + "-" + pad2(num) + ".js") !== -1)
+        num++;
     
-        num = 1;
-        
-        while (files.indexOf(name + "-" + num + ".js") !== -1)
-            num++;
-    }
-    
-    if (num > 0)
-        name += "-" + num;
-    
-    name += ".js";
+    name += "-" + pad2(num) + ".js";
     
     return Path.resolve(__dirname, "../_prev/", name);
 }

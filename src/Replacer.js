@@ -230,14 +230,6 @@ export class Replacer {
     
     MethodDefinition(node) {
     
-        if (node.parentNode.type === "ClassElement" && 
-            node.parentNode.static) {
-            
-            // TODO:  Breaks if name is a string whose value is not
-            // an IdentifierName
-            node.name.text = "__static_" + (node.name.value || "");
-        }
-        
         switch (node.kind) {
         
             case "":
@@ -546,6 +538,27 @@ export class Replacer {
             after + ")";
     }
     
+    ClassElement(node) {
+    
+        if (node.static) {
+        
+            var p = node.parentNode,
+                id = p.staticID;
+            
+            if (id === void 0)
+                id = p.staticID = 0;
+            
+            p.staticID += 1;
+            
+            var text = "{ " + this.stringify(node).replace(/^static\s+/, "") + " }";
+            
+            if (node.computedNames)
+                text = this.wrapComputed(node, text);
+            
+            return "__static_" + id + ": " + text;
+        }
+    }
+    
     ClassBody(node) {
     
         var classIdent = node.parentNode.identifier,
@@ -559,11 +572,7 @@ export class Replacer {
         
             e = elems[i];
             
-            if (e.static) {
-            
-                e.text = e.text.replace(/^static\s+/, "");
-                
-            } else if (e.method.name.value === "constructor") {
+            if (!e.static && e.method.name.value === "constructor") {
             
                 hasCtor = true;
                 
@@ -751,6 +760,9 @@ export class Replacer {
         
             switch (p.type) {
             
+                case "ClassElement":
+                    if (!p.static) break;
+            
                 case "ObjectLiteral":
                 case "ClassBody":
                 
@@ -767,10 +779,10 @@ export class Replacer {
         return null;
     }
     
-    wrapComputed(node) {
+    wrapComputed(node, text) {
     
         if (node.computedNames)
-            return "es6now.computed(" + this.stringify(node) + ", " + node.computedNames.join(",") + ")";
+            return "es6now.computed(" + (text || this.stringify(node)) + ", " + node.computedNames.join(",") + ")";
     }
     
     addTempVar(node, value) {

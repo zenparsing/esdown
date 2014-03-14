@@ -21,9 +21,9 @@ function has(obj, name) {
 // Iterates over the descriptors for each own property of an object
 function forEachDesc(obj, fn) {
 
-    var names = Object.getOwnPropertyNames(obj);
+    var names = Object.getOwnPropertyNames(obj), i;
     
-    for (var i = 0, name; i < names.length; ++i)
+    for (i = 0; i < names.length; ++i)
         fn(names[i], Object.getOwnPropertyDescriptor(obj, names[i]));
     
     return obj;
@@ -44,12 +44,21 @@ function inherit(to, from) {
     return to;
 }
 
-function defineMethods(to, from, classMethods) {
+function defineMethods(to, from) {
 
     forEachDesc(from, (name, desc) => {
     
-        if (STATIC.test(name) === classMethods)
-            Object.defineProperty(to, classMethods ? name.replace(STATIC, "") : name, desc);
+        if (!STATIC.test(name))
+            Object.defineProperty(to, name, desc);
+    });
+}
+
+function defineStatic(to, from) {
+
+    forEachDesc(from, (name, desc) => {
+    
+        if (STATIC.test(name) && typeof desc.value === "object" && desc.value)
+            defineMethods(to, desc.value);
     });
 }
 
@@ -92,7 +101,7 @@ function Class(base, def) {
     if (!constructor)
         throw new Error("No constructor specified.");
     
-    // Make constructor non-enumerable and assign a default
+    // Make constructor non-enumerable
     // if none is provided
     Object.defineProperty(props, "constructor", {
     
@@ -103,13 +112,13 @@ function Class(base, def) {
     });
     
     // Set prototype methods
-    defineMethods(proto, props, false);
+    defineMethods(proto, props);
     
     // Set constructor's prototype
     constructor.prototype = proto;
     
     // Set class "static" methods
-    defineMethods(constructor, props, true);
+    defineStatic(constructor, props);
     
     // "Inherit" from base constructor
     if (base) inherit(constructor, base);
