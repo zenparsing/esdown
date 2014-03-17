@@ -186,8 +186,8 @@ export class Replacer {
     
     FunctionBody(node) {
         
-        var inserted = [],
-            p = node.parentNode;
+        var p = node.parentNode,
+            inserted = [];
         
         if (p.createThisBinding)
             inserted.push("var __this = this;");
@@ -198,8 +198,26 @@ export class Replacer {
         if (p.tempVars)
             inserted.push(this.tempVars(p));
         
+        p.params.forEach(param => {
+        
+            if (!param.useDefault)
+                return;
+            
+            var name = param.pattern.value;
+            inserted.push(`if (${ name } === void 0) ${ name } = ${ param.initializer.text };`);
+        });
+        
         if (inserted.length > 0)
             return "{ " + inserted.join(" ") + this.stringify(node).slice(1);
+    }
+    
+    FormalParameter(node) {
+    
+        if (node.pattern.type === "Identifier" && node.initializer) {
+        
+            node.useDefault = true;
+            return node.pattern.text;
+        }
     }
     
     RestParameter(node) {

@@ -3000,6 +3000,10 @@ var Transform = es6now.Class(function(__super) { return {
     // Transform an expression into a formal parameter list
     transformFormals: function(expr, rest) {
     
+        // TODO:  Handle case where expr is an argument list (an array of nodes),
+        // which may include a rest parameter as the last element.  Or maybe provide
+        // expr as a CallExpression and go into the "arguments" property.
+        
         if (expr === null)
             return rest ? [ rest ] : [];
             
@@ -3515,6 +3519,17 @@ function isUnary(op) {
     return false;
 }
 
+// Returns true if the value is a function modifier keyword
+function isFunctionModifier(value) {
+
+    switch (value) {
+    
+        case "async": return true;
+    }
+    
+    return false;
+}
+
 // Encodes a string as a map key for use in regular object
 function mapKey(name) { return "." + (name || "") }
 
@@ -3720,8 +3735,6 @@ var Parser = es6now.Class(function(__super) { return {
             this.context.functionBody;
     },
     
-    // [Async Functions]
-    
     peekAwait: function() {
     
         if (this.peekKeyword("await") && this.context.functionBody) {
@@ -3736,15 +3749,15 @@ var Parser = es6now.Class(function(__super) { return {
         return false;
     },
     
-    peekAsync: function() {
+    peekFunctionModifier: function() {
     
-        if (this.peekKeyword("async")) {
+        var token = this.peekToken();
         
-            var token = this.peekToken("div", 1);
-            return (!token.newlineBefore && token.type === "function");
-        }
+        if (!(token.type === "IDENTIFIER" && isFunctionModifier(token.value)))
+            return false;
         
-        return false;
+        token = this.peekToken("div", 1);
+        return token.type === "function" && !token.newlineBefore;
     },
     
     // == Context Management ==
@@ -3753,6 +3766,14 @@ var Parser = es6now.Class(function(__super) { return {
     
         isStrict = isStrict || (this.context ? this.context.strict : null);
         this.context = new Context(this.context, isStrict, isFunction);
+    },
+    
+    pushMaybeContext: function() {
+    
+        var parent = this.context;
+        this.pushContext(this.context.isFunction);
+        this.context.functionBody = parent.functionBody;
+        this.context.functionType = parent.functionType;
     },
     
     popContext: function(collapse) {
@@ -4228,7 +4249,8 @@ var Parser = es6now.Class(function(__super) { return {
     
         var token = this.peekToken(),
             type = token.type,
-            start = this.startOffset;
+            start = this.startOffset,
+            next;
         
         switch (type) {
             
@@ -4248,17 +4270,20 @@ var Parser = es6now.Class(function(__super) { return {
                 this.ArrayLiteral();
             
             case "IDENTIFIER":
-            
-                if (this.peekAsync()) {
                 
-                    return this.AsyncExpression();
+                next = this.peekToken("div", 1);
                 
-                } else if (this.peek("div", 1) === "=>") {
+                if (next.type === "=>") {
                 
                     this.pushContext(true);
                     return this.ArrowFunctionHead(this.BindingIdentifier(), null, start);
+                
+                } else if (!next.newlineBefore) {
+                
+                    if (next.type === "function")
+                        return this.FunctionExpression();
                 }
-                    
+                
                 return this.Identifier(true);
             
             case "REGEX":
@@ -4380,10 +4405,7 @@ var Parser = es6now.Class(function(__super) { return {
             rest = null;
         
         // Push a new context in case we are parsing an arrow function
-        var parent = this.context;
-        this.pushContext(this.context.isFunction);
-        this.context.functionBody = parent.functionBody;
-        this.context.functionType = parent.functionType;
+        this.pushMaybeContext();
         
         this.read("(");
         
@@ -4712,13 +4734,21 @@ var Parser = es6now.Class(function(__super) { return {
     
     Statement: function() {
     
+        var next;
+        
         switch (this.peek()) {
             
             case "IDENTIFIER":
             
-                return this.peekAsync() ? this.AsyncDeclaration() :
-                    this.peek("div", 1) === ":" ? this.LabelledStatement() :
-                    this.ExpressionStatement();
+                next = this.peekToken("div", 1);
+                
+                if (next.type === ":")
+                    return this.LabelledStatement();
+                
+                if (next.type === "function" && !next.newlineBefore)
+                    return this.FunctionDeclaration();
+                
+                return this.ExpressionStatement();
             
             case "{": return this.Block();
             case ";": return this.EmptyStatement();
@@ -5301,13 +5331,20 @@ var Parser = es6now.Class(function(__super) { return {
     
     // === Functions ===
     
-    FunctionDeclaration: function(kind, start) {
+    FunctionDeclaration: function() {
     
-        if (kind === void 0)
-            kind = "";
+        var start = this.startOffset,
+            kind = "",
+            tok;
         
-        if (start === void 0)
-            start = this.startOffset;
+        tok = this.peekToken();
+        
+        // TODO: We are not checking newline constraints here.  Should we?
+        if (tok.type === "IDENTIFIER" && isFunctionModifier(tok.value)) {
+        
+            this.read();
+            kind = tok.value;
+        }
         
         this.read("function");
         
@@ -5336,15 +5373,20 @@ var Parser = es6now.Class(function(__super) { return {
             this.endOffset);
     },
     
-    FunctionExpression: function(kind, start) {
+    FunctionExpression: function() {
     
-        if (kind === void 0)
-            kind = "";
+        var start = this.startOffset,
+            ident = null,
+            kind = "",
+            tok;
         
-        if (start === void 0)
-            start = this.startOffset;
-            
-        var ident = null;
+        tok = this.peekToken();
+        
+        if (tok.type === "IDENTIFIER" && isFunctionModifier(tok.value)) {
+        
+            this.read();
+            kind = tok.value;
+        }
         
         this.read("function");
         
@@ -5373,20 +5415,6 @@ var Parser = es6now.Class(function(__super) { return {
             body,
             start,
             this.endOffset);
-    },
-    
-    AsyncDeclaration: function() {
-    
-        var start = this.startOffset;
-        this.readKeyword("async");
-        return this.FunctionDeclaration("async", start);
-    },
-    
-    AsyncExpression: function() {
-    
-        var start = this.startOffset;
-        this.readKeyword("async");
-        return this.FunctionExpression("async", start);
     },
     
     FormalParameters: function() {
@@ -5679,9 +5707,9 @@ var Parser = es6now.Class(function(__super) { return {
                     break;
                 }
                 
-                if (this.peekAsync()) {
+                if (this.peekFunctionModifier()) {
                 
-                    binding = this.AsyncDeclaration();
+                    binding = this.FunctionDeclaration();
                     break;
                 }
             
@@ -6105,8 +6133,8 @@ var Replacer = es6now.Class(function(__super) { return {
     
     FunctionBody: function(node) {
         
-        var inserted = [],
-            p = node.parentNode;
+        var p = node.parentNode,
+            inserted = [];
         
         if (p.createThisBinding)
             inserted.push("var __this = this;");
@@ -6117,8 +6145,26 @@ var Replacer = es6now.Class(function(__super) { return {
         if (p.tempVars)
             inserted.push(this.tempVars(p));
         
+        p.params.forEach((function(param) {
+        
+            if (!param.useDefault)
+                return;
+            
+            var name = param.pattern.value;
+            inserted.push("if (" + (name) + " === void 0) " + (name) + " = " + (param.initializer.text) + ";");
+        }));
+        
         if (inserted.length > 0)
             return "{ " + inserted.join(" ") + this.stringify(node).slice(1);
+    },
+    
+    FormalParameter: function(node) {
+    
+        if (node.pattern.type === "Identifier" && node.initializer) {
+        
+            node.useDefault = true;
+            return node.pattern.text;
+        }
     },
     
     RestParameter: function(node) {
