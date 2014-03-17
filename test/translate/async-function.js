@@ -5,4 +5,4 @@ async function f(a, b, c) {
 
 ({ async f() { await 0; } });
 
-x => await y;
+async x => await y;

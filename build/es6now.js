@@ -3004,14 +3004,38 @@ var Transform = es6now.Class(function(__super) { return {
         // which may include a rest parameter as the last element.  Or maybe provide
         // expr as a CallExpression and go into the "arguments" property.
         
+        // TODO:  We need to throw if an initizlier contains stuff that's not allowed,
+        // like a yield expression or await expression.
+        
         if (expr === null)
-            return rest ? [ rest ] : [];
+            return rest ? [rest] : [];
             
-        var list = (expr.type === "SequenceExpression") ? expr.expressions : [expr],
-            params = [],
+        var params = [],
             param,
+            list,
             node,
             i;
+        
+        switch (expr.type) {
+        
+            case "SequenceExpression":
+                list = expr.expressions;
+                break;
+            
+            case "CallExpression":
+                list = expr.arguments;
+                break;
+            
+            default:
+                list = [expr];
+                break;
+        }
+        
+        if (!rest && list.length > 0 && list[list.length - 1].type === "SpreadExpression") {
+        
+            node = list.pop();
+            rest = new AST.RestParameter(node.expression, node.start, node.end);
+        }
     
         for (i = 0; i < list.length; ++i) {
         
@@ -3737,16 +3761,9 @@ var Parser = es6now.Class(function(__super) { return {
     
     peekAwait: function() {
     
-        if (this.peekKeyword("await") && this.context.functionBody) {
-        
-            switch (this.context.functionType) {
-            
-                case "async": return true;
-                case "arrow": this.context.functionType = "async"; return true;
-            }
-        }
-        
-        return false;
+        return this.peekKeyword("await") && 
+            this.context.functionType === "async" &&
+            this.context.functionBody;
     },
     
     peekFunctionModifier: function() {
@@ -3771,7 +3788,7 @@ var Parser = es6now.Class(function(__super) { return {
     pushMaybeContext: function() {
     
         var parent = this.context;
-        this.pushContext(this.context.isFunction);
+        this.pushContext(parent.isFunction);
         this.context.functionBody = parent.functionBody;
         this.context.functionType = parent.functionType;
     },
@@ -4123,6 +4140,7 @@ var Parser = es6now.Class(function(__super) { return {
     
         var start = this.startOffset,
             type = this.peek(),
+            arrowType = "",
             exit = false,
             prop,
             expr;
@@ -4172,11 +4190,29 @@ var Parser = es6now.Class(function(__super) { return {
                         break;
                     }
                     
+                    if (expr.type === "Identifier" && isFunctionModifier(expr.value)) {
+                    
+                        arrowType = expr.value;
+                        this.pushMaybeContext();
+                    }
+                    
                     expr = new AST.CallExpression(
                         expr, 
                         this.ArgumentList(), 
                         start, 
                         this.endOffset);
+                    
+                    if (arrowType) {
+                    
+                        if (this.peek("div") === "=>") {
+                        
+                            expr = this.ArrowFunctionHead(arrowType, expr, null, start);
+                        
+                        } else {
+                            
+                            this.popContext(true);
+                        }
+                    }
                     
                     break;
                 
@@ -4276,12 +4312,19 @@ var Parser = es6now.Class(function(__super) { return {
                 if (next.type === "=>") {
                 
                     this.pushContext(true);
-                    return this.ArrowFunctionHead(this.BindingIdentifier(), null, start);
+                    return this.ArrowFunctionHead("", this.BindingIdentifier(), null, start);
                 
                 } else if (!next.newlineBefore) {
                 
                     if (next.type === "function")
                         return this.FunctionExpression();
+                    
+                    if (next.type === "IDENTIFIER" && isFunctionModifier(token.value)) {
+                    
+                        this.read();
+                        this.pushContext(true);
+                        return this.ArrowFunctionHead(token.value, this.BindingIdentifier(), null, start);
+                    }
                 }
                 
                 return this.Identifier(true);
@@ -4436,7 +4479,7 @@ var Parser = es6now.Class(function(__super) { return {
         this.read(")");
         
         if (expr === null || rest !== null || this.peek("div") === "=>")
-            return this.ArrowFunctionHead(expr, rest, start);
+            return this.ArrowFunctionHead("", expr, rest, start);
         
         // Collapse this context into its parent
         this.popContext(true);
@@ -5480,10 +5523,11 @@ var Parser = es6now.Class(function(__super) { return {
         return new AST.FunctionBody(statements, start, this.endOffset);
     },
     
-    ArrowFunctionHead: function(formals, rest, start) {
+    ArrowFunctionHead: function(kind, formals, rest, start) {
     
         // Context must have been pushed by caller
         this.context.isFunction = true;
+        this.context.functionType = kind;
         
         var params = this.transformFormals(formals, rest);
         this.checkParameters(params);
@@ -5497,18 +5541,14 @@ var Parser = es6now.Class(function(__super) { return {
         
         var params = head.parameters,
             start = head.start,
-            kind = "";
+            kind = this.context.functionType;
         
         // Use function body context even if parsing expression body form
-        this.context.functionType = "arrow";
         this.context.functionBody = true;
         
         var body = this.peek() === "{" ?
             this.FunctionBody() :
             this.AssignmentExpression(noIn);
-        
-        if (this.context.functionType === "async")
-            kind = "async";
         
         this.popContext();
         

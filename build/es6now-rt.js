@@ -588,7 +588,8 @@ this.es6now.Class = Class;
 
 (function() {
 
-var global = this;
+var global = this, 
+    arraySlice = Array.prototype.slice;
 
 // === Symbols ===
 
@@ -605,7 +606,7 @@ function fakeSymbol() {
 // Symbol objects.  We expect to replace this override when V8's symbols
 // catch up with the ES6 specification.
 
-global.Symbol = fakeSymbol;
+this.Symbol = fakeSymbol;
 Symbol.iterator = Symbol("iterator");
 
 this.es6now.iterator = function(obj) {
@@ -619,23 +620,28 @@ this.es6now.iterator = function(obj) {
     return obj;
 };
 
-this.es6now.computed = function(obj) { var values = [].slice.call(arguments, 1);
+this.es6now.computed = function(obj) {
 
     var name, desc, i;
     
-    for (i = 0; i < values.length; ++i) {
+    for (i = 1; i < arguments.length; ++i) {
     
-        name = "__$" + i;
+        name = "__$" + (i - 1);
         desc = Object.getOwnPropertyDescriptor(obj, name);
         
         if (!desc)
             continue;
         
-        Object.defineProperty(obj, values[i], desc);
+        Object.defineProperty(obj, arguments[i], desc);
         delete obj[name];
     }
     
     return obj;
+};
+
+this.es6now.rest = function(args, pos) {
+
+    return arraySlice.call(args, pos);
 };
 
 function eachKey(obj, fn) {
@@ -725,7 +731,7 @@ addMethods(Number, {
 
 addMethods(String, {
 
-    raw: function(callsite) { var args = [].slice.call(arguments, 1);
+    raw: function(callsite) { var args = es6now.rest(arguments, 1);
     
         var raw = callsite.raw,
             len = raw.length >>> 0;
