@@ -49,6 +49,8 @@ export function main(args) {
             
             if (!ok) {
             
+                FS.writeFileSync(__dirname + "/_test-fail.js", output);
+                
                 console.log("");
                 console.log(output);
                 console.log("");

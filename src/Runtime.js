@@ -863,11 +863,9 @@ function Class(base, def) {
     if (parent === void 0)
         throw new TypeError();
     
-    var proto = Object.create(parent),
-        sup = prop => Object.getPrototypeOf(proto)[prop];
-    
     // Generate the method collection, closing over "__super"
-    var props = def(sup),
+    var proto = Object.create(parent),
+        props = def(parent),
         constructor = props.constructor;
     
     if (!constructor)

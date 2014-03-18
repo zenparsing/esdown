@@ -2,7 +2,7 @@ var A = es6now.Class(B, function(__super) { return {
 
     constructor: function A() {
     
-        __super("constructor").call(this);
+        __super.constructor.call(this);
     },
     
     set a(value) {},
@@ -11,11 +11,11 @@ var A = es6now.Class(B, function(__super) { return {
     
     bar: function(x, y) {
     
-        __super("bar").call(this, x, y);
-        __super("bar").call(this, x, y);
-        __super("foo").foo();
+        __super.bar.call(this, x, y);
+        __super["bar"].call(this, x, y);
+        __super.foo.foo();
         
-        (function(x) { __super("foo") })
+        (function(x) { __super.foo })
     },
     
     __static_0: { S: function() {} },
@@ -34,10 +34,10 @@ var A = es6now.Class(function(__super) { return {
 
 var A = es6now.Class(B, function(__super) { return {
 
-    constructor: function A() { __super("constructor").call(this) }
+    constructor: function A() { __super.constructor.call(this) }
 } });
 
-var A = es6now.Class(B, function(__super) { return { constructor: function A() { var c = __super("constructor"); if (c) return c.apply(this, arguments); } }
+var A = es6now.Class(B, function(__super) { return { constructor: function A() { var c = __super.constructor; if (c) return c.apply(this, arguments); } }
 
  });
 

@@ -41,7 +41,7 @@ class RootNode extends AST.Node {
 
     constructor(root, end) {
     
-        super(0, end);
+        super("Root", 0, end);
         this.root = root;
     }
 }
@@ -442,13 +442,19 @@ export class Replacer {
         if (p.type === "CallExpression") {
         
             // super(args);
-        
             p.isSuperCall = true;
             
             var m = this.parentFunction(p),
-                name = (m.type === "MethodDefinition" ? m.name.text : "constructor");
+                name = ".constructor";
             
-            return "__super(" + JSON.stringify(name) + ")";
+            if (m.type === "MethodDefinition") {
+            
+                name = m.name.type === "Identifier" ?
+                    "." + m.name.text :
+                    "[" + JSON.stringify(m.name.text) + "]";
+            }
+            
+            return "__super" + name;
             
         } else {
         
@@ -473,10 +479,11 @@ export class Replacer {
         
             var prop = node.property.text;
             
-            if (!node.computed)
-                prop = '"' + prop + '"';
+            prop = node.computed ?
+                "[" + prop + "]" :
+                "." + prop;
             
-            return node.object.text + "(" + prop + ")";
+            return node.object.text + prop;
         }
     }
     
@@ -616,7 +623,7 @@ export class Replacer {
             
             if (hasBase) {
             
-                ctor += ' var c = __super("constructor"); ';
+                ctor += ' var c = __super.constructor; ';
                 ctor += "if (c) return c.apply(this, arguments); }";
                 
             } else {

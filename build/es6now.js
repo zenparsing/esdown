@@ -546,11 +546,9 @@ function Class(base, def) {
     if (parent === void 0)
         throw new TypeError();
     
-    var proto = Object.create(parent),
-        sup = (function(prop) { return Object.getPrototypeOf(proto)[prop]; });
-    
     // Generate the method collection, closing over "__super"
-    var props = def(sup),
+    var proto = Object.create(parent),
+        props = def(parent),
         constructor = props.constructor;
     
     if (!constructor)
@@ -1236,7 +1234,7 @@ var ES6 =
 
 var Class = 
 
-"var HOP = Object.prototype.hasOwnProperty,\n    STATIC = /^__static_/;\n\n// Returns true if the object has the specified property\nfunction hasOwn(obj, name) {\n\n    return HOP.call(obj, name);\n}\n\n// Returns true if the object has the specified property in\n// its prototype chain\nfunction has(obj, name) {\n\n    for (; obj; obj = Object.getPrototypeOf(obj))\n        if (HOP.call(obj, name))\n            return true;\n    \n    return false;\n}\n\n// Iterates over the descriptors for each own property of an object\nfunction forEachDesc(obj, fn) {\n\n    var names = Object.getOwnPropertyNames(obj), i;\n    \n    for (i = 0; i < names.length; ++i)\n        fn(names[i], Object.getOwnPropertyDescriptor(obj, names[i]));\n    \n    if (Object.getOwnPropertySymbols) {\n    \n        names = Object.getOwnPropertySymbols(obj);\n        \n        for (i = 0; i < names.length; ++i)\n            fn(names[i], Object.getOwnPropertyDescriptor(obj, names[i]));\n    }\n    \n    return obj;\n}\n\n// Performs copy-based inheritance\nfunction inherit(to, from) {\n\n    for (; from; from = Object.getPrototypeOf(from)) {\n    \n        forEachDesc(from, (name, desc) => {\n        \n            if (!has(to, name))\n                Object.defineProperty(to, name, desc);\n        });\n    }\n    \n    return to;\n}\n\nfunction defineMethods(to, from) {\n\n    forEachDesc(from, (name, desc) => {\n    \n        if (typeof name !== \"string\" || !STATIC.test(name))\n            Object.defineProperty(to, name, desc);\n    });\n}\n\nfunction defineStatic(to, from) {\n\n    forEachDesc(from, (name, desc) => {\n    \n        if (typeof name === \"string\" &&\n            STATIC.test(name) && \n            typeof desc.value === \"object\" && \n            desc.value) {\n            \n            defineMethods(to, desc.value);\n        }\n    });\n}\n\nfunction Class(base, def) {\n\n    var parent;\n    \n    if (def === void 0) {\n    \n        // If no base class is specified, then Object.prototype\n        // is the parent prototype\n        def = base;\n        base = null;\n        parent = Object.prototype;\n    \n    } else if (base === null) {\n    \n        // If the base is null, then then then the parent prototype is null\n        parent = null;\n        \n    } else if (typeof base === \"function\") {\n    \n        parent = base.prototype;\n        \n        // Prototype must be null or an object\n        if (parent !== null && Object(parent) !== parent)\n            parent = void 0;\n    }\n    \n    if (parent === void 0)\n        throw new TypeError();\n    \n    var proto = Object.create(parent),\n        sup = prop => Object.getPrototypeOf(proto)[prop];\n    \n    // Generate the method collection, closing over \"__super\"\n    var props = def(sup),\n        constructor = props.constructor;\n    \n    if (!constructor)\n        throw new Error(\"No constructor specified.\");\n    \n    // Make constructor non-enumerable\n    // if none is provided\n    Object.defineProperty(props, \"constructor\", {\n    \n        enumerable: false,\n        writable: true,\n        configurable: true,\n        value: constructor\n    });\n    \n    // Set prototype methods\n    defineMethods(proto, props);\n    \n    // Set constructor's prototype\n    constructor.prototype = proto;\n    \n    // Set class \"static\" methods\n    defineStatic(constructor, props);\n    \n    // \"Inherit\" from base constructor\n    if (base) inherit(constructor, base);\n    \n    return constructor;\n}\n\nthis.es6now.Class = Class;\n";
+"var HOP = Object.prototype.hasOwnProperty,\n    STATIC = /^__static_/;\n\n// Returns true if the object has the specified property\nfunction hasOwn(obj, name) {\n\n    return HOP.call(obj, name);\n}\n\n// Returns true if the object has the specified property in\n// its prototype chain\nfunction has(obj, name) {\n\n    for (; obj; obj = Object.getPrototypeOf(obj))\n        if (HOP.call(obj, name))\n            return true;\n    \n    return false;\n}\n\n// Iterates over the descriptors for each own property of an object\nfunction forEachDesc(obj, fn) {\n\n    var names = Object.getOwnPropertyNames(obj), i;\n    \n    for (i = 0; i < names.length; ++i)\n        fn(names[i], Object.getOwnPropertyDescriptor(obj, names[i]));\n    \n    if (Object.getOwnPropertySymbols) {\n    \n        names = Object.getOwnPropertySymbols(obj);\n        \n        for (i = 0; i < names.length; ++i)\n            fn(names[i], Object.getOwnPropertyDescriptor(obj, names[i]));\n    }\n    \n    return obj;\n}\n\n// Performs copy-based inheritance\nfunction inherit(to, from) {\n\n    for (; from; from = Object.getPrototypeOf(from)) {\n    \n        forEachDesc(from, (name, desc) => {\n        \n            if (!has(to, name))\n                Object.defineProperty(to, name, desc);\n        });\n    }\n    \n    return to;\n}\n\nfunction defineMethods(to, from) {\n\n    forEachDesc(from, (name, desc) => {\n    \n        if (typeof name !== \"string\" || !STATIC.test(name))\n            Object.defineProperty(to, name, desc);\n    });\n}\n\nfunction defineStatic(to, from) {\n\n    forEachDesc(from, (name, desc) => {\n    \n        if (typeof name === \"string\" &&\n            STATIC.test(name) && \n            typeof desc.value === \"object\" && \n            desc.value) {\n            \n            defineMethods(to, desc.value);\n        }\n    });\n}\n\nfunction Class(base, def) {\n\n    var parent;\n    \n    if (def === void 0) {\n    \n        // If no base class is specified, then Object.prototype\n        // is the parent prototype\n        def = base;\n        base = null;\n        parent = Object.prototype;\n    \n    } else if (base === null) {\n    \n        // If the base is null, then then then the parent prototype is null\n        parent = null;\n        \n    } else if (typeof base === \"function\") {\n    \n        parent = base.prototype;\n        \n        // Prototype must be null or an object\n        if (parent !== null && Object(parent) !== parent)\n            parent = void 0;\n    }\n    \n    if (parent === void 0)\n        throw new TypeError();\n    \n    // Generate the method collection, closing over \"__super\"\n    var proto = Object.create(parent),\n        props = def(parent),\n        constructor = props.constructor;\n    \n    if (!constructor)\n        throw new Error(\"No constructor specified.\");\n    \n    // Make constructor non-enumerable\n    // if none is provided\n    Object.defineProperty(props, \"constructor\", {\n    \n        enumerable: false,\n        writable: true,\n        configurable: true,\n        value: constructor\n    });\n    \n    // Set prototype methods\n    defineMethods(proto, props);\n    \n    // Set constructor's prototype\n    constructor.prototype = proto;\n    \n    // Set class \"static\" methods\n    defineStatic(constructor, props);\n    \n    // \"Inherit\" from base constructor\n    if (base) inherit(constructor, base);\n    \n    return constructor;\n}\n\nthis.es6now.Class = Class;\n";
 
 var Promise = 
 
@@ -1252,14 +1250,21 @@ exports.ES5 = ES5; exports.ES6 = ES6; exports.Class = Class; exports.Promise = P
 
 var AST_ = (function(exports) {
 
+// Initializes common node properties.  This is used in preference
+// to super() for performance reasons.
+function init(node, type, start, end) {
+
+    node.type = type;
+    node.start = start;
+    node.end = end;
+    node.error = "";
+}
+
 var Node = es6now.Class(function(__super) { return {
 
-    constructor: function Node(start, end) {
+    constructor: function Node(type, start, end) {
     
-        this.type = this.constructor.name;
-        this.start = start;
-        this.end = end;
-        this.error = "";
+        init(this, type, start, end);
     },
     
     forEachChild: function(fn) {
@@ -1299,7 +1304,7 @@ var Script = es6now.Class(Node, function(__super) { return {
 
     constructor: function Script(statements, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "Script", start, end);
         this.statements = statements;
     }
 } });
@@ -1308,7 +1313,7 @@ var Module = es6now.Class(Node, function(__super) { return {
 
     constructor: function Module(statements, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "Module", start, end);
         this.statements = statements;
     }
 } });
@@ -1317,7 +1322,7 @@ var Identifier = es6now.Class(Node, function(__super) { return {
 
     constructor: function Identifier(value, context, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "Identifier", start, end);
         this.value = value;
         this.context = context;
     }
@@ -1327,7 +1332,7 @@ var Number = es6now.Class(Node, function(__super) { return {
 
     constructor: function Number(value, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "Number", start, end);
         this.value = value;
     }
 } });
@@ -1336,7 +1341,7 @@ var String = es6now.Class(Node, function(__super) { return {
 
     constructor: function String(value, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "String", start, end);
         this.value = value;
     }
 } });
@@ -1345,7 +1350,7 @@ var Template = es6now.Class(Node, function(__super) { return {
 
     constructor: function Template(value, isEnd, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "Template", start, end);
         this.value = value;
         this.templateEnd = isEnd;
     }
@@ -1355,32 +1360,41 @@ var RegularExpression = es6now.Class(Node, function(__super) { return {
 
     constructor: function RegularExpression(value, flags, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "RegularExpression", start, end);
         this.value = value;
         this.flags = flags;
     }
 } });
 
-var Null = es6now.Class(Node, function(__super) { return { constructor: function Null() { var c = __super("constructor"); if (c) return c.apply(this, arguments); } } });
+var Null = es6now.Class(Node, function(__super) { return { 
+
+    constructor: function Null(start, end) { init(this, "Null", start, end) }
+} });
 
 var Boolean = es6now.Class(Node, function(__super) { return {
 
     constructor: function Boolean(value, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "Boolean", start, end);
         this.value = value;
     }
 } });
 
-var ThisExpression = es6now.Class(Node, function(__super) { return { constructor: function ThisExpression() { var c = __super("constructor"); if (c) return c.apply(this, arguments); } } });
+var ThisExpression = es6now.Class(Node, function(__super) { return {
 
-var SuperExpression = es6now.Class(Node, function(__super) { return { constructor: function SuperExpression() { var c = __super("constructor"); if (c) return c.apply(this, arguments); } } });
+    constructor: function ThisExpression(start, end) { init(this, "ThisExpression", start, end) }
+} });
+
+var SuperExpression = es6now.Class(Node, function(__super) { return {
+    
+    constructor: function SuperExpression(start, end) { init(this, "SuperExpression", start, end) }
+} });
 
 var SequenceExpression = es6now.Class(Node, function(__super) { return {
 
     constructor: function SequenceExpression(list, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "SequenceExpression", start, end);
         this.expressions = list;
     }
 } });
@@ -1389,7 +1403,7 @@ var AssignmentExpression = es6now.Class(Node, function(__super) { return {
 
     constructor: function AssignmentExpression(op, left, right, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "AssignmentExpression", start, end);
         this.operator = op;
         this.left = left;
         this.right = right;
@@ -1400,7 +1414,7 @@ var SpreadExpression = es6now.Class(Node, function(__super) { return {
 
     constructor: function SpreadExpression(expr, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "SpreadExpression", start, end);
         this.expression = expr;
     }
 } });
@@ -1409,7 +1423,7 @@ var YieldExpression = es6now.Class(Node, function(__super) { return {
 
     constructor: function YieldExpression(expr, delegate, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "YieldExpression", start, end);
         this.delegate = delegate;
         this.expression = expr;
     }
@@ -1419,7 +1433,7 @@ var ConditionalExpression = es6now.Class(Node, function(__super) { return {
 
     constructor: function ConditionalExpression(test, cons, alt, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "ConditionalExpression", start, end);
         this.test = test;
         this.consequent = cons;
         this.alternate = alt;
@@ -1430,7 +1444,7 @@ var BinaryExpression = es6now.Class(Node, function(__super) { return {
 
     constructor: function BinaryExpression(op, left, right, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "BinaryExpression", start, end);
         this.operator = op;
         this.left = left;
         this.right = right;
@@ -1441,7 +1455,7 @@ var UpdateExpression = es6now.Class(Node, function(__super) { return {
 
     constructor: function UpdateExpression(op, expr, prefix, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "UpdateExpression", start, end);
         this.operator = op;
         this.expression = expr;
         this.prefix = prefix;
@@ -1452,7 +1466,7 @@ var UnaryExpression = es6now.Class(Node, function(__super) { return {
 
     constructor: function UnaryExpression(op, expr, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "UnaryExpression", start, end);
         this.operator = op;
         this.expression = expr;
     }
@@ -1462,7 +1476,7 @@ var MemberExpression = es6now.Class(Node, function(__super) { return {
 
     constructor: function MemberExpression(obj, prop, computed, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "MemberExpression", start, end);
         this.object = obj;
         this.property = prop;
         this.computed = computed;
@@ -1473,7 +1487,7 @@ var CallExpression = es6now.Class(Node, function(__super) { return {
 
     constructor: function CallExpression(callee, args, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "CallExpression", start, end);
         this.callee = callee;
         this.arguments = args;
     }
@@ -1483,7 +1497,7 @@ var TaggedTemplateExpression = es6now.Class(Node, function(__super) { return {
 
     constructor: function TaggedTemplateExpression(tag, template, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "TaggedTemplateExpression", start, end);
         this.tag = tag;
         this.template = template;
     }
@@ -1493,7 +1507,7 @@ var NewExpression = es6now.Class(Node, function(__super) { return {
 
     constructor: function NewExpression(callee, args, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "NewExpression", start, end);
         this.callee = callee;
         this.arguments = args;
     }
@@ -1503,7 +1517,7 @@ var ParenExpression = es6now.Class(Node, function(__super) { return {
     
     constructor: function ParenExpression(expr, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "ParenExpression", start, end);
         this.expression = expr;
     }
 } });
@@ -1512,7 +1526,7 @@ var ObjectLiteral = es6now.Class(Node, function(__super) { return {
 
     constructor: function ObjectLiteral(props, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "ObjectLiteral", start, end);
         this.properties = props;
     }
 } });
@@ -1521,7 +1535,7 @@ var ComputedPropertyName = es6now.Class(Node, function(__super) { return {
 
     constructor: function ComputedPropertyName(expr, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "ComputedPropertyName", start, end);
         this.expression = expr;
     }
 } });
@@ -1530,7 +1544,7 @@ var PropertyDefinition = es6now.Class(Node, function(__super) { return {
 
     constructor: function PropertyDefinition(name, expr, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "PropertyDefinition", start, end);
         this.name = name;
         this.expression = expr;
     }
@@ -1540,7 +1554,7 @@ var PatternProperty = es6now.Class(Node, function(__super) { return {
 
     constructor: function PatternProperty(name, pattern, initializer, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "PatternProperty", start, end);
         this.name = name;
         this.pattern = pattern;
         this.initializer = initializer;
@@ -1551,7 +1565,7 @@ var PatternElement = es6now.Class(Node, function(__super) { return {
 
     constructor: function PatternElement(pattern, initializer, rest, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "PatternElement", start, end);
         this.pattern = pattern;
         this.initializer = initializer;
         this.rest = rest;
@@ -1562,7 +1576,7 @@ var MethodDefinition = es6now.Class(Node, function(__super) { return {
 
     constructor: function MethodDefinition(kind, name, params, body, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "MethodDefinition", start, end);
         this.kind = kind;
         this.name = name;
         this.params = params;
@@ -1574,7 +1588,7 @@ var ArrayLiteral = es6now.Class(Node, function(__super) { return {
 
     constructor: function ArrayLiteral(elements, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "ArrayLiteral", start, end);
         this.elements = elements;
     }
 } });
@@ -1583,7 +1597,7 @@ var ArrayComprehension = es6now.Class(Node, function(__super) { return {
 
     constructor: function ArrayComprehension(qualifiers, expr, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "ArrayComprehension", start, end);
         this.qualifiers = qualifiers;
         this.expression = expr;
     }
@@ -1593,7 +1607,7 @@ var GeneratorComprehension = es6now.Class(Node, function(__super) { return {
 
     constructor: function GeneratorComprehension(qualifiers, expr, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "GeneratorComprehension", start, end);
         this.qualifiers = qualifiers;
         this.expression = expr;
     }
@@ -1603,7 +1617,7 @@ var ComprehensionFor = es6now.Class(Node, function(__super) { return {
 
     constructor: function ComprehensionFor(left, right, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "ComprehensionFor", start, end);
         this.left = left;
         this.right = right;
     }
@@ -1613,7 +1627,7 @@ var ComprehensionIf = es6now.Class(Node, function(__super) { return {
 
     constructor: function ComprehensionIf(test, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "ComprehensionIf", start, end);
         this.test = test;
     }
 } });
@@ -1622,7 +1636,7 @@ var TemplateExpression = es6now.Class(Node, function(__super) { return {
 
     constructor: function TemplateExpression(lits, subs, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "TemplateExpression", start, end);
         this.literals = lits;
         this.substitutions = subs;
     }
@@ -1632,7 +1646,7 @@ var Block = es6now.Class(Node, function(__super) { return {
 
     constructor: function Block(statements, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "Block", start, end);
         this.statements = statements;
     }
 } });
@@ -1641,7 +1655,7 @@ var LabelledStatement = es6now.Class(Node, function(__super) { return {
 
     constructor: function LabelledStatement(label, statement, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "LabelledStatement", start, end);
         this.label = label;
         this.statement = statement;
     }
@@ -1651,19 +1665,22 @@ var ExpressionStatement = es6now.Class(Node, function(__super) { return {
 
     constructor: function ExpressionStatement(expr, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "ExpressionStatement", start, end);
         this.expression = expr;
         this.directive = null;
     }
 } });
 
-var EmptyStatement = es6now.Class(Node, function(__super) { return { constructor: function EmptyStatement() { var c = __super("constructor"); if (c) return c.apply(this, arguments); } } });
+var EmptyStatement = es6now.Class(Node, function(__super) { return {
+
+    constructor: function EmptyStatement(start, end) { init(this, "EmptyStatement", start, end) }
+} });
 
 var VariableDeclaration = es6now.Class(Node, function(__super) { return {
 
     constructor: function VariableDeclaration(kind, list, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "VariableDeclaration", start, end);
         this.kind = kind;
         this.declarations = list;
     }
@@ -1673,7 +1690,7 @@ var VariableDeclarator = es6now.Class(Node, function(__super) { return {
 
     constructor: function VariableDeclarator(pattern, initializer, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "VariableDeclarator", start, end);
         this.pattern = pattern;
         this.initializer = initializer;
     }
@@ -1683,7 +1700,7 @@ var ReturnStatement = es6now.Class(Node, function(__super) { return {
 
     constructor: function ReturnStatement(arg, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "ReturnStatement", start, end);
         this.argument = arg;
     }
 } });
@@ -1692,7 +1709,7 @@ var BreakStatement = es6now.Class(Node, function(__super) { return {
 
     constructor: function BreakStatement(label, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "BreakStatement", start, end);
         this.label = label;
     }
 } });
@@ -1701,7 +1718,7 @@ var ContinueStatement = es6now.Class(Node, function(__super) { return {
 
     constructor: function ContinueStatement(label, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "ContinueStatement", start, end);
         this.label = label;
     }
 } });
@@ -1710,18 +1727,24 @@ var ThrowStatement = es6now.Class(Node, function(__super) { return {
 
     constructor: function ThrowStatement(expr, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "ThrowStatement", start, end);
         this.expression = expr;
     }
 } });
 
-var DebuggerStatement = es6now.Class(Node, function(__super) { return { constructor: function DebuggerStatement() { var c = __super("constructor"); if (c) return c.apply(this, arguments); } } });
+var DebuggerStatement = es6now.Class(Node, function(__super) { return {
+    
+    constructor: function DebuggerStatement(start, end) {
+    
+        init(this, "DebuggerStatement", start, end);
+    }
+} });
 
 var IfStatement = es6now.Class(Node, function(__super) { return {
 
     constructor: function IfStatement(test, cons, alt, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "IfStatement", start, end);
         this.test = test;
         this.consequent = cons;
         this.alternate = alt;
@@ -1732,7 +1755,7 @@ var DoWhileStatement = es6now.Class(Node, function(__super) { return {
 
     constructor: function DoWhileStatement(body, test, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "DoWhileStatement", start, end);
         this.body = body;
         this.test = test;
     }
@@ -1742,7 +1765,7 @@ var WhileStatement = es6now.Class(Node, function(__super) { return {
 
     constructor: function WhileStatement(test, body, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "WhileStatement", start, end);
         this.test = test;
         this.body = body;
     }
@@ -1752,7 +1775,7 @@ var ForStatement = es6now.Class(Node, function(__super) { return {
 
     constructor: function ForStatement(initializer, test, update, body, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "ForStatement", start, end);
         this.initializer = initializer;
         this.test = test;
         this.update = update;
@@ -1764,7 +1787,7 @@ var ForInStatement = es6now.Class(Node, function(__super) { return {
 
     constructor: function ForInStatement(left, right, body, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "ForInStatement", start, end);
         this.left = left;
         this.right = right;
         this.body = body;
@@ -1775,7 +1798,7 @@ var ForOfStatement = es6now.Class(Node, function(__super) { return {
 
     constructor: function ForOfStatement(left, right, body, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "ForOfStatement", start, end);
         this.left = left;
         this.right = right;
         this.body = body;
@@ -1786,7 +1809,7 @@ var WithStatement = es6now.Class(Node, function(__super) { return {
 
     constructor: function WithStatement(object, body, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "WithStatement", start, end);
         this.object = object;
         this.body = body;
     }
@@ -1796,7 +1819,7 @@ var SwitchStatement = es6now.Class(Node, function(__super) { return {
 
     constructor: function SwitchStatement(desc, cases, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "SwitchStatement", start, end);
         this.descriminant = desc;
         this.cases = cases;
     }
@@ -1806,7 +1829,7 @@ var SwitchCase = es6now.Class(Node, function(__super) { return {
 
     constructor: function SwitchCase(test, cons, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "SwitchCase", start, end);
         this.test = test;
         this.consequent = cons;
     }
@@ -1816,7 +1839,7 @@ var TryStatement = es6now.Class(Node, function(__super) { return {
 
     constructor: function TryStatement(block, handler, fin, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "TryStatement", start, end);
         this.block = block;
         this.handler = handler;
         this.finalizer = fin;
@@ -1827,7 +1850,7 @@ var CatchClause = es6now.Class(Node, function(__super) { return {
 
     constructor: function CatchClause(param, body, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "CatchClause", start, end);
         this.param = param;
         this.body = body;
     }
@@ -1837,7 +1860,7 @@ var FunctionDeclaration = es6now.Class(Node, function(__super) { return {
 
     constructor: function FunctionDeclaration(kind, identifier, params, body, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "FunctionDeclaration", start, end);
         this.kind = kind;
         this.identifier = identifier;
         this.params = params;
@@ -1849,7 +1872,7 @@ var FunctionExpression = es6now.Class(Node, function(__super) { return {
 
     constructor: function FunctionExpression(kind, identifier, params, body, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "FunctionExpression", start, end);
         this.kind = kind;
         this.identifier = identifier;
         this.params = params;
@@ -1861,7 +1884,7 @@ var FormalParameter = es6now.Class(Node, function(__super) { return {
 
     constructor: function FormalParameter(pattern, initializer, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "FormalParameter", start, end);
         this.pattern = pattern;
         this.initializer = initializer;
     }
@@ -1871,7 +1894,7 @@ var RestParameter = es6now.Class(Node, function(__super) { return {
 
     constructor: function RestParameter(identifier, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "RestParameter", start, end);
         this.identifier = identifier;
     }
 } });
@@ -1880,7 +1903,7 @@ var FunctionBody = es6now.Class(Node, function(__super) { return {
 
     constructor: function FunctionBody(statements, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "FunctionBody", start, end);
         this.statements = statements;
     }
 } });
@@ -1889,7 +1912,7 @@ var ArrowFunctionHead = es6now.Class(Node, function(__super) { return {
 
     constructor: function ArrowFunctionHead(params, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "ArrowFunctionHead", start, end);
         this.parameters = params;
     }
 } });
@@ -1898,7 +1921,7 @@ var ArrowFunction = es6now.Class(Node, function(__super) { return {
 
     constructor: function ArrowFunction(kind, params, body, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "ArrowFunction", start, end);
         this.kind = kind;
         this.params = params;
         this.body = body;
@@ -1909,7 +1932,7 @@ var ModuleDeclaration = es6now.Class(Node, function(__super) { return {
 
     constructor: function ModuleDeclaration(identifier, body, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "ModuleDeclaration", start, end);
         this.identifier = identifier;
         this.body = body;
     }
@@ -1919,7 +1942,7 @@ var ModuleBody = es6now.Class(Node, function(__super) { return {
 
     constructor: function ModuleBody(statements, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "ModuleBody", start, end);
         this.statements = statements;
     }
 } });
@@ -1928,7 +1951,7 @@ var ModuleImport = es6now.Class(Node, function(__super) { return {
 
     constructor: function ModuleImport(identifier, from, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "ModuleImport", start, end);
         this.identifier = identifier;
         this.from = from;
     }
@@ -1938,7 +1961,7 @@ var ModuleAlias = es6now.Class(Node, function(__super) { return {
 
     constructor: function ModuleAlias(identifier, path, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "ModuleAlias", start, end);
         this.identifier = identifier;
         this.path = path;
     }
@@ -1948,7 +1971,7 @@ var ImportDefaultDeclaration = es6now.Class(Node, function(__super) { return {
 
     constructor: function ImportDefaultDeclaration(ident, from, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "ImportDefaultDeclaration", start, end);
         this.identifier = ident;
         this.from = from;
     }
@@ -1958,7 +1981,7 @@ var ImportDeclaration = es6now.Class(Node, function(__super) { return {
 
     constructor: function ImportDeclaration(specifiers, from, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "ImportDeclaration", start, end);
         this.specifiers = specifiers;
         this.from = from;
     }
@@ -1968,7 +1991,7 @@ var ImportSpecifier = es6now.Class(Node, function(__super) { return {
 
     constructor: function ImportSpecifier(remote, local, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "ImportSpecifier", start, end);
         this.remote = remote;
         this.local = local;
     }
@@ -1978,7 +2001,7 @@ var ExportDeclaration = es6now.Class(Node, function(__super) { return {
 
     constructor: function ExportDeclaration(binding, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "ExportDeclaration", start, end);
         this.binding = binding;
     }
 } });
@@ -1987,7 +2010,7 @@ var ExportsList = es6now.Class(Node, function(__super) { return {
 
     constructor: function ExportsList(list, from, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "ExportsList", start, end);
         this.specifiers = list;
         this.from = from;
     }
@@ -1997,7 +2020,7 @@ var ExportSpecifier = es6now.Class(Node, function(__super) { return {
 
     constructor: function ExportSpecifier(local, remote, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "ExportSpecifier", start, end);
         this.local = local;
         this.remote = remote;
     }
@@ -2007,7 +2030,7 @@ var ModulePath = es6now.Class(Node, function(__super) { return {
     
     constructor: function ModulePath(list, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "ModulePath", start, end);
         this.elements = list;
     }
 } });
@@ -2016,7 +2039,7 @@ var ClassDeclaration = es6now.Class(Node, function(__super) { return {
 
     constructor: function ClassDeclaration(identifier, base, body, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "ClassDeclaration", start, end);
         this.identifier = identifier;
         this.base = base;
         this.body = body;
@@ -2027,7 +2050,7 @@ var ClassExpression = es6now.Class(Node, function(__super) { return {
 
     constructor: function ClassExpression(identifier, base, body, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "ClassExpression", start, end);
         this.identifier = identifier;
         this.base = base;
         this.body = body;
@@ -2038,7 +2061,7 @@ var ClassBody = es6now.Class(Node, function(__super) { return {
 
     constructor: function ClassBody(elems, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "ClassBody", start, end);
         this.elements = elems;
     }
 } });
@@ -2047,7 +2070,7 @@ var ClassElement = es6now.Class(Node, function(__super) { return {
 
     constructor: function ClassElement(isStatic, method, start, end) {
     
-        __super("constructor").call(this, start, end);
+        init(this, "ClassElement", start, end);
         this.static = isStatic;
         this.method = method;
     }
@@ -2095,42 +2118,28 @@ var octalEscape = /^(?:[0-3][0-7]{0,2}|[4-7][0-7]?)/,
     blockCommentPattern = /\r\n?|[\n\u2028\u2029]|\*\//g,
     hexChar = /[0-9a-f]/i;
 
-// === Character Types ===
-var WHITESPACE = 1,
-    NEWLINE = 2,
-    DECIMAL_DIGIT = 3,
-    PUNCTUATOR = 4,
-    PUNCTUATOR_CHAR = 5,
-    STRING = 6,
-    TEMPLATE = 7,
-    IDENTIFIER = 8,
-    ZERO = 9,
-    DOT = 10,
-    SLASH = 11,
-    LBRACE = 12;
-
 // === Character Type Lookup Table ===
 var charTable = ((function(_) {
 
     var charTable = new Array(128);
     
-    add(WHITESPACE, "\t\v\f ");
-    add(NEWLINE, "\r\n");
-    add(DECIMAL_DIGIT, "123456789");
-    add(PUNCTUATOR_CHAR, "{[]();,?:");
-    add(PUNCTUATOR, "<>+-*%&|^!~=");
-    add(DOT, ".");
-    add(SLASH, "/");
-    add(LBRACE, "}");
-    add(ZERO, "0");
-    add(STRING, "'\"");
-    add(TEMPLATE, "`");
-    add(IDENTIFIER, "$_\\");
+    add("whitespace", "\t\v\f ");
+    add("newline", "\r\n");
+    add("decimal-digit", "123456789");
+    add("punctuator-char", "{[]();,?:");
+    add("punctuator", "<>+-*%&|^!~=");
+    add("dot", ".");
+    add("slash", "/");
+    add("lbrace", "}");
+    add("zero", "0");
+    add("string", "'\"");
+    add("template", "`");
+    add("identifier", "$_\\");
     
     var i;
     
-    for (i = 65; i <= 90; ++i) charTable[i] = IDENTIFIER;
-    for (i = 97; i <= 122; ++i) charTable[i] = IDENTIFIER;
+    for (i = 65; i <= 90; ++i) charTable[i] = "identifier";
+    for (i = 97; i <= 122; ++i) charTable[i] = "identifier";
     
     return charTable;
     
@@ -2489,32 +2498,32 @@ var Scanner = es6now.Class(function(__super) { return {
             
         switch (charTable[code]) {
         
-            case PUNCTUATOR_CHAR: return this.PunctuatorChar(code);
+            case "punctuator-char": return this.PunctuatorChar(code);
             
-            case WHITESPACE: return this.Whitespace(code);
+            case "whitespace": return this.Whitespace(code);
             
-            case IDENTIFIER: 
+            case "identifier": 
             
                 return context === "name" ? 
                     this.IdentifierName(code) : 
                     this.Identifier(code);
             
-            case LBRACE:
+            case "lbrace":
             
                 if (context === "template") return this.Template(code);
                 else return this.PunctuatorChar(code);
             
-            case PUNCTUATOR: return this.Punctuator(code);
+            case "punctuator": return this.Punctuator(code);
             
-            case NEWLINE: return this.Newline(code);
+            case "newline": return this.Newline(code);
             
-            case DECIMAL_DIGIT: return this.Number(code);
+            case "decimal-digit": return this.Number(code);
             
-            case TEMPLATE: return this.Template(code);
+            case "template": return this.Template(code);
             
-            case STRING: return this.String(code);
+            case "string": return this.String(code);
             
-            case ZERO: 
+            case "zero": 
             
                 switch (next = this.input.charCodeAt(this.offset + 1)) {
                 
@@ -2527,14 +2536,14 @@ var Scanner = es6now.Class(function(__super) { return {
                     this.LegacyOctalNumber(code) :
                     this.Number(code);
             
-            case DOT: 
+            case "dot": 
             
                 next = this.input.charCodeAt(this.offset + 1);
                 
                 if (next >= 48 && next <= 57) return this.Number(code);
                 else return this.Punctuator(code);
             
-            case SLASH:
+            case "slash":
             
                 next = this.input.charCodeAt(this.offset + 1);
 
@@ -6017,7 +6026,7 @@ var RootNode = es6now.Class(AST.Node, function(__super) { return {
 
     constructor: function RootNode(root, end) {
     
-        __super("constructor").call(this, 0, end);
+        __super.constructor.call(this, "Root", 0, end);
         this.root = root;
     }
 } });
@@ -6418,13 +6427,19 @@ var Replacer = es6now.Class(function(__super) { return {
         if (p.type === "CallExpression") {
         
             // super(args);
-        
             p.isSuperCall = true;
             
             var m = this.parentFunction(p),
-                name = (m.type === "MethodDefinition" ? m.name.text : "constructor");
+                name = ".constructor";
             
-            return "__super(" + JSON.stringify(name) + ")";
+            if (m.type === "MethodDefinition") {
+            
+                name = m.name.type === "Identifier" ?
+                    "." + m.name.text :
+                    "[" + JSON.stringify(m.name.text) + "]";
+            }
+            
+            return "__super" + name;
             
         } else {
         
@@ -6449,10 +6464,11 @@ var Replacer = es6now.Class(function(__super) { return {
         
             var prop = node.property.text;
             
-            if (!node.computed)
-                prop = '"' + prop + '"';
+            prop = node.computed ?
+                "[" + prop + "]" :
+                "." + prop;
             
-            return node.object.text + "(" + prop + ")";
+            return node.object.text + prop;
         }
     },
     
@@ -6592,7 +6608,7 @@ var Replacer = es6now.Class(function(__super) { return {
             
             if (hasBase) {
             
-                ctor += ' var c = __super("constructor"); ';
+                ctor += ' var c = __super.constructor; ';
                 ctor += "if (c) return c.apply(this, arguments); }";
                 
             } else {
