@@ -1177,24 +1177,20 @@ this.Promise = Promise;
 
 (function() {
 
-function unwrap(x) {
-    
-    return Promise.isPromise(x) ? x.chain(unwrap) : x;
-}
-
-function iterate(iterable) {
+this.es6now.async = function(iterable) {
     
     var iter = es6now.iterator(iterable),
-        deferred = Promise.defer();
-        
-    resume(void 0, false);
+        resolver,
+        promise;
     
-    return deferred.promise;
+    promise = new Promise((function(resolve, reject) { return resolver = { resolve: resolve, reject: reject }; }));
+    resume(void 0, false);
+    return promise;
     
     function resume(value, error) {
     
         if (error && !("throw" in iter))
-            return deferred.reject(value);
+            return resolver.reject(value);
         
         try {
         
@@ -1205,31 +1201,25 @@ function iterate(iterable) {
             
             if (Promise.isPromise(value)) {
             
-                // Recursively unwrap the result value
-                value = value.chain(unwrap);
+                // Recursively unwrap the result value?
+                // value = value.chain(function unwrap(x) { return Promise.isPromise(x) ? x.chain(unwrap) : x });
                 
-                if (done)
-                    value.chain(deferred.resolve, deferred.reject);
-                else
-                    value.chain((function(x) { return resume(x, false); }), (function(x) { return resume(x, true); }));
+                if (done) value.chain(resolver.resolve, resolver.reject);
+                else      value.chain((function(x) { return resume(x, false); }), (function(x) { return resume(x, true); }));
             
             } else if (done) {
                 
-                deferred.resolve(value);
+                resolver.resolve(value);
                 
             } else {
             
                 resume(value, false);
             }
             
-        } catch (x) {
+        } catch (x) { resolver.reject(x) }
         
-            deferred.reject(x);
-        }
     }
-}
-
-this.es6now.async = iterate;
+};
 
 
 }).call(this);
@@ -1254,7 +1244,7 @@ var Promise =
 
 var Async = 
 
-"function unwrap(x) {\n    \n    return Promise.isPromise(x) ? x.chain(unwrap) : x;\n}\n\nfunction iterate(iterable) {\n    \n    var iter = es6now.iterator(iterable),\n        deferred = Promise.defer();\n        \n    resume(void 0, false);\n    \n    return deferred.promise;\n    \n    function resume(value, error) {\n    \n        if (error && !(\"throw\" in iter))\n            return deferred.reject(value);\n        \n        try {\n        \n            // Invoke the iterator/generator\n            var result = error ? iter.throw(value) : iter.next(value),\n                value = result.value,\n                done = result.done;\n            \n            if (Promise.isPromise(value)) {\n            \n                // Recursively unwrap the result value\n                value = value.chain(unwrap);\n                \n                if (done)\n                    value.chain(deferred.resolve, deferred.reject);\n                else\n                    value.chain(x => resume(x, false), x => resume(x, true));\n            \n            } else if (done) {\n                \n                deferred.resolve(value);\n                \n            } else {\n            \n                resume(value, false);\n            }\n            \n        } catch (x) {\n        \n            deferred.reject(x);\n        }\n    }\n}\n\nthis.es6now.async = iterate;\n";
+"this.es6now.async = function(iterable) {\n    \n    var iter = es6now.iterator(iterable),\n        resolver,\n        promise;\n    \n    promise = new Promise((resolve, reject) => resolver = { resolve, reject });\n    resume(void 0, false);\n    return promise;\n    \n    function resume(value, error) {\n    \n        if (error && !(\"throw\" in iter))\n            return resolver.reject(value);\n        \n        try {\n        \n            // Invoke the iterator/generator\n            var result = error ? iter.throw(value) : iter.next(value),\n                value = result.value,\n                done = result.done;\n            \n            if (Promise.isPromise(value)) {\n            \n                // Recursively unwrap the result value?\n                // value = value.chain(function unwrap(x) { return Promise.isPromise(x) ? x.chain(unwrap) : x });\n                \n                if (done) value.chain(resolver.resolve, resolver.reject);\n                else      value.chain(x => resume(x, false), x => resume(x, true));\n            \n            } else if (done) {\n                \n                resolver.resolve(value);\n                \n            } else {\n            \n                resume(value, false);\n            }\n            \n        } catch (x) { resolver.reject(x) }\n        \n    }\n};\n";
 
 
 
@@ -4597,7 +4587,8 @@ var Parser = es6now.Class(function(__super) { return {
     MethodDefinition: function(name) {
     
         var start = name ? name.start : this.startOffset,
-            kind = "";
+            kind = "",
+            val;
         
         if (!name && this.peek("name") === "*") {
         
@@ -4613,21 +4604,19 @@ var Parser = es6now.Class(function(__super) { return {
             
             if (name.type === "Identifier" && this.peek("name") !== "(") {
             
-                switch (name.value) {
+                val = name.value;
                 
-                    case "get":
-                    case "set":
-                    case "async":
-                        kind = name.value;
-                        name = this.PropertyName();
-                        break;
+                if (val === "get" || val === "set" || isFunctionModifier(val)) {
+                
+                    kind = name.value;
+                    name = this.PropertyName();
                 }
             }
         }
         
         this.pushContext(true);
         
-        if (kind === "generator" || kind === "async")
+        if (kind === "generator" || isFunctionModifier(kind))
             this.context.functionType = kind;
         
         var params = this.FormalParameters(),
@@ -8027,6 +8016,7 @@ function createBundle(rootPath, locatePackage) {
         return out;
     }));
 }
+
 
 exports.createBundle = createBundle; return exports; }).call(this, {});
 

@@ -1165,24 +1165,20 @@ this.Promise = Promise;
 
 export var Async = 
 
-`function unwrap(x) {
-    
-    return Promise.isPromise(x) ? x.chain(unwrap) : x;
-}
-
-function iterate(iterable) {
+`this.es6now.async = function(iterable) {
     
     var iter = es6now.iterator(iterable),
-        deferred = Promise.defer();
-        
-    resume(void 0, false);
+        resolver,
+        promise;
     
-    return deferred.promise;
+    promise = new Promise((resolve, reject) => resolver = { resolve, reject });
+    resume(void 0, false);
+    return promise;
     
     function resume(value, error) {
     
         if (error && !("throw" in iter))
-            return deferred.reject(value);
+            return resolver.reject(value);
         
         try {
         
@@ -1193,30 +1189,24 @@ function iterate(iterable) {
             
             if (Promise.isPromise(value)) {
             
-                // Recursively unwrap the result value
-                value = value.chain(unwrap);
+                // Recursively unwrap the result value?
+                // value = value.chain(function unwrap(x) { return Promise.isPromise(x) ? x.chain(unwrap) : x });
                 
-                if (done)
-                    value.chain(deferred.resolve, deferred.reject);
-                else
-                    value.chain(x => resume(x, false), x => resume(x, true));
+                if (done) value.chain(resolver.resolve, resolver.reject);
+                else      value.chain(x => resume(x, false), x => resume(x, true));
             
             } else if (done) {
                 
-                deferred.resolve(value);
+                resolver.resolve(value);
                 
             } else {
             
                 resume(value, false);
             }
             
-        } catch (x) {
+        } catch (x) { resolver.reject(x) }
         
-            deferred.reject(x);
-        }
     }
-}
-
-this.es6now.async = iterate;
+};
 `;
 
