@@ -6753,7 +6753,7 @@ var Replacer = es6now.Class(function(__super) { return {
     
         var name = node.params[node.params.length - 1].identifier.value,
             pos = node.params.length - 1,
-            slice = pos === 0 ? "arguments" : "es6now.rest(arguments, " + pos + ")";
+            slice = "es6now.rest(arguments, " + pos + ")";
         
         return "var " + name + " = " + slice + ";";
     },
