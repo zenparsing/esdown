@@ -546,11 +546,9 @@ function Class(base, def) {
     if (parent === void 0)
         throw new TypeError();
     
-    var proto = Object.create(parent),
-        sup = (function(prop) { return Object.getPrototypeOf(proto)[prop]; });
-    
     // Generate the method collection, closing over "__super"
-    var props = def(sup),
+    var proto = Object.create(parent),
+        props = def(parent),
         constructor = props.constructor;
     
     if (!constructor)
@@ -1177,24 +1175,20 @@ this.Promise = Promise;
 
 (function() {
 
-function unwrap(x) {
-    
-    return Promise.isPromise(x) ? x.chain(unwrap) : x;
-}
-
-function iterate(iterable) {
+this.es6now.async = function(iterable) {
     
     var iter = es6now.iterator(iterable),
-        deferred = Promise.defer();
-        
-    resume(void 0, false);
+        resolver,
+        promise;
     
-    return deferred.promise;
+    promise = new Promise((function(resolve, reject) { return resolver = { resolve: resolve, reject: reject }; }));
+    resume(void 0, false);
+    return promise;
     
     function resume(value, error) {
     
         if (error && !("throw" in iter))
-            return deferred.reject(value);
+            return resolver.reject(value);
         
         try {
         
@@ -1205,31 +1199,25 @@ function iterate(iterable) {
             
             if (Promise.isPromise(value)) {
             
-                // Recursively unwrap the result value
-                value = value.chain(unwrap);
+                // Recursively unwrap the result value?
+                // value = value.chain(function unwrap(x) { return Promise.isPromise(x) ? x.chain(unwrap) : x });
                 
-                if (done)
-                    value.chain(deferred.resolve, deferred.reject);
-                else
-                    value.chain((function(x) { return resume(x, false); }), (function(x) { return resume(x, true); }));
+                if (done) value.chain(resolver.resolve, resolver.reject);
+                else      value.chain((function(x) { return resume(x, false); }), (function(x) { return resume(x, true); }));
             
             } else if (done) {
                 
-                deferred.resolve(value);
+                resolver.resolve(value);
                 
             } else {
             
                 resume(value, false);
             }
             
-        } catch (x) {
+        } catch (x) { resolver.reject(x) }
         
-            deferred.reject(x);
-        }
     }
-}
-
-this.es6now.async = iterate;
+};
 
 
 }).call(this);

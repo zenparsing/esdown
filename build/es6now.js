@@ -1250,831 +1250,776 @@ exports.ES5 = ES5; exports.ES6 = ES6; exports.Class = Class; exports.Promise = P
 
 var AST_ = (function(exports) {
 
-// Initializes common node properties.  This is used in preference
-// to super() for performance reasons.
-function init(node, type, start, end) {
+function define(obj, name, value, enumerable) {
 
-    node.type = type;
-    node.start = start;
-    node.end = end;
-    node.error = "";
+    Object.defineProperty(obj, name, {
+    
+        enumerable: enumerable,
+        writable: true,
+        configurable: true,
+        value: value
+    });
+}
+    
+function proto(fn) {
+
+    var p = Object.create(null);
+    
+    define(p, "constructor", fn, false);
+    define(p, "type", fn.name, true);
+    define(p, "error", "", false);
+    define(p, "parentNode", null, false);
+    define(p, "forEachChild", forEachChild, false);
+    
+    fn.prototype = p;
 }
 
-var Node = es6now.Class(function(__super) { return {
+function forEachChild(fn) {
 
-    constructor: function Node(type, start, end) {
-    
-        init(this, type, start, end);
-    },
-    
-    forEachChild: function(fn) {
+    var keys = Object.keys(this), val, i, j;
 
-        var keys = Object.keys(this), val, i, j;
+    for (i = 0; i < keys.length; ++i) {
+
+        // Don't iterate over backlink to parent
+        if (keys[i] === "parentNode")
+            continue;
     
-        for (i = 0; i < keys.length; ++i) {
-    
-            // Don't iterate over backlink to parent
-            if (keys[i] === "parentNode")
-                continue;
-            
-            val = this[keys[i]];
-        
-            // Skip non-objects and functions
-            if (!val || typeof val !== "object") 
-                continue;
-        
-            if (typeof val.type === "string") {
-        
-                // Nodes have a "type" property
-                fn(val);
-        
-            } else {
-        
-                // Iterate arrays
-                for (j = 0; j < (val.length >>> 0); ++j)
-                    if (val[j] && typeof val[j].type === "string")
-                        fn(val[j]);
-            }
+        val = this[keys[i]];
+
+        // Skip non-objects and functions
+        if (!val || typeof val !== "object") 
+            continue;
+
+        if (typeof val.type === "string") {
+
+            // Nodes have a "type" property
+            fn(val);
+
+        } else {
+
+            // Iterate arrays
+            for (j = 0; j < (val.length >>> 0); ++j)
+                if (val[j] && typeof val[j].type === "string")
+                    fn(val[j]);
         }
     }
-    
-} });
-
-var Script = es6now.Class(Node, function(__super) { return {
-
-    constructor: function Script(statements, start, end) {
-    
-        init(this, "Script", start, end);
-        this.statements = statements;
-    }
-} });
+}
 
-var Module = es6now.Class(Node, function(__super) { return {
+function Node(type, start, end) {
 
-    constructor: function Module(statements, start, end) {
+    this.start = start;
+    this.end = end;
     
-        init(this, "Module", start, end);
-        this.statements = statements;
-    }
-} });
+} proto(Node);
 
-var Identifier = es6now.Class(Node, function(__super) { return {
-
-    constructor: function Identifier(value, context, start, end) {
+function Script(statements, start, end) {
     
-        init(this, "Identifier", start, end);
-        this.value = value;
-        this.context = context;
-    }
-} });
+    this.start = start;
+    this.end = end;
+    this.statements = statements;
 
-var Number = es6now.Class(Node, function(__super) { return {
+} proto(Script);
 
-    constructor: function Number(value, start, end) {
-    
-        init(this, "Number", start, end);
-        this.value = value;
-    }
-} });
+function Module(statements, start, end) {
 
-var String = es6now.Class(Node, function(__super) { return {
+    this.start = start;
+    this.end = end;
+    this.statements = statements;
 
-    constructor: function String(value, start, end) {
-    
-        init(this, "String", start, end);
-        this.value = value;
-    }
-} });
+} proto(Module);
 
-var Template = es6now.Class(Node, function(__super) { return {
+function Identifier(value, context, start, end) {
 
-    constructor: function Template(value, isEnd, start, end) {
+    this.start = start;
+    this.end = end;
+    this.value = value;
+    this.context = context;
     
-        init(this, "Template", start, end);
-        this.value = value;
-        this.templateEnd = isEnd;
-    }
-} });
-
-var RegularExpression = es6now.Class(Node, function(__super) { return {
+} proto(Identifier);
 
-    constructor: function RegularExpression(value, flags, start, end) {
+function Number(value, start, end) {
     
-        init(this, "RegularExpression", start, end);
-        this.value = value;
-        this.flags = flags;
-    }
-} });
+    this.start = start;
+    this.end = end;
+    this.value = value;
 
-var Null = es6now.Class(Node, function(__super) { return { 
+} proto(Number);
 
-    constructor: function Null(start, end) { init(this, "Null", start, end) }
-} });
+function String(value, start, end) {
 
-var Boolean = es6now.Class(Node, function(__super) { return {
-
-    constructor: function Boolean(value, start, end) {
+    this.start = start;
+    this.end = end;
+    this.value = value;
     
-        init(this, "Boolean", start, end);
-        this.value = value;
-    }
-} });
-
-var ThisExpression = es6now.Class(Node, function(__super) { return {
+} proto(String);
 
-    constructor: function ThisExpression(start, end) { init(this, "ThisExpression", start, end) }
-} });
-
-var SuperExpression = es6now.Class(Node, function(__super) { return {
+function Template(value, isEnd, start, end) {
     
-    constructor: function SuperExpression(start, end) { init(this, "SuperExpression", start, end) }
-} });
-
-var SequenceExpression = es6now.Class(Node, function(__super) { return {
-
-    constructor: function SequenceExpression(list, start, end) {
+    this.start = start;
+    this.end = end;
+    this.value = value;
+    this.templateEnd = isEnd;
     
-        init(this, "SequenceExpression", start, end);
-        this.expressions = list;
-    }
-} });
-
-var AssignmentExpression = es6now.Class(Node, function(__super) { return {
+} proto(Template);
 
-    constructor: function AssignmentExpression(op, left, right, start, end) {
+function RegularExpression(value, flags, start, end) {
     
-        init(this, "AssignmentExpression", start, end);
-        this.operator = op;
-        this.left = left;
-        this.right = right;
-    }
-} });
-
-var SpreadExpression = es6now.Class(Node, function(__super) { return {
-
-    constructor: function SpreadExpression(expr, start, end) {
+    this.start = start;
+    this.end = end;
+    this.value = value;
+    this.flags = flags;
     
-        init(this, "SpreadExpression", start, end);
-        this.expression = expr;
-    }
-} });
+} proto(RegularExpression);
 
-var YieldExpression = es6now.Class(Node, function(__super) { return {
+function Null(start, end) { 
 
-    constructor: function YieldExpression(expr, delegate, start, end) {
-    
-        init(this, "YieldExpression", start, end);
-        this.delegate = delegate;
-        this.expression = expr;
-    }
-} });
+    this.start = start;
+    this.end = end;
 
-var ConditionalExpression = es6now.Class(Node, function(__super) { return {
+} proto(Null);
 
-    constructor: function ConditionalExpression(test, cons, alt, start, end) {
+function Boolean(value, start, end) {
     
-        init(this, "ConditionalExpression", start, end);
-        this.test = test;
-        this.consequent = cons;
-        this.alternate = alt;
-    }
-} });
-
-var BinaryExpression = es6now.Class(Node, function(__super) { return {
-
-    constructor: function BinaryExpression(op, left, right, start, end) {
+    this.start = start;
+    this.end = end;
+    this.value = value;
     
-        init(this, "BinaryExpression", start, end);
-        this.operator = op;
-        this.left = left;
-        this.right = right;
-    }
-} });
+} proto(Boolean);
 
-var UpdateExpression = es6now.Class(Node, function(__super) { return {
+function ThisExpression(start, end) { 
 
-    constructor: function UpdateExpression(op, expr, prefix, start, end) {
+    this.start = start;
+    this.end = end;
     
-        init(this, "UpdateExpression", start, end);
-        this.operator = op;
-        this.expression = expr;
-        this.prefix = prefix;
-    }
-} });
+} proto(ThisExpression);
 
-var UnaryExpression = es6now.Class(Node, function(__super) { return {
+function SuperExpression(start, end) { 
 
-    constructor: function UnaryExpression(op, expr, start, end) {
+    this.start = start;
+    this.end = end;
     
-        init(this, "UnaryExpression", start, end);
-        this.operator = op;
-        this.expression = expr;
-    }
-} });
+} proto(SuperExpression);
 
-var MemberExpression = es6now.Class(Node, function(__super) { return {
+function SequenceExpression(list, start, end) {
 
-    constructor: function MemberExpression(obj, prop, computed, start, end) {
-    
-        init(this, "MemberExpression", start, end);
-        this.object = obj;
-        this.property = prop;
-        this.computed = computed;
-    }
-} });
+    this.start = start;
+    this.end = end;
+    this.expressions = list;
 
-var CallExpression = es6now.Class(Node, function(__super) { return {
+} proto(SequenceExpression);
 
-    constructor: function CallExpression(callee, args, start, end) {
+function AssignmentExpression(op, left, right, start, end) {
     
-        init(this, "CallExpression", start, end);
-        this.callee = callee;
-        this.arguments = args;
-    }
-} });
+    this.start = start;
+    this.end = end;
+    this.operator = op;
+    this.left = left;
+    this.right = right;
 
-var TaggedTemplateExpression = es6now.Class(Node, function(__super) { return {
+} proto(AssignmentExpression);
 
-    constructor: function TaggedTemplateExpression(tag, template, start, end) {
+function SpreadExpression(expr, start, end) {
     
-        init(this, "TaggedTemplateExpression", start, end);
-        this.tag = tag;
-        this.template = template;
-    }
-} });
-
-var NewExpression = es6now.Class(Node, function(__super) { return {
-
-    constructor: function NewExpression(callee, args, start, end) {
+    this.start = start;
+    this.end = end;
+    this.expression = expr;
     
-        init(this, "NewExpression", start, end);
-        this.callee = callee;
-        this.arguments = args;
-    }
-} });
+} proto(SpreadExpression);
 
-var ParenExpression = es6now.Class(Node, function(__super) { return {
+function YieldExpression(expr, delegate, start, end) {
     
-    constructor: function ParenExpression(expr, start, end) {
+    this.start = start;
+    this.end = end;
+    this.delegate = delegate;
+    this.expression = expr;
     
-        init(this, "ParenExpression", start, end);
-        this.expression = expr;
-    }
-} });
-
-var ObjectLiteral = es6now.Class(Node, function(__super) { return {
+} proto(YieldExpression);
 
-    constructor: function ObjectLiteral(props, start, end) {
+function ConditionalExpression(test, cons, alt, start, end) {
     
-        init(this, "ObjectLiteral", start, end);
-        this.properties = props;
-    }
-} });
-
-var ComputedPropertyName = es6now.Class(Node, function(__super) { return {
-
-    constructor: function ComputedPropertyName(expr, start, end) {
+    this.start = start;
+    this.end = end;
+    this.test = test;
+    this.consequent = cons;
+    this.alternate = alt;
     
-        init(this, "ComputedPropertyName", start, end);
-        this.expression = expr;
-    }
-} });
+} proto(ConditionalExpression);
 
-var PropertyDefinition = es6now.Class(Node, function(__super) { return {
-
-    constructor: function PropertyDefinition(name, expr, start, end) {
+function BinaryExpression(op, left, right, start, end) {
     
-        init(this, "PropertyDefinition", start, end);
-        this.name = name;
-        this.expression = expr;
-    }
-} });
-
-var PatternProperty = es6now.Class(Node, function(__super) { return {
-
-    constructor: function PatternProperty(name, pattern, initializer, start, end) {
+    this.start = start;
+    this.end = end;
+    this.operator = op;
+    this.left = left;
+    this.right = right;
     
-        init(this, "PatternProperty", start, end);
-        this.name = name;
-        this.pattern = pattern;
-        this.initializer = initializer;
-    }
-} });
-
-var PatternElement = es6now.Class(Node, function(__super) { return {
+} proto(BinaryExpression);
 
-    constructor: function PatternElement(pattern, initializer, rest, start, end) {
+function UpdateExpression(op, expr, prefix, start, end) {
     
-        init(this, "PatternElement", start, end);
-        this.pattern = pattern;
-        this.initializer = initializer;
-        this.rest = rest;
-    }
-} });
-
-var MethodDefinition = es6now.Class(Node, function(__super) { return {
-
-    constructor: function MethodDefinition(kind, name, params, body, start, end) {
+    this.start = start;
+    this.end = end;
+    this.operator = op;
+    this.expression = expr;
+    this.prefix = prefix;
     
-        init(this, "MethodDefinition", start, end);
-        this.kind = kind;
-        this.name = name;
-        this.params = params;
-        this.body = body;
-    }
-} });
+} proto(UpdateExpression);
 
-var ArrayLiteral = es6now.Class(Node, function(__super) { return {
-
-    constructor: function ArrayLiteral(elements, start, end) {
+function UnaryExpression(op, expr, start, end) {
     
-        init(this, "ArrayLiteral", start, end);
-        this.elements = elements;
-    }
-} });
-
-var ArrayComprehension = es6now.Class(Node, function(__super) { return {
-
-    constructor: function ArrayComprehension(qualifiers, expr, start, end) {
+    this.start = start;
+    this.end = end;
+    this.operator = op;
+    this.expression = expr;
     
-        init(this, "ArrayComprehension", start, end);
-        this.qualifiers = qualifiers;
-        this.expression = expr;
-    }
-} });
+} proto(UnaryExpression);
 
-var GeneratorComprehension = es6now.Class(Node, function(__super) { return {
-
-    constructor: function GeneratorComprehension(qualifiers, expr, start, end) {
+function MemberExpression(obj, prop, computed, start, end) {
     
-        init(this, "GeneratorComprehension", start, end);
-        this.qualifiers = qualifiers;
-        this.expression = expr;
-    }
-} });
-
-var ComprehensionFor = es6now.Class(Node, function(__super) { return {
-
-    constructor: function ComprehensionFor(left, right, start, end) {
+    this.start = start;
+    this.end = end;
+    this.object = obj;
+    this.property = prop;
+    this.computed = computed;
     
-        init(this, "ComprehensionFor", start, end);
-        this.left = left;
-        this.right = right;
-    }
-} });
-
-var ComprehensionIf = es6now.Class(Node, function(__super) { return {
+} proto(MemberExpression);
 
-    constructor: function ComprehensionIf(test, start, end) {
+function CallExpression(callee, args, start, end) {
     
-        init(this, "ComprehensionIf", start, end);
-        this.test = test;
-    }
-} });
-
-var TemplateExpression = es6now.Class(Node, function(__super) { return {
-
-    constructor: function TemplateExpression(lits, subs, start, end) {
+    this.start = start;
+    this.end = end;
+    this.callee = callee;
+    this.arguments = args;
     
-        init(this, "TemplateExpression", start, end);
-        this.literals = lits;
-        this.substitutions = subs;
-    }
-} });
+} proto(CallExpression);
 
-var Block = es6now.Class(Node, function(__super) { return {
-
-    constructor: function Block(statements, start, end) {
+function TaggedTemplateExpression(tag, template, start, end) {
     
-        init(this, "Block", start, end);
-        this.statements = statements;
-    }
-} });
-
-var LabelledStatement = es6now.Class(Node, function(__super) { return {
-
-    constructor: function LabelledStatement(label, statement, start, end) {
+    this.start = start;
+    this.end = end;
+    this.tag = tag;
+    this.template = template;
     
-        init(this, "LabelledStatement", start, end);
-        this.label = label;
-        this.statement = statement;
-    }
-} });
-
-var ExpressionStatement = es6now.Class(Node, function(__super) { return {
+} proto(TaggedTemplateExpression);
 
-    constructor: function ExpressionStatement(expr, start, end) {
+function NewExpression(callee, args, start, end) {
     
-        init(this, "ExpressionStatement", start, end);
-        this.expression = expr;
-        this.directive = null;
-    }
-} });
-
-var EmptyStatement = es6now.Class(Node, function(__super) { return {
-
-    constructor: function EmptyStatement(start, end) { init(this, "EmptyStatement", start, end) }
-} });
-
-var VariableDeclaration = es6now.Class(Node, function(__super) { return {
-
-    constructor: function VariableDeclaration(kind, list, start, end) {
+    this.start = start;
+    this.end = end;
+    this.callee = callee;
+    this.arguments = args;
     
-        init(this, "VariableDeclaration", start, end);
-        this.kind = kind;
-        this.declarations = list;
-    }
-} });
+} proto(NewExpression);
 
-var VariableDeclarator = es6now.Class(Node, function(__super) { return {
-
-    constructor: function VariableDeclarator(pattern, initializer, start, end) {
+function ParenExpression(expr, start, end) {
     
-        init(this, "VariableDeclarator", start, end);
-        this.pattern = pattern;
-        this.initializer = initializer;
-    }
-} });
-
-var ReturnStatement = es6now.Class(Node, function(__super) { return {
-
-    constructor: function ReturnStatement(arg, start, end) {
+    this.start = start;
+    this.end = end;
+    this.expression = expr;
     
-        init(this, "ReturnStatement", start, end);
-        this.argument = arg;
-    }
-} });
+} proto(ParenExpression);
 
-var BreakStatement = es6now.Class(Node, function(__super) { return {
-
-    constructor: function BreakStatement(label, start, end) {
+function ObjectLiteral(props, start, end) {
     
-        init(this, "BreakStatement", start, end);
-        this.label = label;
-    }
-} });
-
-var ContinueStatement = es6now.Class(Node, function(__super) { return {
-
-    constructor: function ContinueStatement(label, start, end) {
+    this.start = start;
+    this.end = end;
+    this.properties = props;
     
-        init(this, "ContinueStatement", start, end);
-        this.label = label;
-    }
-} });
-
-var ThrowStatement = es6now.Class(Node, function(__super) { return {
+} proto(ObjectLiteral);
 
-    constructor: function ThrowStatement(expr, start, end) {
+function ComputedPropertyName(expr, start, end) {
     
-        init(this, "ThrowStatement", start, end);
-        this.expression = expr;
-    }
-} });
+    this.start = start;
+    this.end = end;
+    this.expression = expr;
+    
+} proto(ComputedPropertyName);
 
-var DebuggerStatement = es6now.Class(Node, function(__super) { return {
+function PropertyDefinition(name, expr, start, end) {
     
-    constructor: function DebuggerStatement(start, end) {
+    this.start = start;
+    this.end = end;
+    this.name = name;
+    this.expression = expr;
     
-        init(this, "DebuggerStatement", start, end);
-    }
-} });
-
-var IfStatement = es6now.Class(Node, function(__super) { return {
+} proto(PropertyDefinition);
 
-    constructor: function IfStatement(test, cons, alt, start, end) {
+function PatternProperty(name, pattern, initializer, start, end) {
     
-        init(this, "IfStatement", start, end);
-        this.test = test;
-        this.consequent = cons;
-        this.alternate = alt;
-    }
-} });
-
-var DoWhileStatement = es6now.Class(Node, function(__super) { return {
-
-    constructor: function DoWhileStatement(body, test, start, end) {
+    this.start = start;
+    this.end = end;
+    this.name = name;
+    this.pattern = pattern;
+    this.initializer = initializer;
     
-        init(this, "DoWhileStatement", start, end);
-        this.body = body;
-        this.test = test;
-    }
-} });
-
-var WhileStatement = es6now.Class(Node, function(__super) { return {
+} proto(PatternProperty);
 
-    constructor: function WhileStatement(test, body, start, end) {
+function PatternElement(pattern, initializer, rest, start, end) {
     
-        init(this, "WhileStatement", start, end);
-        this.test = test;
-        this.body = body;
-    }
-} });
-
-var ForStatement = es6now.Class(Node, function(__super) { return {
-
-    constructor: function ForStatement(initializer, test, update, body, start, end) {
+    this.start = start;
+    this.end = end;
+    this.pattern = pattern;
+    this.initializer = initializer;
+    this.rest = rest;
     
-        init(this, "ForStatement", start, end);
-        this.initializer = initializer;
-        this.test = test;
-        this.update = update;
-        this.body = body;
-    }
-} });
+} proto(PatternElement);
 
-var ForInStatement = es6now.Class(Node, function(__super) { return {
-
-    constructor: function ForInStatement(left, right, body, start, end) {
+function MethodDefinition(kind, name, params, body, start, end) {
     
-        init(this, "ForInStatement", start, end);
-        this.left = left;
-        this.right = right;
-        this.body = body;
-    }
-} });
-
-var ForOfStatement = es6now.Class(Node, function(__super) { return {
-
-    constructor: function ForOfStatement(left, right, body, start, end) {
+    this.start = start;
+    this.end = end;
+    this.kind = kind;
+    this.name = name;
+    this.params = params;
+    this.body = body;
     
-        init(this, "ForOfStatement", start, end);
-        this.left = left;
-        this.right = right;
-        this.body = body;
-    }
-} });
-
-var WithStatement = es6now.Class(Node, function(__super) { return {
+} proto(MethodDefinition);
 
-    constructor: function WithStatement(object, body, start, end) {
+function ArrayLiteral(elements, start, end) {
     
-        init(this, "WithStatement", start, end);
-        this.object = object;
-        this.body = body;
-    }
-} });
+    this.start = start;
+    this.end = end;
+    this.elements = elements;
+    
+} proto(ArrayLiteral);
 
-var SwitchStatement = es6now.Class(Node, function(__super) { return {
+function ArrayComprehension(qualifiers, expr, start, end) {
+    
+    this.start = start;
+    this.end = end;
+    this.qualifiers = qualifiers;
+    this.expression = expr;
+    
+} proto(ArrayComprehension);
 
-    constructor: function SwitchStatement(desc, cases, start, end) {
+function GeneratorComprehension(qualifiers, expr, start, end) {
     
-        init(this, "SwitchStatement", start, end);
-        this.descriminant = desc;
-        this.cases = cases;
-    }
-} });
+    this.start = start;
+    this.end = end;
+    this.qualifiers = qualifiers;
+    this.expression = expr;
+    
+} proto(GeneratorComprehension);
 
-var SwitchCase = es6now.Class(Node, function(__super) { return {
+function ComprehensionFor(left, right, start, end) {
+    
+    this.start = start;
+    this.end = end;
+    this.left = left;
+    this.right = right;
+    
+} proto(ComprehensionFor);
 
-    constructor: function SwitchCase(test, cons, start, end) {
+function ComprehensionIf(test, start, end) {
+    
+    this.start = start;
+    this.end = end;
+    this.test = test;
     
-        init(this, "SwitchCase", start, end);
-        this.test = test;
-        this.consequent = cons;
-    }
-} });
+} proto(ComprehensionIf);
 
-var TryStatement = es6now.Class(Node, function(__super) { return {
+function TemplateExpression(lits, subs, start, end) {
+    
+    this.start = start;
+    this.end = end;
+    this.literals = lits;
+    this.substitutions = subs;
+    
+} proto(TemplateExpression);
 
-    constructor: function TryStatement(block, handler, fin, start, end) {
+function Block(statements, start, end) {
     
-        init(this, "TryStatement", start, end);
-        this.block = block;
-        this.handler = handler;
-        this.finalizer = fin;
-    }
-} });
+    this.start = start;
+    this.end = end;
+    this.statements = statements;
+    
+} proto(Block);
 
-var CatchClause = es6now.Class(Node, function(__super) { return {
+function LabelledStatement(label, statement, start, end) {
+    
+    this.start = start;
+    this.end = end;
+    this.label = label;
+    this.statement = statement;
+    
+} proto(LabelledStatement);
 
-    constructor: function CatchClause(param, body, start, end) {
+function ExpressionStatement(expr, start, end) {
+    
+    this.start = start;
+    this.end = end;
+    this.expression = expr;
+    this.directive = null;
     
-        init(this, "CatchClause", start, end);
-        this.param = param;
-        this.body = body;
-    }
-} });
+} proto(ExpressionStatement);
 
-var FunctionDeclaration = es6now.Class(Node, function(__super) { return {
+function EmptyStatement(start, end) { 
 
-    constructor: function FunctionDeclaration(kind, identifier, params, body, start, end) {
+    this.start = start;
+    this.end = end;
     
-        init(this, "FunctionDeclaration", start, end);
-        this.kind = kind;
-        this.identifier = identifier;
-        this.params = params;
-        this.body = body;
-    }
-} });
+} proto(EmptyStatement);
 
-var FunctionExpression = es6now.Class(Node, function(__super) { return {
-
-    constructor: function FunctionExpression(kind, identifier, params, body, start, end) {
+function VariableDeclaration(kind, list, start, end) {
+    
+    this.start = start;
+    this.end = end;
+    this.kind = kind;
+    this.declarations = list;
     
-        init(this, "FunctionExpression", start, end);
-        this.kind = kind;
-        this.identifier = identifier;
-        this.params = params;
-        this.body = body;
-    }
-} });
+} proto(VariableDeclaration);
 
-var FormalParameter = es6now.Class(Node, function(__super) { return {
+function VariableDeclarator(pattern, initializer, start, end) {
+    
+    this.start = start;
+    this.end = end;
+    this.pattern = pattern;
+    this.initializer = initializer;
+    
+} proto(VariableDeclarator);
 
-    constructor: function FormalParameter(pattern, initializer, start, end) {
+function ReturnStatement(arg, start, end) {
     
-        init(this, "FormalParameter", start, end);
-        this.pattern = pattern;
-        this.initializer = initializer;
-    }
-} });
+    this.start = start;
+    this.end = end;
+    this.argument = arg;
+    
+} proto(ReturnStatement);
 
-var RestParameter = es6now.Class(Node, function(__super) { return {
+function BreakStatement(label, start, end) {
+    
+    this.start = start;
+    this.end = end;
+    this.label = label;
+    
+} proto(BreakStatement);
 
-    constructor: function RestParameter(identifier, start, end) {
+function ContinueStatement(label, start, end) {
     
-        init(this, "RestParameter", start, end);
-        this.identifier = identifier;
-    }
-} });
+    this.start = start;
+    this.end = end;
+    this.label = label;
+    
+} proto(ContinueStatement);
 
-var FunctionBody = es6now.Class(Node, function(__super) { return {
+function ThrowStatement(expr, start, end) {
+    
+    this.start = start;
+    this.end = end;
+    this.expression = expr;
+    
+} proto(ThrowStatement);
 
-    constructor: function FunctionBody(statements, start, end) {
+function DebuggerStatement(start, end) {
+    
+    this.start = start;
+    this.end = end;
     
-        init(this, "FunctionBody", start, end);
-        this.statements = statements;
-    }
-} });
+} proto(DebuggerStatement);
 
-var ArrowFunctionHead = es6now.Class(Node, function(__super) { return {
+function IfStatement(test, cons, alt, start, end) {
+    
+    this.start = start;
+    this.end = end;
+    this.test = test;
+    this.consequent = cons;
+    this.alternate = alt;
+    
+} proto(IfStatement);
 
-    constructor: function ArrowFunctionHead(params, start, end) {
+function DoWhileStatement(body, test, start, end) {
     
-        init(this, "ArrowFunctionHead", start, end);
-        this.parameters = params;
-    }
-} });
+    this.start = start;
+    this.end = end;
+    this.body = body;
+    this.test = test;
+    
+} proto(DoWhileStatement);
 
-var ArrowFunction = es6now.Class(Node, function(__super) { return {
+function WhileStatement(test, body, start, end) {
+    
+    this.start = start;
+    this.end = end;
+    this.test = test;
+    this.body = body;
+    
+} proto(WhileStatement);
 
-    constructor: function ArrowFunction(kind, params, body, start, end) {
+function ForStatement(initializer, test, update, body, start, end) {
     
-        init(this, "ArrowFunction", start, end);
-        this.kind = kind;
-        this.params = params;
-        this.body = body;
-    }
-} });
+    this.start = start;
+    this.end = end;
+    this.initializer = initializer;
+    this.test = test;
+    this.update = update;
+    this.body = body;
+    
+} proto(ForStatement);
 
-var ModuleDeclaration = es6now.Class(Node, function(__super) { return {
+function ForInStatement(left, right, body, start, end) {
+    
+    this.start = start;
+    this.end = end;
+    this.left = left;
+    this.right = right;
+    this.body = body;
+    
+} proto(ForInStatement);
 
-    constructor: function ModuleDeclaration(identifier, body, start, end) {
+function ForOfStatement(left, right, body, start, end) {
+    
+    this.start = start;
+    this.end = end;
+    this.left = left;
+    this.right = right;
+    this.body = body;
     
-        init(this, "ModuleDeclaration", start, end);
-        this.identifier = identifier;
-        this.body = body;
-    }
-} });
+} proto(ForOfStatement);
 
-var ModuleBody = es6now.Class(Node, function(__super) { return {
+function WithStatement(object, body, start, end) {
+    
+    this.start = start;
+    this.end = end;
+    this.object = object;
+    this.body = body;
+    
+} proto(WithStatement);
 
-    constructor: function ModuleBody(statements, start, end) {
+function SwitchStatement(desc, cases, start, end) {
     
-        init(this, "ModuleBody", start, end);
-        this.statements = statements;
-    }
-} });
+    this.start = start;
+    this.end = end;
+    this.descriminant = desc;
+    this.cases = cases;
+    
+} proto(SwitchStatement);
 
-var ModuleImport = es6now.Class(Node, function(__super) { return {
+function SwitchCase(test, cons, start, end) {
+    
+    this.start = start;
+    this.end = end;
+    this.test = test;
+    this.consequent = cons;
+    
+} proto(SwitchCase);
 
-    constructor: function ModuleImport(identifier, from, start, end) {
+function TryStatement(block, handler, fin, start, end) {
     
-        init(this, "ModuleImport", start, end);
-        this.identifier = identifier;
-        this.from = from;
-    }
-} });
+    this.start = start;
+    this.end = end;
+    this.block = block;
+    this.handler = handler;
+    this.finalizer = fin;
+    
+} proto(TryStatement);
 
-var ModuleAlias = es6now.Class(Node, function(__super) { return {
+function CatchClause(param, body, start, end) {
+    
+    this.start = start;
+    this.end = end;
+    this.param = param;
+    this.body = body;
+    
+} proto(CatchClause);
 
-    constructor: function ModuleAlias(identifier, path, start, end) {
+function FunctionDeclaration(kind, identifier, params, body, start, end) {
+    
+    this.start = start;
+    this.end = end;
+    this.kind = kind;
+    this.identifier = identifier;
+    this.params = params;
+    this.body = body;
     
-        init(this, "ModuleAlias", start, end);
-        this.identifier = identifier;
-        this.path = path;
-    }
-} });
+} proto(FunctionDeclaration);
 
-var ImportDefaultDeclaration = es6now.Class(Node, function(__super) { return {
+function FunctionExpression(kind, identifier, params, body, start, end) {
+    
+    this.start = start;
+    this.end = end;
+    this.kind = kind;
+    this.identifier = identifier;
+    this.params = params;
+    this.body = body;
+    
+} proto(FunctionExpression);
 
-    constructor: function ImportDefaultDeclaration(ident, from, start, end) {
+function FormalParameter(pattern, initializer, start, end) {
     
-        init(this, "ImportDefaultDeclaration", start, end);
-        this.identifier = ident;
-        this.from = from;
-    }
-} });
+    this.start = start;
+    this.end = end;
+    this.pattern = pattern;
+    this.initializer = initializer;
+    
+} proto(FormalParameter);
 
-var ImportDeclaration = es6now.Class(Node, function(__super) { return {
+function RestParameter(identifier, start, end) {
+    
+    this.start = start;
+    this.end = end;
+    this.identifier = identifier;
+    
+} proto(RestParameter);
 
-    constructor: function ImportDeclaration(specifiers, from, start, end) {
+function FunctionBody(statements, start, end) {
+    
+    this.start = start;
+    this.end = end;
+    this.statements = statements;
     
-        init(this, "ImportDeclaration", start, end);
-        this.specifiers = specifiers;
-        this.from = from;
-    }
-} });
+} proto(FunctionBody);
 
-var ImportSpecifier = es6now.Class(Node, function(__super) { return {
+function ArrowFunctionHead(params, start, end) {
+    
+    this.start = start;
+    this.end = end;
+    this.parameters = params;
+    
+} proto(ArrowFunctionHead);
 
-    constructor: function ImportSpecifier(remote, local, start, end) {
+function ArrowFunction(kind, params, body, start, end) {
     
-        init(this, "ImportSpecifier", start, end);
-        this.remote = remote;
-        this.local = local;
-    }
-} });
+    this.start = start;
+    this.end = end;
+    this.kind = kind;
+    this.params = params;
+    this.body = body;
+    
+} proto(ArrowFunction);
 
-var ExportDeclaration = es6now.Class(Node, function(__super) { return {
+function ModuleDeclaration(identifier, body, start, end) {
+    
+    this.start = start;
+    this.end = end;
+    this.identifier = identifier;
+    this.body = body;
+    
+} proto(ModuleDeclaration);
 
-    constructor: function ExportDeclaration(binding, start, end) {
+function ModuleBody(statements, start, end) {
     
-        init(this, "ExportDeclaration", start, end);
-        this.binding = binding;
-    }
-} });
+    this.start = start;
+    this.end = end;
+    this.statements = statements;
+    
+} proto(ModuleBody);
 
-var ExportsList = es6now.Class(Node, function(__super) { return {
+function ModuleImport(identifier, from, start, end) {
+    
+    this.start = start;
+    this.end = end;
+    this.identifier = identifier;
+    this.from = from;
+    
+} proto(ModuleImport);
 
-    constructor: function ExportsList(list, from, start, end) {
+function ModuleAlias(identifier, path, start, end) {
+    
+    this.start = start;
+    this.end = end;
+    this.identifier = identifier;
+    this.path = path;
     
-        init(this, "ExportsList", start, end);
-        this.specifiers = list;
-        this.from = from;
-    }
-} });
+} proto(ModuleAlias);
 
-var ExportSpecifier = es6now.Class(Node, function(__super) { return {
+function ImportDefaultDeclaration(ident, from, start, end) {
+    
+    this.start = start;
+    this.end = end;
+    this.identifier = ident;
+    this.from = from;
+    
+} proto(ImportDefaultDeclaration);
 
-    constructor: function ExportSpecifier(local, remote, start, end) {
+function ImportDeclaration(specifiers, from, start, end) {
     
-        init(this, "ExportSpecifier", start, end);
-        this.local = local;
-        this.remote = remote;
-    }
-} });
+    this.start = start;
+    this.end = end;
+    this.specifiers = specifiers;
+    this.from = from;
+    
+} proto(ImportDeclaration);
 
-var ModulePath = es6now.Class(Node, function(__super) { return {
+function ImportSpecifier(remote, local, start, end) {
     
-    constructor: function ModulePath(list, start, end) {
+    this.start = start;
+    this.end = end;
+    this.remote = remote;
+    this.local = local;
     
-        init(this, "ModulePath", start, end);
-        this.elements = list;
-    }
-} });
+} proto(ImportSpecifier);
 
-var ClassDeclaration = es6now.Class(Node, function(__super) { return {
+function ExportDeclaration(binding, start, end) {
+    
+    this.start = start;
+    this.end = end;
+    this.binding = binding;
+    
+} proto(ExportDeclaration);
 
-    constructor: function ClassDeclaration(identifier, base, body, start, end) {
+function ExportsList(list, from, start, end) {
     
-        init(this, "ClassDeclaration", start, end);
-        this.identifier = identifier;
-        this.base = base;
-        this.body = body;
-    }
-} });
+    this.start = start;
+    this.end = end;
+    this.specifiers = list;
+    this.from = from;
+    
+} proto(ExportsList);
 
-var ClassExpression = es6now.Class(Node, function(__super) { return {
+function ExportSpecifier(local, remote, start, end) {
+    
+    this.start = start;
+    this.end = end;
+    this.local = local;
+    this.remote = remote;
+    
+} proto(ExportSpecifier);
 
-    constructor: function ClassExpression(identifier, base, body, start, end) {
+function ModulePath(list, start, end) {
+    
+    this.start = start;
+    this.end = end;
+    this.elements = list;
     
-        init(this, "ClassExpression", start, end);
-        this.identifier = identifier;
-        this.base = base;
-        this.body = body;
-    }
-} });
+} proto(ModulePath);
 
-var ClassBody = es6now.Class(Node, function(__super) { return {
+function ClassDeclaration(identifier, base, body, start, end) {
+    
+    this.start = start;
+    this.end = end;
+    this.identifier = identifier;
+    this.base = base;
+    this.body = body;
+    
+} proto(ClassDeclaration);
 
-    constructor: function ClassBody(elems, start, end) {
+function ClassExpression(identifier, base, body, start, end) {
     
-        init(this, "ClassBody", start, end);
-        this.elements = elems;
-    }
-} });
+    this.start = start;
+    this.end = end;
+    this.identifier = identifier;
+    this.base = base;
+    this.body = body;
+    
+} proto(ClassExpression);
 
-var ClassElement = es6now.Class(Node, function(__super) { return {
+function ClassBody(elems, start, end) {
+    
+    this.start = start;
+    this.end = end;
+    this.elements = elems;
+    
+} proto(ClassBody);
 
-    constructor: function ClassElement(isStatic, method, start, end) {
+function ClassElement(isStatic, method, start, end) {
     
-        init(this, "ClassElement", start, end);
-        this.static = isStatic;
-        this.method = method;
-    }
-} });
+    this.start = start;
+    this.end = end;
+    this.static = isStatic;
+    this.method = method;
+    
+} proto(ClassElement);
+
 
 
 exports.Node = Node; exports.Script = Script; exports.Module = Module; exports.Identifier = Identifier; exports.Number = Number; exports.String = String; exports.Template = Template; exports.RegularExpression = RegularExpression; exports.Null = Null; exports.Boolean = Boolean; exports.ThisExpression = ThisExpression; exports.SuperExpression = SuperExpression; exports.SequenceExpression = SequenceExpression; exports.AssignmentExpression = AssignmentExpression; exports.SpreadExpression = SpreadExpression; exports.YieldExpression = YieldExpression; exports.ConditionalExpression = ConditionalExpression; exports.BinaryExpression = BinaryExpression; exports.UpdateExpression = UpdateExpression; exports.UnaryExpression = UnaryExpression; exports.MemberExpression = MemberExpression; exports.CallExpression = CallExpression; exports.TaggedTemplateExpression = TaggedTemplateExpression; exports.NewExpression = NewExpression; exports.ParenExpression = ParenExpression; exports.ObjectLiteral = ObjectLiteral; exports.ComputedPropertyName = ComputedPropertyName; exports.PropertyDefinition = PropertyDefinition; exports.PatternProperty = PatternProperty; exports.PatternElement = PatternElement; exports.MethodDefinition = MethodDefinition; exports.ArrayLiteral = ArrayLiteral; exports.ArrayComprehension = ArrayComprehension; exports.GeneratorComprehension = GeneratorComprehension; exports.ComprehensionFor = ComprehensionFor; exports.ComprehensionIf = ComprehensionIf; exports.TemplateExpression = TemplateExpression; exports.Block = Block; exports.LabelledStatement = LabelledStatement; exports.ExpressionStatement = ExpressionStatement; exports.EmptyStatement = EmptyStatement; exports.VariableDeclaration = VariableDeclaration; exports.VariableDeclarator = VariableDeclarator; exports.ReturnStatement = ReturnStatement; exports.BreakStatement = BreakStatement; exports.ContinueStatement = ContinueStatement; exports.ThrowStatement = ThrowStatement; exports.DebuggerStatement = DebuggerStatement; exports.IfStatement = IfStatement; exports.DoWhileStatement = DoWhileStatement; exports.WhileStatement = WhileStatement; exports.ForStatement = ForStatement; exports.ForInStatement = ForInStatement; exports.ForOfStatement = ForOfStatement; exports.WithStatement = WithStatement; exports.SwitchStatement = SwitchStatement; exports.SwitchCase = SwitchCase; exports.TryStatement = TryStatement; exports.CatchClause = CatchClause; exports.FunctionDeclaration = FunctionDeclaration; exports.FunctionExpression = FunctionExpression; exports.FormalParameter = FormalParameter; exports.RestParameter = RestParameter; exports.FunctionBody = FunctionBody; exports.ArrowFunctionHead = ArrowFunctionHead; exports.ArrowFunction = ArrowFunction; exports.ModuleDeclaration = ModuleDeclaration; exports.ModuleBody = ModuleBody; exports.ModuleImport = ModuleImport; exports.ModuleAlias = ModuleAlias; exports.ImportDefaultDeclaration = ImportDefaultDeclaration; exports.ImportDeclaration = ImportDeclaration; exports.ImportSpecifier = ImportSpecifier; exports.ExportDeclaration = ExportDeclaration; exports.ExportsList = ExportsList; exports.ExportSpecifier = ExportSpecifier; exports.ModulePath = ModulePath; exports.ClassDeclaration = ClassDeclaration; exports.ClassExpression = ClassExpression; exports.ClassBody = ClassBody; exports.ClassElement = ClassElement; return exports; }).call(this, {});
@@ -2495,7 +2440,10 @@ var Scanner = es6now.Class(function(__super) { return {
     
         var code = this.input.charCodeAt(this.offset),
             next;
-            
+        
+        if (code === 32)
+            return this.Whitespace(code);
+        
         switch (charTable[code]) {
         
             case "punctuator-char": return this.PunctuatorChar(code);
