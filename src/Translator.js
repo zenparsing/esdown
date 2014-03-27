@@ -10,10 +10,6 @@ var WRAP_CALLEE = "(function(fn, deps, name) { " +
     "if (typeof exports !== 'undefined') " +
         "fn.call(typeof global === 'object' ? global : this, require, exports); " +
         
-    // Sane module transport:
-    "else if (typeof __MODULE === 'function') " +
-        "__MODULE(fn, deps); " +
-        
     // Insane module transport:
     "else if (typeof define === 'function' && define.amd) " +
         "define(['require', 'exports'].concat(deps), fn); " +

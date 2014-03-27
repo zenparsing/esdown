@@ -1,4 +1,4 @@
-/*=es6now=*/(function(fn, deps, name) { if (typeof exports !== 'undefined') fn.call(typeof global === 'object' ? global : this, require, exports); else if (typeof __MODULE === 'function') __MODULE(fn, deps); else if (typeof define === 'function' && define.amd) define(['require', 'exports'].concat(deps), fn); else if (typeof window !== 'undefined' && name) fn.call(window, null, window[name] = {}); else fn.call(window || this, null, {}); })(function(require, exports) { 'use strict'; function __load(p) { var e = require(p); return typeof e === 'object' ? e : { 'default': e }; } var _M0 = __load("path"), _M1 = __load("fs"), _M2 = __load("repl"), _M3 = __load("vm"); 
+/*=es6now=*/(function(fn, deps, name) { if (typeof exports !== 'undefined') fn.call(typeof global === 'object' ? global : this, require, exports); else if (typeof define === 'function' && define.amd) define(['require', 'exports'].concat(deps), fn); else if (typeof window !== 'undefined' && name) fn.call(window, null, window[name] = {}); else fn.call(window || this, null, {}); })(function(require, exports) { 'use strict'; function __load(p) { var e = require(p); return typeof e === 'object' ? e : { 'default': e }; } var _M0 = __load("path"), _M1 = __load("fs"), _M2 = __load("repl"), _M3 = __load("vm"); 
 
 var __this = this; this.es6now = {};
 
@@ -6863,10 +6863,6 @@ var WRAP_CALLEE = "(function(fn, deps, name) { " +
     // Node.js:
     "if (typeof exports !== 'undefined') " +
         "fn.call(typeof global === 'object' ? global : this, require, exports); " +
-        
-    // Sane module transport:
-    "else if (typeof __MODULE === 'function') " +
-        "__MODULE(fn, deps); " +
         
     // Insane module transport:
     "else if (typeof define === 'function' && define.amd) " +
