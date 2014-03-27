@@ -41,7 +41,9 @@ class RootNode extends AST.Node {
 
     constructor(root, end) {
     
-        super("Root", 0, end);
+        this.type = "Root";
+        this.start = 0;
+        this.end = end;
         this.root = root;
     }
 }
@@ -78,9 +80,9 @@ export class Replacer {
                 this[node.type + "Begin"](node);
             
             // Perform a depth-first traversal
-            node.forEachChild(child => {
+            node.children().forEach(child => {
             
-                child.parentNode = node;
+                child.parent = node;
                 visit(child);
             });
             
@@ -186,7 +188,7 @@ export class Replacer {
     
     FunctionBody(node) {
         
-        var p = node.parentNode,
+        var p = node.parent,
             inserted = [];
         
         if (p.createThisBinding)
@@ -222,9 +224,9 @@ export class Replacer {
     
     RestParameter(node) {
     
-        node.parentNode.createRestBinding = true;
+        node.parent.createRestBinding = true;
         
-        var p = node.parentNode.params;
+        var p = node.parent.params;
         
         if (p.length > 1) {
         
@@ -431,13 +433,13 @@ export class Replacer {
     
     SpreadExpression(node) {
     
-        if (node.parentNode.type === "CallExpression")
-            node.parentNode.hasSpreadArg = true;
+        if (node.parent.type === "CallExpression")
+            node.parent.hasSpreadArg = true;
     }
     
     SuperExpression(node) {
     
-        var p = node.parentNode;
+        var p = node.parent;
         
         if (p.type === "CallExpression") {
         
@@ -462,7 +464,7 @@ export class Replacer {
             p.isSuperLookup = true;
         }
         
-        p = p.parentNode;
+        p = p.parent;
         
         if (p.type === "CallExpression") {
         
@@ -567,7 +569,7 @@ export class Replacer {
     
         if (node.static) {
         
-            var p = node.parentNode,
+            var p = node.parent,
                 id = p.staticID;
             
             if (id === void 0)
@@ -586,8 +588,8 @@ export class Replacer {
     
     ClassBody(node) {
     
-        var classIdent = node.parentNode.identifier,
-            hasBase = !!node.parentNode.base,
+        var classIdent = node.parent.identifier,
+            hasBase = !!node.parent.base,
             elems = node.elements, 
             hasCtor = false,
             e,
@@ -676,7 +678,7 @@ export class Replacer {
     
     parentFunction(node) {
     
-        for (var p = node.parentNode; p; p = p.parentNode) {
+        for (var p = node.parent; p; p = p.parent) {
         
             switch (p.type) {
             
@@ -718,7 +720,7 @@ export class Replacer {
             if (node.type === "ThisExpression")
                 throw hasThis;
             
-            node.forEachChild(visit);
+            node.children().forEach(visit);
         }
     }
     
@@ -754,7 +756,7 @@ export class Replacer {
             text = "";
         
         // Build text from child nodes
-        node.forEachChild(child => {
+        node.children().forEach(child => {
         
             if (offset < child.start)
                 text += input.slice(offset, child.start);
@@ -782,7 +784,7 @@ export class Replacer {
     
         var name, p;
         
-        for (p = node.parentNode; p; p = p.parentNode) {
+        for (p = node.parent; p; p = p.parent) {
         
             switch (p.type) {
             
