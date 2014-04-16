@@ -99,7 +99,7 @@ export function startREPL() {
 
     addExtension();
     
-    // TODO: Polyfills are not working in the REPL
+    // TODO: Polyfills are not working in the REPL?
     
     var repl = REPL.start({ 
     
@@ -125,9 +125,9 @@ export function startREPL() {
             try {
             
                 script = VM.createScript(text, { filename, displayErrors });
-            
-                result = context === global ? 
-                    script.runInThisContext({ displayErrors }) : 
+                
+                result = this.useGlobal ?
+                    script.runInThisContext(text, { displayErrors }) :
                     script.runInContext(context, { displayErrors });
                 
             } catch (x) {

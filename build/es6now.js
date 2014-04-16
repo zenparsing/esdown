@@ -7737,7 +7737,7 @@ var
 
 exports.exists = exists; exports.readFile = readFile; exports.close = close; exports.open = open; exports.read = read; exports.write = write; exports.rename = rename; exports.truncate = truncate; exports.rmdir = rmdir; exports.fsync = fsync; exports.mkdir = mkdir; exports.sendfile = sendfile; exports.readdir = readdir; exports.fstat = fstat; exports.lstat = lstat; exports.stat = stat; exports.readlink = readlink; exports.symlink = symlink; exports.link = link; exports.unlink = unlink; exports.fchmod = fchmod; exports.lchmod = lchmod; exports.chmod = chmod; exports.lchown = lchown; exports.fchown = fchown; exports.chown = chown; exports.utimes = utimes; exports.futimes = futimes; exports.writeFile = writeFile; exports.appendFile = appendFile; exports.realpath = realpath; return exports; }).call(this, {});
 
-var main____ = (function(exports) {
+var main___ = (function(exports) {
 
 Object.keys(ConsoleCommand).forEach(function(k) { exports[k] = ConsoleCommand[k]; });
 Object.keys(ConsoleIO).forEach(function(k) { exports[k] = ConsoleIO[k]; });
@@ -7758,7 +7758,7 @@ exports.ConsoleStyle = ConsoleStyle; exports.AsyncFS = AsyncFS; return exports; 
 
 var main_ = (function(exports) {
 
-Object.keys(main____).forEach(function(k) { exports[k] = main____[k]; });
+Object.keys(main___).forEach(function(k) { exports[k] = main___[k]; });
 
 return exports; }).call(this, {});
 
@@ -7865,7 +7865,7 @@ function startREPL() {
 
     addExtension();
     
-    // TODO: Polyfills are not working in the REPL
+    // TODO: Polyfills are not working in the REPL?
     
     var repl = REPL.start({ 
     
@@ -7891,9 +7891,9 @@ function startREPL() {
             try {
             
                 script = VM.createScript(text, { filename: filename, displayErrors: displayErrors });
-            
-                result = context === global ? 
-                    script.runInThisContext({ displayErrors: displayErrors }) : 
+                
+                result = this.useGlobal ?
+                    script.runInThisContext(text, { displayErrors: displayErrors }) :
                     script.runInContext(context, { displayErrors: displayErrors });
                 
             } catch (x) {
@@ -8174,7 +8174,7 @@ function createBundle(rootPath, locatePackage) {
 
 exports.createBundle = createBundle; return exports; }).call(this, {});
 
-var main___ = (function(exports) {
+var main____ = (function(exports) {
 
 var createBundle = Bundler.createBundle;
 var AsyncFS = main_.AsyncFS, ConsoleCommand = main_.ConsoleCommand;
@@ -8209,7 +8209,7 @@ exports.createBundle = createBundle; exports.main = main; return exports; }).cal
 
 var main__ = (function(exports) {
 
-Object.keys(main___).forEach(function(k) { exports[k] = main___[k]; });
+Object.keys(main____).forEach(function(k) { exports[k] = main____[k]; });
 
 return exports; }).call(this, {});
 
