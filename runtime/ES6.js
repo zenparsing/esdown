@@ -1,5 +1,6 @@
 var global = this, 
-    arraySlice = Array.prototype.slice;
+    arraySlice = Array.prototype.slice,
+    toString = Object.prototype.toString;
 
 // === Symbols ===
 
@@ -17,6 +18,7 @@ function fakeSymbol() {
 // catch up with the ES6 specification.
 
 this.Symbol = fakeSymbol;
+
 Symbol.iterator = Symbol("iterator");
 
 this.es6now.iterator = function(obj) {
@@ -197,7 +199,7 @@ addMethods(String.prototype, {
     
         var string = String(this);
         
-        if (this == null || Object.toString.call(search) == "[object RegExp]")
+        if (this == null || toString.call(search) == "[object RegExp]")
             throw TypeError();
             
         var stringLength = this.length,
@@ -216,7 +218,7 @@ addMethods(String.prototype, {
     
     endsWith(search) {
     
-        if (this == null || Object.toString.call(search) == '[object RegExp]')
+        if (this == null || toString.call(search) == '[object RegExp]')
             throw TypeError();
         
         var stringLength = this.length,

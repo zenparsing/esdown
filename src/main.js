@@ -1,12 +1,11 @@
-module FS from "node:fs";
-module Path from "node:path";
-
 import { runModule, startREPL, formatSyntaxError } from "NodeRun.js";
 import { AsyncFS, ConsoleCommand } from "package:zen-bits";
 import { createBundle } from "package:js-bundle";
 import { translate } from "Translator.js";
 import { locatePackage } from "PackageLocator.js";
 
+var FS = require("fs");
+var Path = require("path");
 
 function getOutPath(inPath, outPath) {
 

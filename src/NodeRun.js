@@ -1,11 +1,11 @@
-module FS from "node:fs";
-module REPL from "node:repl";
-module VM from "node:vm";
-module Path from "node:path";
-
 import { translate } from "Translator.js";
 import { isPackageURI, locatePackage } from "PackageLocator.js";
 import { ConsoleStyle as Style } from "package:zen-bits";
+
+var FS = require("fs"),
+    REPL = require("repl"),
+    VM = require("vm"),
+    Path = require("path");
 
 var ES6_GUESS = /(?:^|\n)\s*(?:import|export|class)\s/;
 

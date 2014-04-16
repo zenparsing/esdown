@@ -7,7 +7,7 @@ class A extends B {
     
     set a(value) {}
     
-    get b(value) {}
+    get b() {}
     
     bar(x, y) {
     

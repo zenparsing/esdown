@@ -8,7 +8,7 @@
 
 */
 
-import { Parser, AST } from "package:es6parse";
+import { Parser, AST } from "package:esparse";
 
 var HAS_SCHEMA = /^[a-z]+:/i,
     NODE_SCHEMA = /^(?:npm|node):/i;
@@ -311,13 +311,13 @@ export class Replacer {
         
             node.specifiers.forEach(spec => {
         
-                var remote = spec.remote,
-                    local = spec.local || remote;
+                var imported = spec.imported,
+                    local = spec.local || imported;
             
                 list.push({
                     start: spec.start,
                     end: spec.end,
-                    text: local.text + " = " + moduleSpec + "." + remote.text
+                    text: local.text + " = " + moduleSpec + "." + imported.text
                 });
             });
         }
@@ -336,7 +336,7 @@ export class Replacer {
     
     ExportDeclaration(node) {
     
-        var binding = node.binding,
+        var binding = node.declaration,
             bindingType = binding ? binding.type : "*",
             exports = this.exports,
             ident;
@@ -376,9 +376,9 @@ export class Replacer {
             binding.specifiers.forEach(spec => {
             
                 var local = spec.local.text,
-                    remote = spec.remote ? spec.remote.text : local;
+                    exported = spec.exported ? spec.exported.text : local;
             
-                exports[remote] = from ? 
+                exports[exported] = from ? 
                     fromPath + "." + local :
                     local;
             });

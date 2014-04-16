@@ -1,4 +1,4 @@
-/*=es6now=*/(function(fn, deps, name) { if (typeof exports !== 'undefined') fn.call(typeof global === 'object' ? global : this, require, exports); else if (typeof define === 'function' && define.amd) define(['require', 'exports'].concat(deps), fn); else if (typeof window !== 'undefined' && name) fn.call(window, null, window[name] = {}); else fn.call(window || this, null, {}); })(function(require, exports) { 'use strict'; function __load(p) { var e = require(p); return typeof e === 'object' ? e : { 'default': e }; } var _M0 = __load("path"), _M1 = __load("fs"), _M2 = __load("repl"), _M3 = __load("vm"); 
+/*=es6now=*/(function(fn, deps, name) { if (typeof exports !== 'undefined') fn.call(typeof global === 'object' ? global : this, require, exports); else if (typeof define === 'function' && define.amd) define(['require', 'exports'].concat(deps), fn); else if (typeof window !== 'undefined' && name) fn.call(window, null, window[name] = {}); else fn.call(window || this, null, {}); })(function(require, exports) { 'use strict'; function __load(p) { var e = require(p); return typeof e === 'object' ? e : { 'default': e }; } var _M0 = __load("fs"); 
 
 var __this = this; this.es6now = {};
 
@@ -587,7 +587,8 @@ this.es6now.Class = Class;
 (function() {
 
 var global = this, 
-    arraySlice = Array.prototype.slice;
+    arraySlice = Array.prototype.slice,
+    toString = Object.prototype.toString;
 
 // === Symbols ===
 
@@ -605,6 +606,7 @@ function fakeSymbol() {
 // catch up with the ES6 specification.
 
 this.Symbol = fakeSymbol;
+
 Symbol.iterator = Symbol("iterator");
 
 this.es6now.iterator = function(obj) {
@@ -785,7 +787,7 @@ addMethods(String.prototype, {
     
         var string = String(this);
         
-        if (this == null || Object.toString.call(search) == "[object RegExp]")
+        if (this == null || toString.call(search) == "[object RegExp]")
             throw TypeError();
             
         var stringLength = this.length,
@@ -804,7 +806,7 @@ addMethods(String.prototype, {
     
     endsWith: function(search) {
     
-        if (this == null || Object.toString.call(search) == '[object RegExp]')
+        if (this == null || toString.call(search) == '[object RegExp]')
             throw TypeError();
         
         var stringLength = this.length,
@@ -960,6 +962,47 @@ function isPromise(x) {
     return !!x && $$isPromise in Object(x);
 }
 
+function promiseDefer(ctor) {
+
+    var d = {};
+
+    d.promise = new ctor((function(resolve, reject) {
+        d.resolve = resolve;
+        d.reject = reject;
+    }));
+
+    return d;
+}
+
+function promiseChain(promise, onResolve, onReject) {
+
+    if (typeof onResolve !== "function") onResolve = (function(x) { return x; });
+    if (typeof onReject !== "function") onReject = (function(e) { throw e });
+
+    var deferred = promiseDefer(promise.constructor);
+    
+    if (typeof promise[$status] !== "string")
+        throw new TypeError("Promise method called on a non-promise");
+
+    switch (promise[$status]) {
+
+        case "pending":
+            promise[$onResolve].push([deferred, onResolve]);
+            promise[$onReject].push([deferred, onReject]);
+            break;
+
+        case "resolved":
+            promiseReact(deferred, onResolve, promise[$value]);
+            break;
+    
+        case "rejected":
+            promiseReact(deferred, onReject, promise[$value]);
+            break;
+    }
+
+    return deferred.promise;
+}
+
 function promiseResolve(promise, x) {
     
     promiseDone(promise, "resolved", x, promise[$onResolve]);
@@ -989,7 +1032,7 @@ function promiseUnwrap(deferred, x) {
         throw new TypeError("Promise cannot wrap itself");
     
     if (isPromise(x))
-        x.chain(deferred.resolve, deferred.reject);
+        promiseChain(x, deferred.resolve, deferred.reject);
     else
         deferred.resolve(x);
 }
@@ -999,7 +1042,7 @@ function promiseReact(deferred, handler, x) {
     enqueueMicrotask((function($) {
     
         try { promiseUnwrap(deferred, handler(x)) } 
-        catch(e) { deferred.reject(e) }
+        catch(e) { try { deferred.reject(e) } catch (e) { } }
     }));
 }
 
@@ -1023,51 +1066,14 @@ var Promise = es6now.Class(function(__super) { return {
     
     chain: function(onResolve, onReject) {
     
-        if (typeof onResolve !== "function") onResolve = (function(x) { return x; });
-        if (typeof onReject !== "function") onReject = (function(e) { throw e });
-
-        var deferred = this.constructor.defer();
-
-        switch (this[$status]) {
-
-            case undefined:
-                throw new TypeError("Promise method called on a non-promise");
-        
-            case "pending":
-                this[$onResolve].push([deferred, onResolve]);
-                this[$onReject].push([deferred, onReject]);
-                break;
-    
-            case "resolved":
-                promiseReact(deferred, onResolve, this[$value]);
-                break;
-        
-            case "rejected":
-                promiseReact(deferred, onReject, this[$value]);
-                break;
-        }
-
-        return deferred.promise;
+        return promiseChain(this, onResolve, onReject);
     },
     
     then: function(onResolve, onReject) {
 
         if (typeof onResolve !== "function") onResolve = (function(x) { return x; });
         
-        /*
-        
-        return this.chain(x => {
-        
-            if (isPromise(x))
-                return x.then(onResolve, onReject);
-            
-            return onResolve(x);
-            
-        }, onReject);
-        
-        */
-        
-        return this.chain((function(x) {
+        return promiseChain(this, (function(x) {
     
             if (x && typeof x === "object") {
             
@@ -1083,6 +1089,11 @@ var Promise = es6now.Class(function(__super) { return {
         
     },
     
+    catch: function(onReject) {
+    
+        return this.then(void 0, onReject);
+    },
+    
     __static_0: { isPromise: function(x) {
         
         return isPromise(x);
@@ -1090,59 +1101,62 @@ var Promise = es6now.Class(function(__super) { return {
     
     __static_1: { defer: function() {
     
-        var d = {};
-
-        d.promise = new this((function(resolve, reject) {
-            d.resolve = resolve;
-            d.reject = reject;
-        }));
-
-        return d;
+        return promiseDefer(this);
     } },
     
-    __static_2: { resolve: function(x) { 
+    __static_2: { accept: function(x) {
     
-        var d = this.defer();
+        var d = promiseDefer(this);
         d.resolve(x);
         return d.promise;
     } },
     
-    __static_3: { reject: function(x) { 
+    __static_3: { resolve: function(x) { 
     
-        var d = this.defer();
-        d.reject(x);
+        if (isPromise(x))
+            return x;
+            
+        var d = promiseDefer(this);
+        d.resolve(x);
         return d.promise;
     } },
     
-    __static_4: { cast: function(x) {
-
-        if (x instanceof this)
-            return x;
-
-        var deferred = this.defer();
-        promiseUnwrap(deferred, x);
-        return deferred.promise;
+    __static_4: { reject: function(x) { 
+    
+        var d = promiseDefer(this);
+        d.reject(x);
+        return d.promise;
     } },
 
     __static_5: { all: function(values) {
 
-        var deferred = this.defer(),
-            count = 0,
-            resolutions;
+        // TODO: We should be getting an iterator from values
         
-        for (var i = 0; i < values.length; ++i) {
+        var deferred = promiseDefer(this),
+            count = values.length,
+            resolutions = [];
+            
+        try {
         
-            count += 1;
-            this.cast(values[i]).then(onResolve(i), onReject);
-        }
+            if (!Array.isArray(values))
+                throw new Error("Invalid argument");
         
-        resolutions = new Array(count);
-    
-        if (count === 0) 
-            deferred.resolve(resolutions);
+            var count = values.length;
+        
+            if (count === 0) {
+        
+                deferred.resolve(resolutions);
+            
+            } else {
+        
+                for (var i = 0; i < values.length; ++i)
+                    this.resolve(values[i]).then(onResolve(i), deferred.reject);
+            }
+            
+        } catch(x) { deferred.reject(x) }
         
         return deferred.promise;
-    
+        
         function onResolve(i) {
     
             return (function(x) {
@@ -1153,15 +1167,25 @@ var Promise = es6now.Class(function(__super) { return {
                     deferred.resolve(resolutions);
             });
         }
+    } },
+    
+    __static_6: { race: function(values) {
+    
+        // TODO: We should be getting an iterator from values
         
-        function onReject(r) {
+        var deferred = promiseDefer(this);
         
-            if (count > 0) { 
+        try {
         
-                count = 0; 
-                deferred.reject(r);
-            }
-        }
+            if (!Array.isArray(values))
+                throw new Error("Invalid argument");
+            
+            for (var i = 0; i < values.length; ++i)
+                this.resolve(values[i]).then(deferred.resolve, deferred.reject);
+        
+        } catch(x) { deferred.reject(x) }
+        
+        return deferred.promise;
     } }
     
 } });
@@ -1198,10 +1222,7 @@ this.es6now.async = function(iterable) {
                 done = result.done;
             
             if (Promise.isPromise(value)) {
-            
-                // Recursively unwrap the result value?
-                // value = value.chain(function unwrap(x) { return Promise.isPromise(x) ? x.chain(unwrap) : x });
-                
+
                 if (done) value.chain(resolver.resolve, resolver.reject);
                 else      value.chain((function(x) { return resume(x, false); }), (function(x) { return resume(x, true); }));
             
@@ -1230,7 +1251,7 @@ var ES5 =
 
 var ES6 = 
 
-"var global = this, \n    arraySlice = Array.prototype.slice;\n\n// === Symbols ===\n\nvar symbolCounter = 0;\n\nfunction fakeSymbol() {\n\n    return \"__$\" + Math.floor(Math.random() * 1e9) + \"$\" + (++symbolCounter) + \"$__\";\n}\n\n// NOTE:  As of Node 0.11.12, V8's Symbol implementation is a little wonky.\n// There is no Object.getOwnPropertySymbols, so reflection doesn't seem to\n// work like it should.  Furthermore, Node blows up when trying to inspect\n// Symbol objects.  We expect to replace this override when V8's symbols\n// catch up with the ES6 specification.\n\nthis.Symbol = fakeSymbol;\nSymbol.iterator = Symbol(\"iterator\");\n\nthis.es6now.iterator = function(obj) {\n\n    if (global.Symbol && Symbol.iterator && obj[Symbol.iterator] !== void 0)\n        return obj[Symbol.iterator]();\n    \n    if (Array.isArray(obj))\n        return obj.values();\n    \n    return obj;\n};\n\nthis.es6now.computed = function(obj) {\n\n    var name, desc, i;\n    \n    for (i = 1; i < arguments.length; ++i) {\n    \n        name = \"__$\" + (i - 1);\n        desc = Object.getOwnPropertyDescriptor(obj, name);\n        \n        if (!desc)\n            continue;\n        \n        Object.defineProperty(obj, arguments[i], desc);\n        delete obj[name];\n    }\n    \n    return obj;\n};\n\nthis.es6now.rest = function(args, pos) {\n\n    return arraySlice.call(args, pos);\n};\n\nfunction eachKey(obj, fn) {\n\n    var keys = Object.getOwnPropertyNames(obj),\n        i;\n    \n    for (i = 0; i < keys.length; ++i)\n        fn(keys[i]);\n    \n    if (!Object.getOwnPropertySymbols)\n        return;\n    \n    keys = Object.getOwnPropertySymbols(obj);\n    \n    for (i = 0; i < keys.length; ++i)\n        fn(keys[i]);\n}\n\nfunction addMethods(obj, methods) {\n\n    eachKey(methods, key => {\n    \n        if (key in obj)\n            return;\n        \n        Object.defineProperty(obj, key, {\n        \n            value: methods[key],\n            configurable: true,\n            enumerable: false,\n            writable: true\n        });\n    });\n}\n\n\n// === Object ===\n\naddMethods(Object, {\n\n    is(left, right) {\n    \n        if (left === right)\n            return left !== 0 || 1 / left === 1 / right;\n        \n        return left !== left && right !== right;\n    },\n    \n    assign(target, source) {\n    \n        Object.keys(source).forEach(key => target[key] = source[key]);\n        return target;\n    }\n    \n});\n\n// === Number ===\n\naddMethods(Number, {\n\n    EPSILON: ($=> {\n    \n        var next, result;\n        \n        for (next = 1; 1 + next !== 1; next = next / 2)\n            result = next;\n        \n        return result;\n        \n    })(),\n    \n    MAX_SAFE_INTEGER: 9007199254740992,\n    \n    MIN_SAFE_INTEGER: -9007199254740991,\n    \n    isInteger(val) {\n    \n        typeof val === \"number\" && val | 0 === val;\n    }\n    \n    // TODO: isSafeInteger\n    \n});\n\n// === String === \n\naddMethods(String, {\n\n    raw(callsite, ...args) {\n    \n        var raw = callsite.raw,\n            len = raw.length >>> 0;\n        \n        if (len === 0)\n            return \"\";\n            \n        var s = \"\", i = 0;\n        \n        while (true) {\n        \n            s += raw[i];\n        \n            if (i + 1 === len)\n                return s;\n        \n            s += args[i++];\n        }\n    }\n    \n    // TODO:  fromCodePoint\n    \n});\n\naddMethods(String.prototype, {\n    \n    repeat(count) {\n    \n        if (this == null)\n            throw TypeError();\n        \n        var n = count ? Number(count) : 0;\n        \n        if (isNaN(n))\n            n = 0;\n        \n        // Account for out-of-bounds indices\n        if (n < 0 || n == Infinity)\n            throw RangeError();\n        \n        if (n == 0)\n            return \"\";\n            \n        var result = \"\";\n        \n        while (n--)\n            result += this;\n        \n        return result;\n    },\n    \n    startsWith(search) {\n    \n        var string = String(this);\n        \n        if (this == null || Object.toString.call(search) == \"[object RegExp]\")\n            throw TypeError();\n            \n        var stringLength = this.length,\n            searchString = String(search),\n            searchLength = searchString.length,\n            position = arguments.length > 1 ? arguments[1] : undefined,\n            pos = position ? Number(position) : 0;\n            \n        if (isNaN(pos))\n            pos = 0;\n        \n        var start = Math.min(Math.max(pos, 0), stringLength);\n        \n        return this.indexOf(searchString, pos) == start;\n    },\n    \n    endsWith(search) {\n    \n        if (this == null || Object.toString.call(search) == '[object RegExp]')\n            throw TypeError();\n        \n        var stringLength = this.length,\n            searchString = String(search),\n            searchLength = searchString.length,\n            pos = stringLength;\n        \n        if (arguments.length > 1) {\n        \n            var position = arguments[1];\n        \n            if (position !== undefined) {\n        \n                pos = position ? Number(position) : 0;\n                \n                if (isNaN(pos))\n                    pos = 0;\n            }\n        }\n        \n        var end = Math.min(Math.max(pos, 0), stringLength),\n            start = end - searchLength;\n        \n        if (start < 0)\n            return false;\n            \n        return this.lastIndexOf(searchString, start) == start;\n    },\n    \n    contains(search) {\n    \n        if (this == null)\n            throw TypeError();\n            \n        var stringLength = this.length,\n            searchString = String(search),\n            searchLength = searchString.length,\n            position = arguments.length > 1 ? arguments[1] : undefined,\n            pos = position ? Number(position) : 0;\n        \n        if (isNaN(pos))\n            pos = 0;\n            \n        var start = Math.min(Math.max(pos, 0), stringLength);\n        \n        return this.indexOf(string, searchString, pos) != -1;\n    }\n    \n    // TODO: codePointAt\n    \n});\n\n// === Array ===\n\nclass ArrayIterator {\n\n    constructor(array, kind) {\n    \n        this.array = array;\n        this.current = 0;\n        this.kind = kind;\n    }\n    \n    next() {\n    \n        var length = this.array.length >>> 0,\n            index = this.current;\n        \n        if (index >= length) {\n        \n            this.current = Infinity;\n            return { value: void 0, done: true };\n        }\n        \n        this.current += 1;\n        \n        switch (this.kind) {\n        \n            case \"values\":\n                return { value: this.array[index], done: false };\n            \n            case \"entries\":\n                return { value: [ index, this.array[index] ], done: false };\n            \n            default:\n                return { value: index, done: false };\n        }\n    }\n    \n    [Symbol.iterator]() { return this }\n\n}\n\naddMethods(Array.prototype, {\n\n    values()  { return new ArrayIterator(this, \"values\") },\n    entries() { return new ArrayIterator(this, \"entries\") },\n    keys()    { return new ArrayIterator(this, \"keys\") },\n    [Symbol.iterator]() { return this.values() }\n});\n";
+"var global = this, \n    arraySlice = Array.prototype.slice,\n    toString = Object.prototype.toString;\n\n// === Symbols ===\n\nvar symbolCounter = 0;\n\nfunction fakeSymbol() {\n\n    return \"__$\" + Math.floor(Math.random() * 1e9) + \"$\" + (++symbolCounter) + \"$__\";\n}\n\n// NOTE:  As of Node 0.11.12, V8's Symbol implementation is a little wonky.\n// There is no Object.getOwnPropertySymbols, so reflection doesn't seem to\n// work like it should.  Furthermore, Node blows up when trying to inspect\n// Symbol objects.  We expect to replace this override when V8's symbols\n// catch up with the ES6 specification.\n\nthis.Symbol = fakeSymbol;\n\nSymbol.iterator = Symbol(\"iterator\");\n\nthis.es6now.iterator = function(obj) {\n\n    if (global.Symbol && Symbol.iterator && obj[Symbol.iterator] !== void 0)\n        return obj[Symbol.iterator]();\n    \n    if (Array.isArray(obj))\n        return obj.values();\n    \n    return obj;\n};\n\nthis.es6now.computed = function(obj) {\n\n    var name, desc, i;\n    \n    for (i = 1; i < arguments.length; ++i) {\n    \n        name = \"__$\" + (i - 1);\n        desc = Object.getOwnPropertyDescriptor(obj, name);\n        \n        if (!desc)\n            continue;\n        \n        Object.defineProperty(obj, arguments[i], desc);\n        delete obj[name];\n    }\n    \n    return obj;\n};\n\nthis.es6now.rest = function(args, pos) {\n\n    return arraySlice.call(args, pos);\n};\n\nfunction eachKey(obj, fn) {\n\n    var keys = Object.getOwnPropertyNames(obj),\n        i;\n    \n    for (i = 0; i < keys.length; ++i)\n        fn(keys[i]);\n    \n    if (!Object.getOwnPropertySymbols)\n        return;\n    \n    keys = Object.getOwnPropertySymbols(obj);\n    \n    for (i = 0; i < keys.length; ++i)\n        fn(keys[i]);\n}\n\nfunction addMethods(obj, methods) {\n\n    eachKey(methods, key => {\n    \n        if (key in obj)\n            return;\n        \n        Object.defineProperty(obj, key, {\n        \n            value: methods[key],\n            configurable: true,\n            enumerable: false,\n            writable: true\n        });\n    });\n}\n\n\n// === Object ===\n\naddMethods(Object, {\n\n    is(left, right) {\n    \n        if (left === right)\n            return left !== 0 || 1 / left === 1 / right;\n        \n        return left !== left && right !== right;\n    },\n    \n    assign(target, source) {\n    \n        Object.keys(source).forEach(key => target[key] = source[key]);\n        return target;\n    }\n    \n});\n\n// === Number ===\n\naddMethods(Number, {\n\n    EPSILON: ($=> {\n    \n        var next, result;\n        \n        for (next = 1; 1 + next !== 1; next = next / 2)\n            result = next;\n        \n        return result;\n        \n    })(),\n    \n    MAX_SAFE_INTEGER: 9007199254740992,\n    \n    MIN_SAFE_INTEGER: -9007199254740991,\n    \n    isInteger(val) {\n    \n        typeof val === \"number\" && val | 0 === val;\n    }\n    \n    // TODO: isSafeInteger\n    \n});\n\n// === String === \n\naddMethods(String, {\n\n    raw(callsite, ...args) {\n    \n        var raw = callsite.raw,\n            len = raw.length >>> 0;\n        \n        if (len === 0)\n            return \"\";\n            \n        var s = \"\", i = 0;\n        \n        while (true) {\n        \n            s += raw[i];\n        \n            if (i + 1 === len)\n                return s;\n        \n            s += args[i++];\n        }\n    }\n    \n    // TODO:  fromCodePoint\n    \n});\n\naddMethods(String.prototype, {\n    \n    repeat(count) {\n    \n        if (this == null)\n            throw TypeError();\n        \n        var n = count ? Number(count) : 0;\n        \n        if (isNaN(n))\n            n = 0;\n        \n        // Account for out-of-bounds indices\n        if (n < 0 || n == Infinity)\n            throw RangeError();\n        \n        if (n == 0)\n            return \"\";\n            \n        var result = \"\";\n        \n        while (n--)\n            result += this;\n        \n        return result;\n    },\n    \n    startsWith(search) {\n    \n        var string = String(this);\n        \n        if (this == null || toString.call(search) == \"[object RegExp]\")\n            throw TypeError();\n            \n        var stringLength = this.length,\n            searchString = String(search),\n            searchLength = searchString.length,\n            position = arguments.length > 1 ? arguments[1] : undefined,\n            pos = position ? Number(position) : 0;\n            \n        if (isNaN(pos))\n            pos = 0;\n        \n        var start = Math.min(Math.max(pos, 0), stringLength);\n        \n        return this.indexOf(searchString, pos) == start;\n    },\n    \n    endsWith(search) {\n    \n        if (this == null || toString.call(search) == '[object RegExp]')\n            throw TypeError();\n        \n        var stringLength = this.length,\n            searchString = String(search),\n            searchLength = searchString.length,\n            pos = stringLength;\n        \n        if (arguments.length > 1) {\n        \n            var position = arguments[1];\n        \n            if (position !== undefined) {\n        \n                pos = position ? Number(position) : 0;\n                \n                if (isNaN(pos))\n                    pos = 0;\n            }\n        }\n        \n        var end = Math.min(Math.max(pos, 0), stringLength),\n            start = end - searchLength;\n        \n        if (start < 0)\n            return false;\n            \n        return this.lastIndexOf(searchString, start) == start;\n    },\n    \n    contains(search) {\n    \n        if (this == null)\n            throw TypeError();\n            \n        var stringLength = this.length,\n            searchString = String(search),\n            searchLength = searchString.length,\n            position = arguments.length > 1 ? arguments[1] : undefined,\n            pos = position ? Number(position) : 0;\n        \n        if (isNaN(pos))\n            pos = 0;\n            \n        var start = Math.min(Math.max(pos, 0), stringLength);\n        \n        return this.indexOf(string, searchString, pos) != -1;\n    }\n    \n    // TODO: codePointAt\n    \n});\n\n// === Array ===\n\nclass ArrayIterator {\n\n    constructor(array, kind) {\n    \n        this.array = array;\n        this.current = 0;\n        this.kind = kind;\n    }\n    \n    next() {\n    \n        var length = this.array.length >>> 0,\n            index = this.current;\n        \n        if (index >= length) {\n        \n            this.current = Infinity;\n            return { value: void 0, done: true };\n        }\n        \n        this.current += 1;\n        \n        switch (this.kind) {\n        \n            case \"values\":\n                return { value: this.array[index], done: false };\n            \n            case \"entries\":\n                return { value: [ index, this.array[index] ], done: false };\n            \n            default:\n                return { value: index, done: false };\n        }\n    }\n    \n    [Symbol.iterator]() { return this }\n\n}\n\naddMethods(Array.prototype, {\n\n    values()  { return new ArrayIterator(this, \"values\") },\n    entries() { return new ArrayIterator(this, \"entries\") },\n    keys()    { return new ArrayIterator(this, \"keys\") },\n    [Symbol.iterator]() { return this.values() }\n});\n";
 
 var Class = 
 
@@ -1238,11 +1259,11 @@ var Class =
 
 var Promise = 
 
-"var enqueueMicrotask = ($=> {\n\n    var window = this.window,\n        process = this.process,\n        msgChannel = null,\n        list = [];\n    \n    if (typeof setImmediate === \"function\") {\n    \n        return window ?\n            window.setImmediate.bind(window) :\n            setImmediate;\n    \n    } else if (process && typeof process.nextTick === \"function\") {\n    \n        return process.nextTick;\n        \n    } else if (window && window.MessageChannel) {\n        \n        msgChannel = new window.MessageChannel();\n        msgChannel.port1.onmessage = $=> { if (list.length) list.shift()(); };\n    \n        return fn => {\n        \n            list.push(fn);\n            msgChannel.port2.postMessage(0);\n        };\n    }\n    \n    return fn => setTimeout(fn, 0);\n\n})();\n\n// The following property names are used to simulate the internal data\n// slots that are defined for Promise objects.\n\nvar $status = \"Promise#status\",\n    $value = \"Promise#value\",\n    $onResolve = \"Promise#onResolve\",\n    $onReject = \"Promise#onReject\";\n\n// The following property name is used to simulate the built-in symbol @@isPromise\nvar $$isPromise = \"@@isPromise\";\n\nfunction isPromise(x) { \n\n    return !!x && $$isPromise in Object(x);\n}\n\nfunction promiseResolve(promise, x) {\n    \n    promiseDone(promise, \"resolved\", x, promise[$onResolve]);\n}\n\nfunction promiseReject(promise, x) {\n    \n    promiseDone(promise, \"rejected\", x, promise[$onReject]);\n}\n\nfunction promiseDone(promise, status, value, reactions) {\n\n    if (promise[$status] !== \"pending\") \n        return;\n        \n    promise[$status] = status;\n    promise[$value] = value;\n    promise[$onResolve] = promise[$onReject] = void 0;\n    \n    for (var i = 0; i < reactions.length; ++i) \n        promiseReact(reactions[i][0], reactions[i][1], value);\n}\n\nfunction promiseUnwrap(deferred, x) {\n\n    if (x === deferred.promise)\n        throw new TypeError(\"Promise cannot wrap itself\");\n    \n    if (isPromise(x))\n        x.chain(deferred.resolve, deferred.reject);\n    else\n        deferred.resolve(x);\n}\n\nfunction promiseReact(deferred, handler, x) {\n\n    enqueueMicrotask($=> {\n    \n        try { promiseUnwrap(deferred, handler(x)) } \n        catch(e) { deferred.reject(e) }\n    });\n}\n\nclass Promise {\n\n    constructor(init) {\n    \n        if (typeof init !== \"function\")\n            throw new TypeError(\"Promise constructor called without initializer\");\n        \n        this[$value] = void 0;\n        this[$status] = \"pending\";\n        this[$onResolve] = [];\n        this[$onReject] = [];\n    \n        var resolve = x => promiseResolve(this, x),\n            reject = r => promiseReject(this, r);\n        \n        try { init(resolve, reject) } catch (x) { reject(x) }\n    }\n    \n    chain(onResolve, onReject) {\n    \n        if (typeof onResolve !== \"function\") onResolve = x => x;\n        if (typeof onReject !== \"function\") onReject = e => { throw e };\n\n        var deferred = this.constructor.defer();\n\n        switch (this[$status]) {\n\n            case undefined:\n                throw new TypeError(\"Promise method called on a non-promise\");\n        \n            case \"pending\":\n                this[$onResolve].push([deferred, onResolve]);\n                this[$onReject].push([deferred, onReject]);\n                break;\n    \n            case \"resolved\":\n                promiseReact(deferred, onResolve, this[$value]);\n                break;\n        \n            case \"rejected\":\n                promiseReact(deferred, onReject, this[$value]);\n                break;\n        }\n\n        return deferred.promise;\n    }\n    \n    then(onResolve, onReject) {\n\n        if (typeof onResolve !== \"function\") onResolve = x => x;\n        \n        /*\n        \n        return this.chain(x => {\n        \n            if (isPromise(x))\n                return x.then(onResolve, onReject);\n            \n            return onResolve(x);\n            \n        }, onReject);\n        \n        */\n        \n        return this.chain(x => {\n    \n            if (x && typeof x === \"object\") {\n            \n                var maybeThen = x.then;\n                \n                if (typeof maybeThen === \"function\")\n                    return maybeThen.call(x, onResolve, onReject);\n            }\n                        \n            return onResolve(x);\n        \n        }, onReject);\n        \n    }\n    \n    static isPromise(x) {\n        \n        return isPromise(x);\n    }\n    \n    static defer() {\n    \n        var d = {};\n\n        d.promise = new this((resolve, reject) => {\n            d.resolve = resolve;\n            d.reject = reject;\n        });\n\n        return d;\n    }\n    \n    static resolve(x) { \n    \n        var d = this.defer();\n        d.resolve(x);\n        return d.promise;\n    }\n    \n    static reject(x) { \n    \n        var d = this.defer();\n        d.reject(x);\n        return d.promise;\n    }\n    \n    static cast(x) {\n\n        if (x instanceof this)\n            return x;\n\n        var deferred = this.defer();\n        promiseUnwrap(deferred, x);\n        return deferred.promise;\n    }\n\n    static all(values) {\n\n        var deferred = this.defer(),\n            count = 0,\n            resolutions;\n        \n        for (var i = 0; i < values.length; ++i) {\n        \n            count += 1;\n            this.cast(values[i]).then(onResolve(i), onReject);\n        }\n        \n        resolutions = new Array(count);\n    \n        if (count === 0) \n            deferred.resolve(resolutions);\n        \n        return deferred.promise;\n    \n        function onResolve(i) {\n    \n            return x => {\n        \n                resolutions[i] = x;\n            \n                if (--count === 0)\n                    deferred.resolve(resolutions);\n            };\n        }\n        \n        function onReject(r) {\n        \n            if (count > 0) { \n        \n                count = 0; \n                deferred.reject(r);\n            }\n        }\n    }\n    \n}\n\nPromise.prototype[$$isPromise] = true;\n\nthis.Promise = Promise;\n";
+"var enqueueMicrotask = ($=> {\n\n    var window = this.window,\n        process = this.process,\n        msgChannel = null,\n        list = [];\n    \n    if (typeof setImmediate === \"function\") {\n    \n        return window ?\n            window.setImmediate.bind(window) :\n            setImmediate;\n    \n    } else if (process && typeof process.nextTick === \"function\") {\n    \n        return process.nextTick;\n        \n    } else if (window && window.MessageChannel) {\n        \n        msgChannel = new window.MessageChannel();\n        msgChannel.port1.onmessage = $=> { if (list.length) list.shift()(); };\n    \n        return fn => {\n        \n            list.push(fn);\n            msgChannel.port2.postMessage(0);\n        };\n    }\n    \n    return fn => setTimeout(fn, 0);\n\n})();\n\n// The following property names are used to simulate the internal data\n// slots that are defined for Promise objects.\n\nvar $status = \"Promise#status\",\n    $value = \"Promise#value\",\n    $onResolve = \"Promise#onResolve\",\n    $onReject = \"Promise#onReject\";\n\n// The following property name is used to simulate the built-in symbol @@isPromise\nvar $$isPromise = \"@@isPromise\";\n\nfunction isPromise(x) { \n\n    return !!x && $$isPromise in Object(x);\n}\n\nfunction promiseDefer(ctor) {\n\n    var d = {};\n\n    d.promise = new ctor((resolve, reject) => {\n        d.resolve = resolve;\n        d.reject = reject;\n    });\n\n    return d;\n}\n\nfunction promiseChain(promise, onResolve, onReject) {\n\n    if (typeof onResolve !== \"function\") onResolve = x => x;\n    if (typeof onReject !== \"function\") onReject = e => { throw e };\n\n    var deferred = promiseDefer(promise.constructor);\n    \n    if (typeof promise[$status] !== \"string\")\n        throw new TypeError(\"Promise method called on a non-promise\");\n\n    switch (promise[$status]) {\n\n        case \"pending\":\n            promise[$onResolve].push([deferred, onResolve]);\n            promise[$onReject].push([deferred, onReject]);\n            break;\n\n        case \"resolved\":\n            promiseReact(deferred, onResolve, promise[$value]);\n            break;\n    \n        case \"rejected\":\n            promiseReact(deferred, onReject, promise[$value]);\n            break;\n    }\n\n    return deferred.promise;\n}\n\nfunction promiseResolve(promise, x) {\n    \n    promiseDone(promise, \"resolved\", x, promise[$onResolve]);\n}\n\nfunction promiseReject(promise, x) {\n    \n    promiseDone(promise, \"rejected\", x, promise[$onReject]);\n}\n\nfunction promiseDone(promise, status, value, reactions) {\n\n    if (promise[$status] !== \"pending\") \n        return;\n        \n    promise[$status] = status;\n    promise[$value] = value;\n    promise[$onResolve] = promise[$onReject] = void 0;\n    \n    for (var i = 0; i < reactions.length; ++i) \n        promiseReact(reactions[i][0], reactions[i][1], value);\n}\n\nfunction promiseUnwrap(deferred, x) {\n\n    if (x === deferred.promise)\n        throw new TypeError(\"Promise cannot wrap itself\");\n    \n    if (isPromise(x))\n        promiseChain(x, deferred.resolve, deferred.reject);\n    else\n        deferred.resolve(x);\n}\n\nfunction promiseReact(deferred, handler, x) {\n\n    enqueueMicrotask($=> {\n    \n        try { promiseUnwrap(deferred, handler(x)) } \n        catch(e) { try { deferred.reject(e) } catch (e) { } }\n    });\n}\n\nclass Promise {\n\n    constructor(init) {\n    \n        if (typeof init !== \"function\")\n            throw new TypeError(\"Promise constructor called without initializer\");\n        \n        this[$value] = void 0;\n        this[$status] = \"pending\";\n        this[$onResolve] = [];\n        this[$onReject] = [];\n    \n        var resolve = x => promiseResolve(this, x),\n            reject = r => promiseReject(this, r);\n        \n        try { init(resolve, reject) } catch (x) { reject(x) }\n    }\n    \n    chain(onResolve, onReject) {\n    \n        return promiseChain(this, onResolve, onReject);\n    }\n    \n    then(onResolve, onReject) {\n\n        if (typeof onResolve !== \"function\") onResolve = x => x;\n        \n        return promiseChain(this, x => {\n    \n            if (x && typeof x === \"object\") {\n            \n                var maybeThen = x.then;\n                \n                if (typeof maybeThen === \"function\")\n                    return maybeThen.call(x, onResolve, onReject);\n            }\n                        \n            return onResolve(x);\n        \n        }, onReject);\n        \n    }\n    \n    catch(onReject) {\n    \n        return this.then(void 0, onReject);\n    }\n    \n    static isPromise(x) {\n        \n        return isPromise(x);\n    }\n    \n    static defer() {\n    \n        return promiseDefer(this);\n    }\n    \n    static accept(x) {\n    \n        var d = promiseDefer(this);\n        d.resolve(x);\n        return d.promise;\n    }\n    \n    static resolve(x) { \n    \n        if (isPromise(x))\n            return x;\n            \n        var d = promiseDefer(this);\n        d.resolve(x);\n        return d.promise;\n    }\n    \n    static reject(x) { \n    \n        var d = promiseDefer(this);\n        d.reject(x);\n        return d.promise;\n    }\n\n    static all(values) {\n\n        // TODO: We should be getting an iterator from values\n        \n        var deferred = promiseDefer(this),\n            count = values.length,\n            resolutions = [];\n            \n        try {\n        \n            if (!Array.isArray(values))\n                throw new Error(\"Invalid argument\");\n        \n            var count = values.length;\n        \n            if (count === 0) {\n        \n                deferred.resolve(resolutions);\n            \n            } else {\n        \n                for (var i = 0; i < values.length; ++i)\n                    this.resolve(values[i]).then(onResolve(i), deferred.reject);\n            }\n            \n        } catch(x) { deferred.reject(x) }\n        \n        return deferred.promise;\n        \n        function onResolve(i) {\n    \n            return x => {\n        \n                resolutions[i] = x;\n            \n                if (--count === 0)\n                    deferred.resolve(resolutions);\n            };\n        }\n    }\n    \n    static race(values) {\n    \n        // TODO: We should be getting an iterator from values\n        \n        var deferred = promiseDefer(this);\n        \n        try {\n        \n            if (!Array.isArray(values))\n                throw new Error(\"Invalid argument\");\n            \n            for (var i = 0; i < values.length; ++i)\n                this.resolve(values[i]).then(deferred.resolve, deferred.reject);\n        \n        } catch(x) { deferred.reject(x) }\n        \n        return deferred.promise;\n    }\n    \n}\n\nPromise.prototype[$$isPromise] = true;\n\nthis.Promise = Promise;\n";
 
 var Async = 
 
-"this.es6now.async = function(iterable) {\n    \n    var iter = es6now.iterator(iterable),\n        resolver,\n        promise;\n    \n    promise = new Promise((resolve, reject) => resolver = { resolve, reject });\n    resume(void 0, false);\n    return promise;\n    \n    function resume(value, error) {\n    \n        if (error && !(\"throw\" in iter))\n            return resolver.reject(value);\n        \n        try {\n        \n            // Invoke the iterator/generator\n            var result = error ? iter.throw(value) : iter.next(value),\n                value = result.value,\n                done = result.done;\n            \n            if (Promise.isPromise(value)) {\n            \n                // Recursively unwrap the result value?\n                // value = value.chain(function unwrap(x) { return Promise.isPromise(x) ? x.chain(unwrap) : x });\n                \n                if (done) value.chain(resolver.resolve, resolver.reject);\n                else      value.chain(x => resume(x, false), x => resume(x, true));\n            \n            } else if (done) {\n                \n                resolver.resolve(value);\n                \n            } else {\n            \n                resume(value, false);\n            }\n            \n        } catch (x) { resolver.reject(x) }\n        \n    }\n};\n";
+"this.es6now.async = function(iterable) {\n    \n    var iter = es6now.iterator(iterable),\n        resolver,\n        promise;\n    \n    promise = new Promise((resolve, reject) => resolver = { resolve, reject });\n    resume(void 0, false);\n    return promise;\n    \n    function resume(value, error) {\n    \n        if (error && !(\"throw\" in iter))\n            return resolver.reject(value);\n        \n        try {\n        \n            // Invoke the iterator/generator\n            var result = error ? iter.throw(value) : iter.next(value),\n                value = result.value,\n                done = result.done;\n            \n            if (Promise.isPromise(value)) {\n\n                if (done) value.chain(resolver.resolve, resolver.reject);\n                else      value.chain(x => resume(x, false), x => resume(x, true));\n            \n            } else if (done) {\n                \n                resolver.resolve(value);\n                \n            } else {\n            \n                resume(value, false);\n            }\n            \n        } catch (x) { resolver.reject(x) }\n        \n    }\n};\n";
 
 
 
@@ -1264,8 +1285,8 @@ var AST = {
         this.type = "Identifier";
         this.start = start;
         this.end = end;
-        this.value = value;
-        this.context = context;
+        this.value = value; // (string) The string value of the identifier
+        this.context = context; // (string) The context in which the identifier appears ("", "variable", "declaration")
     },
 
     Number: function(value, start, end) {
@@ -1273,7 +1294,7 @@ var AST = {
         this.type = "Number";
         this.start = start;
         this.end = end;
-        this.value = value;
+        this.value = value; // (number) The mathmatical value of the number literal
     },
 
     String: function(value, start, end) {
@@ -1281,16 +1302,16 @@ var AST = {
         this.type = "String";
         this.start = start;
         this.end = end;
-        this.value = value;
+        this.value = value; // (string) The value of the string literal
     },
 
-    Template: function(value, isEnd, start, end) {
+    TemplatePart: function(value, isEnd, start, end) {
     
-        this.type = "Template";
+        this.type = "TemplatePart";
         this.start = start;
         this.end = end;
-        this.value = value;
-        this.templateEnd = isEnd;
+        this.value = value; // (string) The string value of the template fragment
+        this.templateEnd = isEnd; // (boolean) True if this template fragment terminates the template literal
     },
 
     RegularExpression: function(value, flags, start, end) {
@@ -1298,8 +1319,8 @@ var AST = {
         this.type = "RegularExpression";
         this.start = start;
         this.end = end;
-        this.value = value;
-        this.flags = flags;
+        this.value = value; // (string) The raw value of the regular expression literal
+        this.flags = flags; // (string) The set of flags for the regular expression literal
     },
 
     Boolean: function(value, start, end) {
@@ -1307,7 +1328,7 @@ var AST = {
         this.type = "Boolean";
         this.start = start;
         this.end = end;
-        this.value = value;
+        this.value = value; // (boolean) The value of the boolean literal
     },
     
     Null: function(start, end) { 
@@ -1322,7 +1343,7 @@ var AST = {
         this.type = "Script";
         this.start = start;
         this.end = end;
-        this.statements = statements;
+        this.statements = statements; // [Node] A list of statements
     },
 
     Module: function(statements, start, end) {
@@ -1330,7 +1351,7 @@ var AST = {
         this.type = "Module";
         this.start = start;
         this.end = end;
-        this.statements = statements;
+        this.statements = statements; // [Node] A list of statements
     },
 
     ThisExpression: function(start, end) { 
@@ -1352,7 +1373,7 @@ var AST = {
         this.type = "SequenceExpression";
         this.start = start;
         this.end = end;
-        this.expressions = list;
+        this.expressions = list; // [Node] A list of expressions
     },
 
     AssignmentExpression: function(op, left, right, start, end) {
@@ -1360,9 +1381,9 @@ var AST = {
         this.type = "AssignmentExpression";
         this.start = start;
         this.end = end;
-        this.operator = op;
-        this.left = left;
-        this.right = right;
+        this.operator = op; // (string) An assignment operator
+        this.left = left; // The left-hand-side of the assignment operator
+        this.right = right; // The right-hand-side of the assignment operator
     },
 
     SpreadExpression: function(expr, start, end) {
@@ -1370,7 +1391,7 @@ var AST = {
         this.type = "SpreadExpression";
         this.start = start;
         this.end = end;
-        this.expression = expr;
+        this.expression = expr; // An expression
     },
 
     YieldExpression: function(expr, delegate, start, end) {
@@ -1378,8 +1399,8 @@ var AST = {
         this.type = "YieldExpression";
         this.start = start;
         this.end = end;
-        this.delegate = delegate;
-        this.expression = expr;
+        this.delegate = delegate; // (boolean) True if the yield expression is delegating
+        this.expression = expr; // An expression
     },
 
     ConditionalExpression: function(test, cons, alt, start, end) {
@@ -1387,9 +1408,9 @@ var AST = {
         this.type = "ConditionalExpression";
         this.start = start;
         this.end = end;
-        this.test = test;
-        this.consequent = cons;
-        this.alternate = alt;
+        this.test = test; // A test expression
+        this.consequent = cons; // The expression evaluated if the test passes
+        this.alternate = alt; // The expression evaluated if the test fails
     },
 
     BinaryExpression: function(op, left, right, start, end) {
@@ -1397,9 +1418,9 @@ var AST = {
         this.type = "BinaryExpression";
         this.start = start;
         this.end = end;
-        this.operator = op;
-        this.left = left;
-        this.right = right;
+        this.operator = op; // (string) A binary operator
+        this.left = left; // The left operand expression
+        this.right = right; // The right operand expression
     },
 
     UpdateExpression: function(op, expr, prefix, start, end) {
@@ -1407,9 +1428,9 @@ var AST = {
         this.type = "UpdateExpression";
         this.start = start;
         this.end = end;
-        this.operator = op;
-        this.expression = expr;
-        this.prefix = prefix;
+        this.operator = op; // (string) An update operator
+        this.expression = expr; // An expression
+        this.prefix = prefix; // (boolean) True if the operator is a prefix
     },
 
     UnaryExpression: function(op, expr, start, end) {
@@ -1417,8 +1438,8 @@ var AST = {
         this.type = "UnaryExpression";
         this.start = start;
         this.end = end;
-        this.operator = op;
-        this.expression = expr;
+        this.operator = op; // (string) A unary operator
+        this.expression = expr; // An expression
     },
 
     MemberExpression: function(obj, prop, computed, start, end) {
@@ -1426,9 +1447,9 @@ var AST = {
         this.type = "MemberExpression";
         this.start = start;
         this.end = end;
-        this.object = obj;
-        this.property = prop;
-        this.computed = computed;
+        this.object = obj; // An expression evaulating to an object
+        this.property = prop; // An expression evaluating to a property name
+        this.computed = computed; // (boolean) True if the property name is computed
     },
 
     CallExpression: function(callee, args, start, end) {
@@ -1436,8 +1457,8 @@ var AST = {
         this.type = "CallExpression";
         this.start = start;
         this.end = end;
-        this.callee = callee;
-        this.arguments = args;
+        this.callee = callee; // An expression
+        this.arguments = args; // [Node] A list of call arguments
     },
 
     TaggedTemplateExpression: function(tag, template, start, end) {
@@ -1445,8 +1466,8 @@ var AST = {
         this.type = "TaggedTemplateExpression";
         this.start = start;
         this.end = end;
-        this.tag = tag;
-        this.template = template;
+        this.tag = tag; // The template tag
+        this.template = template; // <TemplateExpression> A template
     },
 
     NewExpression: function(callee, args, start, end) {
@@ -1454,8 +1475,8 @@ var AST = {
         this.type = "NewExpression";
         this.start = start;
         this.end = end;
-        this.callee = callee;
-        this.arguments = args;
+        this.callee = callee; // An expression
+        this.arguments = args; // [Node] A list of call arguments
     },
 
     ParenExpression: function(expr, start, end) {
@@ -1463,7 +1484,7 @@ var AST = {
         this.type = "ParenExpression";
         this.start = start;
         this.end = end;
-        this.expression = expr;
+        this.expression = expr; // An expression contained within parenthesis
     },
 
     ObjectLiteral: function(props, start, end) {
@@ -1471,7 +1492,7 @@ var AST = {
         this.type = "ObjectLiteral";
         this.start = start;
         this.end = end;
-        this.properties = props;
+        this.properties = props; // [PropertyDefinition|MethodDefinition] A list of properties and methods defined in the object literal
     },
 
     ComputedPropertyName: function(expr, start, end) {
@@ -1479,7 +1500,7 @@ var AST = {
         this.type = "ComputedPropertyName";
         this.start = start;
         this.end = end;
-        this.expression = expr;
+        this.expression = expr; // An expression
     },
 
     PropertyDefinition: function(name, expr, start, end) {
@@ -1487,8 +1508,8 @@ var AST = {
         this.type = "PropertyDefinition";
         this.start = start;
         this.end = end;
-        this.name = name;
-        this.expression = expr;
+        this.name = name; // (String|Number|Identifier|ComputedPropertyName) The property name
+        this.expression = expr; // (Node?) An expression
     },
 
     PatternProperty: function(name, pattern, initializer, start, end) {
@@ -1496,19 +1517,26 @@ var AST = {
         this.type = "PatternProperty";
         this.start = start;
         this.end = end;
-        this.name = name;
-        this.pattern = pattern;
-        this.initializer = initializer;
+        this.name = name; // The destructuring property name
+        this.pattern = pattern; // (Node?) A destructuring target pattern
+        this.initializer = initializer; // (Node?) A default initializer expression
     },
 
-    PatternElement: function(pattern, initializer, rest, start, end) {
+    PatternElement: function(pattern, initializer, start, end) {
     
         this.type = "PatternElement";
         this.start = start;
         this.end = end;
         this.pattern = pattern;
         this.initializer = initializer;
-        this.rest = rest;
+    },
+    
+    PatternRestElement: function(pattern, start, end) {
+    
+        this.type = "PatternRestElement";
+        this.start = start;
+        this.end = end;
+        this.pattern = pattern;
     },
 
     MethodDefinition: function(kind, name, params, body, start, end) {
@@ -1597,7 +1625,6 @@ var AST = {
         this.start = start;
         this.end = end;
         this.expression = expr;
-        this.directive = null;
     },
 
     EmptyStatement: function(start, end) { 
@@ -1834,6 +1861,43 @@ var AST = {
         this.body = body;
     },
 
+    ClassDeclaration: function(identifier, base, body, start, end) {
+    
+        this.type = "ClassDeclaration";
+        this.start = start;
+        this.end = end;
+        this.identifier = identifier;
+        this.base = base;
+        this.body = body;
+    },
+
+    ClassExpression: function(identifier, base, body, start, end) {
+    
+        this.type = "ClassExpression";
+        this.start = start;
+        this.end = end;
+        this.identifier = identifier;
+        this.base = base;
+        this.body = body;
+    },
+
+    ClassBody: function(elems, start, end) {
+    
+        this.type = "ClassBody";
+        this.start = start;
+        this.end = end;
+        this.elements = elems;
+    },
+
+    ClassElement: function(isStatic, method, start, end) {
+    
+        this.type = "ClassElement";
+        this.start = start;
+        this.end = end;
+        this.static = isStatic;
+        this.method = method;
+    },
+    
     ModuleDeclaration: function(identifier, body, start, end) {
     
         this.type = "ModuleDeclaration";
@@ -1887,21 +1951,21 @@ var AST = {
         this.from = from;
     },
 
-    ImportSpecifier: function(remote, local, start, end) {
+    ImportSpecifier: function(imported, local, start, end) {
     
         this.type = "ImportSpecifier";
         this.start = start;
         this.end = end;
-        this.remote = remote;
+        this.imported = imported;
         this.local = local;
     },
 
-    ExportDeclaration: function(binding, start, end) {
+    ExportDeclaration: function(declaration, start, end) {
     
         this.type = "ExportDeclaration";
         this.start = start;
         this.end = end;
-        this.binding = binding;
+        this.declaration = declaration;
     },
 
     ExportsList: function(list, from, start, end) {
@@ -1913,13 +1977,13 @@ var AST = {
         this.from = from;
     },
 
-    ExportSpecifier: function(local, remote, start, end) {
+    ExportSpecifier: function(local, exported, start, end) {
     
         this.type = "ExportSpecifier";
         this.start = start;
         this.end = end;
         this.local = local;
-        this.remote = remote;
+        this.exported = exported;
     },
 
     ModulePath: function(list, start, end) {
@@ -1928,43 +1992,6 @@ var AST = {
         this.start = start;
         this.end = end;
         this.elements = list;
-    },
-
-    ClassDeclaration: function(identifier, base, body, start, end) {
-    
-        this.type = "ClassDeclaration";
-        this.start = start;
-        this.end = end;
-        this.identifier = identifier;
-        this.base = base;
-        this.body = body;
-    },
-
-    ClassExpression: function(identifier, base, body, start, end) {
-    
-        this.type = "ClassExpression";
-        this.start = start;
-        this.end = end;
-        this.identifier = identifier;
-        this.base = base;
-        this.body = body;
-    },
-
-    ClassBody: function(elems, start, end) {
-    
-        this.type = "ClassBody";
-        this.start = start;
-        this.end = end;
-        this.elements = elems;
-    },
-
-    ClassElement: function(isStatic, method, start, end) {
-    
-        this.type = "ClassElement";
-        this.start = start;
-        this.end = end;
-        this.static = isStatic;
-        this.method = method;
     }
 
 };
@@ -2098,7 +2125,7 @@ function binarySearch(array, val) {
 function isIdentifierPart(c) {
 
     if (c > 127)
-        return isIdentifierPartUnicode(c);
+        return identifierPart.test(String.fromCharCode(c));
     
     return  c > 64 && c < 91 || 
             c > 96 && c < 123 ||
@@ -2106,12 +2133,6 @@ function isIdentifierPart(c) {
             c === 36 ||
             c === 95 ||
             c === 92;
-}
-
-// Returns true if the character is a valid identifier part
-function isIdentifierPartUnicode(c) {
-
-    return identifierPart.test(String.fromCharCode(c));
 }
 
 // Returns true if the specified character is a newline
@@ -2268,11 +2289,8 @@ var Scanner = es6now.Class(function(__super) { return {
         return this.input.charAt(this.offset++);
     },
     
-    readIdentifierEscape: function() {
-    
-        if (this.readChar() !== "u")
-            return "";
-        
+    readUnicodeEscape: function() {
+  
         var hex = "";
         
         if (this.peekChar() === "{") {
@@ -2280,18 +2298,23 @@ var Scanner = es6now.Class(function(__super) { return {
             this.offset++;
             hex = this.readHex(0);
             
-            if (this.readChar() !== "}")
-                return "";
+            if (hex.length < 1 || this.readChar() !== "}")
+                return null;
         
         } else {
         
             hex = this.readHex(4);
         
             if (hex.length < 4)
-                return "";
+                return null;
         }
         
-        return String.fromCharCode(parseInt(hex, 16));
+        var val = parseInt(hex, 16);
+        
+        if (val > 1114111)
+            return null;
+        
+        return String.fromCharCode(val);
     },
     
     readOctalEscape: function() {
@@ -2365,21 +2388,7 @@ var Scanner = es6now.Class(function(__super) { return {
             
             case "u":
             
-                if (this.peekChar() === "{") {
-                
-                    this.offset++;
-                    esc = this.readHex(0);
-                    
-                    if (this.readChar() !== "}")
-                        return null;
-                    
-                } else {
-                
-                    esc = this.readHex(4);
-                    if (esc.length < 4) return null;
-                }
-                
-                return String.fromCharCode(parseInt(esc, 16));
+                return this.readUnicodeEscape();
             
             default: 
             
@@ -2712,9 +2721,11 @@ var Scanner = es6now.Class(function(__super) { return {
         
         var backslash = false, 
             inClass = false,
-            flags = null,
+            flags = "",
+            flagStart = 0,
             val = "", 
-            chr = "";
+            chr = "",
+            code = 0;
         
         while (chr = this.readChar()) {
         
@@ -2753,8 +2764,19 @@ var Scanner = es6now.Class(function(__super) { return {
         if (!chr)
             return this.Error();
         
-        if (isIdentifierPart(this.peekCode()))
-            flags = this.Identifier("name");
+        flagStart = this.offset;
+        
+        while (isIdentifierPart(code = this.peekCode())) {
+        
+            // Unicode escapes are not allowed in regular expression flags
+            if (code === 92)
+                return this.Error();
+            
+            this.offset++;
+        }
+        
+        if (this.offset > flagStart)
+            flags = this.input.slice(flagStart, this.offset);
         
         this.value = val;
         this.regexFlags = flags;
@@ -2871,33 +2893,49 @@ var Scanner = es6now.Class(function(__super) { return {
     Identifier: function(context) {
     
         var start = this.offset,
+            startChar = true,
             id = "",
             code = 0,
             esc = "";
 
-        while (isIdentifierPart(code = this.peekCode())) {
+        while (true) {
+        
+            code = this.peekCode();
         
             if (code === 92 /* backslash */) {
             
                 id += this.input.slice(start, this.offset++);
-                esc = this.readIdentifierEscape();
+                
+                if (this.readChar() !== "u")
+                    return this.Error();
+                
+                esc = this.readUnicodeEscape();
                 
                 if (esc === null)
+                    return this.Error();
+
+                if (!(startChar ? identifierStart : identifierPart).test(esc))
                     return this.Error();
                 
                 id += esc;
                 start = this.offset;
                 
-            } else {
+            } else if (startChar || isIdentifierPart(code)) {
             
                 this.offset++;
+                
+            } else {
+            
+                break;
             }
+            
+            startChar = false;
         }
         
         id += this.input.slice(start, this.offset);
         
         if (context !== "name" && reservedWord.test(id))
-            return id;
+            return esc ? this.Error() : id;
         
         this.value = id;
         
@@ -2960,7 +2998,9 @@ var Scanner = es6now.Class(function(__super) { return {
     
     Error: function() {
     
-        this.offset++;
+        if (this.start === this.offset)
+            this.offset++;
+        
         return "ILLEGAL";
     }
     
@@ -2972,136 +3012,159 @@ exports.Scanner = Scanner; return exports; }).call(this, {});
 var Transform_ = (function(exports) {
 
 var AST = AST_.AST;
-
+    
 var Transform = es6now.Class(function(__super) { return {
 
     // Transform an expression into a formal parameter list
-    transformFormals: function(expr, rest) {
+    transformFormals: function(expr) {
         
-        if (expr === null)
-            return rest ? [rest] : [];
+        if (!expr)
+            return [];
             
-        var params = [],
-            param,
+        var param,
             list,
             node,
-            i;
+            expr;
         
         switch (expr.type) {
         
-            case "SequenceExpression":
-                list = expr.expressions;
-                break;
-            
-            case "CallExpression":
-                list = expr.arguments;
-                break;
-            
-            default:
-                list = [expr];
-                break;
-        }
-        
-        if (!rest && list.length > 0 && list[list.length - 1].type === "SpreadExpression") {
-        
-            node = list.pop();
-            rest = new AST.RestParameter(node.expression, node.start, node.end);
+            case "SequenceExpression": list = expr.expressions; break;
+            case "CallExpression": list = expr.arguments; break;
+            default: list = [expr]; break;
         }
     
-        for (i = 0; i < list.length; ++i) {
+        for (var i = 0; i < list.length; ++i) {
         
             node = list[i];
-            params.push(param = new AST.FormalParameter(node, null, node.start, node.end));
-            this.transformPatternElement(param, true);
+            
+            if (i === list.length - 1 && node.type === "SpreadExpression") {
+            
+                expr = node.expression;
+                
+                // Rest parameters can only be identifiers
+                if (expr.type !== "Identifier")
+                    this.fail("Invalid rest parameter", expr);
+                
+                this.checkBindingTarget(expr);
+                
+                // Clear parser error for invalid spread expression
+                node.error = "";
+                
+                param = new AST.RestParameter(expr, node.start, node.end);
+                
+            } else {
+             
+                param = new AST.FormalParameter(node, null, node.start, node.end);
+                this.transformPatternElement(param, true);
+            }
+            
+            list[i] = param;
         }
         
-        if (rest)
-            params.push(rest);
-        
-        return params;
+        return list;
     },
     
     transformArrayPattern: function(node, binding) {
     
-        // ArrayPattern and ArrayLiteral are isomorphic, so we simply change the type
+        // NOTE: ArrayPattern and ArrayLiteral are isomorphic
         node.type = "ArrayPattern";
         
         var elems = node.elements,
             elem,
-            rest,
-            i;
+            expr;
         
-        for (i = 0; i < elems.length; ++i) {
+        for (var i = 0; i < elems.length; ++i) {
         
             elem = elems[i];
             
+            // Skip holes in pattern
             if (!elem) 
                 continue;
             
-            if (elem.type !== "PatternElement") {
-            
-                rest = (elem.type === "SpreadExpression");
+            switch (elem.type) {
                 
-                elem = elems[i] = new AST.PatternElement(
-                    rest ? elem.expression : elem,
-                    null,
-                    rest,
-                    elem.start,
-                    elem.end);
+                case "SpreadExpression":
                 
-                // No trailing comma allowed after rest
-                if (rest && (node.trailingComma || i < elems.length - 1))
-                    this.fail("Invalid destructuring pattern", elem);
+                    // TODO:  Currently, we are ignoring the last comma, but commas
+                    // are not allowed after a rest element.  Should they be?
+                    
+                    // Rest element must be in the last position
+                    if (i < elems.length - 1)
+                        this.fail("Invalid destructuring pattern", elem);
+                    
+                    expr = elem.expression;
+                    
+                    // Rest target cannot be a destructuring pattern
+                    switch (expr.type) {
+                    
+                        case "ObjectLiteral":
+                        case "ObjectPattern":
+                        case "ArrayLiteral":
+                        case "ArrayPattern": 
+                            this.fail("Invalid rest pattern", expr);
+                    }
+                    
+                    elem = new AST.PatternRestElement(expr, elem.start, elem.end);
+                    this.checkPatternTarget(elem.pattern, binding);
+                    break;
+                
+                case "PatternRestElement":
+                    this.checkPatternTarget(elem.pattern, binding);
+                    break;
+                    
+                case "PatternElement":
+                    this.transformPatternElement(elem, binding);
+                    break;
+                
+                default:
+                    elem = new AST.PatternElement(elem, null, elem.start, elem.end);
+                    this.transformPatternElement(elem, binding);
+                    break;
+                    
             }
             
-            if (elem.rest) this.transformPattern(elem.pattern, binding);
-            else this.transformPatternElement(elem, binding);
+            elems[i] = elem;
         }
+        
     },
     
     transformObjectPattern: function(node, binding) {
 
-        // ObjectPattern and ObjectLiteral are isomorphic, so we simply change the type
+        // NOTE: ObjectPattern and ObjectLiteral are isomorphic
         node.type = "ObjectPattern";
         
-        var props = node.properties, 
-            prop,
-            i;
+        var props = node.properties;
         
-        for (i = 0; i < props.length; ++i) {
+        for (var i = 0; i < props.length; ++i) {
         
-            prop = props[i];
+            var prop = props[i];
             
             // Clear the error flag
             prop.error = "";
             
             switch (prop.type) {
-            
-                case "PatternProperty":
-                
-                    break;
                     
                 case "PropertyDefinition":
                     
                     // Replace node
-                    prop = new AST.PatternProperty(
+                    props[i] = prop = new AST.PatternProperty(
                         prop.name,
                         prop.expression,
                         null,
                         prop.start,
                         prop.end);
                     
-                    props[i] = prop;
-                    
+                    break;
+                
+                case "PatternProperty":
                     break;
                 
                 default:
-                
                     this.fail("Invalid pattern", prop);
             }
             
             if (prop.pattern) this.transformPatternElement(prop, binding);
-            else this.transformPattern(prop.name, binding);
+            else this.checkPatternTarget(prop.name, binding);
         }
     },
     
@@ -3110,47 +3173,13 @@ var Transform = es6now.Class(function(__super) { return {
         var node = elem.pattern;
         
         // Split assignment into pattern and initializer
-        if (node.type === "AssignmentExpression" && node.operator === "=") {
+        if (node && node.type === "AssignmentExpression" && node.operator === "=") {
         
-            elem.pattern = node.left;
             elem.initializer = node.right;
+            elem.pattern = node = node.left;
         }
         
-        this.transformPattern(elem.pattern, binding);
-    },
-    
-    // Transforms an expression into a pattern
-    transformPattern: function(node, binding) {
-
-        switch (node.type) {
-        
-            case "Identifier":
-                if (binding) this.checkBindingIdentifier(node, true);
-                else this.checkAssignTarget(node);
-                
-                break;
-            
-            case "MemberExpression":
-            case "CallExpression":
-                if (binding) this.fail("Invalid left-hand-side in binding pattern", node);
-                break;
-            
-            case "ObjectLiteral":
-            case "ObjectPattern":
-                this.transformObjectPattern(node, binding);
-                break;
-            
-            case "ArrayLiteral":
-            case "ArrayPattern":
-                this.transformArrayPattern(node, binding);
-                break;
-                
-            default:
-                this.fail("Invalid expression in pattern", node);
-                break;
-        }
-        
-        return node;
+        this.checkPatternTarget(node, binding);
     }, constructor: function Transform() {}
     
 } });
@@ -3159,7 +3188,34 @@ var Transform = es6now.Class(function(__super) { return {
 
 exports.Transform = Transform; return exports; }).call(this, {});
 
+var IntMap_ = (function(exports) {
+
+
+var IntMap = es6now.Class(function(__super) { return {
+
+    constructor: function IntMap() {
+    
+        this.obj = Object.create(null);
+    },
+    
+    get: function(key) {
+    
+        return this.obj[key] | 0;
+    },
+    
+    set: function(key, val) {
+    
+        return this.obj[key] = val | 0;
+    }
+    
+} });
+
+
+exports.IntMap = IntMap; return exports; }).call(this, {});
+
 var Validate_ = (function(exports) {
+
+var IntMap = IntMap_.IntMap;
 
 // Object literal property name flags
 var PROP_NORMAL = 1,
@@ -3178,68 +3234,96 @@ function isStrictReserved(word) {
     return strictReservedWord.test(word);
 }
 
-// Encodes a string as a map key for use in regular object
-function mapKey(name) { 
-
-    return "." + (name || "");
-}
-
 // Returns true if the specified name is a restricted identifier in strict mode
 function isPoisonIdent(name) {
 
     return name === "eval" || name === "arguments";
 }
 
-// Returns true if the specified name type is a duplicate for a given set of flags
-function isDuplicateName(type, flags, strict) {
+// Unwraps parens surrounding an expression
+function unwrapParens(node) {
 
-    if (!flags)
-        return false;
-    
-    switch (type) {
-    
-        case PROP_DATA: return strict || flags !== PROP_DATA;
-        case PROP_GET: return flags !== PROP_SET;
-        case PROP_SET: return flags !== PROP_GET;
-        default: return !!flags;
-    }
+    // Remove any parenthesis surrounding the target
+    for (; node.type === "ParenExpression"; node = node.expression);
+    return node;
 }
 
 var Validate = es6now.Class(function(__super) { return {
 
-    // Checks an assignment target for strict mode restrictions
-    checkAssignTarget: function(node, simple) {
+    // Validates an assignment target
+    checkAssignmentTarget: function(node, simple) {
     
-        // Remove any parenthesis surrounding the target
-        for (; node.type === "ParenExpression"; node = node.expression);
+        switch (node.type) {
+        
+            case "Identifier":
+            
+                if (isPoisonIdent(node.value))
+                    this.addStrictError("Cannot modify " + node.value + " in strict mode", node);
+        
+                return;
+            
+            case "MemberExpression":
+                return;
+            
+            case "ObjectPattern":
+            case "ArrayPattern":
+                if (!simple) return;
+                break;
+            
+            case "ObjectLiteral":
+                if (!simple) { this.transformObjectPattern(node, false); return }
+                break;
+                
+            case "ArrayLiteral":
+                if (!simple) { this.transformArrayPattern(node, false); return }
+                break;
+            
+        }
+        
+        this.fail("Invalid left-hand side in assignment", node);
+    },
+    
+    // Validates a binding target
+    checkBindingTarget: function(node) {
+    
+        var name, msg;
         
         switch (node.type) {
         
             case "Identifier":
             
-                // Mark identifier node as a variable
-                node.context = "variable";
-
-                if (isPoisonIdent(node.value))
-                    this.addStrictError("Cannot modify " + node.value + " in strict mode", node);
+                // Perform basic identifier validation
+                this.checkIdentifier(node);
         
-                break;
+                // Mark identifier node as a declaration
+                node.context = "declaration";
             
-            case "MemberExpression":
-                break;
-                    
-            case "ObjectLiteral":
-            case "ArrayLiteral":
-            
-                if (!simple) {
+                name = node.value;
+        
+                if (isPoisonIdent(name))
+                    this.addStrictError("Binding cannot be created for '" + name + "' in strict mode", node);
                 
-                    this.transformPattern(node, false);
-                    break;
-                }
+                return;
             
-            default:
-                this.fail("Invalid left-hand side in assignment", node);
+            case "ArrayLiteral":
+            case "ArrayPattern":
+                this.transformArrayPattern(node, true);
+                return;
+            
+            case "ObjectLiteral":
+            case "ObjectPattern":
+                this.transformObjectPattern(node, true);
+                return;
+            
         }
+        
+        this.fail("Invalid binding target", node);
+    },
+    
+    // Validates a target in a binding or assignment pattern
+    checkPatternTarget: function(node, binding) {
+    
+        return binding ? this.checkBindingTarget(node) : this.checkAssignmentTarget(node, false);
     },
     
     // Checks an identifier for strict mode reserved words
@@ -3255,43 +3339,13 @@ var Validate = es6now.Class(function(__super) { return {
             this.addStrictError(ident + " cannot be used as an identifier in strict mode", node);
     },
     
-    // Checks a binding identifier for strict mode restrictions
-    checkBindingIdentifier: function(node, strict) {
-    
-        // Perform basic identifier check
-        this.checkIdentifier(node);
-        
-        // Mark identifier node as a declaration
-        node.context = "declaration";
-            
-        var name = node.value;
-        
-        if (isPoisonIdent(name)) {
-        
-            var msg = "Binding cannot be created for '" + name + "' in strict mode";
-            
-            if (strict) this.fail(msg, node);
-            else this.addStrictError(msg, node);
-        }
-    },
-    
     // Checks function formal parameters for strict mode restrictions
-    checkParameters: function(params) {
+    checkParameters: function(params, kind) {
     
-        var names = {}, 
+        var names = new IntMap, 
             name,
-            key,
             node,
             i;
-        
-        // TODO: We need to check for duplicate names in some non-strict contexts
-        // as well (method definitions, arrow parameters, and maybe generator functions).
-        // How do these rules apply when parameters are patterns, though?
-        
-        // I think (the early errors portion of the spec is very hard to understand)
-        // that you have to force strict-like validation in the following cases:
-        // method definitions, functions and generators using new parameter list 
-        // features (patterns, initializers, or rest), and arrow functions.
         
         for (i = 0; i < params.length; ++i) {
         
@@ -3301,15 +3355,14 @@ var Validate = es6now.Class(function(__super) { return {
                 continue;
             
             name = node.pattern.value;
-            key = mapKey(name);
             
             if (isPoisonIdent(name))
                 this.addStrictError("Parameter name " + name + " is not allowed in strict mode", node);
             
-            if (names[key])
+            if (names.get(name))
                 this.addStrictError("Strict mode function may not have duplicate parameter names", node);
             
-            names[key] = 1;
+            names.set(name, 1);
         }
     },
     
@@ -3325,7 +3378,9 @@ var Validate = es6now.Class(function(__super) { return {
     // Performs validation on transformed arrow formal parameters
     checkArrowParameters: function(params) {
     
+        params = this.transformFormals(params);
         this.checkParameters(params);
+        return params;
     },
     
     // Performs validation on the init portion of a for-in or for-of statement
@@ -3336,38 +3391,54 @@ var Validate = es6now.Class(function(__super) { return {
             // For-in/of may only have one variable declaration
             if (init.declarations.length !== 1)
                 this.fail("for-" + type + " statement may not have more than one variable declaration", init);
-        
-            // A variable initializer is only allowed in for-in where 
-            // variable type is "var" and it is not a pattern
             
             var decl = init.declarations[0];
-        
-            if (decl.initializer && (
-                type === "of" ||
-                init.kind !== "var" ||
-                decl.pattern.type !== "Identifier")) {
             
+            // Initializers are not allowed in for in and for of
+            if (decl.initializer)
                 this.fail("Invalid initializer in for-" + type + " statement", init);
-            }
             
         } else {
         
-            this.checkAssignTarget(init);
+            this.checkAssignmentTarget(this.unwrapParens(init));
         }
     },
     
     // Checks for duplicate object literal property names
     checkPropertyName: function(node, nameSet) {
     
-        if (node.name.type !== "Identifier")
-            return;
+        // TODO:  This is hot code.  Correctly detecting property name conflicts
+        // results in a significant performance degredation.  Investigate ways
+        // to make this more efficient.
         
         var flag = PROP_NORMAL,
-            name;
+            currentFlags = 0,
+            name = "";
+        
+        switch (node.name.type) {
+        
+            case "ComputedPropertyName":
+                // If property name is computed, skip duplicate check
+                return;
+            
+            case "Number":
+                name = String(node.name.value);
+                break;
+            
+            default:
+                name = node.name.value;
+                break;
+        }
         
         switch (node.type) {
 
-            case "PropertyDefinition": flag = PROP_DATA; break;
+            case "PropertyDefinition":
+            
+                // Duplicates only allowed for "x: expr" form
+                if (node.expression)
+                    flag = PROP_DATA;
+                
+                break;
     
             case "MethodDefinition":
         
@@ -3376,43 +3447,42 @@ var Validate = es6now.Class(function(__super) { return {
                     case "get": flag = PROP_GET; break;
                     case "set": flag = PROP_SET; break;
                 }
+                
+                break;
         }
 
-        // Check for duplicate names
-        name = mapKey(node.name.value);
-
-        if (isDuplicateName(flag, nameSet[name], false))
-            this.addInvalidNode("Duplicate property names in object literal not allowed", node);
-        else if (isDuplicateName(flag, nameSet[name], true))
-            this.addStrictError("Duplicate data property names in object literal not allowed in strict mode", node);
-
-        // Set name flag
-        nameSet[name] |= flag;
-    },
-    
-    // Checks for duplicate class element names
-    checkClassElementName: function(node, nameSet) {
-    
-        if (node.name.type !== "Identifier")
-            return;
+        // If this name has already been added...
+        if (currentFlags = nameSet.get(name)) {
         
-        var flag = PROP_NORMAL,
-            name;
-        
-        switch (node.kind) {
-
-            case "get": flag = PROP_GET; break;
-            case "set": flag = PROP_SET; break;
+            var duplicate = true;
+            
+            switch (flag) {
+    
+                case PROP_DATA:
+                    
+                    if (currentFlags === PROP_DATA) {
+                    
+                        this.addStrictError("Duplicate data property names in object literal not allowed in strict mode", node);
+                        duplicate = false;
+                    }
+                    
+                    break;
+                
+                case PROP_GET:
+                    if (currentFlags === PROP_SET) duplicate = false;
+                    break;
+                    
+                case PROP_SET:
+                    if (currentFlags === PROP_GET) duplicate = false;
+                    break;
+            }
+            
+            if (duplicate)
+                this.addInvalidNode("Duplicate property names in object literal not allowed", node);
         }
 
-        // Check for duplicate names
-        name = mapKey(node.name.value);
-
-        if (isDuplicateName(flag, nameSet[name], false))
-            this.addInvalidNode("Duplicate method names in class not allowed", node);
-
         // Set name flag
-        nameSet[name] |= flag;
+        nameSet.set(name, currentFlags | flag);
     },
     
     checkInvalidNodes: function() {
@@ -3422,10 +3492,9 @@ var Validate = es6now.Class(function(__super) { return {
             list = context.invalidNodes,
             item,
             node,
-            error,
-            i;
+            error;
         
-        for (i = 0; i < list.length; ++i) {
+        for (var i = 0; i < list.length; ++i) {
         
             item = list[i];
             node = item.node;
@@ -3435,7 +3504,7 @@ var Validate = es6now.Class(function(__super) { return {
             if (!error)
                 continue;
             
-            // Throw if item is not a strict-mode error, or
+            // Throw if item is not a strict-mode-only error, or
             // if the current context is strict
             if (!item.strict || context.mode === "strict")
                 this.fail(error, node);
@@ -3444,7 +3513,7 @@ var Validate = es6now.Class(function(__super) { return {
             if (context.mode === "sloppy")
                 continue;
             
-            // NOTE:  If parent context is sloppy, then we ignore.
+            // NOTE:  If the parent context is sloppy, then we ignore.
             // If the parent context is strict, then this context would
             // also be known to be strict and therefore handled above.
             
@@ -3454,9 +3523,18 @@ var Validate = es6now.Class(function(__super) { return {
                 parent.invalidNodes.push(item);
         }
         
+    },
+    
+    checkDelete: function(node) {
+    
+        node = this.unwrapParens(node);
+        
+        if (node.type === "Identifier")
+            this.addStrictError("Cannot delete unqualified property in strict mode", node);
     }, constructor: function Validate() {}
     
 } });
+
 
 exports.Validate = Validate; return exports; }).call(this, {});
 
@@ -3466,12 +3544,7 @@ var AST = AST_.AST;
 var Scanner = Scanner_.Scanner;
 var Transform = Transform_.Transform;
 var Validate = Validate_.Validate;
-
-// Object literal property name flags
-var PROP_NORMAL = 1,
-    PROP_DATA = 2,
-    PROP_GET = 4,
-    PROP_SET = 8;
+var IntMap = IntMap_.IntMap;
 
 // Returns true if the specified operator is an increment operator
 function isIncrement(op) {
@@ -3559,6 +3632,9 @@ function isUnary(op) {
 // Returns true if the value is a function modifier keyword
 function isFunctionModifier(value) {
 
+    // TODO:  Here we just test a string value, but what if the identifier contains
+    // unicode escapes?
+    
     switch (value) {
     
         case "async": return true;
@@ -3566,9 +3642,6 @@ function isFunctionModifier(value) {
     
     return false;
 }
-
-// Encodes a string as a map key for use in regular object
-function mapKey(name) { return "." + (name || "") }
 
 // Copies token data
 function copyToken(from, to) {
@@ -3595,8 +3668,9 @@ var Context = es6now.Class(function(__super) { return {
         this.isFunction = isFunction;
         this.functionBody = false;
         this.functionType = "";
-        this.labelSet = {};
+        this.labelSet = new IntMap;
         this.switchDepth = 0;
+        this.loopDepth = 0;
         this.invalidNodes = [];
     }
 } });
@@ -3624,7 +3698,9 @@ var Parser = es6now.Class(function(__super) { return {
         var scanner = this.scanner,
             type = "";
         
-        do { type = scanner.next(context || ""); }
+        context = context || "";
+        
+        do { type = scanner.next(context); }
         while (type === "COMMENT");
         
         return scanner;
@@ -3715,6 +3791,10 @@ var Parser = es6now.Class(function(__super) { return {
     
     readKeyword: function(word) {
     
+        // TODO:  What if token has a unicode escape?  Does it still count as the keyword?
+        // Do we fail if the keyword has a unicode escape (this would mirror what happens
+        // with reserved words).
+        
         var token = this.readToken();
         
         if (token.type === word || token.type === "IDENTIFIER" && token.value === word)
@@ -3757,16 +3837,16 @@ var Parser = es6now.Class(function(__super) { return {
     
     peekYield: function() {
     
-        return this.peekKeyword("yield") && 
+        return this.context.functionBody &&
             this.context.functionType === "generator" && 
-            this.context.functionBody;
+            this.peekKeyword("yield");
     },
     
     peekAwait: function() {
     
-        return this.peekKeyword("await") && 
+        return this.context.functionBody && 
             this.context.functionType === "async" &&
-            this.context.functionBody;
+            this.peekKeyword("await");
     },
     
     peekFunctionModifier: function() {
@@ -3816,7 +3896,7 @@ var Parser = es6now.Class(function(__super) { return {
     fail: function(msg, node) {
     
         if (!node)
-            node = this.peek0;
+            node = this.peekToken();
         
         var pos = this.scanner.position(node.start),
             err = new SyntaxError(msg);
@@ -3830,6 +3910,14 @@ var Parser = es6now.Class(function(__super) { return {
         
         throw err;
     },
+    
+    unwrapParens: function(node) {
+
+        // Remove any parenthesis surrounding the target
+        for (; node.type === "ParenExpression"; node = node.expression);
+        return node;
+    },
+
     
     // == Context Management ==
     
@@ -3886,6 +3974,11 @@ var Parser = es6now.Class(function(__super) { return {
         this.context.invalidNodes.push({ node: node, strict: !!strict });
     },
     
+    setLoopLabel: function(label) {
+    
+        this.context.labelSet.set(label, 2);
+    },
+    
     // === Top Level ===
     
     Script: function() {
@@ -3922,15 +4015,7 @@ var Parser = es6now.Class(function(__super) { return {
             list = null;
             
         while (this.peek("div") === ",") {
-        
-            // If the next token after "," is "...", we might be
-            // trying to parse an arrow function formal parameter
-            // list with a trailing rest parameter.  Return the 
-            // expression up to, but not including ",".
-            
-            if (this.peekAt(null, 1) === "...")
-                break;
-            
+
             this.read();
             
             if (list === null)
@@ -3945,49 +4030,46 @@ var Parser = es6now.Class(function(__super) { return {
         return expr;
     },
     
-    AssignmentExpression: function(noIn) {
+    AssignmentExpression: function(noIn, allowSpread) {
     
         var start = this.nodeStart(),
-            left,
-            lhs;
+            node;
+        
+        if (this.peek() === "...") {
+        
+            this.read();
+            
+            node = new AST.SpreadExpression(
+                this.AssignmentExpression(noIn),
+                start,
+                this.nodeEnd());
+            
+            if (!allowSpread)
+                this.addInvalidNode("Invalid spread expression", node);
+            
+            return node;
+        }
         
         if (this.peekYield())
             return this.YieldExpression(noIn);
         
-        left = this.ConditionalExpression(noIn);
+        node = this.ConditionalExpression(noIn);
         
-        if (left.type === "ArrowFunctionHead")
-            return this.ArrowFunctionBody(left, noIn);
+        if (node.type === "ArrowFunctionHead")
+            return this.ArrowFunctionBody(node, noIn);
         
         // Check for assignment operator
         if (!isAssignment(this.peek("div")))
-            return left;
+            return node;
         
-        this.checkAssignTarget(left);
+        this.checkAssignmentTarget(this.unwrapParens(node), false);
         
         return new AST.AssignmentExpression(
             this.read(),
-            left,
+            node,
             this.AssignmentExpression(noIn),
             start,
             this.nodeEnd());
-    },
-    
-    SpreadAssignment: function(noIn) {
-    
-        if (this.peek() === "...") {
-        
-            var start = this.nodeStart();
-            
-            this.read();
-            
-            return new AST.SpreadExpression(
-                this.AssignmentExpression(noIn), 
-                start, 
-                this.nodeEnd());
-        }
-        
-        return this.AssignmentExpression(noIn);
     },
     
     YieldExpression: function(noIn) {
@@ -4093,7 +4175,7 @@ var Parser = es6now.Class(function(__super) { return {
         
             this.read();
             expr = this.MemberExpression(true);
-            this.checkAssignTarget(expr, true);
+            this.checkAssignmentTarget(this.unwrapParens(expr), true);
             
             return new AST.UpdateExpression(type, expr, true, start, this.nodeEnd());
         }
@@ -4106,8 +4188,8 @@ var Parser = es6now.Class(function(__super) { return {
             this.read();
             expr = this.UnaryExpression();
             
-            if (type === "delete" && expr.type === "Identifier")
-                this.addStrictError("Cannot delete unqualified property in strict mode", expr);
+            if (type === "delete")
+                this.checkDelete(expr);
             
             return new AST.UnaryExpression(type, expr, start, this.nodeEnd());
         }
@@ -4120,7 +4202,7 @@ var Parser = es6now.Class(function(__super) { return {
         if (isIncrement(type) && !token.newlineBefore) {
         
             this.read();
-            this.checkAssignTarget(expr, true);
+            this.checkAssignmentTarget(this.unwrapParens(expr), true);
             
             return new AST.UpdateExpression(type, expr, false, start, this.nodeEnd());
         }
@@ -4131,20 +4213,22 @@ var Parser = es6now.Class(function(__super) { return {
     MemberExpression: function(allowCall) {
     
         var start = this.nodeStart(),
-            type = this.peek(),
+            token = this.peekToken(),
             arrowType = "",
             exit = false,
             prop,
             expr;
         
         expr = 
-            type === "new" ? this.NewExpression() :
-            type === "super" ? this.SuperExpression() :
+            token.type === "new" ? this.NewExpression() :
+            token.type === "super" ? this.SuperExpression() :
             this.PrimaryExpression();
         
-        while (!exit && (type = this.peek("div"))) {
+        while (!exit) { 
         
-            switch (type) {
+            token = this.peekToken("div");
+            
+            switch (token.type) {
             
                 case ".":
                 
@@ -4182,8 +4266,9 @@ var Parser = es6now.Class(function(__super) { return {
                         break;
                     }
                     
-                    if (expr.type === "Identifier" && isFunctionModifier(expr.value)) {
-                    
+                    if (expr.type === "Identifier" && 
+                        isFunctionModifier(expr.value)) {
+                
                         arrowType = expr.value;
                         this.pushMaybeContext();
                     }
@@ -4196,9 +4281,11 @@ var Parser = es6now.Class(function(__super) { return {
                     
                     if (arrowType) {
                     
-                        if (this.peek("div") === "=>") {
+                        token = this.peekToken("div");
+
+                        if (token.type === "=>" && !token.newlineBefore) {
                         
-                            expr = this.ArrowFunctionHead(arrowType, expr, null, start);
+                            expr = this.ArrowFunctionHead(arrowType, expr, start);
                             exit = true;
                         
                         } else {
@@ -4253,7 +4340,12 @@ var Parser = es6now.Class(function(__super) { return {
         var start = this.nodeStart();
         this.read("super");
         
-        return new AST.SuperExpression(start, this.nodeEnd());
+        var node = new AST.SuperExpression(start, this.nodeEnd());
+        
+        if (!this.context.isFunction)
+            this.fail("Super keyword outside of function", node);
+        
+        return node;
     },
     
     ArgumentList: function() {
@@ -4267,7 +4359,7 @@ var Parser = es6now.Class(function(__super) { return {
             if (list.length > 0)
                 this.read(",");
             
-            list.push(this.SpreadAssignment());
+            list.push(this.AssignmentExpression(false, true));
         }
         
         this.read(")");
@@ -4306,7 +4398,7 @@ var Parser = es6now.Class(function(__super) { return {
                 if (next.type === "=>") {
                 
                     this.pushContext(true);
-                    return this.ArrowFunctionHead("", this.BindingIdentifier(), null, start);
+                    return this.ArrowFunctionHead("", this.BindingIdentifier(), start);
                 
                 } else if (!next.newlineBefore) {
                 
@@ -4317,7 +4409,7 @@ var Parser = es6now.Class(function(__super) { return {
                     
                         this.read();
                         this.pushContext(true);
-                        return this.ArrowFunctionHead(token.value, this.BindingIdentifier(), null, start);
+                        return this.ArrowFunctionHead(token.value, this.BindingIdentifier(), start);
                     }
                 }
                 
@@ -4345,10 +4437,7 @@ var Parser = es6now.Class(function(__super) { return {
     Identifier: function(isVar) {
     
         var token = this.readToken("IDENTIFIER"),
-            node = new AST.Identifier(token.value, "", token.start, token.end);
-        
-        if (isVar)
-            node.context = "variable";
+            node = new AST.Identifier(token.value, isVar ? "variable" : "", token.start, token.end);
         
         this.checkIdentifier(node);
         return node;
@@ -4382,10 +4471,10 @@ var Parser = es6now.Class(function(__super) { return {
         return node;
     },
     
-    Template: function() {
+    TemplatePart: function() {
     
         var token = this.readToken("TEMPLATE", "template"),
-            node = new AST.Template(token.value, token.templateEnd, token.start, token.end);
+            node = new AST.TemplatePart(token.value, token.templateEnd, token.start, token.end);
         
         if (token.strictError)
             this.addStrictError(token.strictError, node);
@@ -4395,6 +4484,7 @@ var Parser = es6now.Class(function(__super) { return {
     
     RegularExpression: function() {
     
+        // TODO:  Validate regular expression against RegExp grammar (21.2.1)
         var token = this.readToken("REGEX");
         return new AST.RegularExpression(token.value, token.regexFlags, token.start, token.end);
     },
@@ -4404,7 +4494,7 @@ var Parser = es6now.Class(function(__super) { return {
         var token = this.readToken("IDENTIFIER"),
             node = new AST.Identifier(token.value, "", token.start, token.end);
         
-        this.checkBindingIdentifier(node);
+        this.checkBindingTarget(node);
         return node;
     },
     
@@ -4423,14 +4513,10 @@ var Parser = es6now.Class(function(__super) { return {
                 break;
             
             default:
-                node = this.BindingIdentifier();
-                break;
+                return this.BindingIdentifier();
         }
         
-        // Transform expressions to patterns
-        if (node.type !== "Identifier")
-            this.transformPattern(node, true);
-        
+        this.checkBindingTarget(node);
         return node;
     },
     
@@ -4451,28 +4537,16 @@ var Parser = es6now.Class(function(__super) { return {
             case ")":
                 break;
             
-            // An arrow function formal list with a single rest parameter
-            case "...":
-                rest = this.RestParameter();
-                break;
-            
             // Paren expression
             default:
                 expr = this.Expression();
                 break;
         }
         
-        // Look for a trailing rest formal parameter within an arrow formal list
-        if (!rest && this.peek() === "," && this.peekAt(null, 1) === "...") {
-        
-            this.read();
-            rest = this.RestParameter();
-        }
-        
         this.read(")");
         
-        if (expr === null || rest !== null || this.peek("div") === "=>")
-            return this.ArrowFunctionHead("", expr, rest, start);
+        if (expr === null || this.peek("div") === "=>")
+            return this.ArrowFunctionHead("", expr, start);
         
         // Collapse this context into its parent
         this.popContext(true);
@@ -4483,21 +4557,24 @@ var Parser = es6now.Class(function(__super) { return {
     ObjectLiteral: function() {
     
         var start = this.nodeStart(),
+            nameSet = new IntMap,
+            comma = false,
             list = [],
-            nameSet = {},
-            node,
-            flag,
-            key;
+            node;
         
         this.read("{");
         
         while (this.peekUntil("}", "name")) {
         
-            if (list.length > 0)
+            if (list.length > 0) {
+            
                 this.read(",");
+                comma = true;
+            }
             
             if (this.peek("name") !== "}") {
             
+                comma = false;
                 list.push(node = this.PropertyDefinition());
                 this.checkPropertyName(node, nameSet);
             }
@@ -4525,7 +4602,7 @@ var Parser = es6now.Class(function(__super) { return {
                 this.unpeek();
             
                 node = new AST.PatternProperty(
-                    this.Identifier(),
+                    this.Identifier(true),
                     null,
                     (this.read(), this.AssignmentExpression()),
                     start,
@@ -4541,7 +4618,7 @@ var Parser = es6now.Class(function(__super) { return {
                 this.unpeek();
         
                 return new AST.PropertyDefinition(
-                    this.Identifier(),
+                    this.Identifier(true),
                     null,
                     start,
                     this.nodeEnd());
@@ -4587,56 +4664,6 @@ var Parser = es6now.Class(function(__super) { return {
         return new AST.ComputedPropertyName(expr, start, this.nodeEnd());
     },
     
-    MethodDefinition: function(name) {
-    
-        var start = name ? name.start : this.nodeStart(),
-            kind = "",
-            val;
-        
-        if (!name && this.peek("name") === "*") {
-        
-            this.read();
-            
-            kind = "generator";
-            name = this.PropertyName();
-        
-        } else {
-        
-            if (!name)
-                name = this.PropertyName();
-            
-            if (name.type === "Identifier" && this.peek("name") !== "(") {
-            
-                val = name.value;
-                
-                if (val === "get" || val === "set" || isFunctionModifier(val)) {
-                
-                    kind = name.value;
-                    name = this.PropertyName();
-                }
-            }
-        }
-        
-        this.pushContext(true);
-        
-        if (kind === "generator" || isFunctionModifier(kind))
-            this.context.functionType = kind;
-        
-        var params = this.FormalParameters(),
-            body = this.FunctionBody();
-        
-        this.checkParameters(params);
-        this.popContext();
-        
-        return new AST.MethodDefinition(
-            kind,
-            name,
-            params,
-            body,
-            start,
-            this.nodeEnd());
-    },
-    
     ArrayLiteral: function() {
     
         var start = this.nodeStart(),
@@ -4660,7 +4687,7 @@ var Parser = es6now.Class(function(__super) { return {
             
             } else {
             
-                list.push(next = this.SpreadAssignment());
+                list.push(next = this.AssignmentExpression(false, true));
                 comma = false;
             }
         }
@@ -4686,14 +4713,18 @@ var Parser = es6now.Class(function(__super) { return {
     
     GeneratorComprehension: function() {
     
-        var start = this.nodeStart();
+        var start = this.nodeStart(),
+            fType = this.context.functionType;
         
+        // Generator comprehensions cannot contain contextual expresions like yield
+        this.context.functionType = "";
         this.read("(");
         
         var list = this.ComprehensionQualifierList(),
             expr = this.AssignmentExpression();
         
         this.read(")");
+        this.context.functionType = fType;
         
         return new AST.GeneratorComprehension(list, expr, start, this.nodeEnd());
     },
@@ -4747,7 +4778,7 @@ var Parser = es6now.Class(function(__super) { return {
     
     TemplateExpression: function() {
         
-        var atom = this.Template(),
+        var atom = this.TemplatePart(),
             start = atom.start,
             lit = [atom],
             sub = [];
@@ -4759,7 +4790,7 @@ var Parser = es6now.Class(function(__super) { return {
             // Discard any tokens that have been scanned using a different context
             this.unpeek();
             
-            lit.push(atom = this.Template());
+            lit.push(atom = this.TemplatePart());
         }
         
         return new AST.TemplateExpression(lit, sub, start, this.nodeEnd());
@@ -4767,7 +4798,7 @@ var Parser = es6now.Class(function(__super) { return {
     
     // === Statements ===
     
-    Statement: function() {
+    Statement: function(label) {
     
         var next;
         
@@ -4789,36 +4820,20 @@ var Parser = es6now.Class(function(__super) { return {
             case ";": return this.EmptyStatement();
             case "var": return this.VariableStatement();
             case "return": return this.ReturnStatement();
-            case "break":
-            case "continue": return this.BreakOrContinueStatement();
+            case "break": return this.BreakStatement();
+            case "continue": return this.ContinueStatement();
             case "throw": return this.ThrowStatement();
             case "debugger": return this.DebuggerStatement();
             case "if": return this.IfStatement();
-            case "do": return this.DoWhileStatement();
-            case "while": return this.WhileStatement();
-            case "for": return this.ForStatement();
+            case "do": return this.DoWhileStatement(label);
+            case "while": return this.WhileStatement(label);
+            case "for": return this.ForStatement(label);
             case "with": return this.WithStatement();
             case "switch": return this.SwitchStatement();
             case "try": return this.TryStatement();
             
             default: return this.ExpressionStatement();
         }
-    },
-    
-    StatementWithLabel: function(label) {
-    
-        var name = mapKey(label && label.value),
-            labelSet = this.context.labelSet,
-            stmt;
-        
-        if (!labelSet[name]) labelSet[name] = 0;
-        else if (label) this.fail("Invalid label", label);
-        
-        labelSet[name] += 1;
-        stmt = this.Statement();
-        labelSet[name] -= 1;
-        
-        return stmt;
     },
     
     Block: function() {
@@ -4844,13 +4859,22 @@ var Parser = es6now.Class(function(__super) { return {
     LabelledStatement: function() {
     
         var start = this.nodeStart(),
-            label = this.Identifier();
+            label = this.Identifier(),
+            name = label.value,
+            labelSet = this.context.labelSet;
+        
+        if (labelSet.get(name) > 0)
+            this.fail("Invalid label", label);
         
         this.read(":");
         
+        labelSet.set(name, 1);
+        var statement = this.Statement(name);
+        labelSet.set(name, 0);
+        
         return new AST.LabelledStatement(
             label, 
-            this.StatementWithLabel(label),
+            statement,
             start,
             this.nodeEnd());
     },
@@ -4932,8 +4956,11 @@ var Parser = es6now.Class(function(__super) { return {
             pattern = this.BindingPattern(),
             init = null;
         
-        if (pattern.type !== "Identifier" || this.peek() === "=") {
+        if ((!noIn && pattern.type !== "Identifier") || this.peek() === "=") {
         
+            // NOTE: Patterns must have initializers when not in declaration
+            // section of a for statement
+            
             this.read("=");
             init = this.AssignmentExpression(noIn);
             
@@ -4959,38 +4986,57 @@ var Parser = es6now.Class(function(__super) { return {
         
         return new AST.ReturnStatement(value, start, this.nodeEnd());
     },
-
-    // TODO: Separate out break and continue, so it's easier to follow the logic?
-    BreakOrContinueStatement: function() {
+    
+    BreakStatement: function() {
     
         var start = this.nodeStart(),
-            token = this.readToken(),
-            keyword = token.type,
-            labelSet = this.context.labelSet;
+            context = this.context,
+            labelSet = context.labelSet;
         
-        var label = this.peekEnd() ? null : this.Identifier(),
-            name = mapKey(label && label.value);
-        
+        this.read("break");
+        var label = this.peekEnd() ? null : this.Identifier();
         this.Semicolon();
         
-        var node = keyword === "break" ?
-            new AST.BreakStatement(label, start, this.nodeEnd()) :
-            new AST.ContinueStatement(label, start, this.nodeEnd());
-            
+        var node = new AST.BreakStatement(label, start, this.nodeEnd());
+        
         if (label) {
         
-            if (!labelSet[name])
+            if (labelSet.get(label.value) === 0)
                 this.fail("Invalid label", label);
+                
+        } else if (context.loopDepth === 0 && context.switchDepth === 0) {
         
-        } else {
-        
-            if (!labelSet[name] && !(keyword === "break" && this.context.switchDepth > 0))
-                this.fail("Invalid " + keyword + " statement", node);
+            this.fail("Break not contained within a switch or loop", node);
         }
         
         return node;
     },
     
+    ContinueStatement: function() {
+    
+        var start = this.nodeStart(),
+            context = this.context,
+            labelSet = context.labelSet;
+        
+        this.read("continue");
+        var label = this.peekEnd() ? null : this.Identifier();
+        this.Semicolon();
+        
+        var node = new AST.ContinueStatement(label, start, this.nodeEnd());
+        
+        if (label) {
+        
+            if (labelSet.get(label.value) !== 2)
+                this.fail("Invalid label", label);
+                
+        } else if (context.loopDepth === 0) {
+        
+            this.fail("Continue not contained within a loop", node);
+        }
+        
+        return node;
+    },
+
     ThrowStatement: function() {
     
         var start = this.nodeStart();
@@ -5040,14 +5086,20 @@ var Parser = es6now.Class(function(__super) { return {
         return new AST.IfStatement(test, body, elseBody, start, this.nodeEnd());
     },
     
-    DoWhileStatement: function() {
+    DoWhileStatement: function(label) {
     
         var start = this.nodeStart(),
             body, 
             test;
         
+        if (label) 
+            this.setLoopLabel(label);
+        
         this.read("do");
-        body = this.StatementWithLabel();
+        
+        this.context.loopDepth += 1;
+        body = this.Statement();
+        this.context.loopDepth -= 1;
         
         this.read("while");
         this.read("(");
@@ -5059,26 +5111,38 @@ var Parser = es6now.Class(function(__super) { return {
         return new AST.DoWhileStatement(body, test, start, this.nodeEnd());
     },
     
-    WhileStatement: function() {
+    WhileStatement: function(label) {
     
         var start = this.nodeStart();
         
+        if (label) 
+            this.setLoopLabel(label);
+        
         this.read("while");
         this.read("(");
+        var expr = this.Expression();
+        this.read(")");
+        
+        this.context.loopDepth += 1;
+        var statement = this.Statement();
+        this.context.loopDepth -= 1;
         
         return new AST.WhileStatement(
-            this.Expression(), 
-            (this.read(")"), this.StatementWithLabel()), 
+            expr, 
+            statement, 
             start, 
             this.nodeEnd());
     },
     
-    ForStatement: function() {
+    ForStatement: function(label) {
     
         var start = this.nodeStart(),
             init = null,
             test,
             step;
+        
+        if (label) 
+            this.setLoopLabel(label);
         
         this.read("for");
         this.read("(");
@@ -5124,11 +5188,15 @@ var Parser = es6now.Class(function(__super) { return {
         
         this.read(")");
         
+        this.context.loopDepth += 1;
+        var statement = this.Statement();
+        this.context.loopDepth -= 1;
+        
         return new AST.ForStatement(
             init, 
             test, 
             step, 
-            this.StatementWithLabel(), 
+            statement, 
             start, 
             this.nodeEnd());
     },
@@ -5141,10 +5209,14 @@ var Parser = es6now.Class(function(__super) { return {
         var expr = this.Expression();
         this.read(")");
         
+        this.context.loopDepth += 1;
+        var statement = this.Statement();
+        this.context.loopDepth -= 1;
+        
         return new AST.ForInStatement(
             init, 
             expr, 
-            this.StatementWithLabel(), 
+            statement, 
             start, 
             this.nodeEnd());
     },
@@ -5157,10 +5229,14 @@ var Parser = es6now.Class(function(__super) { return {
         var expr = this.AssignmentExpression();
         this.read(")");
         
+        this.context.loopDepth += 1;
+        var statement = this.Statement();
+        this.context.loopDepth -= 1;
+        
         return new AST.ForOfStatement(
             init, 
             expr, 
-            this.StatementWithLabel(), 
+            statement, 
             start, 
             this.nodeEnd());
     },
@@ -5307,9 +5383,7 @@ var Parser = es6now.Class(function(__super) { return {
                     // Get the non-escaped literal text of the string
                     node = element.expression;
                     dir = this.input.slice(node.start + 1, node.end - 1);
-                
-                    element.directive = dir;
-                
+
                     // Check for strict mode
                     if (dir === "use strict")
                         this.setStrict(true);
@@ -5455,6 +5529,73 @@ var Parser = es6now.Class(function(__super) { return {
             this.nodeEnd());
     },
     
+    MethodDefinition: function(name) {
+    
+        var start = name ? name.start : this.nodeStart(),
+            kind = "",
+            val;
+        
+        if (!name && this.peek("name") === "*") {
+        
+            this.read();
+            
+            kind = "generator";
+            name = this.PropertyName();
+        
+        } else {
+        
+            if (!name)
+                name = this.PropertyName();
+            
+            if (name.type === "Identifier" && this.peek("name") !== "(") {
+            
+                val = name.value;
+                
+                if (val === "get" || val === "set" || isFunctionModifier(val)) {
+                
+                    kind = name.value;
+                    name = this.PropertyName();
+                }
+            }
+        }
+        
+        this.pushContext(true);
+        
+        if (kind === "generator" || isFunctionModifier(kind))
+            this.context.functionType = kind;
+        
+        var params = kind === "get" || kind === "set" ?
+            this.AccessorParameters(kind) :
+            this.FormalParameters();
+        
+        var body = this.FunctionBody();
+        
+        this.checkParameters(params);
+        this.popContext();
+        
+        return new AST.MethodDefinition(
+            kind,
+            name,
+            params,
+            body,
+            start,
+            this.nodeEnd());
+    },
+    
+    AccessorParameters: function(kind) {
+    
+        var list = [];
+        
+        this.read("(");
+        
+        if (kind === "set")
+            list.push(this.FormalParameter(false));
+        
+        this.read(")");
+        
+        return list;
+    },
+    
     FormalParameters: function() {
     
         var list = [];
@@ -5473,7 +5614,7 @@ var Parser = es6now.Class(function(__super) { return {
                 break;
             }
             
-            list.push(this.FormalParameter());
+            list.push(this.FormalParameter(true));
         }
         
         this.read(")");
@@ -5481,13 +5622,13 @@ var Parser = es6now.Class(function(__super) { return {
         return list;
     },
     
-    FormalParameter: function() {
+    FormalParameter: function(allowDefault) {
     
         var start = this.nodeStart(),
             pattern = this.BindingPattern(),
             init = null;
         
-        if (this.peek() === "=") {
+        if (allowDefault && this.peek() === "=") {
         
             this.read("=");
             init = this.AssignmentExpression();
@@ -5518,16 +5659,14 @@ var Parser = es6now.Class(function(__super) { return {
         return new AST.FunctionBody(statements, start, this.nodeEnd());
     },
     
-    ArrowFunctionHead: function(kind, formals, rest, start) {
+    ArrowFunctionHead: function(kind, formals, start) {
     
         // Context must have been pushed by caller
         this.context.isFunction = true;
         this.context.functionType = kind;
         
-        var params = this.transformFormals(formals, rest);
-        
-        // Perform validation on transformed formal parameters
-        this.checkArrowParameters(params);
+        // Transform and validate formal parameters
+        var params = this.checkArrowParameters(formals);
         
         return new AST.ArrowFunctionHead(params, start, this.nodeEnd());
     },
@@ -5550,6 +5689,111 @@ var Parser = es6now.Class(function(__super) { return {
         this.popContext();
         
         return new AST.ArrowFunction(kind, params, body, start, this.nodeEnd());
+    },
+    
+    // === Classes ===
+    
+    ClassDeclaration: function() {
+    
+        var start = this.nodeStart(),
+            ident = null,
+            base = null;
+        
+        this.read("class");
+        
+        ident = this.BindingIdentifier();
+        
+        if (this.peek() === "extends") {
+        
+            this.read();
+            base = this.MemberExpression(true);
+        }
+        
+        return new AST.ClassDeclaration(
+            ident,
+            base,
+            this.ClassBody(),
+            start,
+            this.nodeEnd());
+    },
+    
+    ClassExpression: function() {
+    
+        var start = this.nodeStart(), 
+            ident = null,
+            base = null;
+        
+        this.read("class");
+        
+        if (this.peek() === "IDENTIFIER")
+            ident = this.BindingIdentifier();
+        
+        if (this.peek() === "extends") {
+        
+            this.read();
+            base = this.MemberExpression(true);
+        }
+        
+        return new AST.ClassExpression(
+            ident, 
+            base, 
+            this.ClassBody(), 
+            start, 
+            this.nodeEnd());
+    },
+    
+    ClassBody: function() {
+        
+        var start = this.nodeStart(),
+            nameSet = new IntMap, 
+            staticSet = new IntMap,
+            list = [],
+            node;
+        
+        this.pushContext(false);
+        this.setStrict(true);
+        this.read("{");
+        
+        while (this.peekUntil("}", "name")) {
+        
+            list.push(node = this.ClassElement());
+            this.checkPropertyName(node.method, node.static ? staticSet : nameSet);
+        }
+        
+        this.read("}");
+        this.popContext();
+        
+        return new AST.ClassBody(list, start, this.nodeEnd());
+    },
+    
+    ClassElement: function() {
+    
+        var start = this.nodeStart(),
+            isStatic = false;
+        
+        // Check for static modifier
+        if (this.peekToken("name").value === "static" &&
+            this.peekAt("name", 1) !== "(") {
+        
+            isStatic = true;
+            this.read();
+        }
+        
+        var method = this.MethodDefinition(),
+            name = method.name;
+        
+        if (isStatic) {
+        
+            if (name.type === "Identifier" && name.value === "prototype")
+                this.fail("Invalid prototype property in class definition", name);
+            
+        } else {
+        
+            if (name.type === "Identifier" && name.value === "constructor" && method.kind !== "")
+                this.fail("Invalid constructor property in class definition", name);
+        }
+        
+        return new AST.ClassElement(isStatic, method, start, this.nodeEnd());
     },
     
     // === Modules ===
@@ -5704,7 +5948,7 @@ var Parser = es6now.Class(function(__super) { return {
             
         } else {
         
-            this.checkBindingIdentifier(remote);
+            this.checkBindingTarget(remote);
         }
         
         return new AST.ImportSpecifier(remote, local, start, this.nodeEnd());
@@ -5839,102 +6083,6 @@ var Parser = es6now.Class(function(__super) { return {
         }
         
         return new AST.ModulePath(path, start, this.nodeEnd());
-    },
-    
-    // === Classes ===
-    
-    ClassDeclaration: function() {
-    
-        var start = this.nodeStart(),
-            ident = null,
-            base = null;
-        
-        this.read("class");
-        
-        ident = this.BindingIdentifier();
-        
-        if (this.peek() === "extends") {
-        
-            this.read();
-            base = this.MemberExpression(true);
-        }
-        
-        return new AST.ClassDeclaration(
-            ident,
-            base,
-            this.ClassBody(),
-            start,
-            this.nodeEnd());
-    },
-    
-    ClassExpression: function() {
-    
-        var start = this.nodeStart(), 
-            ident = null,
-            base = null;
-        
-        this.read("class");
-        
-        if (this.peek() === "IDENTIFIER")
-            ident = this.BindingIdentifier();
-        
-        if (this.peek() === "extends") {
-        
-            this.read();
-            base = this.MemberExpression(true);
-        }
-        
-        return new AST.ClassExpression(
-            ident, 
-            base, 
-            this.ClassBody(), 
-            start, 
-            this.nodeEnd());
-    },
-    
-    ClassBody: function() {
-    
-        this.pushContext(false);
-        this.setStrict(true);
-        
-        var start = this.nodeStart(),
-            nameSet = {}, 
-            staticSet = {},
-            list = [];
-        
-        this.read("{");
-        
-        while (this.peekUntil("}", "name"))
-            list.push(this.ClassElement(nameSet, staticSet));
-        
-        this.read("}");
-        
-        this.popContext();
-        
-        return new AST.ClassBody(list, start, this.nodeEnd());
-    },
-    
-    ClassElement: function(nameSet, staticSet) {
-    
-        var start = this.nodeStart(),
-            isStatic = false,
-            flag = PROP_NORMAL,
-            method,
-            name;
-        
-        // Check for static modifier
-        if (this.peekToken("name").value === "static" &&
-            this.peekAt("name", 1) !== "(") {
-        
-            isStatic = true;
-            nameSet = staticSet;
-            this.read();
-        }
-        
-        method = this.MethodDefinition();
-        this.checkClassElementName(method, nameSet);
-        
-        return new AST.ClassElement(isStatic, method, start, this.nodeEnd());
     }
     
 } });
@@ -6288,13 +6436,13 @@ var Replacer = es6now.Class(function(__super) { return {
         
             node.specifiers.forEach((function(spec) {
         
-                var remote = spec.remote,
-                    local = spec.local || remote;
+                var imported = spec.imported,
+                    local = spec.local || imported;
             
                 list.push({
                     start: spec.start,
                     end: spec.end,
-                    text: local.text + " = " + moduleSpec + "." + remote.text
+                    text: local.text + " = " + moduleSpec + "." + imported.text
                 });
             }));
         }
@@ -6313,7 +6461,7 @@ var Replacer = es6now.Class(function(__super) { return {
     
     ExportDeclaration: function(node) {
     
-        var binding = node.binding,
+        var binding = node.declaration,
             bindingType = binding ? binding.type : "*",
             exports = this.exports,
             ident;
@@ -6353,9 +6501,9 @@ var Replacer = es6now.Class(function(__super) { return {
             binding.specifiers.forEach((function(spec) {
             
                 var local = spec.local.text,
-                    remote = spec.remote ? spec.remote.text : local;
+                    exported = spec.exported ? spec.exported.text : local;
             
-                exports[remote] = from ? 
+                exports[exported] = from ? 
                     fromPath + "." + local :
                     local;
             }));
@@ -6953,8 +7101,8 @@ exports.translate = translate; exports.wrap = wrap; exports.isWrapped = isWrappe
 
 var PackageLocator = (function(exports) {
 
-var Path = _M0;
-var FS = _M1;
+var Path = require("path"),
+    FS = require("fs");
 
 var PACKAGE_URI = /^package:/i,
     JS_PACKAGE_ROOT = process.env["JS_PACKAGE_ROOT"] || "",
@@ -7522,7 +7670,7 @@ exports.EventTarget = EventTarget; exports.Event = Event; return exports; }).cal
 
 var AsyncFS_ = (function(exports) {
 
-var FS = _M1;
+var FS = _M0;
 
 // Wraps a standard Node async function with a promise
 // generating function
@@ -7589,7 +7737,7 @@ var
 
 exports.exists = exists; exports.readFile = readFile; exports.close = close; exports.open = open; exports.read = read; exports.write = write; exports.rename = rename; exports.truncate = truncate; exports.rmdir = rmdir; exports.fsync = fsync; exports.mkdir = mkdir; exports.sendfile = sendfile; exports.readdir = readdir; exports.fstat = fstat; exports.lstat = lstat; exports.stat = stat; exports.readlink = readlink; exports.symlink = symlink; exports.link = link; exports.unlink = unlink; exports.fchmod = fchmod; exports.lchmod = lchmod; exports.chmod = chmod; exports.lchown = lchown; exports.fchown = fchown; exports.chown = chown; exports.utimes = utimes; exports.futimes = futimes; exports.writeFile = writeFile; exports.appendFile = appendFile; exports.realpath = realpath; return exports; }).call(this, {});
 
-var main___ = (function(exports) {
+var main____ = (function(exports) {
 
 Object.keys(ConsoleCommand).forEach(function(k) { exports[k] = ConsoleCommand[k]; });
 Object.keys(ConsoleIO).forEach(function(k) { exports[k] = ConsoleIO[k]; });
@@ -7610,20 +7758,20 @@ exports.ConsoleStyle = ConsoleStyle; exports.AsyncFS = AsyncFS; return exports; 
 
 var main_ = (function(exports) {
 
-Object.keys(main___).forEach(function(k) { exports[k] = main___[k]; });
+Object.keys(main____).forEach(function(k) { exports[k] = main____[k]; });
 
 return exports; }).call(this, {});
 
 var NodeRun = (function(exports) {
 
-var FS = _M1;
-var REPL = _M2;
-var VM = _M3;
-var Path = _M0;
-
 var translate = Translator.translate;
 var isPackageURI = PackageLocator.isPackageURI, locatePackage = PackageLocator.locatePackage;
 var Style = main_.ConsoleStyle;
+
+var FS = require("fs"),
+    REPL = require("repl"),
+    VM = require("vm"),
+    Path = require("path");
 
 var ES6_GUESS = /(?:^|\n)\s*(?:import|export|class)\s/;
 
@@ -7841,10 +7989,10 @@ exports.parse = parse; exports.analyze = analyze; return exports; }).call(this, 
 
 var Bundler = (function(exports) {
 
-var Path = _M0;
-
 var AsyncFS = main_.AsyncFS, StringMap = main_.StringMap, StringSet = main_.StringSet;
 var analyze = Analyzer.analyze;
+
+var Path = require("path");
 
 var EXTERNAL_URL = /[a-z][a-z]+:/i;
 
@@ -8026,7 +8174,7 @@ function createBundle(rootPath, locatePackage) {
 
 exports.createBundle = createBundle; return exports; }).call(this, {});
 
-var main____ = (function(exports) {
+var main___ = (function(exports) {
 
 var createBundle = Bundler.createBundle;
 var AsyncFS = main_.AsyncFS, ConsoleCommand = main_.ConsoleCommand;
@@ -8061,14 +8209,11 @@ exports.createBundle = createBundle; exports.main = main; return exports; }).cal
 
 var main__ = (function(exports) {
 
-Object.keys(main____).forEach(function(k) { exports[k] = main____[k]; });
+Object.keys(main___).forEach(function(k) { exports[k] = main___[k]; });
 
 return exports; }).call(this, {});
 
 var main = (function(exports) {
-
-var FS = _M1;
-var Path = _M0;
 
 var runModule = NodeRun.runModule, startREPL = NodeRun.startREPL, formatSyntaxError = NodeRun.formatSyntaxError;
 var AsyncFS = main_.AsyncFS, ConsoleCommand = main_.ConsoleCommand;
@@ -8076,6 +8221,8 @@ var createBundle = main__.createBundle;
 var translate = Translator.translate;
 var locatePackage = PackageLocator.locatePackage;
 
+var FS = require("fs");
+var Path = require("path");
 
 function getOutPath(inPath, outPath) {
 
@@ -8186,4 +8333,4 @@ return exports; }).call(this, {});
 Object.keys(main).forEach(function(k) { exports[k] = main[k]; });
 
 
-}, ["path","fs","repl","vm"], "");
+}, ["fs"], "");

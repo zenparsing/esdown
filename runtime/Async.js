@@ -21,10 +21,7 @@ this.es6now.async = function(iterable) {
                 done = result.done;
             
             if (Promise.isPromise(value)) {
-            
-                // Recursively unwrap the result value?
-                // value = value.chain(function unwrap(x) { return Promise.isPromise(x) ? x.chain(unwrap) : x });
-                
+
                 if (done) value.chain(resolver.resolve, resolver.reject);
                 else      value.chain(x => resume(x, false), x => resume(x, true));
             

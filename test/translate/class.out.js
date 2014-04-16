@@ -7,7 +7,7 @@ var A = es6now.Class(B, function(__super) { return {
     
     set a(value) {},
     
-    get b(value) {},
+    get b() {},
     
     bar: function(x, y) {
     

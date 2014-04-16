@@ -1,8 +1,8 @@
-module FS from "node:fs";
-module Path from "node:path";
-
 import { translate } from "../src/Translator.js";
 import { runTests } from "package:moon-unit";
+
+var FS = require("fs"),
+    Path = require("path");
 
 function statPath(path) {
 

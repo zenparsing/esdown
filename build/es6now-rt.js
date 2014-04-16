@@ -587,7 +587,8 @@ this.es6now.Class = Class;
 (function() {
 
 var global = this, 
-    arraySlice = Array.prototype.slice;
+    arraySlice = Array.prototype.slice,
+    toString = Object.prototype.toString;
 
 // === Symbols ===
 
@@ -605,6 +606,7 @@ function fakeSymbol() {
 // catch up with the ES6 specification.
 
 this.Symbol = fakeSymbol;
+
 Symbol.iterator = Symbol("iterator");
 
 this.es6now.iterator = function(obj) {
@@ -785,7 +787,7 @@ addMethods(String.prototype, {
     
         var string = String(this);
         
-        if (this == null || Object.toString.call(search) == "[object RegExp]")
+        if (this == null || toString.call(search) == "[object RegExp]")
             throw TypeError();
             
         var stringLength = this.length,
@@ -804,7 +806,7 @@ addMethods(String.prototype, {
     
     endsWith: function(search) {
     
-        if (this == null || Object.toString.call(search) == '[object RegExp]')
+        if (this == null || toString.call(search) == '[object RegExp]')
             throw TypeError();
         
         var stringLength = this.length,
@@ -960,6 +962,47 @@ function isPromise(x) {
     return !!x && $$isPromise in Object(x);
 }
 
+function promiseDefer(ctor) {
+
+    var d = {};
+
+    d.promise = new ctor((function(resolve, reject) {
+        d.resolve = resolve;
+        d.reject = reject;
+    }));
+
+    return d;
+}
+
+function promiseChain(promise, onResolve, onReject) {
+
+    if (typeof onResolve !== "function") onResolve = (function(x) { return x; });
+    if (typeof onReject !== "function") onReject = (function(e) { throw e });
+
+    var deferred = promiseDefer(promise.constructor);
+    
+    if (typeof promise[$status] !== "string")
+        throw new TypeError("Promise method called on a non-promise");
+
+    switch (promise[$status]) {
+
+        case "pending":
+            promise[$onResolve].push([deferred, onResolve]);
+            promise[$onReject].push([deferred, onReject]);
+            break;
+
+        case "resolved":
+            promiseReact(deferred, onResolve, promise[$value]);
+            break;
+    
+        case "rejected":
+            promiseReact(deferred, onReject, promise[$value]);
+            break;
+    }
+
+    return deferred.promise;
+}
+
 function promiseResolve(promise, x) {
     
     promiseDone(promise, "resolved", x, promise[$onResolve]);
@@ -989,7 +1032,7 @@ function promiseUnwrap(deferred, x) {
         throw new TypeError("Promise cannot wrap itself");
     
     if (isPromise(x))
-        x.chain(deferred.resolve, deferred.reject);
+        promiseChain(x, deferred.resolve, deferred.reject);
     else
         deferred.resolve(x);
 }
@@ -999,7 +1042,7 @@ function promiseReact(deferred, handler, x) {
     enqueueMicrotask((function($) {
     
         try { promiseUnwrap(deferred, handler(x)) } 
-        catch(e) { deferred.reject(e) }
+        catch(e) { try { deferred.reject(e) } catch (e) { } }
     }));
 }
 
@@ -1023,51 +1066,14 @@ var Promise = es6now.Class(function(__super) { return {
     
     chain: function(onResolve, onReject) {
     
-        if (typeof onResolve !== "function") onResolve = (function(x) { return x; });
-        if (typeof onReject !== "function") onReject = (function(e) { throw e });
-
-        var deferred = this.constructor.defer();
-
-        switch (this[$status]) {
-
-            case undefined:
-                throw new TypeError("Promise method called on a non-promise");
-        
-            case "pending":
-                this[$onResolve].push([deferred, onResolve]);
-                this[$onReject].push([deferred, onReject]);
-                break;
-    
-            case "resolved":
-                promiseReact(deferred, onResolve, this[$value]);
-                break;
-        
-            case "rejected":
-                promiseReact(deferred, onReject, this[$value]);
-                break;
-        }
-
-        return deferred.promise;
+        return promiseChain(this, onResolve, onReject);
     },
     
     then: function(onResolve, onReject) {
 
         if (typeof onResolve !== "function") onResolve = (function(x) { return x; });
         
-        /*
-        
-        return this.chain(x => {
-        
-            if (isPromise(x))
-                return x.then(onResolve, onReject);
-            
-            return onResolve(x);
-            
-        }, onReject);
-        
-        */
-        
-        return this.chain((function(x) {
+        return promiseChain(this, (function(x) {
     
             if (x && typeof x === "object") {
             
@@ -1083,6 +1089,11 @@ var Promise = es6now.Class(function(__super) { return {
         
     },
     
+    catch: function(onReject) {
+    
+        return this.then(void 0, onReject);
+    },
+    
     __static_0: { isPromise: function(x) {
         
         return isPromise(x);
@@ -1090,59 +1101,62 @@ var Promise = es6now.Class(function(__super) { return {
     
     __static_1: { defer: function() {
     
-        var d = {};
-
-        d.promise = new this((function(resolve, reject) {
-            d.resolve = resolve;
-            d.reject = reject;
-        }));
-
-        return d;
+        return promiseDefer(this);
     } },
     
-    __static_2: { resolve: function(x) { 
+    __static_2: { accept: function(x) {
     
-        var d = this.defer();
+        var d = promiseDefer(this);
         d.resolve(x);
         return d.promise;
     } },
     
-    __static_3: { reject: function(x) { 
+    __static_3: { resolve: function(x) { 
     
-        var d = this.defer();
-        d.reject(x);
+        if (isPromise(x))
+            return x;
+            
+        var d = promiseDefer(this);
+        d.resolve(x);
         return d.promise;
     } },
     
-    __static_4: { cast: function(x) {
-
-        if (x instanceof this)
-            return x;
-
-        var deferred = this.defer();
-        promiseUnwrap(deferred, x);
-        return deferred.promise;
+    __static_4: { reject: function(x) { 
+    
+        var d = promiseDefer(this);
+        d.reject(x);
+        return d.promise;
     } },
 
     __static_5: { all: function(values) {
 
-        var deferred = this.defer(),
-            count = 0,
-            resolutions;
+        // TODO: We should be getting an iterator from values
         
-        for (var i = 0; i < values.length; ++i) {
+        var deferred = promiseDefer(this),
+            count = values.length,
+            resolutions = [];
+            
+        try {
         
-            count += 1;
-            this.cast(values[i]).then(onResolve(i), onReject);
-        }
+            if (!Array.isArray(values))
+                throw new Error("Invalid argument");
         
-        resolutions = new Array(count);
-    
-        if (count === 0) 
-            deferred.resolve(resolutions);
+            var count = values.length;
+        
+            if (count === 0) {
+        
+                deferred.resolve(resolutions);
+            
+            } else {
+        
+                for (var i = 0; i < values.length; ++i)
+                    this.resolve(values[i]).then(onResolve(i), deferred.reject);
+            }
+            
+        } catch(x) { deferred.reject(x) }
         
         return deferred.promise;
-    
+        
         function onResolve(i) {
     
             return (function(x) {
@@ -1153,15 +1167,25 @@ var Promise = es6now.Class(function(__super) { return {
                     deferred.resolve(resolutions);
             });
         }
+    } },
+    
+    __static_6: { race: function(values) {
+    
+        // TODO: We should be getting an iterator from values
         
-        function onReject(r) {
+        var deferred = promiseDefer(this);
         
-            if (count > 0) { 
+        try {
         
-                count = 0; 
-                deferred.reject(r);
-            }
-        }
+            if (!Array.isArray(values))
+                throw new Error("Invalid argument");
+            
+            for (var i = 0; i < values.length; ++i)
+                this.resolve(values[i]).then(deferred.resolve, deferred.reject);
+        
+        } catch(x) { deferred.reject(x) }
+        
+        return deferred.promise;
     } }
     
 } });
@@ -1198,10 +1222,7 @@ this.es6now.async = function(iterable) {
                 done = result.done;
             
             if (Promise.isPromise(value)) {
-            
-                // Recursively unwrap the result value?
-                // value = value.chain(function unwrap(x) { return Promise.isPromise(x) ? x.chain(unwrap) : x });
-                
+
                 if (done) value.chain(resolver.resolve, resolver.reject);
                 else      value.chain((function(x) { return resume(x, false); }), (function(x) { return resume(x, true); }));
             

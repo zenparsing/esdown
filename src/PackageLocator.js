@@ -1,5 +1,5 @@
-module Path from "node:path";
-module FS from "node:fs";
+var Path = require("path"),
+    FS = require("fs");
 
 var PACKAGE_URI = /^package:/i,
     JS_PACKAGE_ROOT = process.env["JS_PACKAGE_ROOT"] || "",
