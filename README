@@ -8,8 +8,13 @@ straightforward source transformations.
 
 === Instructions ===
 
-Put build/* in your path and smoke it.  NPM not required.  You'll need 
-Node.js 0.11 or later for async functions.
+Copy build/es6now and build/es6now.js in your path and smoke it. Or, use
+npm:
+
+    you$ npm install -g es6now
+
+(You'll need Node.js 0.11 or later for async functions.)
+
 
 Start a REPL by running it without any arguments:
 

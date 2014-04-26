@@ -726,7 +726,7 @@ export class Replacer {
     
     modulePath(node) {
     
-        return node.type === "String" ?
+        return node.type === "StringLiteral" ?
             this.moduleIdent(node.value) :
             this.stringify(node);
     }

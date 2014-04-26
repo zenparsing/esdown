@@ -1271,16 +1271,27 @@ exports.ES5 = ES5; exports.ES6 = ES6; exports.Class = Class; exports.Promise = P
 
 var AST_ = (function(exports) {
 
+/*
+
+NOTE:  For auto-documentation purposes, the following conventions must be followed:
+
+1)  The last parameters to each constructor function must always be "start"
+    and "end", in that order.
+
+2)  With the exception of "start" and "end", the order of constructor parameters
+    must be identical to the order of property assignments within the constructor.
+
+*/
 var AST = {
     
     Node: function(type, start, end) {
 
-        this.type = type;
+        this.type = type; // (string) The node type
         this.start = start;
         this.end = end;
     },
     
-    Identifier: function(value, context, start, end) {
+    Identifier: function(value, context, start, end) { 
 
         this.type = "Identifier";
         this.start = start;
@@ -1289,17 +1300,19 @@ var AST = {
         this.context = context; // (string) The context in which the identifier appears ("", "variable", "declaration")
     },
 
-    Number: function(value, start, end) {
+    // A number literal
+    NumberLiteral: function(value, start, end) {
     
-        this.type = "Number";
+        this.type = "NumberLiteral";
         this.start = start;
         this.end = end;
         this.value = value; // (number) The mathmatical value of the number literal
     },
 
-    String: function(value, start, end) {
+    // A string literal
+    StringLiteral: function(value, start, end) {
 
-        this.type = "String";
+        this.type = "StringLiteral";
         this.start = start;
         this.end = end;
         this.value = value; // (string) The value of the string literal
@@ -1323,17 +1336,17 @@ var AST = {
         this.flags = flags; // (string) The set of flags for the regular expression literal
     },
 
-    Boolean: function(value, start, end) {
+    BooleanLiteral: function(value, start, end) {
     
-        this.type = "Boolean";
+        this.type = "BooleanLiteral";
         this.start = start;
         this.end = end;
         this.value = value; // (boolean) The value of the boolean literal
     },
     
-    Null: function(start, end) { 
+    NullLiteral: function(start, end) { 
 
-        this.type = "Null";
+        this.type = "NullLiteral";
         this.start = start;
         this.end = end;
     },
@@ -1467,7 +1480,7 @@ var AST = {
         this.start = start;
         this.end = end;
         this.tag = tag; // The template tag
-        this.template = template; // <TemplateExpression> A template
+        this.template = template; // (TemplateExpression) A template
     },
 
     NewExpression: function(callee, args, start, end) {
@@ -1508,10 +1521,18 @@ var AST = {
         this.type = "PropertyDefinition";
         this.start = start;
         this.end = end;
-        this.name = name; // (String|Number|Identifier|ComputedPropertyName) The property name
+        this.name = name; // (StringLiteral|NumberLiteral|Identifier|ComputedPropertyName) The property name
         this.expression = expr; // (Node?) An expression
     },
 
+    ObjectPattern: function(props, start, end) {
+        
+        this.type = "ObjectPattern";
+        this.start = start;
+        this.end = end;
+        this.properties = props; // [PatternProperty] A list of destructuring pattern properties
+    },
+    
     PatternProperty: function(name, pattern, initializer, start, end) {
     
         this.type = "PatternProperty";
@@ -1522,13 +1543,21 @@ var AST = {
         this.initializer = initializer; // (Node?) A default initializer expression
     },
 
+    ArrayPattern: function(elements, start, end) {
+    
+        this.type = "ArrayPattern";
+        this.start = start;
+        this.end = end;
+        this.elements = elements; // [PatternElement|PatternRestElement] A list of of destructuring pattern elements
+    },
+    
     PatternElement: function(pattern, initializer, start, end) {
     
         this.type = "PatternElement";
         this.start = start;
         this.end = end;
-        this.pattern = pattern;
-        this.initializer = initializer;
+        this.pattern = pattern; // A destructuring target pattern
+        this.initializer = initializer; // (Node?) A default initializer expression
     },
     
     PatternRestElement: function(pattern, start, end) {
@@ -1536,7 +1565,7 @@ var AST = {
         this.type = "PatternRestElement";
         this.start = start;
         this.end = end;
-        this.pattern = pattern;
+        this.pattern = pattern; // A destructuring target
     },
 
     MethodDefinition: function(kind, name, params, body, start, end) {
@@ -1544,10 +1573,10 @@ var AST = {
         this.type = "MethodDefinition";
         this.start = start;
         this.end = end;
-        this.kind = kind;
-        this.name = name;
-        this.params = params;
-        this.body = body;
+        this.kind = kind; // (string) The type of method
+        this.name = name; // The method name
+        this.params = params; // [FormalParameter] A list of formal parameters
+        this.body = body; // (FunctionBody) The function body
     },
 
     ArrayLiteral: function(elements, start, end) {
@@ -1555,7 +1584,7 @@ var AST = {
         this.type = "ArrayLiteral";
         this.start = start;
         this.end = end;
-        this.elements = elements;
+        this.elements = elements; // [Node|null]
     },
 
     ArrayComprehension: function(qualifiers, expr, start, end) {
@@ -3344,10 +3373,9 @@ var Validate = es6now.Class(function(__super) { return {
     
         var names = new IntMap, 
             name,
-            node,
-            i;
+            node;
         
-        for (i = 0; i < params.length; ++i) {
+        for (var i = 0; i < params.length; ++i) {
         
             node = params[i];
             
@@ -3407,26 +3435,23 @@ var Validate = es6now.Class(function(__super) { return {
     // Checks for duplicate object literal property names
     checkPropertyName: function(node, nameSet) {
     
-        // TODO:  This is hot code.  Correctly detecting property name conflicts
-        // results in a significant performance degredation.  Investigate ways
-        // to make this more efficient.
-        
         var flag = PROP_NORMAL,
             currentFlags = 0,
             name = "";
         
         switch (node.name.type) {
         
+            case "Identifier":
+            case "StringLiteral":
+                name = node.name.value;
+                break;
+                
             case "ComputedPropertyName":
                 // If property name is computed, skip duplicate check
                 return;
             
-            case "Number":
-                name = String(node.name.value);
-                break;
-            
             default:
-                name = node.name.value;
+                name = String(node.name.value);
                 break;
         }
         
@@ -4379,8 +4404,8 @@ var Parser = es6now.Class(function(__super) { return {
             case "function": return this.FunctionExpression();
             case "class": return this.ClassExpression();
             case "TEMPLATE": return this.TemplateExpression();
-            case "NUMBER": return this.Number();
-            case "STRING": return this.String();
+            case "NUMBER": return this.NumberLiteral();
+            case "STRING": return this.StringLiteral();
             case "{": return this.ObjectLiteral();
             
             case "(": return this.peekAt(null, 1) === "for" ? 
@@ -4419,12 +4444,12 @@ var Parser = es6now.Class(function(__super) { return {
             
             case "null":
                 this.read();
-                return new AST.Null(token.start, token.end);
+                return new AST.NullLiteral(token.start, token.end);
             
             case "true":
             case "false":
                 this.read();
-                return new AST.Boolean(type === "true", token.start, token.end);
+                return new AST.BooleanLiteral(type === "true", token.start, token.end);
             
             case "this":
                 this.read();
@@ -4449,10 +4474,10 @@ var Parser = es6now.Class(function(__super) { return {
         return new AST.Identifier(token.value, "", token.start, token.end);
     },
     
-    String: function() {
+    StringLiteral: function() {
     
         var token = this.readToken("STRING"),
-            node = new AST.String(token.value, token.start, token.end);
+            node = new AST.StringLiteral(token.value, token.start, token.end);
         
         if (token.strictError)
             this.addStrictError(token.strictError, node);
@@ -4460,10 +4485,10 @@ var Parser = es6now.Class(function(__super) { return {
         return node;
     },
     
-    Number: function() {
+    NumberLiteral: function() {
     
         var token = this.readToken("NUMBER"),
-            node = new AST.Number(token.number, token.start, token.end);
+            node = new AST.NumberLiteral(token.number, token.start, token.end);
         
         if (token.strictError)
             this.addStrictError(token.strictError, node);
@@ -4645,8 +4670,8 @@ var Parser = es6now.Class(function(__super) { return {
         switch (token.type) {
         
             case "IDENTIFIER": return this.IdentifierName();
-            case "STRING": return this.String();
-            case "NUMBER": return this.Number();
+            case "STRING": return this.StringLiteral();
+            case "NUMBER": return this.NumberLiteral();
             case "[": return this.ComputedPropertyName();
         }
         
@@ -5378,7 +5403,7 @@ var Parser = es6now.Class(function(__super) { return {
             if (prologue) {
             
                 if (element.type === "ExpressionStatement" &&
-                    element.expression.type === "String") {
+                    element.expression.type === "StringLiteral") {
                 
                     // Get the non-escaped literal text of the string
                     node = element.expression;
@@ -5871,7 +5896,7 @@ var Parser = es6now.Class(function(__super) { return {
     
     ModuleSpecifier: function() {
     
-        return this.peek() === "STRING" ? this.String() : this.ModulePath();
+        return this.peek() === "STRING" ? this.StringLiteral() : this.ModulePath();
     },
     
     ImportDeclaration: function() {
@@ -6851,7 +6876,7 @@ var Replacer = es6now.Class(function(__super) { return {
     
     modulePath: function(node) {
     
-        return node.type === "String" ?
+        return node.type === "StringLiteral" ?
             this.moduleIdent(node.value) :
             this.stringify(node);
     },
@@ -7970,7 +7995,7 @@ function analyze(ast, resolvePath) {
     
     function addEdge(spec) {
     
-        if (!spec || spec.type !== "String")
+        if (!spec || spec.type !== "StringLiteral")
             return;
         
         var path = resolvePath(spec.value);
