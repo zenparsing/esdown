@@ -60,12 +60,11 @@ export class Replacer {
     
     replace(input) {
         
-        var parser = new Parser(input),
-            scanner = parser.scanner,
-            root = parser.Module();
+        var parser = new Parser,
+            root = parser.parse(input, { module: true });
         
         this.input = input;
-        this.scanner = scanner;
+        this.parser = parser;
         this.exportStack = [this.exports = {}];
         this.imports = {};
         this.dependencies = [];
@@ -844,9 +843,14 @@ export class Replacer {
         }).join(", ") + ";";
     }
     
+    lineNumber(pos) {
+    
+        return this.parser.position(pos).line;
+    }
+    
     syncNewlines(start, end, text) {
     
-        var height = this.scanner.lineNumber(end - 1) - this.scanner.lineNumber(start);
+        var height = this.lineNumber(end - 1) - this.lineNumber(start);
         return preserveNewlines(text, height);
     }
     

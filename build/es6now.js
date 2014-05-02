@@ -4,442 +4,6 @@ var __this = this; this.es6now = {};
 
 (function() {
 
-/*
-
-Provides basic support for methods added in EcmaScript 5 for EcmaScript 4 browsers.
-The intent is not to create 100% spec-compatible replacements, but to allow the use
-of basic ES5 functionality with predictable results.  There are features in ES5 that
-require an ES5 engine (freezing an object, for instance).  If you plan to write for 
-legacy engines, then don't rely on those features.
-
-*/
-
-var global = this,
-    OP = Object.prototype,
-    HOP = OP.hasOwnProperty,
-    slice = Array.prototype.slice,
-    TRIM_S = /^s+/,
-    TRIM_E = /s+$/,
-    FALSE = function() { return false; },
-    TRUE = function() { return true; },
-    identity = function(o) { return o; },
-    defGet = OP.__defineGetter__,
-    defSet = OP.__defineSetter__,
-    keys = Object.keys || es4Keys,
-    ENUM_BUG = !function() { var o = { constructor: 1 }; for (var i in o) return i = true; }(),
-    ENUM_BUG_KEYS = [ "toString", "toLocaleString", "valueOf", "hasOwnProperty", "isPrototypeOf", "propertyIsEnumerable", "constructor" ],
-    ERR_REDUCE = "Reduce of empty array with no initial value";
-
-// Returns the internal class of an object
-function getClass(o) {
-
-    if (o === null || o === undefined) return "Object";
-    return OP.toString.call(o).slice("[object ".length, -1);
-}
-
-// Returns an array of keys defined on the object
-function es4Keys(o) {
-
-    var a = [], i;
-    
-    for (i in o)
-        if (HOP.call(o, i))
-            a.push(i);
-    
-    if (ENUM_BUG) 
-        for (i = 0; i < ENUM_BUG_KEYS.length; ++i)
-            if (HOP.call(o, ENUM_BUG_KEYS[i]))
-                a.push(ENUM_BUG_KEYS[i]);
-    
-    return a;
-}
-
-// Sets a collection of keys, if the property is not already set
-function addKeys(o, p) {
-
-    for (var i = 0, a = keys(p), k; i < a.length; ++i) {
-    
-        k = a[i];
-        
-        if (o[k] === undefined) 
-            o[k] = p[k];
-    }
-    
-    return o;
-}
-
-
-// In IE8, defineProperty and getOwnPropertyDescriptor only work on DOM objects
-// and are therefore useless - so bury them.
-try { (Object.defineProperty || FALSE)({}, "-", { value: 0 }); }
-catch (x) { Object.defineProperty = undefined; };
-
-try { (Object.getOwnPropertyDescriptor || FALSE)({}, "-"); }
-catch (x) { Object.getOwnPropertyDescriptor = undefined; }
-
-// In IE < 9 [].slice does not work properly when the start or end arguments are undefined.
-try { [0].slice(0, undefined)[0][0]; }
-catch (x) {
-
-    Array.prototype.slice = function(s, e) {
-    
-        s = s || 0;
-        return (e === undefined ? slice.call(this, s) : slice.call(this, s, e));
-    };
-}
-
-// ES5 Object functions
-addKeys(Object, {
-
-    create: function(o, p) {
-    
-        var n;
-        
-        if (o === null) {
-        
-            n = { "__proto__": o };
-        
-        } else {
-        
-            var f = function() {};
-            f.prototype = o;
-            n = new f;
-        }
-        
-        if (p !== undefined)
-            Object.defineProperties(n, p);
-        
-        return n;
-    },
-    
-    keys: keys,
-    
-    getOwnPropertyDescriptor: function(o, p) {
-    
-        if (!HOP.call(o, p))
-            return undefined;
-        
-        return { 
-            value: o[p], 
-            writable: true, 
-            configurable: true, 
-            enumerable: OP.propertyIsEnumerable.call(o, p)
-        };
-    },
-    
-    defineProperty: function(o, n, p) {
-    
-        var msg = "Accessor properties are not supported.";
-        
-        if ("get" in p) {
-        
-            if (defGet) defGet(n, p.get);
-            else throw new Error(msg);
-        }
-        
-        if ("set" in p) {
-        
-            if (defSet) defSet(n, p.set);
-            else throw new Error(msg);
-        }
-        
-        if ("value" in p)
-            o[n] = p.value;
-        
-        return o;
-    },
-    
-    defineProperties: function(o, d) {
-    
-        Object.keys(d).forEach(function(k) { Object.defineProperty(o, k, d[k]); });
-        return o;
-    },
-    
-    getPrototypeOf: function(o) {
-    
-        return "__proto__" in o ? o.__proto__ : o.constructor.prototype;
-    },
-    
-    /*
-    
-    NOTE: getOwnPropertyNames is buggy since there is no way to get non-enumerable 
-    ES3 properties.
-    
-    */
-    
-    getOwnProperyNames: keys,
-    
-    freeze: identity,
-    seal: identity,
-    preventExtensions: identity,
-    isFrozen: FALSE,
-    isSealed: FALSE,
-    isExtensible: TRUE
-    
-});
-
-
-// Add ES5 String extras
-addKeys(String.prototype, {
-
-    trim: function() { return this.replace(TRIM_S, "").replace(TRIM_E, ""); }
-});
-
-
-// Add ES5 Array extras
-addKeys(Array, {
-
-    isArray: function(obj) { return getClass(obj) === "Array"; }
-});
-
-
-addKeys(Array.prototype, {
-
-    indexOf: function(v, i) {
-    
-        var len = this.length >>> 0;
-        
-        i = i || 0;
-        if (i < 0) i = Math.max(len + i, 0);
-        
-        for (; i < len; ++i)
-            if (this[i] === v)
-                return i;
-        
-        return -1;
-    },
-    
-    lastIndexOf: function(v, i) {
-    
-        var len = this.length >>> 0;
-        
-        i = Math.min(i || 0, len - 1);
-        if (i < 0) i = len + i;
-        
-        for (; i >= 0; --i)
-            if (this[i] === v)
-                return i;
-        
-        return -1;
-    },
-    
-    every: function(fn, self) {
-    
-        var r = true;
-        
-        for (var i = 0, len = this.length >>> 0; i < len; ++i)
-            if (i in this && !(r = fn.call(self, this[i], i, this)))
-                break;
-        
-        return !!r;
-    },
-    
-    some: function(fn, self) {
-    
-        var r = false;
-        
-        for (var i = 0, len = this.length >>> 0; i < len; ++i)
-            if (i in this && (r = fn.call(self, this[i], i, this)))
-                break;
-        
-        return !!r;
-    },
-    
-    forEach: function(fn, self) {
-    
-        for (var i = 0, len = this.length >>> 0; i < len; ++i)
-            if (i in this)
-                fn.call(self, this[i], i, this);
-    },
-    
-    map: function(fn, self) {
-    
-        var a = [];
-        
-        for (var i = 0, len = this.length >>> 0; i < len; ++i)
-            if (i in this)
-                a[i] = fn.call(self, this[i], i, this);
-        
-        return a;
-    },
-    
-    filter: function(fn, self) {
-    
-        var a = [];
-        
-        for (var i = 0, len = this.length >>> 0; i < len; ++i)
-            if (i in this && fn.call(self, this[i], i, this))
-                a.push(this[i]);
-        
-        return a;
-    },
-    
-    reduce: function(fn) {
-    
-        var len = this.length >>> 0,
-            i = 0, 
-            some = false,
-            ini = (arguments.length > 1),
-            val = (ini ? arguments[1] : this[i++]);
-        
-        for (; i < len; ++i) {
-        
-            if (i in this) {
-            
-                some = true;
-                val = fn(val, this[i], i, this);
-            }
-        }
-        
-        if (!some && !ini)
-            throw new TypeError(ERR_REDUCE);
-        
-        return val;
-    },
-    
-    reduceRight: function(fn) {
-    
-        var len = this.length >>> 0,
-            i = len - 1,
-            some = false,
-            ini = (arguments.length > 1),
-            val = (ini || i < 0  ? arguments[1] : this[i--]);
-        
-        for (; i >= 0; --i) {
-        
-            if (i in this) {
-            
-                some = true;
-                val = fn(val, this[i], i, this);
-            }
-        }
-        
-        if (!some && !ini)
-            throw new TypeError(ERR_REDUCE);
-        
-        return val;
-    }
-});
-
-// Add ES5 Function extras
-addKeys(Function.prototype, {
-
-    bind: function(self) {
-    
-        var f = this,
-            args = slice.call(arguments, 1),
-            noargs = (args.length === 0);
-        
-        bound.prototype = f.prototype;
-        return bound;
-        
-        function bound() {
-        
-            return f.apply(
-                this instanceof bound ? this : self, 
-                noargs ? arguments : args.concat(slice.call(arguments, 0)));
-        }
-    }
-});
-
-// Add ES5 Date extras
-addKeys(Date, {
-
-    now: function() { return (new Date()).getTime(); }
-});
-
-// Add ES5 Date extras
-addKeys(Date.prototype, {
-
-    toISOString: function() {
-    
-        function pad(s) {
-        
-            if ((s = "" + s).length === 1) s = "0" + s;
-            return s;
-        }
-        
-        return this.getUTCFullYear() + "-" +
-            pad(this.getUTCMonth() + 1, 2) + "-" +
-            pad(this.getUTCDate(), 2) + "T" +
-            pad(this.getUTCHours(), 2) + ":" +
-            pad(this.getUTCMinutes(), 2) + ":" +
-            pad(this.getUTCSeconds(), 2) + "Z";
-    },
-    
-    toJSON: function() {
-    
-        return this.toISOString();
-    }
-});
-
-// Add ISO support to Date.parse
-if (Date.parse(new Date(0).toISOString()) !== 0) !function() {
-
-    /*
-    
-    In ES5 the Date constructor will also parse ISO dates, but overwritting 
-    the Date function itself is too far.  Note that new Date(isoDateString)
-    is not backward-compatible.  Use the following instead:
-    
-    new Date(Date.parse(dateString));
-    
-    1: +/- year
-    2: month
-    3: day
-    4: hour
-    5: minute
-    6: second
-    7: fraction
-    8: +/- tz hour
-    9: tz minute
-    
-    */
-    
-    var isoRE = /^(?:((?:[+-]d{2})?d{4})(?:-(d{2})(?:-(d{2}))?)?)?(?:T(d{2}):(d{2})(?::(d{2})(?:.d{3})?)?)?(?:Z|([-+]d{2}):(d{2}))?$/,
-        dateParse = Date.parse;
-
-    Date.parse = function(s) {
-    
-        var t, m, hasDate, i, offset;
-        
-        if (!isNaN(t = dateParse(s)))
-            return t;
-        
-        if (s && (m = isoRE.exec(s))) {
-        
-            hasDate = m[1] !== undefined;
-            
-            // Convert matches to numbers (month and day default to 1)
-            for (i = 1; i <= 9; ++i)
-                m[i] = Number(m[i] || (i <= 3 ? 1 : 0));
-            
-            // Calculate ms directly if no date is provided
-            if (!hasDate)
-                return ((m[4] * 60 + m[5]) * 60 + m[6]) * 1000 + m[7];
-            
-            // Convert month to zero-indexed
-            m[2] -= 1;
-            
-            // Get TZ offset
-            offset = (m[8] * 60 + m[9]) * 60 * 1000;
-            
-            // Remove full match from array
-            m.shift();
-            
-            t = Date.UTC.apply(this, m) + offset;
-        }
-        
-        return t;
-    };
-            
-}();
-
-
-}).call(this);
-
-(function() {
-
 var HOP = Object.prototype.hasOwnProperty,
     STATIC = /^__static_/;
 
@@ -1245,10 +809,6 @@ this.es6now.async = function(iterable) {
 
 var Runtime_ = (function(exports) {
 
-var ES5 = 
-
-"/*\n\nProvides basic support for methods added in EcmaScript 5 for EcmaScript 4 browsers.\nThe intent is not to create 100% spec-compatible replacements, but to allow the use\nof basic ES5 functionality with predictable results.  There are features in ES5 that\nrequire an ES5 engine (freezing an object, for instance).  If you plan to write for \nlegacy engines, then don't rely on those features.\n\n*/\n\nvar global = this,\n    OP = Object.prototype,\n    HOP = OP.hasOwnProperty,\n    slice = Array.prototype.slice,\n    TRIM_S = /^s+/,\n    TRIM_E = /s+$/,\n    FALSE = function() { return false; },\n    TRUE = function() { return true; },\n    identity = function(o) { return o; },\n    defGet = OP.__defineGetter__,\n    defSet = OP.__defineSetter__,\n    keys = Object.keys || es4Keys,\n    ENUM_BUG = !function() { var o = { constructor: 1 }; for (var i in o) return i = true; }(),\n    ENUM_BUG_KEYS = [ \"toString\", \"toLocaleString\", \"valueOf\", \"hasOwnProperty\", \"isPrototypeOf\", \"propertyIsEnumerable\", \"constructor\" ],\n    ERR_REDUCE = \"Reduce of empty array with no initial value\";\n\n// Returns the internal class of an object\nfunction getClass(o) {\n\n    if (o === null || o === undefined) return \"Object\";\n    return OP.toString.call(o).slice(\"[object \".length, -1);\n}\n\n// Returns an array of keys defined on the object\nfunction es4Keys(o) {\n\n    var a = [], i;\n    \n    for (i in o)\n        if (HOP.call(o, i))\n            a.push(i);\n    \n    if (ENUM_BUG) \n        for (i = 0; i < ENUM_BUG_KEYS.length; ++i)\n            if (HOP.call(o, ENUM_BUG_KEYS[i]))\n                a.push(ENUM_BUG_KEYS[i]);\n    \n    return a;\n}\n\n// Sets a collection of keys, if the property is not already set\nfunction addKeys(o, p) {\n\n    for (var i = 0, a = keys(p), k; i < a.length; ++i) {\n    \n        k = a[i];\n        \n        if (o[k] === undefined) \n            o[k] = p[k];\n    }\n    \n    return o;\n}\n\n\n// In IE8, defineProperty and getOwnPropertyDescriptor only work on DOM objects\n// and are therefore useless - so bury them.\ntry { (Object.defineProperty || FALSE)({}, \"-\", { value: 0 }); }\ncatch (x) { Object.defineProperty = undefined; };\n\ntry { (Object.getOwnPropertyDescriptor || FALSE)({}, \"-\"); }\ncatch (x) { Object.getOwnPropertyDescriptor = undefined; }\n\n// In IE < 9 [].slice does not work properly when the start or end arguments are undefined.\ntry { [0].slice(0, undefined)[0][0]; }\ncatch (x) {\n\n    Array.prototype.slice = function(s, e) {\n    \n        s = s || 0;\n        return (e === undefined ? slice.call(this, s) : slice.call(this, s, e));\n    };\n}\n\n// ES5 Object functions\naddKeys(Object, {\n\n    create(o, p) {\n    \n        var n;\n        \n        if (o === null) {\n        \n            n = { \"__proto__\": o };\n        \n        } else {\n        \n            var f = function() {};\n            f.prototype = o;\n            n = new f;\n        }\n        \n        if (p !== undefined)\n            Object.defineProperties(n, p);\n        \n        return n;\n    },\n    \n    keys: keys,\n    \n    getOwnPropertyDescriptor(o, p) {\n    \n        if (!HOP.call(o, p))\n            return undefined;\n        \n        return { \n            value: o[p], \n            writable: true, \n            configurable: true, \n            enumerable: OP.propertyIsEnumerable.call(o, p)\n        };\n    },\n    \n    defineProperty(o, n, p) {\n    \n        var msg = \"Accessor properties are not supported.\";\n        \n        if (\"get\" in p) {\n        \n            if (defGet) defGet(n, p.get);\n            else throw new Error(msg);\n        }\n        \n        if (\"set\" in p) {\n        \n            if (defSet) defSet(n, p.set);\n            else throw new Error(msg);\n        }\n        \n        if (\"value\" in p)\n            o[n] = p.value;\n        \n        return o;\n    },\n    \n    defineProperties(o, d) {\n    \n        Object.keys(d).forEach(function(k) { Object.defineProperty(o, k, d[k]); });\n        return o;\n    },\n    \n    getPrototypeOf(o) {\n    \n        return \"__proto__\" in o ? o.__proto__ : o.constructor.prototype;\n    },\n    \n    /*\n    \n    NOTE: getOwnPropertyNames is buggy since there is no way to get non-enumerable \n    ES3 properties.\n    \n    */\n    \n    getOwnProperyNames: keys,\n    \n    freeze: identity,\n    seal: identity,\n    preventExtensions: identity,\n    isFrozen: FALSE,\n    isSealed: FALSE,\n    isExtensible: TRUE\n    \n});\n\n\n// Add ES5 String extras\naddKeys(String.prototype, {\n\n    trim() { return this.replace(TRIM_S, \"\").replace(TRIM_E, \"\"); }\n});\n\n\n// Add ES5 Array extras\naddKeys(Array, {\n\n    isArray(obj) { return getClass(obj) === \"Array\"; }\n});\n\n\naddKeys(Array.prototype, {\n\n    indexOf(v, i) {\n    \n        var len = this.length >>> 0;\n        \n        i = i || 0;\n        if (i < 0) i = Math.max(len + i, 0);\n        \n        for (; i < len; ++i)\n            if (this[i] === v)\n                return i;\n        \n        return -1;\n    },\n    \n    lastIndexOf(v, i) {\n    \n        var len = this.length >>> 0;\n        \n        i = Math.min(i || 0, len - 1);\n        if (i < 0) i = len + i;\n        \n        for (; i >= 0; --i)\n            if (this[i] === v)\n                return i;\n        \n        return -1;\n    },\n    \n    every(fn, self) {\n    \n        var r = true;\n        \n        for (var i = 0, len = this.length >>> 0; i < len; ++i)\n            if (i in this && !(r = fn.call(self, this[i], i, this)))\n                break;\n        \n        return !!r;\n    },\n    \n    some(fn, self) {\n    \n        var r = false;\n        \n        for (var i = 0, len = this.length >>> 0; i < len; ++i)\n            if (i in this && (r = fn.call(self, this[i], i, this)))\n                break;\n        \n        return !!r;\n    },\n    \n    forEach(fn, self) {\n    \n        for (var i = 0, len = this.length >>> 0; i < len; ++i)\n            if (i in this)\n                fn.call(self, this[i], i, this);\n    },\n    \n    map(fn, self) {\n    \n        var a = [];\n        \n        for (var i = 0, len = this.length >>> 0; i < len; ++i)\n            if (i in this)\n                a[i] = fn.call(self, this[i], i, this);\n        \n        return a;\n    },\n    \n    filter(fn, self) {\n    \n        var a = [];\n        \n        for (var i = 0, len = this.length >>> 0; i < len; ++i)\n            if (i in this && fn.call(self, this[i], i, this))\n                a.push(this[i]);\n        \n        return a;\n    },\n    \n    reduce(fn) {\n    \n        var len = this.length >>> 0,\n            i = 0, \n            some = false,\n            ini = (arguments.length > 1),\n            val = (ini ? arguments[1] : this[i++]);\n        \n        for (; i < len; ++i) {\n        \n            if (i in this) {\n            \n                some = true;\n                val = fn(val, this[i], i, this);\n            }\n        }\n        \n        if (!some && !ini)\n            throw new TypeError(ERR_REDUCE);\n        \n        return val;\n    },\n    \n    reduceRight(fn) {\n    \n        var len = this.length >>> 0,\n            i = len - 1,\n            some = false,\n            ini = (arguments.length > 1),\n            val = (ini || i < 0  ? arguments[1] : this[i--]);\n        \n        for (; i >= 0; --i) {\n        \n            if (i in this) {\n            \n                some = true;\n                val = fn(val, this[i], i, this);\n            }\n        }\n        \n        if (!some && !ini)\n            throw new TypeError(ERR_REDUCE);\n        \n        return val;\n    }\n});\n\n// Add ES5 Function extras\naddKeys(Function.prototype, {\n\n    bind(self) {\n    \n        var f = this,\n            args = slice.call(arguments, 1),\n            noargs = (args.length === 0);\n        \n        bound.prototype = f.prototype;\n        return bound;\n        \n        function bound() {\n        \n            return f.apply(\n                this instanceof bound ? this : self, \n                noargs ? arguments : args.concat(slice.call(arguments, 0)));\n        }\n    }\n});\n\n// Add ES5 Date extras\naddKeys(Date, {\n\n    now() { return (new Date()).getTime(); }\n});\n\n// Add ES5 Date extras\naddKeys(Date.prototype, {\n\n    toISOString() {\n    \n        function pad(s) {\n        \n            if ((s = \"\" + s).length === 1) s = \"0\" + s;\n            return s;\n        }\n        \n        return this.getUTCFullYear() + \"-\" +\n            pad(this.getUTCMonth() + 1, 2) + \"-\" +\n            pad(this.getUTCDate(), 2) + \"T\" +\n            pad(this.getUTCHours(), 2) + \":\" +\n            pad(this.getUTCMinutes(), 2) + \":\" +\n            pad(this.getUTCSeconds(), 2) + \"Z\";\n    },\n    \n    toJSON() {\n    \n        return this.toISOString();\n    }\n});\n\n// Add ISO support to Date.parse\nif (Date.parse(new Date(0).toISOString()) !== 0) !function() {\n\n    /*\n    \n    In ES5 the Date constructor will also parse ISO dates, but overwritting \n    the Date function itself is too far.  Note that new Date(isoDateString)\n    is not backward-compatible.  Use the following instead:\n    \n    new Date(Date.parse(dateString));\n    \n    1: +/- year\n    2: month\n    3: day\n    4: hour\n    5: minute\n    6: second\n    7: fraction\n    8: +/- tz hour\n    9: tz minute\n    \n    */\n    \n    var isoRE = /^(?:((?:[+-]d{2})?d{4})(?:-(d{2})(?:-(d{2}))?)?)?(?:T(d{2}):(d{2})(?::(d{2})(?:.d{3})?)?)?(?:Z|([-+]d{2}):(d{2}))?$/,\n        dateParse = Date.parse;\n\n    Date.parse = function(s) {\n    \n        var t, m, hasDate, i, offset;\n        \n        if (!isNaN(t = dateParse(s)))\n            return t;\n        \n        if (s && (m = isoRE.exec(s))) {\n        \n            hasDate = m[1] !== undefined;\n            \n            // Convert matches to numbers (month and day default to 1)\n            for (i = 1; i <= 9; ++i)\n                m[i] = Number(m[i] || (i <= 3 ? 1 : 0));\n            \n            // Calculate ms directly if no date is provided\n            if (!hasDate)\n                return ((m[4] * 60 + m[5]) * 60 + m[6]) * 1000 + m[7];\n            \n            // Convert month to zero-indexed\n            m[2] -= 1;\n            \n            // Get TZ offset\n            offset = (m[8] * 60 + m[9]) * 60 * 1000;\n            \n            // Remove full match from array\n            m.shift();\n            \n            t = Date.UTC.apply(this, m) + offset;\n        }\n        \n        return t;\n    };\n            \n}();\n";
-
 var ES6 = 
 
 "var global = this, \n    arraySlice = Array.prototype.slice,\n    toString = Object.prototype.toString;\n\n// === Symbols ===\n\nvar symbolCounter = 0;\n\nfunction fakeSymbol() {\n\n    return \"__$\" + Math.floor(Math.random() * 1e9) + \"$\" + (++symbolCounter) + \"$__\";\n}\n\n// NOTE:  As of Node 0.11.12, V8's Symbol implementation is a little wonky.\n// There is no Object.getOwnPropertySymbols, so reflection doesn't seem to\n// work like it should.  Furthermore, Node blows up when trying to inspect\n// Symbol objects.  We expect to replace this override when V8's symbols\n// catch up with the ES6 specification.\n\nthis.Symbol = fakeSymbol;\n\nSymbol.iterator = Symbol(\"iterator\");\n\nthis.es6now.iterator = function(obj) {\n\n    if (global.Symbol && Symbol.iterator && obj[Symbol.iterator] !== void 0)\n        return obj[Symbol.iterator]();\n    \n    if (Array.isArray(obj))\n        return obj.values();\n    \n    return obj;\n};\n\nthis.es6now.computed = function(obj) {\n\n    var name, desc, i;\n    \n    for (i = 1; i < arguments.length; ++i) {\n    \n        name = \"__$\" + (i - 1);\n        desc = Object.getOwnPropertyDescriptor(obj, name);\n        \n        if (!desc)\n            continue;\n        \n        Object.defineProperty(obj, arguments[i], desc);\n        delete obj[name];\n    }\n    \n    return obj;\n};\n\nthis.es6now.rest = function(args, pos) {\n\n    return arraySlice.call(args, pos);\n};\n\nfunction eachKey(obj, fn) {\n\n    var keys = Object.getOwnPropertyNames(obj),\n        i;\n    \n    for (i = 0; i < keys.length; ++i)\n        fn(keys[i]);\n    \n    if (!Object.getOwnPropertySymbols)\n        return;\n    \n    keys = Object.getOwnPropertySymbols(obj);\n    \n    for (i = 0; i < keys.length; ++i)\n        fn(keys[i]);\n}\n\nfunction addMethods(obj, methods) {\n\n    eachKey(methods, key => {\n    \n        if (key in obj)\n            return;\n        \n        Object.defineProperty(obj, key, {\n        \n            value: methods[key],\n            configurable: true,\n            enumerable: false,\n            writable: true\n        });\n    });\n}\n\n\n// === Object ===\n\naddMethods(Object, {\n\n    is(left, right) {\n    \n        if (left === right)\n            return left !== 0 || 1 / left === 1 / right;\n        \n        return left !== left && right !== right;\n    },\n    \n    assign(target, source) {\n    \n        Object.keys(source).forEach(key => target[key] = source[key]);\n        return target;\n    }\n    \n});\n\n// === Number ===\n\naddMethods(Number, {\n\n    EPSILON: ($=> {\n    \n        var next, result;\n        \n        for (next = 1; 1 + next !== 1; next = next / 2)\n            result = next;\n        \n        return result;\n        \n    })(),\n    \n    MAX_SAFE_INTEGER: 9007199254740992,\n    \n    MIN_SAFE_INTEGER: -9007199254740991,\n    \n    isInteger(val) {\n    \n        typeof val === \"number\" && val | 0 === val;\n    }\n    \n    // TODO: isSafeInteger\n    \n});\n\n// === String === \n\naddMethods(String, {\n\n    raw(callsite, ...args) {\n    \n        var raw = callsite.raw,\n            len = raw.length >>> 0;\n        \n        if (len === 0)\n            return \"\";\n            \n        var s = \"\", i = 0;\n        \n        while (true) {\n        \n            s += raw[i];\n        \n            if (i + 1 === len)\n                return s;\n        \n            s += args[i++];\n        }\n    }\n    \n    // TODO:  fromCodePoint\n    \n});\n\naddMethods(String.prototype, {\n    \n    repeat(count) {\n    \n        if (this == null)\n            throw TypeError();\n        \n        var n = count ? Number(count) : 0;\n        \n        if (isNaN(n))\n            n = 0;\n        \n        // Account for out-of-bounds indices\n        if (n < 0 || n == Infinity)\n            throw RangeError();\n        \n        if (n == 0)\n            return \"\";\n            \n        var result = \"\";\n        \n        while (n--)\n            result += this;\n        \n        return result;\n    },\n    \n    startsWith(search) {\n    \n        var string = String(this);\n        \n        if (this == null || toString.call(search) == \"[object RegExp]\")\n            throw TypeError();\n            \n        var stringLength = this.length,\n            searchString = String(search),\n            searchLength = searchString.length,\n            position = arguments.length > 1 ? arguments[1] : undefined,\n            pos = position ? Number(position) : 0;\n            \n        if (isNaN(pos))\n            pos = 0;\n        \n        var start = Math.min(Math.max(pos, 0), stringLength);\n        \n        return this.indexOf(searchString, pos) == start;\n    },\n    \n    endsWith(search) {\n    \n        if (this == null || toString.call(search) == '[object RegExp]')\n            throw TypeError();\n        \n        var stringLength = this.length,\n            searchString = String(search),\n            searchLength = searchString.length,\n            pos = stringLength;\n        \n        if (arguments.length > 1) {\n        \n            var position = arguments[1];\n        \n            if (position !== undefined) {\n        \n                pos = position ? Number(position) : 0;\n                \n                if (isNaN(pos))\n                    pos = 0;\n            }\n        }\n        \n        var end = Math.min(Math.max(pos, 0), stringLength),\n            start = end - searchLength;\n        \n        if (start < 0)\n            return false;\n            \n        return this.lastIndexOf(searchString, start) == start;\n    },\n    \n    contains(search) {\n    \n        if (this == null)\n            throw TypeError();\n            \n        var stringLength = this.length,\n            searchString = String(search),\n            searchLength = searchString.length,\n            position = arguments.length > 1 ? arguments[1] : undefined,\n            pos = position ? Number(position) : 0;\n        \n        if (isNaN(pos))\n            pos = 0;\n            \n        var start = Math.min(Math.max(pos, 0), stringLength);\n        \n        return this.indexOf(string, searchString, pos) != -1;\n    }\n    \n    // TODO: codePointAt\n    \n});\n\n// === Array ===\n\nclass ArrayIterator {\n\n    constructor(array, kind) {\n    \n        this.array = array;\n        this.current = 0;\n        this.kind = kind;\n    }\n    \n    next() {\n    \n        var length = this.array.length >>> 0,\n            index = this.current;\n        \n        if (index >= length) {\n        \n            this.current = Infinity;\n            return { value: void 0, done: true };\n        }\n        \n        this.current += 1;\n        \n        switch (this.kind) {\n        \n            case \"values\":\n                return { value: this.array[index], done: false };\n            \n            case \"entries\":\n                return { value: [ index, this.array[index] ], done: false };\n            \n            default:\n                return { value: index, done: false };\n        }\n    }\n    \n    [Symbol.iterator]() { return this }\n\n}\n\naddMethods(Array.prototype, {\n\n    values()  { return new ArrayIterator(this, \"values\") },\n    entries() { return new ArrayIterator(this, \"entries\") },\n    keys()    { return new ArrayIterator(this, \"keys\") },\n    [Symbol.iterator]() { return this.values() }\n});\n";
@@ -1267,7 +827,7 @@ var Async =
 
 
 
-exports.ES5 = ES5; exports.ES6 = ES6; exports.Class = Class; exports.Promise = Promise; exports.Async = Async; return exports; }).call(this, {});
+exports.ES6 = ES6; exports.Class = Class; exports.Promise = Promise; exports.Async = Async; return exports; }).call(this, {});
 
 var AST_ = (function(exports) {
 
@@ -2222,10 +1782,10 @@ function isNumberFollowUnicode(c) {
 
 var Scanner = es6now.Class(function(__super) { return {
 
-    constructor: function Scanner(input, offset) {
+    constructor: function Scanner(input) {
 
         this.input = input || "";
-        this.offset = offset | 0;
+        this.offset = 0;
         this.length = this.input.length;
         this.lines = [-1];
         this.lastLineBreak = -1;
@@ -3700,11 +3260,27 @@ var Context = es6now.Class(function(__super) { return {
     }
 } });
 
+var Options = es6now.Class(function(__super) { return {
+
+    constructor: function Options(obj) {
+    
+        this.obj = obj || {};
+    },
+    
+    get: function(key, def) {
+    
+        var v = this.obj[key];
+        return v === void 0 ? def : v;
+    }
+} });
+
 var Parser = es6now.Class(function(__super) { return {
 
-    constructor: function Parser(input, offset) {
-
-        var scanner = new Scanner(input, offset);
+    parse: function(input, options) {
+    
+        options = new Options(options);
+        
+        var scanner = new Scanner(input);
         
         this.scanner = scanner;
         this.input = input;
@@ -3716,6 +3292,16 @@ var Parser = es6now.Class(function(__super) { return {
         
         this.context = new Context(null, false);
         this.setStrict(false);
+        
+        return options.get("module") ? this.Module() : this.Script();
+    },
+    
+    position: function(offset) {
+    
+        if (!this.scanner)
+            throw new Error("Parser not initialized");
+        
+        return this.scanner.position(offset);
     },
     
     nextToken: function(context) {
@@ -6108,7 +5694,7 @@ var Parser = es6now.Class(function(__super) { return {
         }
         
         return new AST.ModulePath(path, start, this.nodeEnd());
-    }
+    }, constructor: function Parser() {}
     
 } });
 
@@ -6121,24 +5707,24 @@ exports.Parser = Parser; return exports; }).call(this, {});
 
 var main______ = (function(exports) {
 
-var AST = AST_.AST;
 var Parser = Parser_.Parser;
-var Scanner = Scanner_.Scanner;
+var AST = AST_.AST;
 
+function parse(input, options) {
 
-
-function parseModule(input, options) {
-
-    return new Parser(input, options).Module();
-}
-
-function parseScript(input, options) {
-
-    return new Parser(input, options).Script();
+    return new Parser().parse(input, options);
 }
 
 
-exports.Parser = Parser; exports.Scanner = Scanner; exports.AST = AST; exports.parseModule = parseModule; exports.parseScript = parseScript; return exports; }).call(this, {});
+
+
+
+
+
+
+
+
+exports.AST = AST; exports.Parser = Parser; exports.parse = parse; exports.default = parse; return exports; }).call(this, {});
 
 var main_____ = (function(exports) {
 
@@ -6210,12 +5796,11 @@ var Replacer = es6now.Class(function(__super) { return {
     
     replace: function(input) { var __this = this;
         
-        var parser = new Parser(input),
-            scanner = parser.scanner,
-            root = parser.Module();
+        var parser = new Parser,
+            root = parser.parse(input, { module: true });
         
         this.input = input;
-        this.scanner = scanner;
+        this.parser = parser;
         this.exportStack = [this.exports = {}];
         this.imports = {};
         this.dependencies = [];
@@ -6994,9 +6579,14 @@ var Replacer = es6now.Class(function(__super) { return {
         })).join(", ") + ";";
     },
     
+    lineNumber: function(pos) {
+    
+        return this.parser.position(pos).line;
+    },
+    
     syncNewlines: function(start, end, text) {
     
-        var height = this.scanner.lineNumber(end - 1) - this.scanner.lineNumber(start);
+        var height = this.lineNumber(end - 1) - this.lineNumber(start);
         return preserveNewlines(text, height);
     },
     
@@ -7090,7 +6680,6 @@ function translate(input, options) {
             
         input = "\n\n" +
             "this.es6now = {};\n\n" +
-            wrapRuntimeModule(Runtime.ES5) +
             wrapRuntimeModule(Runtime.Class) + 
             wrapRuntimeModule(Runtime.ES6) +
             wrapRuntimeModule(Runtime.Promise) +
@@ -7936,18 +7525,13 @@ exports.formatSyntaxError = formatSyntaxError; exports.runModule = runModule; ex
 
 var Analyzer = (function(exports) {
 
-var parseModule = main_____.parseModule;
+var parse = main_____.parse;
 var StringSet = main_.StringSet, StringMap = main_.StringMap;
-
-function parse(code) { 
-
-    return parseModule(code);
-}
 
 function analyze(ast, resolvePath) {
 
     if (typeof ast === "string")
-        ast = parseModule(ast);
+        ast = parse(ast, { module: true });
     
     if (!resolvePath)
         resolvePath = (function(x) { return x; });
@@ -8010,7 +7594,7 @@ function analyze(ast, resolvePath) {
     }
 }
 
-exports.parse = parse; exports.analyze = analyze; return exports; }).call(this, {});
+exports.analyze = analyze; return exports; }).call(this, {});
 
 var Bundler = (function(exports) {
 
