@@ -3,7 +3,6 @@
     "version": "0.5.2",
     "description": "Minimal ES6 to ES5 transpiler",
     "homepage": "https://github.com/zenparsing/es6now",
-    "main": "build/es6now.js",
     "bin": {
         "es6now.js": "./build/es6now.js",
         "es6now": "./build/es6now"
