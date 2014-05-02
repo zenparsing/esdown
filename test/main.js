@@ -36,32 +36,40 @@ export function main(args) {
         }
     });
     
-    try {
+    runTests({
     
-        inputFiles.forEach(path => {
+        "Translation" (test) {
+    
+            try {
+    
+                inputFiles.forEach(path => {
         
-            var input = FS.readFileSync(path, "utf8"),
-                output = translate(input, { wrap: false }),
-                expected = FS.readFileSync(path.replace(/\.js$/, ".out.js"), "utf8"),
-                ok = output === expected;
+                    var input = FS.readFileSync(path, "utf8"),
+                        output = translate(input, { wrap: false }),
+                        expected = FS.readFileSync(path.replace(/\.js$/, ".out.js"), "utf8"),
+                        ok = output === expected;
             
-            console.log(Path.basename(path) + " " + (ok ? "[OK]" : "[FAIL]"));
+                    test.name(Path.basename(path).replace(/-/g, " ").replace(/\.js$/, "")).assert(ok);
             
-            if (!ok) {
+                    if (!ok) {
             
-                FS.writeFileSync(__dirname + "/_test-fail.js", output);
+                        FS.writeFileSync(__dirname + "/_test-fail.js", output);
                 
-                console.log("");
-                console.log(output);
-                console.log("");
-                throw stop;
+                        console.log("");
+                        console.log(output);
+                        console.log("");
+                        throw stop;
+                    }
+                });
+    
+            } catch(x) {
+    
+                if (x !== stop)
+                    throw x;
             }
-        });
+        }
+        
+    });
     
-    } catch(x) {
-    
-        if (x !== stop)
-            throw x;
-    }
 }
 
