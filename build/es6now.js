@@ -842,6 +842,17 @@ NOTE:  For auto-documentation purposes, the following conventions must be follow
     must be identical to the order of property assignments within the constructor.
 
 */
+
+/*
+
+NOTE: We forego using classes and class-based inheritance for the following reasons:
+
+1)  super() is currently slow when using ES6 transpilers.
+2)  Using object literal methods allows us to easily iterated over all AST nodes
+    from within this module.
+
+*/
+
 var AST = {
     
     Node: function(type, start, end) {
@@ -1828,19 +1839,9 @@ var Scanner = es6now.Class(function(__super) { return {
         return this.type;
     },
     
-    raw: function(token) {
+    location: function(offset) {
     
-        return this.input.slice(token.start, token.end);
-    },
-    
-    lineNumber: function(offset) {
-    
-        return binarySearch(this.lines, offset);
-    },
-    
-    position: function(offset) {
-    
-        var line = this.lineNumber(offset),
+        var line = binarySearch(this.lines, offset),
             pos = this.lines[line - 1],
             column = offset - pos;
         
@@ -3296,12 +3297,12 @@ var Parser = es6now.Class(function(__super) { return {
         return options.get("module") ? this.Module() : this.Script();
     },
     
-    position: function(offset) {
+    location: function(offset) {
     
         if (!this.scanner)
             throw new Error("Parser not initialized");
         
-        return this.scanner.position(offset);
+        return this.scanner.location(offset);
     },
     
     nextToken: function(context) {
@@ -3509,12 +3510,12 @@ var Parser = es6now.Class(function(__super) { return {
         if (!node)
             node = this.peekToken();
         
-        var pos = this.scanner.position(node.start),
+        var loc = this.scanner.location(node.start),
             err = new SyntaxError(msg);
         
-        err.line = pos.line;
-        err.column = pos.column;
-        err.lineOffset = pos.lineOffset;
+        err.line = loc.line;
+        err.column = loc.column;
+        err.lineOffset = loc.lineOffset;
         err.startOffset = node.start;
         err.endOffset = node.end;
         err.sourceText = this.input;
@@ -4006,17 +4007,18 @@ var Parser = es6now.Class(function(__super) { return {
                 
                 next = this.peekTokenAt("div", 1);
                 
-                if (next.type === "=>") {
+                if (!next.newlineBefore) {
                 
-                    this.pushContext(true);
-                    return this.ArrowFunctionHead("", this.BindingIdentifier(), start);
+                    if (next.type === "=>") {
                 
-                } else if (!next.newlineBefore) {
+                        this.pushContext(true);
+                        return this.ArrowFunctionHead("", this.BindingIdentifier(), start);
                 
-                    if (next.type === "function")
+                    } else if (next.type === "function") {
+                    
                         return this.FunctionExpression();
                     
-                    if (next.type === "IDENTIFIER" && isFunctionModifier(token.value)) {
+                    } else if (next.type === "IDENTIFIER" && isFunctionModifier(token.value)) {
                     
                         this.read();
                         this.pushContext(true);
@@ -4156,7 +4158,9 @@ var Parser = es6now.Class(function(__super) { return {
         
         this.read(")");
         
-        if (expr === null || this.peek("div") === "=>")
+        var next = this.peekToken("div");
+        
+        if (!next.newlineBefore && (next.type === "=>" || expr === null))
             return this.ArrowFunctionHead("", expr, start);
         
         // Collapse this context into its parent
@@ -6579,9 +6583,9 @@ var Replacer = es6now.Class(function(__super) { return {
         })).join(", ") + ";";
     },
     
-    lineNumber: function(pos) {
+    lineNumber: function(offset) {
     
-        return this.parser.position(pos).line;
+        return this.parser.location(offset).line;
     },
     
     syncNewlines: function(start, end, text) {

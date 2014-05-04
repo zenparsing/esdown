@@ -843,9 +843,9 @@ export class Replacer {
         }).join(", ") + ";";
     }
     
-    lineNumber(pos) {
+    lineNumber(offset) {
     
-        return this.parser.position(pos).line;
+        return this.parser.location(offset).line;
     }
     
     syncNewlines(start, end, text) {

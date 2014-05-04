@@ -36,7 +36,7 @@ export function main(args) {
         }
     });
     
-    runTests({
+    return runTests({
     
         "Translation" (test) {
     
