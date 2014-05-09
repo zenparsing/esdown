@@ -658,24 +658,19 @@ var Promise = es6now.Class(function(__super) { return {
         return this.then(void 0, onReject);
     },
     
-    __static_0: { isPromise: function(x) {
-        
-        return isPromise(x);
-    } },
-    
-    __static_1: { defer: function() {
+    __static_0: { defer: function() {
     
         return promiseDefer(this);
     } },
     
-    __static_2: { accept: function(x) {
+    __static_1: { accept: function(x) {
     
         var d = promiseDefer(this);
         d.resolve(x);
         return d.promise;
     } },
     
-    __static_3: { resolve: function(x) { 
+    __static_2: { resolve: function(x) { 
     
         if (isPromise(x))
             return x;
@@ -685,14 +680,14 @@ var Promise = es6now.Class(function(__super) { return {
         return d.promise;
     } },
     
-    __static_4: { reject: function(x) { 
+    __static_3: { reject: function(x) { 
     
         var d = promiseDefer(this);
         d.reject(x);
         return d.promise;
     } },
 
-    __static_5: { all: function(values) {
+    __static_4: { all: function(values) {
 
         // TODO: We should be getting an iterator from values
         
@@ -733,7 +728,7 @@ var Promise = es6now.Class(function(__super) { return {
         }
     } },
     
-    __static_6: { race: function(values) {
+    __static_5: { race: function(values) {
     
         // TODO: We should be getting an iterator from values
         
@@ -756,7 +751,8 @@ var Promise = es6now.Class(function(__super) { return {
 
 Promise.prototype[$$isPromise] = true;
 
-this.Promise = Promise;
+if (this.Promise === void 0)
+    this.Promise = Promise;
 
 
 }).call(this);
@@ -782,22 +778,13 @@ this.es6now.async = function(iterable) {
         
             // Invoke the iterator/generator
             var result = error ? iter.throw(value) : iter.next(value),
-                value = result.value,
+                value = Promise.resolve(result.value),
                 done = result.done;
             
-            if (Promise.isPromise(value)) {
-
-                if (done) value.chain(resolver.resolve, resolver.reject);
-                else      value.chain((function(x) { return resume(x, false); }), (function(x) { return resume(x, true); }));
-            
-            } else if (done) {
-                
-                resolver.resolve(value);
-                
-            } else {
-            
-                resume(value, false);
-            }
+            if (result.done)
+                value.chain(resolver.resolve, resolver.reject);
+            else
+                value.chain((function(x) { return resume(x, false); }), (function(x) { return resume(x, true); }));
             
         } catch (x) { resolver.reject(x) }
         
@@ -819,11 +806,11 @@ var Class =
 
 var Promise = 
 
-"var enqueueMicrotask = ($=> {\n\n    var window = this.window,\n        process = this.process,\n        msgChannel = null,\n        list = [];\n    \n    if (typeof setImmediate === \"function\") {\n    \n        return window ?\n            window.setImmediate.bind(window) :\n            setImmediate;\n    \n    } else if (process && typeof process.nextTick === \"function\") {\n    \n        return process.nextTick;\n        \n    } else if (window && window.MessageChannel) {\n        \n        msgChannel = new window.MessageChannel();\n        msgChannel.port1.onmessage = $=> { if (list.length) list.shift()(); };\n    \n        return fn => {\n        \n            list.push(fn);\n            msgChannel.port2.postMessage(0);\n        };\n    }\n    \n    return fn => setTimeout(fn, 0);\n\n})();\n\n// The following property names are used to simulate the internal data\n// slots that are defined for Promise objects.\n\nvar $status = \"Promise#status\",\n    $value = \"Promise#value\",\n    $onResolve = \"Promise#onResolve\",\n    $onReject = \"Promise#onReject\";\n\n// The following property name is used to simulate the built-in symbol @@isPromise\nvar $$isPromise = \"@@isPromise\";\n\nfunction isPromise(x) { \n\n    return !!x && $$isPromise in Object(x);\n}\n\nfunction promiseDefer(ctor) {\n\n    var d = {};\n\n    d.promise = new ctor((resolve, reject) => {\n        d.resolve = resolve;\n        d.reject = reject;\n    });\n\n    return d;\n}\n\nfunction promiseChain(promise, onResolve, onReject) {\n\n    if (typeof onResolve !== \"function\") onResolve = x => x;\n    if (typeof onReject !== \"function\") onReject = e => { throw e };\n\n    var deferred = promiseDefer(promise.constructor);\n    \n    if (typeof promise[$status] !== \"string\")\n        throw new TypeError(\"Promise method called on a non-promise\");\n\n    switch (promise[$status]) {\n\n        case \"pending\":\n            promise[$onResolve].push([deferred, onResolve]);\n            promise[$onReject].push([deferred, onReject]);\n            break;\n\n        case \"resolved\":\n            promiseReact(deferred, onResolve, promise[$value]);\n            break;\n    \n        case \"rejected\":\n            promiseReact(deferred, onReject, promise[$value]);\n            break;\n    }\n\n    return deferred.promise;\n}\n\nfunction promiseResolve(promise, x) {\n    \n    promiseDone(promise, \"resolved\", x, promise[$onResolve]);\n}\n\nfunction promiseReject(promise, x) {\n    \n    promiseDone(promise, \"rejected\", x, promise[$onReject]);\n}\n\nfunction promiseDone(promise, status, value, reactions) {\n\n    if (promise[$status] !== \"pending\") \n        return;\n        \n    promise[$status] = status;\n    promise[$value] = value;\n    promise[$onResolve] = promise[$onReject] = void 0;\n    \n    for (var i = 0; i < reactions.length; ++i) \n        promiseReact(reactions[i][0], reactions[i][1], value);\n}\n\nfunction promiseUnwrap(deferred, x) {\n\n    if (x === deferred.promise)\n        throw new TypeError(\"Promise cannot wrap itself\");\n    \n    if (isPromise(x))\n        promiseChain(x, deferred.resolve, deferred.reject);\n    else\n        deferred.resolve(x);\n}\n\nfunction promiseReact(deferred, handler, x) {\n\n    enqueueMicrotask($=> {\n    \n        try { promiseUnwrap(deferred, handler(x)) } \n        catch(e) { try { deferred.reject(e) } catch (e) { } }\n    });\n}\n\nclass Promise {\n\n    constructor(init) {\n    \n        if (typeof init !== \"function\")\n            throw new TypeError(\"Promise constructor called without initializer\");\n        \n        this[$value] = void 0;\n        this[$status] = \"pending\";\n        this[$onResolve] = [];\n        this[$onReject] = [];\n    \n        var resolve = x => promiseResolve(this, x),\n            reject = r => promiseReject(this, r);\n        \n        try { init(resolve, reject) } catch (x) { reject(x) }\n    }\n    \n    chain(onResolve, onReject) {\n    \n        return promiseChain(this, onResolve, onReject);\n    }\n    \n    then(onResolve, onReject) {\n\n        if (typeof onResolve !== \"function\") onResolve = x => x;\n        \n        return promiseChain(this, x => {\n    \n            if (x && typeof x === \"object\") {\n            \n                var maybeThen = x.then;\n                \n                if (typeof maybeThen === \"function\")\n                    return maybeThen.call(x, onResolve, onReject);\n            }\n                        \n            return onResolve(x);\n        \n        }, onReject);\n        \n    }\n    \n    catch(onReject) {\n    \n        return this.then(void 0, onReject);\n    }\n    \n    static isPromise(x) {\n        \n        return isPromise(x);\n    }\n    \n    static defer() {\n    \n        return promiseDefer(this);\n    }\n    \n    static accept(x) {\n    \n        var d = promiseDefer(this);\n        d.resolve(x);\n        return d.promise;\n    }\n    \n    static resolve(x) { \n    \n        if (isPromise(x))\n            return x;\n            \n        var d = promiseDefer(this);\n        d.resolve(x);\n        return d.promise;\n    }\n    \n    static reject(x) { \n    \n        var d = promiseDefer(this);\n        d.reject(x);\n        return d.promise;\n    }\n\n    static all(values) {\n\n        // TODO: We should be getting an iterator from values\n        \n        var deferred = promiseDefer(this),\n            count = values.length,\n            resolutions = [];\n            \n        try {\n        \n            if (!Array.isArray(values))\n                throw new Error(\"Invalid argument\");\n        \n            var count = values.length;\n        \n            if (count === 0) {\n        \n                deferred.resolve(resolutions);\n            \n            } else {\n        \n                for (var i = 0; i < values.length; ++i)\n                    this.resolve(values[i]).then(onResolve(i), deferred.reject);\n            }\n            \n        } catch(x) { deferred.reject(x) }\n        \n        return deferred.promise;\n        \n        function onResolve(i) {\n    \n            return x => {\n        \n                resolutions[i] = x;\n            \n                if (--count === 0)\n                    deferred.resolve(resolutions);\n            };\n        }\n    }\n    \n    static race(values) {\n    \n        // TODO: We should be getting an iterator from values\n        \n        var deferred = promiseDefer(this);\n        \n        try {\n        \n            if (!Array.isArray(values))\n                throw new Error(\"Invalid argument\");\n            \n            for (var i = 0; i < values.length; ++i)\n                this.resolve(values[i]).then(deferred.resolve, deferred.reject);\n        \n        } catch(x) { deferred.reject(x) }\n        \n        return deferred.promise;\n    }\n    \n}\n\nPromise.prototype[$$isPromise] = true;\n\nthis.Promise = Promise;\n";
+"var enqueueMicrotask = ($=> {\n\n    var window = this.window,\n        process = this.process,\n        msgChannel = null,\n        list = [];\n    \n    if (typeof setImmediate === \"function\") {\n    \n        return window ?\n            window.setImmediate.bind(window) :\n            setImmediate;\n    \n    } else if (process && typeof process.nextTick === \"function\") {\n    \n        return process.nextTick;\n        \n    } else if (window && window.MessageChannel) {\n        \n        msgChannel = new window.MessageChannel();\n        msgChannel.port1.onmessage = $=> { if (list.length) list.shift()(); };\n    \n        return fn => {\n        \n            list.push(fn);\n            msgChannel.port2.postMessage(0);\n        };\n    }\n    \n    return fn => setTimeout(fn, 0);\n\n})();\n\n// The following property names are used to simulate the internal data\n// slots that are defined for Promise objects.\n\nvar $status = \"Promise#status\",\n    $value = \"Promise#value\",\n    $onResolve = \"Promise#onResolve\",\n    $onReject = \"Promise#onReject\";\n\n// The following property name is used to simulate the built-in symbol @@isPromise\nvar $$isPromise = \"@@isPromise\";\n\nfunction isPromise(x) { \n\n    return !!x && $$isPromise in Object(x);\n}\n\nfunction promiseDefer(ctor) {\n\n    var d = {};\n\n    d.promise = new ctor((resolve, reject) => {\n        d.resolve = resolve;\n        d.reject = reject;\n    });\n\n    return d;\n}\n\nfunction promiseChain(promise, onResolve, onReject) {\n\n    if (typeof onResolve !== \"function\") onResolve = x => x;\n    if (typeof onReject !== \"function\") onReject = e => { throw e };\n\n    var deferred = promiseDefer(promise.constructor);\n    \n    if (typeof promise[$status] !== \"string\")\n        throw new TypeError(\"Promise method called on a non-promise\");\n\n    switch (promise[$status]) {\n\n        case \"pending\":\n            promise[$onResolve].push([deferred, onResolve]);\n            promise[$onReject].push([deferred, onReject]);\n            break;\n\n        case \"resolved\":\n            promiseReact(deferred, onResolve, promise[$value]);\n            break;\n    \n        case \"rejected\":\n            promiseReact(deferred, onReject, promise[$value]);\n            break;\n    }\n\n    return deferred.promise;\n}\n\nfunction promiseResolve(promise, x) {\n    \n    promiseDone(promise, \"resolved\", x, promise[$onResolve]);\n}\n\nfunction promiseReject(promise, x) {\n    \n    promiseDone(promise, \"rejected\", x, promise[$onReject]);\n}\n\nfunction promiseDone(promise, status, value, reactions) {\n\n    if (promise[$status] !== \"pending\") \n        return;\n        \n    promise[$status] = status;\n    promise[$value] = value;\n    promise[$onResolve] = promise[$onReject] = void 0;\n    \n    for (var i = 0; i < reactions.length; ++i) \n        promiseReact(reactions[i][0], reactions[i][1], value);\n}\n\nfunction promiseUnwrap(deferred, x) {\n\n    if (x === deferred.promise)\n        throw new TypeError(\"Promise cannot wrap itself\");\n    \n    if (isPromise(x))\n        promiseChain(x, deferred.resolve, deferred.reject);\n    else\n        deferred.resolve(x);\n}\n\nfunction promiseReact(deferred, handler, x) {\n\n    enqueueMicrotask($=> {\n    \n        try { promiseUnwrap(deferred, handler(x)) } \n        catch(e) { try { deferred.reject(e) } catch (e) { } }\n    });\n}\n\nclass Promise {\n\n    constructor(init) {\n    \n        if (typeof init !== \"function\")\n            throw new TypeError(\"Promise constructor called without initializer\");\n        \n        this[$value] = void 0;\n        this[$status] = \"pending\";\n        this[$onResolve] = [];\n        this[$onReject] = [];\n    \n        var resolve = x => promiseResolve(this, x),\n            reject = r => promiseReject(this, r);\n        \n        try { init(resolve, reject) } catch (x) { reject(x) }\n    }\n    \n    chain(onResolve, onReject) {\n    \n        return promiseChain(this, onResolve, onReject);\n    }\n    \n    then(onResolve, onReject) {\n\n        if (typeof onResolve !== \"function\") onResolve = x => x;\n        \n        return promiseChain(this, x => {\n    \n            if (x && typeof x === \"object\") {\n            \n                var maybeThen = x.then;\n                \n                if (typeof maybeThen === \"function\")\n                    return maybeThen.call(x, onResolve, onReject);\n            }\n                        \n            return onResolve(x);\n        \n        }, onReject);\n        \n    }\n    \n    catch(onReject) {\n    \n        return this.then(void 0, onReject);\n    }\n    \n    static defer() {\n    \n        return promiseDefer(this);\n    }\n    \n    static accept(x) {\n    \n        var d = promiseDefer(this);\n        d.resolve(x);\n        return d.promise;\n    }\n    \n    static resolve(x) { \n    \n        if (isPromise(x))\n            return x;\n            \n        var d = promiseDefer(this);\n        d.resolve(x);\n        return d.promise;\n    }\n    \n    static reject(x) { \n    \n        var d = promiseDefer(this);\n        d.reject(x);\n        return d.promise;\n    }\n\n    static all(values) {\n\n        // TODO: We should be getting an iterator from values\n        \n        var deferred = promiseDefer(this),\n            count = values.length,\n            resolutions = [];\n            \n        try {\n        \n            if (!Array.isArray(values))\n                throw new Error(\"Invalid argument\");\n        \n            var count = values.length;\n        \n            if (count === 0) {\n        \n                deferred.resolve(resolutions);\n            \n            } else {\n        \n                for (var i = 0; i < values.length; ++i)\n                    this.resolve(values[i]).then(onResolve(i), deferred.reject);\n            }\n            \n        } catch(x) { deferred.reject(x) }\n        \n        return deferred.promise;\n        \n        function onResolve(i) {\n    \n            return x => {\n        \n                resolutions[i] = x;\n            \n                if (--count === 0)\n                    deferred.resolve(resolutions);\n            };\n        }\n    }\n    \n    static race(values) {\n    \n        // TODO: We should be getting an iterator from values\n        \n        var deferred = promiseDefer(this);\n        \n        try {\n        \n            if (!Array.isArray(values))\n                throw new Error(\"Invalid argument\");\n            \n            for (var i = 0; i < values.length; ++i)\n                this.resolve(values[i]).then(deferred.resolve, deferred.reject);\n        \n        } catch(x) { deferred.reject(x) }\n        \n        return deferred.promise;\n    }\n    \n}\n\nPromise.prototype[$$isPromise] = true;\n\nif (this.Promise === void 0)\n    this.Promise = Promise;\n";
 
 var Async = 
 
-"this.es6now.async = function(iterable) {\n    \n    var iter = es6now.iterator(iterable),\n        resolver,\n        promise;\n    \n    promise = new Promise((resolve, reject) => resolver = { resolve, reject });\n    resume(void 0, false);\n    return promise;\n    \n    function resume(value, error) {\n    \n        if (error && !(\"throw\" in iter))\n            return resolver.reject(value);\n        \n        try {\n        \n            // Invoke the iterator/generator\n            var result = error ? iter.throw(value) : iter.next(value),\n                value = result.value,\n                done = result.done;\n            \n            if (Promise.isPromise(value)) {\n\n                if (done) value.chain(resolver.resolve, resolver.reject);\n                else      value.chain(x => resume(x, false), x => resume(x, true));\n            \n            } else if (done) {\n                \n                resolver.resolve(value);\n                \n            } else {\n            \n                resume(value, false);\n            }\n            \n        } catch (x) { resolver.reject(x) }\n        \n    }\n};\n";
+"this.es6now.async = function(iterable) {\n    \n    var iter = es6now.iterator(iterable),\n        resolver,\n        promise;\n    \n    promise = new Promise((resolve, reject) => resolver = { resolve, reject });\n    resume(void 0, false);\n    return promise;\n    \n    function resume(value, error) {\n    \n        if (error && !(\"throw\" in iter))\n            return resolver.reject(value);\n        \n        try {\n        \n            // Invoke the iterator/generator\n            var result = error ? iter.throw(value) : iter.next(value),\n                value = Promise.resolve(result.value),\n                done = result.done;\n            \n            if (result.done)\n                value.chain(resolver.resolve, resolver.reject);\n            else\n                value.chain(x => resume(x, false), x => resume(x, true));\n            \n        } catch (x) { resolver.reject(x) }\n        \n    }\n};\n";
 
 
 
@@ -1630,12 +1617,869 @@ Object.keys(AST).forEach((function(k) { return AST[k].prototype = NodeBase.proto
 
 exports.AST = AST; return exports; }).call(this, {});
 
+var UnicodeData = (function(exports) {
+
+// Unicode 6.3.0 | 2013-09-25, 18:58:50 GMT [MD]
+
+var IDENTIFIER = [
+    36,0,2,
+    48,9,3,
+    65,25,2,
+    95,0,2,
+    97,25,2,
+    170,0,2,
+    181,0,2,
+    183,0,3,
+    186,0,2,
+    192,22,2,
+    216,30,2,
+    248,457,2,
+    710,11,2,
+    736,4,2,
+    748,0,2,
+    750,0,2,
+    768,111,3,
+    880,4,2,
+    886,1,2,
+    890,3,2,
+    902,0,2,
+    903,0,3,
+    904,2,2,
+    908,0,2,
+    910,19,2,
+    931,82,2,
+    1015,138,2,
+    1155,4,3,
+    1162,157,2,
+    1329,37,2,
+    1369,0,2,
+    1377,38,2,
+    1425,44,3,
+    1471,0,3,
+    1473,1,3,
+    1476,1,3,
+    1479,0,3,
+    1488,26,2,
+    1520,2,2,
+    1552,10,3,
+    1568,42,2,
+    1611,30,3,
+    1646,1,2,
+    1648,0,3,
+    1649,98,2,
+    1749,0,2,
+    1750,6,3,
+    1759,5,3,
+    1765,1,2,
+    1767,1,3,
+    1770,3,3,
+    1774,1,2,
+    1776,9,3,
+    1786,2,2,
+    1791,0,2,
+    1808,0,2,
+    1809,0,3,
+    1810,29,2,
+    1840,26,3,
+    1869,88,2,
+    1958,10,3,
+    1969,0,2,
+    1984,9,3,
+    1994,32,2,
+    2027,8,3,
+    2036,1,2,
+    2042,0,2,
+    2048,21,2,
+    2070,3,3,
+    2074,0,2,
+    2075,8,3,
+    2084,0,2,
+    2085,2,3,
+    2088,0,2,
+    2089,4,3,
+    2112,24,2,
+    2137,2,3,
+    2208,0,2,
+    2210,10,2,
+    2276,26,3,
+    2304,3,3,
+    2308,53,2,
+    2362,2,3,
+    2365,0,2,
+    2366,17,3,
+    2384,0,2,
+    2385,6,3,
+    2392,9,2,
+    2402,1,3,
+    2406,9,3,
+    2417,6,2,
+    2425,6,2,
+    2433,2,3,
+    2437,7,2,
+    2447,1,2,
+    2451,21,2,
+    2474,6,2,
+    2482,0,2,
+    2486,3,2,
+    2492,0,3,
+    2493,0,2,
+    2494,6,3,
+    2503,1,3,
+    2507,2,3,
+    2510,0,2,
+    2519,0,3,
+    2524,1,2,
+    2527,2,2,
+    2530,1,3,
+    2534,9,3,
+    2544,1,2,
+    2561,2,3,
+    2565,5,2,
+    2575,1,2,
+    2579,21,2,
+    2602,6,2,
+    2610,1,2,
+    2613,1,2,
+    2616,1,2,
+    2620,0,3,
+    2622,4,3,
+    2631,1,3,
+    2635,2,3,
+    2641,0,3,
+    2649,3,2,
+    2654,0,2,
+    2662,11,3,
+    2674,2,2,
+    2677,0,3,
+    2689,2,3,
+    2693,8,2,
+    2703,2,2,
+    2707,21,2,
+    2730,6,2,
+    2738,1,2,
+    2741,4,2,
+    2748,0,3,
+    2749,0,2,
+    2750,7,3,
+    2759,2,3,
+    2763,2,3,
+    2768,0,2,
+    2784,1,2,
+    2786,1,3,
+    2790,9,3,
+    2817,2,3,
+    2821,7,2,
+    2831,1,2,
+    2835,21,2,
+    2858,6,2,
+    2866,1,2,
+    2869,4,2,
+    2876,0,3,
+    2877,0,2,
+    2878,6,3,
+    2887,1,3,
+    2891,2,3,
+    2902,1,3,
+    2908,1,2,
+    2911,2,2,
+    2914,1,3,
+    2918,9,3,
+    2929,0,2,
+    2946,0,3,
+    2947,0,2,
+    2949,5,2,
+    2958,2,2,
+    2962,3,2,
+    2969,1,2,
+    2972,0,2,
+    2974,1,2,
+    2979,1,2,
+    2984,2,2,
+    2990,11,2,
+    3006,4,3,
+    3014,2,3,
+    3018,3,3,
+    3024,0,2,
+    3031,0,3,
+    3046,9,3,
+    3073,2,3,
+    3077,7,2,
+    3086,2,2,
+    3090,22,2,
+    3114,9,2,
+    3125,4,2,
+    3133,0,2,
+    3134,6,3,
+    3142,2,3,
+    3146,3,3,
+    3157,1,3,
+    3160,1,2,
+    3168,1,2,
+    3170,1,3,
+    3174,9,3,
+    3202,1,3,
+    3205,7,2,
+    3214,2,2,
+    3218,22,2,
+    3242,9,2,
+    3253,4,2,
+    3260,0,3,
+    3261,0,2,
+    3262,6,3,
+    3270,2,3,
+    3274,3,3,
+    3285,1,3,
+    3294,0,2,
+    3296,1,2,
+    3298,1,3,
+    3302,9,3,
+    3313,1,2,
+    3330,1,3,
+    3333,7,2,
+    3342,2,2,
+    3346,40,2,
+    3389,0,2,
+    3390,6,3,
+    3398,2,3,
+    3402,3,3,
+    3406,0,2,
+    3415,0,3,
+    3424,1,2,
+    3426,1,3,
+    3430,9,3,
+    3450,5,2,
+    3458,1,3,
+    3461,17,2,
+    3482,23,2,
+    3507,8,2,
+    3517,0,2,
+    3520,6,2,
+    3530,0,3,
+    3535,5,3,
+    3542,0,3,
+    3544,7,3,
+    3570,1,3,
+    3585,47,2,
+    3633,0,3,
+    3634,1,2,
+    3636,6,3,
+    3648,6,2,
+    3655,7,3,
+    3664,9,3,
+    3713,1,2,
+    3716,0,2,
+    3719,1,2,
+    3722,0,2,
+    3725,0,2,
+    3732,3,2,
+    3737,6,2,
+    3745,2,2,
+    3749,0,2,
+    3751,0,2,
+    3754,1,2,
+    3757,3,2,
+    3761,0,3,
+    3762,1,2,
+    3764,5,3,
+    3771,1,3,
+    3773,0,2,
+    3776,4,2,
+    3782,0,2,
+    3784,5,3,
+    3792,9,3,
+    3804,3,2,
+    3840,0,2,
+    3864,1,3,
+    3872,9,3,
+    3893,0,3,
+    3895,0,3,
+    3897,0,3,
+    3902,1,3,
+    3904,7,2,
+    3913,35,2,
+    3953,19,3,
+    3974,1,3,
+    3976,4,2,
+    3981,10,3,
+    3993,35,3,
+    4038,0,3,
+    4096,42,2,
+    4139,19,3,
+    4159,0,2,
+    4160,9,3,
+    4176,5,2,
+    4182,3,3,
+    4186,3,2,
+    4190,2,3,
+    4193,0,2,
+    4194,2,3,
+    4197,1,2,
+    4199,6,3,
+    4206,2,2,
+    4209,3,3,
+    4213,12,2,
+    4226,11,3,
+    4238,0,2,
+    4239,14,3,
+    4256,37,2,
+    4295,0,2,
+    4301,0,2,
+    4304,42,2,
+    4348,332,2,
+    4682,3,2,
+    4688,6,2,
+    4696,0,2,
+    4698,3,2,
+    4704,40,2,
+    4746,3,2,
+    4752,32,2,
+    4786,3,2,
+    4792,6,2,
+    4800,0,2,
+    4802,3,2,
+    4808,14,2,
+    4824,56,2,
+    4882,3,2,
+    4888,66,2,
+    4957,2,3,
+    4969,8,3,
+    4992,15,2,
+    5024,84,2,
+    5121,619,2,
+    5743,16,2,
+    5761,25,2,
+    5792,74,2,
+    5870,2,2,
+    5888,12,2,
+    5902,3,2,
+    5906,2,3,
+    5920,17,2,
+    5938,2,3,
+    5952,17,2,
+    5970,1,3,
+    5984,12,2,
+    5998,2,2,
+    6002,1,3,
+    6016,51,2,
+    6068,31,3,
+    6103,0,2,
+    6108,0,2,
+    6109,0,3,
+    6112,9,3,
+    6155,2,3,
+    6160,9,3,
+    6176,87,2,
+    6272,40,2,
+    6313,0,3,
+    6314,0,2,
+    6320,69,2,
+    6400,28,2,
+    6432,11,3,
+    6448,11,3,
+    6470,9,3,
+    6480,29,2,
+    6512,4,2,
+    6528,43,2,
+    6576,16,3,
+    6593,6,2,
+    6600,1,3,
+    6608,10,3,
+    6656,22,2,
+    6679,4,3,
+    6688,52,2,
+    6741,9,3,
+    6752,28,3,
+    6783,10,3,
+    6800,9,3,
+    6823,0,2,
+    6912,4,3,
+    6917,46,2,
+    6964,16,3,
+    6981,6,2,
+    6992,9,3,
+    7019,8,3,
+    7040,2,3,
+    7043,29,2,
+    7073,12,3,
+    7086,1,2,
+    7088,9,3,
+    7098,43,2,
+    7142,13,3,
+    7168,35,2,
+    7204,19,3,
+    7232,9,3,
+    7245,2,2,
+    7248,9,3,
+    7258,35,2,
+    7376,2,3,
+    7380,20,3,
+    7401,3,2,
+    7405,0,3,
+    7406,3,2,
+    7410,2,3,
+    7413,1,2,
+    7424,191,2,
+    7616,38,3,
+    7676,3,3,
+    7680,277,2,
+    7960,5,2,
+    7968,37,2,
+    8008,5,2,
+    8016,7,2,
+    8025,0,2,
+    8027,0,2,
+    8029,0,2,
+    8031,30,2,
+    8064,52,2,
+    8118,6,2,
+    8126,0,2,
+    8130,2,2,
+    8134,6,2,
+    8144,3,2,
+    8150,5,2,
+    8160,12,2,
+    8178,2,2,
+    8182,6,2,
+    8204,1,3,
+    8255,1,3,
+    8276,0,3,
+    8305,0,2,
+    8319,0,2,
+    8336,12,2,
+    8400,12,3,
+    8417,0,3,
+    8421,11,3,
+    8450,0,2,
+    8455,0,2,
+    8458,9,2,
+    8469,0,2,
+    8472,5,2,
+    8484,0,2,
+    8486,0,2,
+    8488,0,2,
+    8490,15,2,
+    8508,3,2,
+    8517,4,2,
+    8526,0,2,
+    8544,40,2,
+    11264,46,2,
+    11312,46,2,
+    11360,132,2,
+    11499,3,2,
+    11503,2,3,
+    11506,1,2,
+    11520,37,2,
+    11559,0,2,
+    11565,0,2,
+    11568,55,2,
+    11631,0,2,
+    11647,0,3,
+    11648,22,2,
+    11680,6,2,
+    11688,6,2,
+    11696,6,2,
+    11704,6,2,
+    11712,6,2,
+    11720,6,2,
+    11728,6,2,
+    11736,6,2,
+    11744,31,3,
+    12293,2,2,
+    12321,8,2,
+    12330,5,3,
+    12337,4,2,
+    12344,4,2,
+    12353,85,2,
+    12441,1,3,
+    12443,4,2,
+    12449,89,2,
+    12540,3,2,
+    12549,40,2,
+    12593,93,2,
+    12704,26,2,
+    12784,15,2,
+    13312,6581,2,
+    19968,20940,2,
+    40960,1164,2,
+    42192,45,2,
+    42240,268,2,
+    42512,15,2,
+    42528,9,3,
+    42538,1,2,
+    42560,46,2,
+    42607,0,3,
+    42612,9,3,
+    42623,24,2,
+    42655,0,3,
+    42656,79,2,
+    42736,1,3,
+    42775,8,2,
+    42786,102,2,
+    42891,3,2,
+    42896,3,2,
+    42912,10,2,
+    43000,9,2,
+    43010,0,3,
+    43011,2,2,
+    43014,0,3,
+    43015,3,2,
+    43019,0,3,
+    43020,22,2,
+    43043,4,3,
+    43072,51,2,
+    43136,1,3,
+    43138,49,2,
+    43188,16,3,
+    43216,9,3,
+    43232,17,3,
+    43250,5,2,
+    43259,0,2,
+    43264,9,3,
+    43274,27,2,
+    43302,7,3,
+    43312,22,2,
+    43335,12,3,
+    43360,28,2,
+    43392,3,3,
+    43396,46,2,
+    43443,13,3,
+    43471,0,2,
+    43472,9,3,
+    43520,40,2,
+    43561,13,3,
+    43584,2,2,
+    43587,0,3,
+    43588,7,2,
+    43596,1,3,
+    43600,9,3,
+    43616,22,2,
+    43642,0,2,
+    43643,0,3,
+    43648,47,2,
+    43696,0,3,
+    43697,0,2,
+    43698,2,3,
+    43701,1,2,
+    43703,1,3,
+    43705,4,2,
+    43710,1,3,
+    43712,0,2,
+    43713,0,3,
+    43714,0,2,
+    43739,2,2,
+    43744,10,2,
+    43755,4,3,
+    43762,2,2,
+    43765,1,3,
+    43777,5,2,
+    43785,5,2,
+    43793,5,2,
+    43808,6,2,
+    43816,6,2,
+    43968,34,2,
+    44003,7,3,
+    44012,1,3,
+    44016,9,3,
+    44032,11171,2,
+    55216,22,2,
+    55243,48,2,
+    63744,365,2,
+    64112,105,2,
+    64256,6,2,
+    64275,4,2,
+    64285,0,2,
+    64286,0,3,
+    64287,9,2,
+    64298,12,2,
+    64312,4,2,
+    64318,0,2,
+    64320,1,2,
+    64323,1,2,
+    64326,107,2,
+    64467,362,2,
+    64848,63,2,
+    64914,53,2,
+    65008,11,2,
+    65024,15,3,
+    65056,6,3,
+    65075,1,3,
+    65101,2,3,
+    65136,4,2,
+    65142,134,2,
+    65296,9,3,
+    65313,25,2,
+    65343,0,3,
+    65345,25,2,
+    65382,88,2,
+    65474,5,2,
+    65482,5,2,
+    65490,5,2,
+    65498,2,2,
+    65536,11,2,
+    65549,25,2,
+    65576,18,2,
+    65596,1,2,
+    65599,14,2,
+    65616,13,2,
+    65664,122,2,
+    65856,52,2,
+    66045,0,3,
+    66176,28,2,
+    66208,48,2,
+    66304,30,2,
+    66352,26,2,
+    66432,29,2,
+    66464,35,2,
+    66504,7,2,
+    66513,4,2,
+    66560,157,2,
+    66720,9,3,
+    67584,5,2,
+    67592,0,2,
+    67594,43,2,
+    67639,1,2,
+    67644,0,2,
+    67647,22,2,
+    67840,21,2,
+    67872,25,2,
+    67968,55,2,
+    68030,1,2,
+    68096,0,2,
+    68097,2,3,
+    68101,1,3,
+    68108,3,3,
+    68112,3,2,
+    68117,2,2,
+    68121,26,2,
+    68152,2,3,
+    68159,0,3,
+    68192,28,2,
+    68352,53,2,
+    68416,21,2,
+    68448,18,2,
+    68608,72,2,
+    69632,2,3,
+    69635,52,2,
+    69688,14,3,
+    69734,9,3,
+    69760,2,3,
+    69763,44,2,
+    69808,10,3,
+    69840,24,2,
+    69872,9,3,
+    69888,2,3,
+    69891,35,2,
+    69927,13,3,
+    69942,9,3,
+    70016,2,3,
+    70019,47,2,
+    70067,13,3,
+    70081,3,2,
+    70096,9,3,
+    71296,42,2,
+    71339,12,3,
+    71360,9,3,
+    73728,878,2,
+    74752,98,2,
+    77824,1070,2,
+    92160,568,2,
+    93952,68,2,
+    94032,0,2,
+    94033,45,3,
+    94095,3,3,
+    94099,12,2,
+    110592,1,2,
+    119141,4,3,
+    119149,5,3,
+    119163,7,3,
+    119173,6,3,
+    119210,3,3,
+    119362,2,3,
+    119808,84,2,
+    119894,70,2,
+    119966,1,2,
+    119970,0,2,
+    119973,1,2,
+    119977,3,2,
+    119982,11,2,
+    119995,0,2,
+    119997,6,2,
+    120005,64,2,
+    120071,3,2,
+    120077,7,2,
+    120086,6,2,
+    120094,27,2,
+    120123,3,2,
+    120128,4,2,
+    120134,0,2,
+    120138,6,2,
+    120146,339,2,
+    120488,24,2,
+    120514,24,2,
+    120540,30,2,
+    120572,24,2,
+    120598,30,2,
+    120630,24,2,
+    120656,30,2,
+    120688,24,2,
+    120714,30,2,
+    120746,24,2,
+    120772,7,2,
+    120782,49,3,
+    126464,3,2,
+    126469,26,2,
+    126497,1,2,
+    126500,0,2,
+    126503,0,2,
+    126505,9,2,
+    126516,3,2,
+    126521,0,2,
+    126523,0,2,
+    126530,0,2,
+    126535,0,2,
+    126537,0,2,
+    126539,0,2,
+    126541,2,2,
+    126545,1,2,
+    126548,0,2,
+    126551,0,2,
+    126553,0,2,
+    126555,0,2,
+    126557,0,2,
+    126559,0,2,
+    126561,1,2,
+    126564,0,2,
+    126567,3,2,
+    126572,6,2,
+    126580,3,2,
+    126585,3,2,
+    126590,0,2,
+    126592,9,2,
+    126603,16,2,
+    126625,2,2,
+    126629,4,2,
+    126635,16,2,
+    131072,42710,2,
+    173824,4148,2,
+    177984,221,2,
+    194560,541,2,
+    917760,239,3
+];
+
+var WHITESPACE = [
+    9,0,1,
+    11,1,1,
+    32,0,1,
+    160,0,1,
+    5760,0,1,
+    8192,10,1,
+    8239,0,1,
+    8287,0,1,
+    12288,0,1,
+    65279,0,1
+];
+
+
+
+exports.IDENTIFIER = IDENTIFIER; exports.WHITESPACE = WHITESPACE; return exports; }).call(this, {});
+
+var Unicode_ = (function(exports) {
+
+var IDENTIFIER = UnicodeData.IDENTIFIER, WHITESPACE = UnicodeData.WHITESPACE;
+
+function binarySearch(table, val) {
+
+    var right = (table.length / 3) - 1,
+        left = 0,
+        mid = 0,
+        test = 0,
+        offset = 0;
+    
+    while (left <= right) {
+        
+        mid = (left + right) >> 1;
+        offset = mid * 3;
+        test = table[offset];
+        
+        if (val < test) {
+        
+            right = mid - 1;
+        
+        } else if (val === test || val <= test + table[offset + 1]) {
+        
+            return table[offset + 2];
+            
+        } else {
+        
+            left = mid + 1; 
+        }
+    }
+    
+    return 0;
+}
+
+function isIdentifierStart(code) {
+
+    return binarySearch(IDENTIFIER, code) === 2;
+}
+
+function isIdentifierPart(code) {
+
+    return binarySearch(IDENTIFIER, code) >= 2;
+}
+
+function isWhitespace(code) {
+
+    return binarySearch(WHITESPACE, code) === 1;
+}
+
+function length(code) {
+
+    return code > 0xffff ? 2 : 1;
+}
+
+function codePointAt(str, offset) {
+
+    var a = str.charCodeAt(offset);
+        
+    if (a >= 0xd800 && 
+        a <= 0xdbff && 
+        str.length > offset + 1) {
+    
+        var b = str.charCodeAt(offset + 1);
+        
+        if (b >= 0xdc00 && b <= 0xdfff)
+            return (a - 0xd800) * 0x400 + b - 0xdc00 + 0x10000;
+    }
+    
+    return a;
+}
+
+function toString(code) {
+
+    if (code > 0x10ffff)
+        return "";
+    
+    if (code <= 0xffff)
+        return String.fromCharCode(code);
+    
+    // If value is greater than 0xffff, then it must be encoded
+    // as 2 UTF-16 code units in a surrogate pair.
+    
+    code -= 0x10000;
+    
+    return String.fromCharCode(
+        (code >> 10) + 0xd800, 
+        (code % 0x400) + 0xdc00);
+}
+
+
+
+exports.isIdentifierStart = isIdentifierStart; exports.isIdentifierPart = isIdentifierPart; exports.isWhitespace = isWhitespace; exports.length = length; exports.codePointAt = codePointAt; exports.toString = toString; return exports; }).call(this, {});
+
 var Scanner_ = (function(exports) {
 
-// Unicode 6.2.0 | 2012-05-23, 20:34:59 GMT [MD]
-var identifierStart = /[\x24\x41-\x5A\x5F\x61-\x7A\xAA\xB5\xBA\xC0-\xD6\xD8-\xF6\xF8-\u02C1\u02C6-\u02D1\u02E0-\u02E4\u02EC\u02EE\u0370-\u0374\u0376-\u0377\u037A-\u037D\u0386\u0388-\u038A\u038C\u038E-\u03A1\u03A3-\u03F5\u03F7-\u0481\u048A-\u0527\u0531-\u0556\u0559\u0561-\u0587\u05D0-\u05EA\u05F0-\u05F2\u0620-\u064A\u066E-\u066F\u0671-\u06D3\u06D5\u06E5-\u06E6\u06EE-\u06EF\u06FA-\u06FC\u06FF\u0710\u0712-\u072F\u074D-\u07A5\u07B1\u07CA-\u07EA\u07F4-\u07F5\u07FA\u0800-\u0815\u081A\u0824\u0828\u0840-\u0858\u08A0\u08A2-\u08AC\u0904-\u0939\u093D\u0950\u0958-\u0961\u0971-\u0977\u0979-\u097F\u0985-\u098C\u098F-\u0990\u0993-\u09A8\u09AA-\u09B0\u09B2\u09B6-\u09B9\u09BD\u09CE\u09DC-\u09DD\u09DF-\u09E1\u09F0-\u09F1\u0A05-\u0A0A\u0A0F-\u0A10\u0A13-\u0A28\u0A2A-\u0A30\u0A32-\u0A33\u0A35-\u0A36\u0A38-\u0A39\u0A59-\u0A5C\u0A5E\u0A72-\u0A74\u0A85-\u0A8D\u0A8F-\u0A91\u0A93-\u0AA8\u0AAA-\u0AB0\u0AB2-\u0AB3\u0AB5-\u0AB9\u0ABD\u0AD0\u0AE0-\u0AE1\u0B05-\u0B0C\u0B0F-\u0B10\u0B13-\u0B28\u0B2A-\u0B30\u0B32-\u0B33\u0B35-\u0B39\u0B3D\u0B5C-\u0B5D\u0B5F-\u0B61\u0B71\u0B83\u0B85-\u0B8A\u0B8E-\u0B90\u0B92-\u0B95\u0B99-\u0B9A\u0B9C\u0B9E-\u0B9F\u0BA3-\u0BA4\u0BA8-\u0BAA\u0BAE-\u0BB9\u0BD0\u0C05-\u0C0C\u0C0E-\u0C10\u0C12-\u0C28\u0C2A-\u0C33\u0C35-\u0C39\u0C3D\u0C58-\u0C59\u0C60-\u0C61\u0C85-\u0C8C\u0C8E-\u0C90\u0C92-\u0CA8\u0CAA-\u0CB3\u0CB5-\u0CB9\u0CBD\u0CDE\u0CE0-\u0CE1\u0CF1-\u0CF2\u0D05-\u0D0C\u0D0E-\u0D10\u0D12-\u0D3A\u0D3D\u0D4E\u0D60-\u0D61\u0D7A-\u0D7F\u0D85-\u0D96\u0D9A-\u0DB1\u0DB3-\u0DBB\u0DBD\u0DC0-\u0DC6\u0E01-\u0E30\u0E32-\u0E33\u0E40-\u0E46\u0E81-\u0E82\u0E84\u0E87-\u0E88\u0E8A\u0E8D\u0E94-\u0E97\u0E99-\u0E9F\u0EA1-\u0EA3\u0EA5\u0EA7\u0EAA-\u0EAB\u0EAD-\u0EB0\u0EB2-\u0EB3\u0EBD\u0EC0-\u0EC4\u0EC6\u0EDC-\u0EDF\u0F00\u0F40-\u0F47\u0F49-\u0F6C\u0F88-\u0F8C\u1000-\u102A\u103F\u1050-\u1055\u105A-\u105D\u1061\u1065-\u1066\u106E-\u1070\u1075-\u1081\u108E\u10A0-\u10C5\u10C7\u10CD\u10D0-\u10FA\u10FC-\u1248\u124A-\u124D\u1250-\u1256\u1258\u125A-\u125D\u1260-\u1288\u128A-\u128D\u1290-\u12B0\u12B2-\u12B5\u12B8-\u12BE\u12C0\u12C2-\u12C5\u12C8-\u12D6\u12D8-\u1310\u1312-\u1315\u1318-\u135A\u1380-\u138F\u13A0-\u13F4\u1401-\u166C\u166F-\u167F\u1681-\u169A\u16A0-\u16EA\u16EE-\u16F0\u1700-\u170C\u170E-\u1711\u1720-\u1731\u1740-\u1751\u1760-\u176C\u176E-\u1770\u1780-\u17B3\u17D7\u17DC\u1820-\u1877\u1880-\u18A8\u18AA\u18B0-\u18F5\u1900-\u191C\u1950-\u196D\u1970-\u1974\u1980-\u19AB\u19C1-\u19C7\u1A00-\u1A16\u1A20-\u1A54\u1AA7\u1B05-\u1B33\u1B45-\u1B4B\u1B83-\u1BA0\u1BAE-\u1BAF\u1BBA-\u1BE5\u1C00-\u1C23\u1C4D-\u1C4F\u1C5A-\u1C7D\u1CE9-\u1CEC\u1CEE-\u1CF1\u1CF5-\u1CF6\u1D00-\u1DBF\u1E00-\u1F15\u1F18-\u1F1D\u1F20-\u1F45\u1F48-\u1F4D\u1F50-\u1F57\u1F59\u1F5B\u1F5D\u1F5F-\u1F7D\u1F80-\u1FB4\u1FB6-\u1FBC\u1FBE\u1FC2-\u1FC4\u1FC6-\u1FCC\u1FD0-\u1FD3\u1FD6-\u1FDB\u1FE0-\u1FEC\u1FF2-\u1FF4\u1FF6-\u1FFC\u2071\u207F\u2090-\u209C\u2102\u2107\u210A-\u2113\u2115\u2118-\u211D\u2124\u2126\u2128\u212A-\u2139\u213C-\u213F\u2145-\u2149\u214E\u2160-\u2188\u2C00-\u2C2E\u2C30-\u2C5E\u2C60-\u2CE4\u2CEB-\u2CEE\u2CF2-\u2CF3\u2D00-\u2D25\u2D27\u2D2D\u2D30-\u2D67\u2D6F\u2D80-\u2D96\u2DA0-\u2DA6\u2DA8-\u2DAE\u2DB0-\u2DB6\u2DB8-\u2DBE\u2DC0-\u2DC6\u2DC8-\u2DCE\u2DD0-\u2DD6\u2DD8-\u2DDE\u3005-\u3007\u3021-\u3029\u3031-\u3035\u3038-\u303C\u3041-\u3096\u309B-\u309F\u30A1-\u30FA\u30FC-\u30FF\u3105-\u312D\u3131-\u318E\u31A0-\u31BA\u31F0-\u31FF\u3400-\u4DB5\u4E00-\u9FCC\uA000-\uA48C\uA4D0-\uA4FD\uA500-\uA60C\uA610-\uA61F\uA62A-\uA62B\uA640-\uA66E\uA67F-\uA697\uA6A0-\uA6EF\uA717-\uA71F\uA722-\uA788\uA78B-\uA78E\uA790-\uA793\uA7A0-\uA7AA\uA7F8-\uA801\uA803-\uA805\uA807-\uA80A\uA80C-\uA822\uA840-\uA873\uA882-\uA8B3\uA8F2-\uA8F7\uA8FB\uA90A-\uA925\uA930-\uA946\uA960-\uA97C\uA984-\uA9B2\uA9CF\uAA00-\uAA28\uAA40-\uAA42\uAA44-\uAA4B\uAA60-\uAA76\uAA7A\uAA80-\uAAAF\uAAB1\uAAB5-\uAAB6\uAAB9-\uAABD\uAAC0\uAAC2\uAADB-\uAADD\uAAE0-\uAAEA\uAAF2-\uAAF4\uAB01-\uAB06\uAB09-\uAB0E\uAB11-\uAB16\uAB20-\uAB26\uAB28-\uAB2E\uABC0-\uABE2\uAC00-\uD7A3\uD7B0-\uD7C6\uD7CB-\uD7FB\uF900-\uFA6D\uFA70-\uFAD9\uFB00-\uFB06\uFB13-\uFB17\uFB1D\uFB1F-\uFB28\uFB2A-\uFB36\uFB38-\uFB3C\uFB3E\uFB40-\uFB41\uFB43-\uFB44\uFB46-\uFBB1\uFBD3-\uFD3D\uFD50-\uFD8F\uFD92-\uFDC7\uFDF0-\uFDFB\uFE70-\uFE74\uFE76-\uFEFC\uFF21-\uFF3A\uFF41-\uFF5A\uFF66-\uFFBE\uFFC2-\uFFC7\uFFCA-\uFFCF\uFFD2-\uFFD7\uFFDA-\uFFDC]/,
-    identifierPart = /[\x24\x30-\x39\x41-\x5A\x5F\x61-\x7A\xAA\xB5\xB7\xBA\xC0-\xD6\xD8-\xF6\xF8-\u02C1\u02C6-\u02D1\u02E0-\u02E4\u02EC\u02EE\u0300-\u036F\u0370-\u0374\u0376-\u0377\u037A-\u037D\u0386\u0387\u0388-\u038A\u038C\u038E-\u03A1\u03A3-\u03F5\u03F7-\u0481\u0483-\u0487\u048A-\u0527\u0531-\u0556\u0559\u0561-\u0587\u0591-\u05BD\u05BF\u05C1-\u05C2\u05C4-\u05C5\u05C7\u05D0-\u05EA\u05F0-\u05F2\u0610-\u061A\u0620-\u064A\u064B-\u0669\u066E-\u066F\u0670\u0671-\u06D3\u06D5\u06D6-\u06DC\u06DF-\u06E4\u06E5-\u06E6\u06E7-\u06E8\u06EA-\u06ED\u06EE-\u06EF\u06F0-\u06F9\u06FA-\u06FC\u06FF\u0710\u0711\u0712-\u072F\u0730-\u074A\u074D-\u07A5\u07A6-\u07B0\u07B1\u07C0-\u07C9\u07CA-\u07EA\u07EB-\u07F3\u07F4-\u07F5\u07FA\u0800-\u0815\u0816-\u0819\u081A\u081B-\u0823\u0824\u0825-\u0827\u0828\u0829-\u082D\u0840-\u0858\u0859-\u085B\u08A0\u08A2-\u08AC\u08E4-\u08FE\u0900-\u0903\u0904-\u0939\u093A-\u093C\u093D\u093E-\u094F\u0950\u0951-\u0957\u0958-\u0961\u0962-\u0963\u0966-\u096F\u0971-\u0977\u0979-\u097F\u0981-\u0983\u0985-\u098C\u098F-\u0990\u0993-\u09A8\u09AA-\u09B0\u09B2\u09B6-\u09B9\u09BC\u09BD\u09BE-\u09C4\u09C7-\u09C8\u09CB-\u09CD\u09CE\u09D7\u09DC-\u09DD\u09DF-\u09E1\u09E2-\u09E3\u09E6-\u09EF\u09F0-\u09F1\u0A01-\u0A03\u0A05-\u0A0A\u0A0F-\u0A10\u0A13-\u0A28\u0A2A-\u0A30\u0A32-\u0A33\u0A35-\u0A36\u0A38-\u0A39\u0A3C\u0A3E-\u0A42\u0A47-\u0A48\u0A4B-\u0A4D\u0A51\u0A59-\u0A5C\u0A5E\u0A66-\u0A71\u0A72-\u0A74\u0A75\u0A81-\u0A83\u0A85-\u0A8D\u0A8F-\u0A91\u0A93-\u0AA8\u0AAA-\u0AB0\u0AB2-\u0AB3\u0AB5-\u0AB9\u0ABC\u0ABD\u0ABE-\u0AC5\u0AC7-\u0AC9\u0ACB-\u0ACD\u0AD0\u0AE0-\u0AE1\u0AE2-\u0AE3\u0AE6-\u0AEF\u0B01-\u0B03\u0B05-\u0B0C\u0B0F-\u0B10\u0B13-\u0B28\u0B2A-\u0B30\u0B32-\u0B33\u0B35-\u0B39\u0B3C\u0B3D\u0B3E-\u0B44\u0B47-\u0B48\u0B4B-\u0B4D\u0B56-\u0B57\u0B5C-\u0B5D\u0B5F-\u0B61\u0B62-\u0B63\u0B66-\u0B6F\u0B71\u0B82\u0B83\u0B85-\u0B8A\u0B8E-\u0B90\u0B92-\u0B95\u0B99-\u0B9A\u0B9C\u0B9E-\u0B9F\u0BA3-\u0BA4\u0BA8-\u0BAA\u0BAE-\u0BB9\u0BBE-\u0BC2\u0BC6-\u0BC8\u0BCA-\u0BCD\u0BD0\u0BD7\u0BE6-\u0BEF\u0C01-\u0C03\u0C05-\u0C0C\u0C0E-\u0C10\u0C12-\u0C28\u0C2A-\u0C33\u0C35-\u0C39\u0C3D\u0C3E-\u0C44\u0C46-\u0C48\u0C4A-\u0C4D\u0C55-\u0C56\u0C58-\u0C59\u0C60-\u0C61\u0C62-\u0C63\u0C66-\u0C6F\u0C82-\u0C83\u0C85-\u0C8C\u0C8E-\u0C90\u0C92-\u0CA8\u0CAA-\u0CB3\u0CB5-\u0CB9\u0CBC\u0CBD\u0CBE-\u0CC4\u0CC6-\u0CC8\u0CCA-\u0CCD\u0CD5-\u0CD6\u0CDE\u0CE0-\u0CE1\u0CE2-\u0CE3\u0CE6-\u0CEF\u0CF1-\u0CF2\u0D02-\u0D03\u0D05-\u0D0C\u0D0E-\u0D10\u0D12-\u0D3A\u0D3D\u0D3E-\u0D44\u0D46-\u0D48\u0D4A-\u0D4D\u0D4E\u0D57\u0D60-\u0D61\u0D62-\u0D63\u0D66-\u0D6F\u0D7A-\u0D7F\u0D82-\u0D83\u0D85-\u0D96\u0D9A-\u0DB1\u0DB3-\u0DBB\u0DBD\u0DC0-\u0DC6\u0DCA\u0DCF-\u0DD4\u0DD6\u0DD8-\u0DDF\u0DF2-\u0DF3\u0E01-\u0E30\u0E31\u0E32-\u0E33\u0E34-\u0E3A\u0E40-\u0E46\u0E47-\u0E4E\u0E50-\u0E59\u0E81-\u0E82\u0E84\u0E87-\u0E88\u0E8A\u0E8D\u0E94-\u0E97\u0E99-\u0E9F\u0EA1-\u0EA3\u0EA5\u0EA7\u0EAA-\u0EAB\u0EAD-\u0EB0\u0EB1\u0EB2-\u0EB3\u0EB4-\u0EB9\u0EBB-\u0EBC\u0EBD\u0EC0-\u0EC4\u0EC6\u0EC8-\u0ECD\u0ED0-\u0ED9\u0EDC-\u0EDF\u0F00\u0F18-\u0F19\u0F20-\u0F29\u0F35\u0F37\u0F39\u0F3E-\u0F3F\u0F40-\u0F47\u0F49-\u0F6C\u0F71-\u0F84\u0F86-\u0F87\u0F88-\u0F8C\u0F8D-\u0F97\u0F99-\u0FBC\u0FC6\u1000-\u102A\u102B-\u103E\u103F\u1040-\u1049\u1050-\u1055\u1056-\u1059\u105A-\u105D\u105E-\u1060\u1061\u1062-\u1064\u1065-\u1066\u1067-\u106D\u106E-\u1070\u1071-\u1074\u1075-\u1081\u1082-\u108D\u108E\u108F-\u109D\u10A0-\u10C5\u10C7\u10CD\u10D0-\u10FA\u10FC-\u1248\u124A-\u124D\u1250-\u1256\u1258\u125A-\u125D\u1260-\u1288\u128A-\u128D\u1290-\u12B0\u12B2-\u12B5\u12B8-\u12BE\u12C0\u12C2-\u12C5\u12C8-\u12D6\u12D8-\u1310\u1312-\u1315\u1318-\u135A\u135D-\u135F\u1369-\u1371\u1380-\u138F\u13A0-\u13F4\u1401-\u166C\u166F-\u167F\u1681-\u169A\u16A0-\u16EA\u16EE-\u16F0\u1700-\u170C\u170E-\u1711\u1712-\u1714\u1720-\u1731\u1732-\u1734\u1740-\u1751\u1752-\u1753\u1760-\u176C\u176E-\u1770\u1772-\u1773\u1780-\u17B3\u17B4-\u17D3\u17D7\u17DC\u17DD\u17E0-\u17E9\u180B-\u180D\u1810-\u1819\u1820-\u1877\u1880-\u18A8\u18A9\u18AA\u18B0-\u18F5\u1900-\u191C\u1920-\u192B\u1930-\u193B\u1946-\u194F\u1950-\u196D\u1970-\u1974\u1980-\u19AB\u19B0-\u19C0\u19C1-\u19C7\u19C8-\u19C9\u19D0-\u19DA\u1A00-\u1A16\u1A17-\u1A1B\u1A20-\u1A54\u1A55-\u1A5E\u1A60-\u1A7C\u1A7F-\u1A89\u1A90-\u1A99\u1AA7\u1B00-\u1B04\u1B05-\u1B33\u1B34-\u1B44\u1B45-\u1B4B\u1B50-\u1B59\u1B6B-\u1B73\u1B80-\u1B82\u1B83-\u1BA0\u1BA1-\u1BAD\u1BAE-\u1BAF\u1BB0-\u1BB9\u1BBA-\u1BE5\u1BE6-\u1BF3\u1C00-\u1C23\u1C24-\u1C37\u1C40-\u1C49\u1C4D-\u1C4F\u1C50-\u1C59\u1C5A-\u1C7D\u1CD0-\u1CD2\u1CD4-\u1CE8\u1CE9-\u1CEC\u1CED\u1CEE-\u1CF1\u1CF2-\u1CF4\u1CF5-\u1CF6\u1D00-\u1DBF\u1DC0-\u1DE6\u1DFC-\u1DFF\u1E00-\u1F15\u1F18-\u1F1D\u1F20-\u1F45\u1F48-\u1F4D\u1F50-\u1F57\u1F59\u1F5B\u1F5D\u1F5F-\u1F7D\u1F80-\u1FB4\u1FB6-\u1FBC\u1FBE\u1FC2-\u1FC4\u1FC6-\u1FCC\u1FD0-\u1FD3\u1FD6-\u1FDB\u1FE0-\u1FEC\u1FF2-\u1FF4\u1FF6-\u1FFC\u200C-\u200D\u203F-\u2040\u2054\u2071\u207F\u2090-\u209C\u20D0-\u20DC\u20E1\u20E5-\u20F0\u2102\u2107\u210A-\u2113\u2115\u2118-\u211D\u2124\u2126\u2128\u212A-\u2139\u213C-\u213F\u2145-\u2149\u214E\u2160-\u2188\u2C00-\u2C2E\u2C30-\u2C5E\u2C60-\u2CE4\u2CEB-\u2CEE\u2CEF-\u2CF1\u2CF2-\u2CF3\u2D00-\u2D25\u2D27\u2D2D\u2D30-\u2D67\u2D6F\u2D7F\u2D80-\u2D96\u2DA0-\u2DA6\u2DA8-\u2DAE\u2DB0-\u2DB6\u2DB8-\u2DBE\u2DC0-\u2DC6\u2DC8-\u2DCE\u2DD0-\u2DD6\u2DD8-\u2DDE\u2DE0-\u2DFF\u3005-\u3007\u3021-\u3029\u302A-\u302F\u3031-\u3035\u3038-\u303C\u3041-\u3096\u3099-\u309A\u309B-\u309F\u30A1-\u30FA\u30FC-\u30FF\u3105-\u312D\u3131-\u318E\u31A0-\u31BA\u31F0-\u31FF\u3400-\u4DB5\u4E00-\u9FCC\uA000-\uA48C\uA4D0-\uA4FD\uA500-\uA60C\uA610-\uA61F\uA620-\uA629\uA62A-\uA62B\uA640-\uA66E\uA66F\uA674-\uA67D\uA67F-\uA697\uA69F\uA6A0-\uA6EF\uA6F0-\uA6F1\uA717-\uA71F\uA722-\uA788\uA78B-\uA78E\uA790-\uA793\uA7A0-\uA7AA\uA7F8-\uA801\uA802\uA803-\uA805\uA806\uA807-\uA80A\uA80B\uA80C-\uA822\uA823-\uA827\uA840-\uA873\uA880-\uA881\uA882-\uA8B3\uA8B4-\uA8C4\uA8D0-\uA8D9\uA8E0-\uA8F1\uA8F2-\uA8F7\uA8FB\uA900-\uA909\uA90A-\uA925\uA926-\uA92D\uA930-\uA946\uA947-\uA953\uA960-\uA97C\uA980-\uA983\uA984-\uA9B2\uA9B3-\uA9C0\uA9CF\uA9D0-\uA9D9\uAA00-\uAA28\uAA29-\uAA36\uAA40-\uAA42\uAA43\uAA44-\uAA4B\uAA4C-\uAA4D\uAA50-\uAA59\uAA60-\uAA76\uAA7A\uAA7B\uAA80-\uAAAF\uAAB0\uAAB1\uAAB2-\uAAB4\uAAB5-\uAAB6\uAAB7-\uAAB8\uAAB9-\uAABD\uAABE-\uAABF\uAAC0\uAAC1\uAAC2\uAADB-\uAADD\uAAE0-\uAAEA\uAAEB-\uAAEF\uAAF2-\uAAF4\uAAF5-\uAAF6\uAB01-\uAB06\uAB09-\uAB0E\uAB11-\uAB16\uAB20-\uAB26\uAB28-\uAB2E\uABC0-\uABE2\uABE3-\uABEA\uABEC-\uABED\uABF0-\uABF9\uAC00-\uD7A3\uD7B0-\uD7C6\uD7CB-\uD7FB\uF900-\uFA6D\uFA70-\uFAD9\uFB00-\uFB06\uFB13-\uFB17\uFB1D\uFB1E\uFB1F-\uFB28\uFB2A-\uFB36\uFB38-\uFB3C\uFB3E\uFB40-\uFB41\uFB43-\uFB44\uFB46-\uFBB1\uFBD3-\uFD3D\uFD50-\uFD8F\uFD92-\uFDC7\uFDF0-\uFDFB\uFE00-\uFE0F\uFE20-\uFE26\uFE33-\uFE34\uFE4D-\uFE4F\uFE70-\uFE74\uFE76-\uFEFC\uFF10-\uFF19\uFF21-\uFF3A\uFF3F\uFF41-\uFF5A\uFF66-\uFFBE\uFFC2-\uFFC7\uFFCA-\uFFCF\uFFD2-\uFFD7\uFFDA-\uFFDC]/,
-    whitespaceChars = /[\x09\x0B-\x0C\x20\xA0\u1680\u180E\u2000-\u200A\u202F\u205F\u3000\uFEFF]/;
+var Unicode = Unicode_;
 
 var identifierEscape = /\\u([0-9a-fA-F]{4})/g,
     newlineSequence = /\r\n?|[\n\u2028\u2029]/g;
@@ -1722,17 +2566,13 @@ function binarySearch(array, val) {
 }
 
 // Returns true if the character is a valid identifier part
-function isIdentifierPart(c) {
+function isIdentifierPartAscii(c) {
 
-    if (c > 127)
-        return identifierPart.test(String.fromCharCode(c));
-    
     return  c > 64 && c < 91 || 
             c > 96 && c < 123 ||
             c > 47 && c < 58 ||
             c === 36 ||
-            c === 95 ||
-            c === 92;
+            c === 95;
 }
 
 // Returns true if the specified character is a newline
@@ -1767,28 +2607,6 @@ function isPunctuatorNext(c) {
     }
     
     return false;
-}
-
-// Returns true if the specified character is a valid numeric following character
-function isNumberFollow(c) {
-
-    if (c > 127)
-        return isNumberFollowUnicode(c);
-    
-    return !(
-        c > 64 && c < 91 || 
-        c > 96 && c < 123 ||
-        c > 47 && c < 58 ||
-        c === 36 ||
-        c === 95 ||
-        c === 92
-    );
-}
-
-// Returns true if the specified character is a valid numeric following character
-function isNumberFollowUnicode(c) {
-
-    return !identifierStart.test(String.fromCharCode(c));
 }
 
 var Scanner = es6now.Class(function(__super) { return {
@@ -1864,6 +2682,11 @@ var Scanner = es6now.Class(function(__super) { return {
         return this.input.charAt(this.offset + n);
     },
     
+    peekCodePoint: function() {
+    
+        return Unicode.codePointAt(this.input, this.offset);
+    },
+    
     peekCode: function() {
     
         return this.input.charCodeAt(this.offset) | 0;
@@ -1879,8 +2702,8 @@ var Scanner = es6now.Class(function(__super) { return {
         return this.input.charAt(this.offset++);
     },
     
-    readUnicodeEscape: function() {
-  
+    readUnicodeEscapeValue: function() {
+    
         var hex = "";
         
         if (this.peekChar() === "{") {
@@ -1899,12 +2722,38 @@ var Scanner = es6now.Class(function(__super) { return {
                 return null;
         }
         
-        var val = parseInt(hex, 16);
+        return parseInt(hex, 16);
+    },
+    
+    readUnicodeEscape: function() {
+
+        var cp = this.readUnicodeEscapeValue(),
+            val = Unicode.toString(cp);
         
-        if (val > 1114111)
+        return val === "" ? null : val;
+    },
+    
+    readIdentifierEscape: function(startChar) {
+    
+        this.offset++;
+        
+        if (this.readChar() !== "u")
             return null;
         
-        return String.fromCharCode(val);
+        var cp = this.readUnicodeEscapeValue();
+        
+        if (startChar) {
+        
+            if (!Unicode.isIdentifierStart(cp))
+                return null;
+            
+        } else {
+        
+            if (!Unicode.isIdentifierPart(cp))
+                return null;
+        }
+        
+        return Unicode.toString(cp);
     },
     
     readOctalEscape: function() {
@@ -2034,6 +2883,23 @@ var Scanner = es6now.Class(function(__super) { return {
         return str;
     },
     
+    peekNumberFollow: function() {
+    
+        var c = this.peekCode();
+        
+        if (c > 127)
+            return !Unicode.isIdentifierStart(this.peekCodePoint());
+    
+        return !(
+            c > 64 && c < 91 || 
+            c > 96 && c < 123 ||
+            c > 47 && c < 58 ||
+            c === 36 ||
+            c === 95 ||
+            c === 92
+        );
+    },
+    
     Skip: function() {
     
         var code = this.peekCode();
@@ -2042,7 +2908,7 @@ var Scanner = es6now.Class(function(__super) { return {
         
             switch (charTable[code]) {
         
-                case "whitespace": return this.Whitespace(code);
+                case "whitespace": return this.Whitespace();
             
                 case "newline": return this.Newline(code);
             
@@ -2050,21 +2916,21 @@ var Scanner = es6now.Class(function(__super) { return {
             
                     var next = this.peekCodeAt(1);
 
-                    if (next === 47) return this.LineComment(code);       // /
-                    else if (next === 42) return this.BlockComment(code); // *
+                    if (next === 47) return this.LineComment();       // /
+                    else if (next === 42) return this.BlockComment(); // *
             }
         
         } else {
         
-            var chr = this.peekChar();
-        
             // Unicode newlines
-            if (isNewlineChar(chr))
+            if (isNewlineChar(this.peekChar()))
                 return this.Newline(code);
         
+            var cp = this.peekCodePoint();
+            
             // Unicode whitespace
-            if (whitespaceChars.test(chr))
-                return this.UnicodeWhitespace(code);
+            if (Unicode.isWhitespace(cp))
+                return this.UnicodeWhitespace(cp);
         }
         
         return "UNKNOWN";
@@ -2081,7 +2947,7 @@ var Scanner = es6now.Class(function(__super) { return {
             
             case "whitespace": return this.Whitespace();
             
-            case "identifier": return this.Identifier(context);
+            case "identifier": return this.Identifier(context, code);
             
             case "rbrace":
             
@@ -2129,19 +2995,19 @@ var Scanner = es6now.Class(function(__super) { return {
             
         }
         
-        var chr = this.peekChar();
-        
         // Unicode newlines
-        if (isNewlineChar(chr))
+        if (isNewlineChar(this.peekChar()))
             return this.Newline(code);
         
+        var cp = this.peekCodePoint();
+        
         // Unicode whitespace
-        if (whitespaceChars.test(chr))
-            return this.UnicodeWhitespace();
+        if (Unicode.isWhitespace(cp))
+            return this.UnicodeWhitespace(cp);
         
         // Unicode identifier chars
-        if (identifierStart.test(chr))
-            return this.Identifier(context);
+        if (Unicode.isIdentifierStart(cp))
+            return this.Identifier(context, cp);
         
         return this.Error();
     },
@@ -2164,13 +3030,13 @@ var Scanner = es6now.Class(function(__super) { return {
         return "";
     },
     
-    UnicodeWhitespace: function() {
+    UnicodeWhitespace: function(cp) {
     
-        this.offset++;
+        this.offset += Unicode.length(cp);
         
         // General unicode whitespace
-        while (whitespaceChars.test(this.peekChar()))
-            this.offset++;
+        while (Unicode.isWhitespace(cp = this.peekCodePoint()))
+            this.offset += Unicode.length(cp);
         
         return "";
     },
@@ -2311,11 +3177,10 @@ var Scanner = es6now.Class(function(__super) { return {
         
         var backslash = false, 
             inClass = false,
-            flags = "",
-            flagStart = 0,
             val = "", 
             chr = "",
-            code = 0;
+            code = 0,
+            flagStart = 0;
         
         while (chr = this.readChar()) {
         
@@ -2356,20 +3221,33 @@ var Scanner = es6now.Class(function(__super) { return {
         
         flagStart = this.offset;
         
-        while (isIdentifierPart(code = this.peekCode())) {
+        while (true) {
         
-            // Unicode escapes are not allowed in regular expression flags
-            if (code === 92)
+            code = this.peekCode();
+        
+            if (code === 92) {
+            
                 return this.Error();
             
-            this.offset++;
+            } else if (code > 127) {
+            
+                if (Unicode.isIdentifierPart(code = this.peekCodePoint()))
+                    this.offset += Unicode.length(code);
+                else
+                    break;
+            
+            } else if (isIdentifierPartAscii(code)) {
+            
+                this.offset++;
+                
+            } else {
+            
+                break;
+            }
         }
         
-        if (this.offset > flagStart)
-            flags = this.input.slice(flagStart, this.offset);
-        
         this.value = val;
-        this.regexFlags = flags;
+        this.regexFlags = this.input.slice(flagStart, this.offset);
         
         return "REGEX";
     },
@@ -2393,7 +3271,7 @@ var Scanner = es6now.Class(function(__super) { return {
         
         var val = parseInt(this.input.slice(start, this.offset), 8);
         
-        if (!isNumberFollow(this.peekCode()))
+        if (!this.peekNumberFollow())
             return this.Error();
         
         this.number = val;
@@ -2430,7 +3308,7 @@ var Scanner = es6now.Class(function(__super) { return {
         
         var val = parseFloat(this.input.slice(start, this.offset));
         
-        if (!isNumberFollow(this.peekCode()))
+        if (!this.peekNumberFollow())
             return this.Error();
         
         this.number = val;
@@ -2444,7 +3322,7 @@ var Scanner = es6now.Class(function(__super) { return {
         
         var val = parseInt(this.readRange(48, 49), 2);
         
-        if (!isNumberFollow(this.peekCode()))
+        if (!this.peekNumberFollow())
             return this.Error();
         
         this.number = val;
@@ -2458,7 +3336,7 @@ var Scanner = es6now.Class(function(__super) { return {
         
         var val = parseInt(this.readRange(48, 55), 8);
         
-        if (!isNumberFollow(this.peekCode()))
+        if (!this.peekNumberFollow())
             return this.Error();
         
         this.number = val;
@@ -2472,7 +3350,7 @@ var Scanner = es6now.Class(function(__super) { return {
         
         var val = parseInt(this.readHex(0), 16);
         
-        if (!isNumberFollow(this.peekCode()))
+        if (!this.peekNumberFollow())
             return this.Error();
         
         this.number = val;
@@ -2480,37 +3358,58 @@ var Scanner = es6now.Class(function(__super) { return {
         return "NUMBER";
     },
     
-    Identifier: function(context) {
+    Identifier: function(context, code) {
     
         var start = this.offset,
-            startChar = true,
-            id = "",
-            code = 0,
+            val = "",
             esc = "";
+        
+        // Identifier Start
+    
+        if (code === 92) {
 
+            esc = this.readIdentifierEscape(true);
+    
+            if (esc === null)
+                return this.Error();
+    
+            val = esc;
+            start = this.offset;
+
+        } else if (code > 127) {
+
+            this.offset += Unicode.length(code);
+            
+        } else {
+        
+            this.offset++;
+        }
+        
+        // Identifier Part
+        
         while (true) {
         
             code = this.peekCode();
         
-            if (code === 92 /* backslash */) {
+            if (code === 92) {
             
-                id += this.input.slice(start, this.offset++);
-                
-                if (this.readChar() !== "u")
-                    return this.Error();
-                
-                esc = this.readUnicodeEscape();
+                val += this.input.slice(start, this.offset++);
+                esc = this.readIdentifierEscape(false);
                 
                 if (esc === null)
                     return this.Error();
-
-                if (!(startChar ? identifierStart : identifierPart).test(esc))
-                    return this.Error();
                 
-                id += esc;
+                val += esc;
                 start = this.offset;
-                
-            } else if (startChar || isIdentifierPart(code)) {
+            
+            } else if (code > 127) {
+            
+                if (Unicode.isIdentifierPart(code = this.peekCodePoint()))
+                    this.offset += Unicode.length(code);
+                else
+                    break;
+            
+            } else if (isIdentifierPartAscii(code)) {
             
                 this.offset++;
                 
@@ -2518,16 +3417,14 @@ var Scanner = es6now.Class(function(__super) { return {
             
                 break;
             }
-            
-            startChar = false;
         }
         
-        id += this.input.slice(start, this.offset);
+        val += this.input.slice(start, this.offset);
         
-        if (context !== "name" && reservedWord.test(id))
-            return esc ? this.Error() : id;
+        if (context !== "name" && reservedWord.test(val))
+            return esc ? this.Error() : val;
         
-        this.value = id;
+        this.value = val;
         
         return "IDENTIFIER";
     },
@@ -2780,25 +3677,49 @@ exports.Transform = Transform; return exports; }).call(this, {});
 
 var IntMap_ = (function(exports) {
 
+/*
+
+NOTE:  We are using an O(n) list-based search algorithm, because for our purposes
+it is much faster than using an object-as-dictionary.  Object properties can be
+read very fast, but creating new properties tends to be sluggish (v8 2014-05).  As 
+v8 progresses, we may want to see if using the built-in Map class is faster.
+
+*/
 
 var IntMap = es6now.Class(function(__super) { return {
 
     constructor: function IntMap() {
     
-        this.obj = Object.create(null);
+        this.list = [];
     },
     
     get: function(key) {
     
-        return this.obj[key] | 0;
+        var i = this.searchList(key);
+        return i >= 0 ? this.list[i][1] : 0;
     },
     
     set: function(key, val) {
     
-        return this.obj[key] = val | 0;
+        var i = this.searchList(key);
+        
+        if (i >= 0) this.list[i][1] = val;
+        else this.list.push([ key, val ]);
+    },
+    
+    searchList: function(key) {
+    
+        var list = this.list;
+
+        for (var i = 0; i < list.length; ++i)
+            if (list[i][0] === key)
+                return i;
+    
+        return -1;
     }
     
 } });
+
 
 
 exports.IntMap = IntMap; return exports; }).call(this, {});
@@ -3039,7 +3960,7 @@ var Validate = es6now.Class(function(__super) { return {
 
         // If this name has already been added...
         if (currentFlags = nameSet.get(name)) {
-        
+            
             var duplicate = true;
             
             switch (flag) {
@@ -3984,7 +4905,8 @@ var Parser = es6now.Class(function(__super) { return {
         var token = this.peekToken(),
             type = token.type,
             start = this.nodeStart(),
-            next;
+            next,
+            value;
         
         switch (type) {
             
@@ -4005,6 +4927,7 @@ var Parser = es6now.Class(function(__super) { return {
             
             case "IDENTIFIER":
                 
+                value = token.value;
                 next = this.peekTokenAt("div", 1);
                 
                 if (!next.newlineBefore) {
@@ -4018,11 +4941,11 @@ var Parser = es6now.Class(function(__super) { return {
                     
                         return this.FunctionExpression();
                     
-                    } else if (next.type === "IDENTIFIER" && isFunctionModifier(token.value)) {
+                    } else if (next.type === "IDENTIFIER" && isFunctionModifier(value)) {
                     
                         this.read();
                         this.pushContext(true);
-                        return this.ArrowFunctionHead(token.value, this.BindingIdentifier(), start);
+                        return this.ArrowFunctionHead(value, this.BindingIdentifier(), start);
                     }
                 }
                 
@@ -4181,13 +5104,12 @@ var Parser = es6now.Class(function(__super) { return {
         
         while (this.peekUntil("}", "name")) {
         
-            if (list.length > 0) {
+            if (!comma && node) {
             
                 this.read(",");
                 comma = true;
-            }
-            
-            if (this.peek("name") !== "}") {
+
+            } else {
             
                 comma = false;
                 list.push(node = this.PropertyDefinition());
@@ -4282,9 +5204,8 @@ var Parser = es6now.Class(function(__super) { return {
     ArrayLiteral: function() {
     
         var start = this.nodeStart(),
-            list = [],
             comma = false,
-            next,
+            list = [],
             type;
         
         this.read("[");
@@ -4302,7 +5223,7 @@ var Parser = es6now.Class(function(__super) { return {
             
             } else {
             
-                list.push(next = this.AssignmentExpression(false, true));
+                list.push(this.AssignmentExpression(false, true));
                 comma = false;
             }
         }
@@ -7474,16 +8395,13 @@ function runModule(path) {
     
         var result = m.main(process.argv);
         
-        if (Promise.isPromise(result))
-            result.then(null, (function(x) { return setTimeout((function($) { throw x }), 0); }));
+        Promise.resolve(result).then(null, (function(x) { return setTimeout((function($) { throw x }), 0); }));
     }
 }
 
 function startREPL() {
 
     addExtension();
-    
-    // TODO: Polyfills are not working in the REPL?
     
     var repl = REPL.start({ 
     
@@ -7507,7 +8425,7 @@ function startREPL() {
             }
             
             try {
-            
+                
                 script = VM.createScript(text, { filename: filename, displayErrors: displayErrors });
                 
                 result = this.useGlobal ?

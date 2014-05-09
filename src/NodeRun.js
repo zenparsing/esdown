@@ -90,16 +90,13 @@ export function runModule(path) {
     
         var result = m.main(process.argv);
         
-        if (Promise.isPromise(result))
-            result.then(null, x => setTimeout($=> { throw x }, 0));
+        Promise.resolve(result).then(null, x => setTimeout($=> { throw x }, 0));
     }
 }
 
 export function startREPL() {
 
     addExtension();
-    
-    // TODO: Polyfills are not working in the REPL?
     
     var repl = REPL.start({ 
     
@@ -123,7 +120,7 @@ export function startREPL() {
             }
             
             try {
-            
+                
                 script = VM.createScript(text, { filename, displayErrors });
                 
                 result = this.useGlobal ?

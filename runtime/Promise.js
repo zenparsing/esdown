@@ -179,11 +179,6 @@ class Promise {
         return this.then(void 0, onReject);
     }
     
-    static isPromise(x) {
-        
-        return isPromise(x);
-    }
-    
     static defer() {
     
         return promiseDefer(this);
@@ -277,4 +272,5 @@ class Promise {
 
 Promise.prototype[$$isPromise] = true;
 
-this.Promise = Promise;
+if (this.Promise === void 0)
+    this.Promise = Promise;

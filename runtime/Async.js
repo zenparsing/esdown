@@ -17,22 +17,13 @@ this.es6now.async = function(iterable) {
         
             // Invoke the iterator/generator
             var result = error ? iter.throw(value) : iter.next(value),
-                value = result.value,
+                value = Promise.resolve(result.value),
                 done = result.done;
             
-            if (Promise.isPromise(value)) {
-
-                if (done) value.chain(resolver.resolve, resolver.reject);
-                else      value.chain(x => resume(x, false), x => resume(x, true));
-            
-            } else if (done) {
-                
-                resolver.resolve(value);
-                
-            } else {
-            
-                resume(value, false);
-            }
+            if (result.done)
+                value.chain(resolver.resolve, resolver.reject);
+            else
+                value.chain(x => resume(x, false), x => resume(x, true));
             
         } catch (x) { resolver.reject(x) }
         
