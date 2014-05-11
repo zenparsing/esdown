@@ -1,6 +1,6 @@
 import { translate } from "Translator.js";
 import { isPackageURI, locatePackage } from "PackageLocator.js";
-import { ConsoleStyle as Style } from "package:zen-bits";
+import { ConsoleStyle as Style } from "package:zencmd";
 
 var FS = require("fs"),
     REPL = require("repl"),

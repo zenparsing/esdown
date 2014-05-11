@@ -1,6 +1,6 @@
 {
     "name": "es6now",
-    "version": "0.5.2",
+    "version": "0.5.3",
     "description": "Minimal ES6 to ES5 transpiler",
     "homepage": "https://github.com/zenparsing/es6now",
     "bin": {

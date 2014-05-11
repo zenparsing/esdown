@@ -1,4 +1,4 @@
-/*=es6now=*/(function(fn, deps, name) { if (typeof exports !== 'undefined') fn.call(typeof global === 'object' ? global : this, require, exports); else if (typeof define === 'function' && define.amd) define(['require', 'exports'].concat(deps), fn); else if (typeof window !== 'undefined' && name) fn.call(window, null, window[name] = {}); else fn.call(window || this, null, {}); })(function(require, exports) { 'use strict'; function __load(p) { var e = require(p); return typeof e === 'object' ? e : { 'default': e }; } var _M0 = __load("fs"); 
+/*=es6now=*/(function(fn, deps, name) { if (typeof exports !== 'undefined') fn.call(typeof global === 'object' ? global : this, require, exports); else if (typeof define === 'function' && define.amd) define(['require', 'exports'].concat(deps), fn); else if (typeof window !== 'undefined' && name) fn.call(window, null, window[name] = {}); else fn.call(window || this, null, {}); })(function(require, exports) { 'use strict'; function __load(p) { var e = require(p); return typeof e === 'object' ? e : { 'default': e }; } 
 
 var __this = this; this.es6now = {};
 
@@ -793,6 +793,73 @@ this.es6now.async = function(iterable) {
 
 
 }).call(this);
+
+var AsyncFS_ = (function(exports) {
+
+var FS = require("fs");
+
+// Wraps a standard Node async function with a promise
+// generating function
+function wrap(fn) {
+
+	return function() { var args = es6now.rest(arguments, 0);
+	
+		return new Promise((function(resolve, reject) {
+		    
+            args.push((function(err, data) {
+        
+                if (err) reject(err);
+                else resolve(data);
+            }));
+            
+            fn.apply(null, args);
+        }));
+	};
+}
+
+function exists(path) {
+
+    return new Promise((function(resolve) {
+    
+        FS.exists(path, (function(result) { return resolve(result); }));
+    }));
+}
+
+var 
+    readFile = wrap(FS.readFile),
+    close = wrap(FS.close),
+    open = wrap(FS.open),
+    read = wrap(FS.read),
+    write = wrap(FS.write),
+    rename = wrap(FS.rename),
+    truncate = wrap(FS.truncate),
+    rmdir = wrap(FS.rmdir),
+    fsync = wrap(FS.fsync),
+    mkdir = wrap(FS.mkdir),
+    sendfile = wrap(FS.sendfile),
+    readdir = wrap(FS.readdir),
+    fstat = wrap(FS.fstat),
+    lstat = wrap(FS.lstat),
+    stat = wrap(FS.stat),
+    readlink = wrap(FS.readlink),
+    symlink = wrap(FS.symlink),
+    link = wrap(FS.link),
+    unlink = wrap(FS.unlink),
+    fchmod = wrap(FS.fchmod),
+    lchmod = wrap(FS.lchmod),
+    chmod = wrap(FS.chmod),
+    lchown = wrap(FS.lchown),
+    fchown = wrap(FS.fchown),
+    chown = wrap(FS.chown),
+    utimes = wrap(FS.utimes),
+    futimes = wrap(FS.futimes),
+    writeFile = wrap(FS.writeFile),
+    appendFile = wrap(FS.appendFile),
+    realpath = wrap(FS.realpath);
+
+
+
+exports.exists = exists; exports.readFile = readFile; exports.close = close; exports.open = open; exports.read = read; exports.write = write; exports.rename = rename; exports.truncate = truncate; exports.rmdir = rmdir; exports.fsync = fsync; exports.mkdir = mkdir; exports.sendfile = sendfile; exports.readdir = readdir; exports.fstat = fstat; exports.lstat = lstat; exports.stat = stat; exports.readlink = readlink; exports.symlink = symlink; exports.link = link; exports.unlink = unlink; exports.fchmod = fchmod; exports.lchmod = lchmod; exports.chmod = chmod; exports.lchown = lchown; exports.fchown = fchown; exports.chown = chown; exports.utimes = utimes; exports.futimes = futimes; exports.writeFile = writeFile; exports.appendFile = appendFile; exports.realpath = realpath; return exports; }).call(this, {});
 
 var Runtime_ = (function(exports) {
 
@@ -6630,7 +6697,7 @@ Object.assign(Parser.prototype, Validate.prototype);
 
 exports.Parser = Parser; return exports; }).call(this, {});
 
-var main______ = (function(exports) {
+var main________ = (function(exports) {
 
 var Parser = Parser_.Parser;
 var AST = AST_.AST;
@@ -6651,9 +6718,9 @@ function parse(input, options) {
 
 exports.AST = AST; exports.Parser = Parser; exports.parse = parse; exports.default = parse; return exports; }).call(this, {});
 
-var main_____ = (function(exports) {
+var main______ = (function(exports) {
 
-Object.keys(main______).forEach(function(k) { exports[k] = main______[k]; });
+Object.keys(main________).forEach(function(k) { exports[k] = main________[k]; });
 
 return exports; }).call(this, {});
 
@@ -6669,7 +6736,7 @@ var Replacer_ = (function(exports) {
 
 */
 
-var Parser = main_____.Parser, AST = main_____.AST;
+var Parser = main______.Parser, AST = main______.AST;
 
 var HAS_SCHEMA = /^[a-z]+:/i,
     NODE_SCHEMA = /^(?:npm|node):/i;
@@ -7683,6 +7750,379 @@ function locatePackage(uri) {
 
 exports.isPackageURI = isPackageURI; exports.locatePackage = locatePackage; return exports; }).call(this, {});
 
+var ConsoleCommand = (function(exports) {
+
+var HAS = Object.prototype.hasOwnProperty;
+
+function parse(argv, params) {
+
+    params || (params = {});
+    
+    var pos = Object.keys(params),
+        values = {},
+        shorts = {},
+        required = [],
+        param,
+        value,
+        name,
+        i,
+        a;
+    
+    // Create short-to-long mapping
+    pos.forEach((function(name) {
+    
+        var p = params[name];
+        
+        if (p.short)
+            shorts[p.short] = name;
+        
+        if (p.required)
+            required.push(name);
+    }));
+    
+    // For each command line arg...
+    for (i = 0; i < argv.length; ++i) {
+    
+        a = argv[i];
+        param = null;
+        value = null;
+        name = "";
+        
+        if (a[0] === "-") {
+        
+            if (a.slice(0, 2) === "--") {
+            
+                // Long named parameter
+                param = params[name = a.slice(2)];
+            
+            } else {
+            
+                // Short named parameter
+                param = params[name = shorts[a.slice(1)]];
+            }
+            
+            // Verify parameter exists
+            if (!param)
+                throw new Error("Invalid command line option: " + a);
+            
+            if (param.flag) {
+            
+                value = true;
+            
+            } else {
+            
+                // Get parameter value
+                value = argv[++i] || "";
+                
+                if (typeof value !== "string" || value[0] === "-")
+                    throw new Error("No value provided for option " + a);
+            }
+            
+        } else {
+        
+            // Positional parameter
+            do { param = params[name = pos.shift()]; } 
+            while (param && !param.positional);;
+            
+            value = a;
+        }
+        
+        if (param)
+            values[name] = value;
+    }
+    
+    required.forEach((function(name) {
+    
+        if (values[name] === void 0)
+            throw new Error("Missing required option: --" + name);
+    }));
+    
+    return values;
+}
+
+var ConsoleCommand = es6now.Class(function(__super) { return {
+
+    constructor: function ConsoleCommand(cmd) {
+    
+        this.fallback = cmd;
+        this.commands = {};
+    },
+    
+    add: function(name, cmd) {
+    
+        this.commands[name] = cmd;
+        return this;
+    },
+    
+    run: function(args) {
+    
+        // Peel off the "node" and main module args
+        args || (args = process.argv.slice(2));
+        
+        var name = args[0] || "",
+            cmd = this.fallback;
+        
+        if (name && HAS.call(this.commands, name)) {
+        
+            cmd = this.commands[name];
+            args = args.slice(1);
+        }
+        
+        if (!cmd)
+            throw new Error("Invalid command");
+        
+        return cmd.execute(parse(args, cmd.params));
+    }
+    
+} });
+
+
+exports.ConsoleCommand = ConsoleCommand; return exports; }).call(this, {});
+
+var ConsoleIO = (function(exports) {
+
+
+var ConsoleIO = es6now.Class(function(__super) { return {
+
+    constructor: function ConsoleIO() {
+    
+        this._inStream = process.stdin;
+        this._outStream = process.stdout;
+        
+        this._outEnc = "utf8";
+        this._inEnc = "utf8";
+        
+        this.inputEncoding = "utf8";
+        this.outputEncoding = "utf8";
+    },
+    
+    get inputEncoding() { 
+    
+        return this._inEnc;
+    },
+    
+    set inputEncoding(enc) {
+    
+        this._inStream.setEncoding(this._inEnc = enc);
+    },
+    
+    get outputEncoding() {
+    
+        return this._outEnc;
+    },
+    
+    set outputEncoding(enc) {
+    
+        this._outStream.setEncoding(this._outEnc = enc);
+    },
+    
+    readLine: function() { var __this = this;
+    
+        return new Promise((function(resolve) {
+        
+            var listener = (function(data) {
+            
+                resolve(data);
+                __this._inStream.removeListener("data", listener);
+                __this._inStream.pause();
+            });
+            
+            __this._inStream.resume();
+            __this._inStream.on("data", listener);
+        }));
+    },
+    
+    writeLine: function(msg) {
+    
+        console.log(msg);
+    },
+    
+    write: function(msg) {
+    
+        process.stdout.write(msg);
+    }
+    
+} });
+
+
+exports.ConsoleIO = ConsoleIO; return exports; }).call(this, {});
+
+var ConsoleStyle = (function(exports) {
+
+var ConsoleStyle = {
+
+    green: function(msg) { return "\u001b[32m" + (msg) + "\u001b[39m" },
+
+    red: function(msg) { return "\u001b[31m" + (msg) + "\u001b[39m" },
+
+    gray: function(msg) { "\u001b[90m" + (msg) + "\u001b[39m" },
+
+    bold: function(msg) { "\u001b[1m" + (msg) + "\u001b[22m" },
+
+};
+
+
+exports.ConsoleStyle = ConsoleStyle; return exports; }).call(this, {});
+
+var main___ = (function(exports) {
+
+Object.keys(ConsoleCommand).forEach(function(k) { exports[k] = ConsoleCommand[k]; });
+Object.keys(ConsoleIO).forEach(function(k) { exports[k] = ConsoleIO[k]; });
+Object.keys(ConsoleStyle).forEach(function(k) { exports[k] = ConsoleStyle[k]; });
+
+
+return exports; }).call(this, {});
+
+var main_ = (function(exports) {
+
+Object.keys(main___).forEach(function(k) { exports[k] = main___[k]; });
+
+return exports; }).call(this, {});
+
+var NodeRun = (function(exports) {
+
+var translate = Translator.translate;
+var isPackageURI = PackageLocator.isPackageURI, locatePackage = PackageLocator.locatePackage;
+var Style = main_.ConsoleStyle;
+
+var FS = require("fs"),
+    REPL = require("repl"),
+    VM = require("vm"),
+    Path = require("path");
+
+var ES6_GUESS = /(?:^|\n)\s*(?:import|export|class)\s/;
+
+function formatSyntaxError(e, filename) {
+
+    var msg = e.message,
+        text = e.sourceText;
+        
+    if (filename === void 0 && e.filename !== void 0)
+        filename = e.filename;
+    
+    if (filename)
+        msg += "\n    " + (filename) + ":" + (e.line) + "";
+    
+    if (e.lineOffset < text.length) {
+    
+        var code = "\n\n" +
+            text.slice(e.lineOffset, e.startOffset) +
+            Style.bold(Style.red(text.slice(e.startOffset, e.endOffset))) + 
+            text.slice(e.endOffset, text.indexOf("\n", e.endOffset)) +
+            "\n";
+        
+        msg += code.replace(/\n/g, "\n    ");
+    }
+    
+    return msg;
+}
+
+function addExtension() {
+
+    var Module = module.constructor,
+        resolveFilename = Module._resolveFilename;
+    
+    Module._resolveFilename = (function(filename, parent) {
+    
+        if (isPackageURI(filename))
+            filename = locatePackage(filename);
+        
+        return resolveFilename(filename, parent);
+    });
+    
+    // Compile ES6 js files
+    require.extensions[".js"] = (function(module, filename) {
+    
+        var text, source;
+        
+        try {
+        
+            text = source = FS.readFileSync(filename, "utf8");
+            
+            if (ES6_GUESS.test(text))
+                text = translate(text);
+        
+        } catch (e) {
+        
+            if (e instanceof SyntaxError)
+                e = new SyntaxError(formatSyntaxError(e, filename));
+            
+            throw e;
+        }
+        
+        return module._compile(text, filename);
+    });
+}
+
+function runModule(path) {
+
+    addExtension();
+        
+    var path = Path.resolve(process.cwd(), path),
+        stat;
+
+    try { stat = FS.statSync(path) }
+    catch (x) {}
+
+    if (stat && stat.isDirectory())
+        path = Path.join(path, "main.js");
+
+    var m = require(path);
+
+    if (m && typeof m.main === "function") {
+    
+        var result = m.main(process.argv);
+        
+        Promise.resolve(result).then(null, (function(x) { return setTimeout((function($) { throw x }), 0); }));
+    }
+}
+
+function startREPL() {
+
+    addExtension();
+    
+    var repl = REPL.start({ 
+    
+        prompt: "es6now> ",
+        
+        eval: function(input, context, filename, cb) {
+        
+            var text, result, script, displayErrors = false;
+            
+            try {
+            
+                text = translate(input, { wrap: false });
+            
+            } catch (x) {
+            
+                // Regenerate syntax error to eliminate parser stack
+                if (x instanceof SyntaxError)
+                    x = new SyntaxError(x.message);
+                
+                return cb(x);
+            }
+            
+            try {
+                
+                script = VM.createScript(text, { filename: filename, displayErrors: displayErrors });
+                
+                result = this.useGlobal ?
+                    script.runInThisContext(text, { displayErrors: displayErrors }) :
+                    script.runInContext(context, { displayErrors: displayErrors });
+                
+            } catch (x) {
+            
+                return cb(x);
+            }
+            
+            return cb(null, result);
+        }
+    });
+}
+
+
+exports.formatSyntaxError = formatSyntaxError; exports.runModule = runModule; exports.startREPL = startREPL; return exports; }).call(this, {});
+
 var ConsoleStyle_ = (function(exports) {
 
 function green(msg) {
@@ -7707,7 +8147,7 @@ function bold(msg) {
 
 exports.green = green; exports.red = red; exports.gray = gray; exports.bold = bold; return exports; }).call(this, {});
 
-var ConsoleCommand = (function(exports) {
+var ConsoleCommand_ = (function(exports) {
 
 var Style = ConsoleStyle_;
 
@@ -7872,7 +8312,7 @@ parse(process.argv.slice(2), {
 
 exports.ConsoleCommand = ConsoleCommand; return exports; }).call(this, {});
 
-var ConsoleIO = (function(exports) {
+var ConsoleIO_ = (function(exports) {
 
 var Style = ConsoleStyle_;
 
@@ -8207,27 +8647,25 @@ var Event = es6now.Class(function(__super) { return {
 
 exports.EventTarget = EventTarget; exports.Event = Event; return exports; }).call(this, {});
 
-var AsyncFS_ = (function(exports) {
+var AsyncFS__ = (function(exports) {
 
-var FS = _M0;
+var FS = require("fs");
 
 // Wraps a standard Node async function with a promise
 // generating function
 function wrap(fn) {
 
-	return function() {
+	return function() { var args = es6now.rest(arguments, 0);
 	
-	    var a = [].slice.call(arguments, 0);
-	    
 		return new Promise((function(resolve, reject) {
 		    
-            a.push((function(err, data) {
+            args.push((function(err, data) {
         
                 if (err) reject(err);
                 else resolve(data);
             }));
             
-            fn.apply(null, a);
+            fn.apply(null, args);
         }));
 	};
 }
@@ -8276,10 +8714,10 @@ var
 
 exports.exists = exists; exports.readFile = readFile; exports.close = close; exports.open = open; exports.read = read; exports.write = write; exports.rename = rename; exports.truncate = truncate; exports.rmdir = rmdir; exports.fsync = fsync; exports.mkdir = mkdir; exports.sendfile = sendfile; exports.readdir = readdir; exports.fstat = fstat; exports.lstat = lstat; exports.stat = stat; exports.readlink = readlink; exports.symlink = symlink; exports.link = link; exports.unlink = unlink; exports.fchmod = fchmod; exports.lchmod = lchmod; exports.chmod = chmod; exports.lchown = lchown; exports.fchown = fchown; exports.chown = chown; exports.utimes = utimes; exports.futimes = futimes; exports.writeFile = writeFile; exports.appendFile = appendFile; exports.realpath = realpath; return exports; }).call(this, {});
 
-var main___ = (function(exports) {
+var main_______ = (function(exports) {
 
-Object.keys(ConsoleCommand).forEach(function(k) { exports[k] = ConsoleCommand[k]; });
-Object.keys(ConsoleIO).forEach(function(k) { exports[k] = ConsoleIO[k]; });
+Object.keys(ConsoleCommand_).forEach(function(k) { exports[k] = ConsoleCommand_[k]; });
+Object.keys(ConsoleIO_).forEach(function(k) { exports[k] = ConsoleIO_[k]; });
 Object.keys(StringSet).forEach(function(k) { exports[k] = StringSet[k]; });
 Object.keys(StringMap_).forEach(function(k) { exports[k] = StringMap_[k]; });
 Object.keys(PromiseExtensions).forEach(function(k) { exports[k] = PromiseExtensions[k]; });
@@ -8288,167 +8726,23 @@ Object.keys(EventTarget).forEach(function(k) { exports[k] = EventTarget[k]; });
 var ConsoleStyle = ConsoleStyle_;
 
 
-var AsyncFS = AsyncFS_;
+var AsyncFS = AsyncFS__;
 
 
 
 
 exports.ConsoleStyle = ConsoleStyle; exports.AsyncFS = AsyncFS; return exports; }).call(this, {});
 
-var main_ = (function(exports) {
+var main_____ = (function(exports) {
 
-Object.keys(main___).forEach(function(k) { exports[k] = main___[k]; });
+Object.keys(main_______).forEach(function(k) { exports[k] = main_______[k]; });
 
 return exports; }).call(this, {});
 
-var NodeRun = (function(exports) {
-
-var translate = Translator.translate;
-var isPackageURI = PackageLocator.isPackageURI, locatePackage = PackageLocator.locatePackage;
-var Style = main_.ConsoleStyle;
-
-var FS = require("fs"),
-    REPL = require("repl"),
-    VM = require("vm"),
-    Path = require("path");
-
-var ES6_GUESS = /(?:^|\n)\s*(?:import|export|class)\s/;
-
-function formatSyntaxError(e, filename) {
-
-    var msg = e.message,
-        text = e.sourceText;
-        
-    if (filename === void 0 && e.filename !== void 0)
-        filename = e.filename;
-    
-    if (filename)
-        msg += "\n    " + (filename) + ":" + (e.line) + "";
-    
-    if (e.lineOffset < text.length) {
-    
-        var code = "\n\n" +
-            text.slice(e.lineOffset, e.startOffset) +
-            Style.bold(Style.red(text.slice(e.startOffset, e.endOffset))) + 
-            text.slice(e.endOffset, text.indexOf("\n", e.endOffset)) +
-            "\n";
-        
-        msg += code.replace(/\n/g, "\n    ");
-    }
-    
-    return msg;
-}
-
-function addExtension() {
-
-    var Module = module.constructor,
-        resolveFilename = Module._resolveFilename;
-    
-    Module._resolveFilename = (function(filename, parent) {
-    
-        if (isPackageURI(filename))
-            filename = locatePackage(filename);
-        
-        return resolveFilename(filename, parent);
-    });
-    
-    // Compile ES6 js files
-    require.extensions[".js"] = (function(module, filename) {
-    
-        var text, source;
-        
-        try {
-        
-            text = source = FS.readFileSync(filename, "utf8");
-            
-            if (ES6_GUESS.test(text))
-                text = translate(text);
-        
-        } catch (e) {
-        
-            if (e instanceof SyntaxError)
-                e = new SyntaxError(formatSyntaxError(e, filename));
-            
-            throw e;
-        }
-        
-        return module._compile(text, filename);
-    });
-}
-
-function runModule(path) {
-
-    addExtension();
-        
-    var path = Path.resolve(process.cwd(), path),
-        stat;
-
-    try { stat = FS.statSync(path) }
-    catch (x) {}
-
-    if (stat && stat.isDirectory())
-        path = Path.join(path, "main.js");
-
-    var m = require(path);
-
-    if (m && typeof m.main === "function") {
-    
-        var result = m.main(process.argv);
-        
-        Promise.resolve(result).then(null, (function(x) { return setTimeout((function($) { throw x }), 0); }));
-    }
-}
-
-function startREPL() {
-
-    addExtension();
-    
-    var repl = REPL.start({ 
-    
-        prompt: "es6now> ",
-        
-        eval: function(input, context, filename, cb) {
-        
-            var text, result, script, displayErrors = false;
-            
-            try {
-            
-                text = translate(input, { wrap: false });
-            
-            } catch (x) {
-            
-                // Regenerate syntax error to eliminate parser stack
-                if (x instanceof SyntaxError)
-                    x = new SyntaxError(x.message);
-                
-                return cb(x);
-            }
-            
-            try {
-                
-                script = VM.createScript(text, { filename: filename, displayErrors: displayErrors });
-                
-                result = this.useGlobal ?
-                    script.runInThisContext(text, { displayErrors: displayErrors }) :
-                    script.runInContext(context, { displayErrors: displayErrors });
-                
-            } catch (x) {
-            
-                return cb(x);
-            }
-            
-            return cb(null, result);
-        }
-    });
-}
-
-
-exports.formatSyntaxError = formatSyntaxError; exports.runModule = runModule; exports.startREPL = startREPL; return exports; }).call(this, {});
-
 var Analyzer = (function(exports) {
 
-var parse = main_____.parse;
-var StringSet = main_.StringSet, StringMap = main_.StringMap;
+var parse = main______.parse;
+var StringSet = main_____.StringSet, StringMap = main_____.StringMap;
 
 function analyze(ast, resolvePath) {
 
@@ -8520,7 +8814,7 @@ exports.analyze = analyze; return exports; }).call(this, {});
 
 var Bundler = (function(exports) {
 
-var AsyncFS = main_.AsyncFS, StringMap = main_.StringMap, StringSet = main_.StringSet;
+var AsyncFS = main_____.AsyncFS, StringMap = main_____.StringMap, StringSet = main_____.StringSet;
 var analyze = Analyzer.analyze;
 
 var Path = require("path");
@@ -8708,7 +9002,7 @@ exports.createBundle = createBundle; return exports; }).call(this, {});
 var main____ = (function(exports) {
 
 var createBundle = Bundler.createBundle;
-var AsyncFS = main_.AsyncFS, ConsoleCommand = main_.ConsoleCommand;
+var AsyncFS = main_____.AsyncFS, ConsoleCommand = main_____.ConsoleCommand;
 
 
 function main() {
@@ -8746,8 +9040,10 @@ return exports; }).call(this, {});
 
 var main = (function(exports) {
 
+var AsyncFS = AsyncFS_;
+
 var runModule = NodeRun.runModule, startREPL = NodeRun.startREPL, formatSyntaxError = NodeRun.formatSyntaxError;
-var AsyncFS = main_.AsyncFS, ConsoleCommand = main_.ConsoleCommand;
+var ConsoleCommand = main_.ConsoleCommand;
 var createBundle = main__.createBundle;
 var translate = Translator.translate;
 var locatePackage = PackageLocator.locatePackage;
@@ -8864,4 +9160,4 @@ return exports; }).call(this, {});
 Object.keys(main).forEach(function(k) { exports[k] = main[k]; });
 
 
-}, ["fs"], "");
+}, [], "");

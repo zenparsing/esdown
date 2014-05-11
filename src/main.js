@@ -1,5 +1,7 @@
+module AsyncFS from "AsyncFS.js";
+
 import { runModule, startREPL, formatSyntaxError } from "NodeRun.js";
-import { AsyncFS, ConsoleCommand } from "package:zen-bits";
+import { ConsoleCommand } from "package:zencmd";
 import { createBundle } from "package:js-bundle";
 import { translate } from "Translator.js";
 import { locatePackage } from "PackageLocator.js";
