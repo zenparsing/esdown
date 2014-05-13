@@ -74,7 +74,7 @@ function addExtension() {
 export function runModule(path) {
 
     addExtension();
-        
+    
     var path = Path.resolve(process.cwd(), path),
         stat;
 
@@ -135,4 +135,30 @@ export function startREPL() {
             return cb(null, result);
         }
     });
+    
+    repl.defineCommand("translate", {
+    
+        help: "Translate ES6 to ES5",
+        
+        action(input) {
+            
+            var text;
+            
+            try {
+            
+                text = translate(input, { wrap: false });
+            
+            } catch (x) {
+            
+                text = x instanceof SyntaxError ?
+                    formatSyntaxError(x, "REPL") :
+                    x.toString();
+            }
+            
+            console.log(text);
+            
+            this.displayPrompt();
+        }
+    });
+    
 }

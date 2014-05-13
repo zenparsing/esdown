@@ -7955,9 +7955,9 @@ var ConsoleStyle = {
 
     red: function(msg) { return "\u001b[31m" + (msg) + "\u001b[39m" },
 
-    gray: function(msg) { "\u001b[90m" + (msg) + "\u001b[39m" },
+    gray: function(msg) { return "\u001b[90m" + (msg) + "\u001b[39m" },
 
-    bold: function(msg) { "\u001b[1m" + (msg) + "\u001b[22m" },
+    bold: function(msg) { return "\u001b[1m" + (msg) + "\u001b[22m" },
 
 };
 
@@ -8057,7 +8057,7 @@ function addExtension() {
 function runModule(path) {
 
     addExtension();
-        
+    
     var path = Path.resolve(process.cwd(), path),
         stat;
 
@@ -8118,6 +8118,32 @@ function startREPL() {
             return cb(null, result);
         }
     });
+    
+    repl.defineCommand("translate", {
+    
+        help: "Translate ES6 to ES5",
+        
+        action: function(input) {
+            
+            var text;
+            
+            try {
+            
+                text = translate(input, { wrap: false });
+            
+            } catch (x) {
+            
+                text = x instanceof SyntaxError ?
+                    formatSyntaxError(x, "REPL") :
+                    x.toString();
+            }
+            
+            console.log(text);
+            
+            this.displayPrompt();
+        }
+    });
+    
 }
 
 
