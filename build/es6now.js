@@ -3460,7 +3460,7 @@ var Scanner = es6now.Class(function(__super) { return {
         
             if (code === 92) {
             
-                val += this.input.slice(start, this.offset++);
+                val += this.input.slice(start, this.offset);
                 esc = this.readIdentifierEscape(false);
                 
                 if (esc === null)
@@ -3488,10 +3488,10 @@ var Scanner = es6now.Class(function(__super) { return {
         
         val += this.input.slice(start, this.offset);
         
+        this.value = val;
+        
         if (context !== "name" && reservedWord.test(val))
             return esc ? this.Error() : val;
-        
-        this.value = val;
         
         return "IDENTIFIER";
     },
@@ -4206,15 +4206,32 @@ function isUnary(op) {
 // Returns true if the value is a function modifier keyword
 function isFunctionModifier(value) {
 
-    // TODO:  Here we just test a string value, but what if the identifier contains
-    // unicode escapes?
-    
     switch (value) {
     
         case "async": return true;
     }
     
     return false;
+}
+
+// Returns the value of the specified token, if it is an identifier and does not
+// contain any unicode escapes
+function keywordFromToken(token) {
+
+    if (token.type === "IDENTIFIER" && token.end - token.start === token.value.length)
+        return token.value;
+    
+    return "";
+}
+
+// Returns the value of the specified node, if it is an Identifier and does not
+// contain any unicode escapes
+function keywordFromNode(node) {
+
+    if (node.type === "Identifier" && node.end - node.start === node.value.length)
+        return node.value;
+    
+    return "";
 }
 
 // Copies token data
@@ -4391,13 +4408,9 @@ var Parser = es6now.Class(function(__super) { return {
     
     readKeyword: function(word) {
     
-        // TODO:  What if token has a unicode escape?  Does it still count as the keyword?
-        // Do we fail if the keyword has a unicode escape (this would mirror what happens
-        // with reserved words).
-        
         var token = this.readToken();
         
-        if (token.type === word || token.type === "IDENTIFIER" && token.value === word)
+        if (token.type === word || keywordFromToken(token) === word)
             return token;
         
         this.unexpected(token);
@@ -4406,7 +4419,7 @@ var Parser = es6now.Class(function(__super) { return {
     peekKeyword: function(word) {
     
         var token = this.peekToken();
-        return token.type === "IDENTIFIER" && token.value === word;
+        return token.type === word || keywordFromToken(token) === word;
     },
     
     peekLet: function() {
@@ -4453,7 +4466,7 @@ var Parser = es6now.Class(function(__super) { return {
     
         var token = this.peekToken();
         
-        if (!(token.type === "IDENTIFIER" && isFunctionModifier(token.value)))
+        if (!isFunctionModifier(keywordFromToken(token)))
             return false;
         
         token = this.peekTokenAt("div", 1);
@@ -4866,8 +4879,7 @@ var Parser = es6now.Class(function(__super) { return {
                         break;
                     }
                     
-                    if (expr.type === "Identifier" && 
-                        isFunctionModifier(expr.value)) {
+                    if (isFunctionModifier(keywordFromNode(expr))) {
                 
                         arrowType = expr.value;
                         this.pushMaybeContext();
@@ -4994,7 +5006,7 @@ var Parser = es6now.Class(function(__super) { return {
             
             case "IDENTIFIER":
                 
-                value = token.value;
+                value = keywordFromToken(token);
                 next = this.peekTokenAt("div", 1);
                 
                 if (!next.newlineBefore) {
@@ -5413,9 +5425,6 @@ var Parser = es6now.Class(function(__super) { return {
                 
                 if (next.type === ":")
                     return this.LabelledStatement();
-                
-                if (next.type === "function" && !next.newlineBefore)
-                    return this.FunctionDeclaration();
                 
                 return this.ExpressionStatement();
             
@@ -6026,6 +6035,9 @@ var Parser = es6now.Class(function(__super) { return {
                 if (this.peekLet())
                     return this.LexicalDeclaration();
                 
+                if (this.peekFunctionModifier())
+                    return this.FunctionDeclaration();
+                
                 if (this.peekModule())
                     return this.ModuleDefinition();
                 
@@ -6055,7 +6067,7 @@ var Parser = es6now.Class(function(__super) { return {
         
         tok = this.peekToken();
         
-        if (tok.type === "IDENTIFIER" && isFunctionModifier(tok.value)) {
+        if (isFunctionModifier(keywordFromToken(tok))) {
         
             this.read();
             kind = tok.value;
@@ -6097,7 +6109,7 @@ var Parser = es6now.Class(function(__super) { return {
         
         tok = this.peekToken();
         
-        if (tok.type === "IDENTIFIER" && isFunctionModifier(tok.value)) {
+        if (isFunctionModifier(keywordFromToken(tok))) {
         
             this.read();
             kind = tok.value;
@@ -6150,9 +6162,9 @@ var Parser = es6now.Class(function(__super) { return {
             if (!name)
                 name = this.PropertyName();
             
-            if (name.type === "Identifier" && this.peek("name") !== "(") {
+            val = keywordFromNode(name);
             
-                val = name.value;
+            if (this.peek("name") !== "(") {
                 
                 if (val === "get" || val === "set" || isFunctionModifier(val)) {
                 
@@ -8115,34 +8127,37 @@ function startREPL() {
                 return cb(x);
             }
             
-            return cb(null, result);
+            return Promise.resolve(result).then((function(x) { return cb(null, x); }), (function(err) { return cb(err); }));
         }
     });
     
-    repl.defineCommand("translate", {
+    if (typeof repl.defineCommand === "function") {
     
-        help: "Translate ES6 to ES5",
+        repl.defineCommand("translate", {
+    
+            help: "Translate ES6 to ES5",
         
-        action: function(input) {
+            action: function(input) {
             
-            var text;
+                var text;
             
-            try {
+                try {
             
-                text = translate(input, { wrap: false });
+                    text = translate(input, { wrap: false });
             
-            } catch (x) {
+                } catch (x) {
             
-                text = x instanceof SyntaxError ?
-                    formatSyntaxError(x, "REPL") :
-                    x.toString();
+                    text = x instanceof SyntaxError ?
+                        formatSyntaxError(x, "REPL") :
+                        x.toString();
+                }
+            
+                console.log(text);
+            
+                this.displayPrompt();
             }
-            
-            console.log(text);
-            
-            this.displayPrompt();
-        }
-    });
+        });
+    }
     
 }
 

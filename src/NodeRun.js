@@ -132,33 +132,36 @@ export function startREPL() {
                 return cb(x);
             }
             
-            return cb(null, result);
+            return Promise.resolve(result).then(x => cb(null, x), err => cb(err));
         }
     });
     
-    repl.defineCommand("translate", {
+    if (typeof repl.defineCommand === "function") {
     
-        help: "Translate ES6 to ES5",
+        repl.defineCommand("translate", {
+    
+            help: "Translate ES6 to ES5",
         
-        action(input) {
+            action(input) {
             
-            var text;
+                var text;
             
-            try {
+                try {
             
-                text = translate(input, { wrap: false });
+                    text = translate(input, { wrap: false });
             
-            } catch (x) {
+                } catch (x) {
             
-                text = x instanceof SyntaxError ?
-                    formatSyntaxError(x, "REPL") :
-                    x.toString();
+                    text = x instanceof SyntaxError ?
+                        formatSyntaxError(x, "REPL") :
+                        x.toString();
+                }
+            
+                console.log(text);
+            
+                this.displayPrompt();
             }
-            
-            console.log(text);
-            
-            this.displayPrompt();
-        }
-    });
+        });
+    }
     
 }
