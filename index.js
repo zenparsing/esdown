@@ -1,1 +1,1 @@
-module.exports = require("./build/esnow")
+module.exports = require("./build/es6now.js")
