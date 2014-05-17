@@ -804,7 +804,7 @@ this.es6now.async = function(iterable) {
 
 }).call(this);
 
-var AsyncFS_ = (function(exports) {
+var AsyncFS_ = (function(exports) { 
 
 var FS = require("fs");
 
@@ -871,7 +871,7 @@ var
 
 exports.exists = exists; exports.readFile = readFile; exports.close = close; exports.open = open; exports.read = read; exports.write = write; exports.rename = rename; exports.truncate = truncate; exports.rmdir = rmdir; exports.fsync = fsync; exports.mkdir = mkdir; exports.sendfile = sendfile; exports.readdir = readdir; exports.fstat = fstat; exports.lstat = lstat; exports.stat = stat; exports.readlink = readlink; exports.symlink = symlink; exports.link = link; exports.unlink = unlink; exports.fchmod = fchmod; exports.lchmod = lchmod; exports.chmod = chmod; exports.lchown = lchown; exports.fchown = fchown; exports.chown = chown; exports.utimes = utimes; exports.futimes = futimes; exports.writeFile = writeFile; exports.appendFile = appendFile; exports.realpath = realpath; return exports; }).call(this, {});
 
-var Runtime_ = (function(exports) {
+var Runtime_ = (function(exports) { 
 
 var ES6 = 
 
@@ -1671,7 +1671,7 @@ var Async =
 
 exports.ES6 = ES6; exports.Class = Class; exports.Promise = Promise; exports.Async = Async; return exports; }).call(this, {});
 
-var AST_ = (function(exports) {
+var AST_ = (function(exports) { 
 
 /*
 
@@ -2473,7 +2473,7 @@ Object.keys(AST).forEach((function(k) { return AST[k].prototype = NodeBase.proto
 
 exports.AST = AST; return exports; }).call(this, {});
 
-var UnicodeData = (function(exports) {
+var UnicodeData = (function(exports) { 
 
 // Unicode 6.3.0 | 2013-09-25, 18:58:50 GMT [MD]
 
@@ -3239,7 +3239,7 @@ var WHITESPACE = [
 
 exports.IDENTIFIER = IDENTIFIER; exports.WHITESPACE = WHITESPACE; return exports; }).call(this, {});
 
-var Unicode_ = (function(exports) {
+var Unicode_ = (function(exports) { 
 
 var IDENTIFIER = UnicodeData.IDENTIFIER, WHITESPACE = UnicodeData.WHITESPACE;
 
@@ -3333,7 +3333,7 @@ function toString(code) {
 
 exports.isIdentifierStart = isIdentifierStart; exports.isIdentifierPart = isIdentifierPart; exports.isWhitespace = isWhitespace; exports.length = length; exports.codePointAt = codePointAt; exports.toString = toString; return exports; }).call(this, {});
 
-var Scanner_ = (function(exports) {
+var Scanner_ = (function(exports) { 
 
 var Unicode = Unicode_;
 
@@ -4359,7 +4359,7 @@ var Scanner = es6now.Class(function(__super) { return {
 
 exports.Scanner = Scanner; return exports; }).call(this, {});
 
-var Transform_ = (function(exports) {
+var Transform_ = (function(exports) { 
 
 var AST = AST_.AST;
     
@@ -4538,7 +4538,7 @@ var Transform = es6now.Class(function(__super) { return {
 
 exports.Transform = Transform; return exports; }).call(this, {});
 
-var IntMap_ = (function(exports) {
+var IntMap_ = (function(exports) { 
 
 /*
 
@@ -4587,7 +4587,7 @@ var IntMap = es6now.Class(function(__super) { return {
 
 exports.IntMap = IntMap; return exports; }).call(this, {});
 
-var Validate_ = (function(exports) {
+var Validate_ = (function(exports) { 
 
 var IntMap = IntMap_.IntMap;
 
@@ -4908,7 +4908,7 @@ var Validate = es6now.Class(function(__super) { return {
 
 exports.Validate = Validate; return exports; }).call(this, {});
 
-var Parser_ = (function(exports) {
+var Parser_ = (function(exports) { 
 
 var AST = AST_.AST;
 var Scanner = Scanner_.Scanner;
@@ -7518,7 +7518,7 @@ Object.assign(Parser.prototype, Validate.prototype);
 
 exports.Parser = Parser; return exports; }).call(this, {});
 
-var main______ = (function(exports) {
+var main______ = (function(exports) { 
 
 var Parser = Parser_.Parser;
 var AST = AST_.AST;
@@ -7539,13 +7539,13 @@ function parse(input, options) {
 
 exports.AST = AST; exports.Parser = Parser; exports.parse = parse; exports.default = parse; return exports; }).call(this, {});
 
-var main___ = (function(exports) {
+var main___ = (function(exports) { 
 
 Object.keys(main______).forEach(function(k) { exports[k] = main______[k]; });
 
 return exports; }).call(this, {});
 
-var Replacer_ = (function(exports) {
+var Replacer_ = (function(exports) { 
 
 /*
 
@@ -7617,6 +7617,7 @@ var Replacer = es6now.Class(function(__super) { return {
         this.exportStack = [this.exports = {}];
         this.imports = {};
         this.dependencies = [];
+        this.strictStack = [];
         this.uid = 0;
         
         var visit = (function(node) {
@@ -7715,8 +7716,15 @@ var Replacer = es6now.Class(function(__super) { return {
         return out + node.body.text;
     },
     
+    ModuleBegin: function() {
+    
+        this.strictStack.push(1);
+    },
+    
     Module: function(node) {
     
+        // NOTE: Strict directive is included with module wrapper
+        
         var inserted = [];
         
         if (node.createThisBinding)
@@ -7833,9 +7841,10 @@ var Replacer = es6now.Class(function(__super) { return {
     
     ModuleDeclaration: function(node) { var __this = this;
     
-        var out = "var " + node.identifier.text + " = (function(exports) ";
+        var out = "var " + node.identifier.text + " = (function(exports) {";
         
-        out += node.body.text.replace(/\}$/, "");
+        out += this.strictDirective() + " ";
+        out += node.body.text.replace(/^\{|\}$/g, "");
         
         Object.keys(this.exports).forEach((function(k) {
     
@@ -8090,7 +8099,7 @@ var Replacer = es6now.Class(function(__super) { return {
     
         return "var " + node.identifier.text + " = es6now.Class(" + 
             (node.base ? (node.base.text + ", ") : "") +
-            "function(__super) { return " +
+            "function(__super) {" + this.strictDirective() + " return " +
             node.body.text + " });";
     },
     
@@ -8108,7 +8117,7 @@ var Replacer = es6now.Class(function(__super) { return {
         return "(" + before + 
             "es6now.Class(" + 
             (node.base ? (node.base.text + ", ") : "") +
-            "function(__super) { return " +
+            "function(__super) {" + this.strictDirective() + "return " +
             node.body.text + " })" +
             after + ")";
     },
@@ -8425,6 +8434,11 @@ var Replacer = es6now.Class(function(__super) { return {
         })).join(", ") + ";";
     },
     
+    strictDirective: function() {
+    
+        return this.strictStack.length > 0 ? "" : ' "use strict";';
+    },
+    
     lineNumber: function(offset) {
     
         return this.parser.location(offset).line;
@@ -8459,14 +8473,13 @@ var Replacer = es6now.Class(function(__super) { return {
 
 exports.Replacer = Replacer; return exports; }).call(this, {});
 
-var Translator = (function(exports) {
+var Translator = (function(exports) { 
 
 var Runtime = Runtime_;
 
 var Replacer = Replacer_.Replacer;
 
 var SIGNATURE = "/*=es6now=*/";
-
 var WRAP_CALLEE = "(function(fn, deps, name) { " +
 
     // Node.js:
@@ -8535,7 +8548,7 @@ function translate(input, options) {
             
     output = replacer.replace(input);
     
-    if (options.wrap !== false)
+    if (options.wrap)
         output = wrap(output, replacer.dependencies, options.global);
     
     return output;
@@ -8559,7 +8572,7 @@ function isWrapped(text) {
 
 exports.translate = translate; exports.wrap = wrap; exports.isWrapped = isWrapped; return exports; }).call(this, {});
 
-var PackageLocator = (function(exports) {
+var PackageLocator = (function(exports) { 
 
 var Path = require("path"),
     FS = require("fs");
@@ -8604,7 +8617,7 @@ function locatePackage(uri) {
 
 exports.isPackageURI = isPackageURI; exports.locatePackage = locatePackage; return exports; }).call(this, {});
 
-var ConsoleCommand = (function(exports) {
+var ConsoleCommand = (function(exports) { 
 
 var HAS = Object.prototype.hasOwnProperty;
 
@@ -8733,7 +8746,7 @@ var ConsoleCommand = es6now.Class(function(__super) { return {
 
 exports.ConsoleCommand = ConsoleCommand; return exports; }).call(this, {});
 
-var ConsoleIO = (function(exports) {
+var ConsoleIO = (function(exports) { 
 
 
 var ConsoleIO = es6now.Class(function(__super) { return {
@@ -8801,7 +8814,7 @@ var ConsoleIO = es6now.Class(function(__super) { return {
 
 exports.ConsoleIO = ConsoleIO; return exports; }).call(this, {});
 
-var ConsoleStyle = (function(exports) {
+var ConsoleStyle = (function(exports) { 
 
 var ConsoleStyle = {
 
@@ -8818,7 +8831,7 @@ var ConsoleStyle = {
 
 exports.ConsoleStyle = ConsoleStyle; return exports; }).call(this, {});
 
-var main____ = (function(exports) {
+var main____ = (function(exports) { 
 
 Object.keys(ConsoleCommand).forEach(function(k) { exports[k] = ConsoleCommand[k]; });
 Object.keys(ConsoleIO).forEach(function(k) { exports[k] = ConsoleIO[k]; });
@@ -8827,13 +8840,13 @@ Object.keys(ConsoleStyle).forEach(function(k) { exports[k] = ConsoleStyle[k]; })
 
 return exports; }).call(this, {});
 
-var main_ = (function(exports) {
+var main_ = (function(exports) { 
 
 Object.keys(main____).forEach(function(k) { exports[k] = main____[k]; });
 
 return exports; }).call(this, {});
 
-var NodeRun = (function(exports) {
+var NodeRun = (function(exports) { 
 
 var translate = Translator.translate;
 var isPackageURI = PackageLocator.isPackageURI, locatePackage = PackageLocator.locatePackage;
@@ -8896,7 +8909,7 @@ function addExtension() {
             text = source = FS.readFileSync(filename, "utf8");
             
             if (ES6_GUESS.test(text))
-                text = translate(text);
+                text = translate(text, { wrap: true });
         
         } catch (e) {
         
@@ -9036,7 +9049,7 @@ function startREPL() {
 
 exports.formatSyntaxError = formatSyntaxError; exports.runModule = runModule; exports.startREPL = startREPL; return exports; }).call(this, {});
 
-var ConsoleStyle_ = (function(exports) {
+var ConsoleStyle_ = (function(exports) { 
 
 function green(msg) {
 
@@ -9060,7 +9073,7 @@ function bold(msg) {
 
 exports.green = green; exports.red = red; exports.gray = gray; exports.bold = bold; return exports; }).call(this, {});
 
-var ConsoleCommand_ = (function(exports) {
+var ConsoleCommand_ = (function(exports) { 
 
 var Style = ConsoleStyle_;
 
@@ -9225,7 +9238,7 @@ parse(process.argv.slice(2), {
 
 exports.ConsoleCommand = ConsoleCommand; return exports; }).call(this, {});
 
-var ConsoleIO_ = (function(exports) {
+var ConsoleIO_ = (function(exports) { 
 
 var Style = ConsoleStyle_;
 
@@ -9294,7 +9307,7 @@ var ConsoleIO = es6now.Class(function(__super) { return {
 
 exports.ConsoleIO = ConsoleIO; return exports; }).call(this, {});
 
-var StringMap_ = (function(exports) {
+var StringMap_ = (function(exports) { 
 
 var HAS = Object.prototype.hasOwnProperty;
 
@@ -9357,7 +9370,7 @@ var StringMap = es6now.Class(function(__super) { return {
 
 exports.StringMap = StringMap; return exports; }).call(this, {});
 
-var StringSet = (function(exports) {
+var StringSet = (function(exports) { 
 
 var StringMap = StringMap_.StringMap;
 
@@ -9407,7 +9420,7 @@ var StringSet = es6now.Class(function(__super) { return {
 
 exports.StringSet = StringSet; return exports; }).call(this, {});
 
-var PromiseExtensions = (function(exports) {
+var PromiseExtensions = (function(exports) { 
 
 var PromiseExtensions = es6now.Class(function(__super) { return {
 
@@ -9430,7 +9443,7 @@ var PromiseExtensions = es6now.Class(function(__super) { return {
 
 exports.PromiseExtensions = PromiseExtensions; return exports; }).call(this, {});
 
-var EventTarget = (function(exports) {
+var EventTarget = (function(exports) { 
 
 /*
 
@@ -9560,7 +9573,7 @@ var Event = es6now.Class(function(__super) { return {
 
 exports.EventTarget = EventTarget; exports.Event = Event; return exports; }).call(this, {});
 
-var AsyncFS__ = (function(exports) {
+var AsyncFS__ = (function(exports) { 
 
 var FS = require("fs");
 
@@ -9627,7 +9640,7 @@ var
 
 exports.exists = exists; exports.readFile = readFile; exports.close = close; exports.open = open; exports.read = read; exports.write = write; exports.rename = rename; exports.truncate = truncate; exports.rmdir = rmdir; exports.fsync = fsync; exports.mkdir = mkdir; exports.sendfile = sendfile; exports.readdir = readdir; exports.fstat = fstat; exports.lstat = lstat; exports.stat = stat; exports.readlink = readlink; exports.symlink = symlink; exports.link = link; exports.unlink = unlink; exports.fchmod = fchmod; exports.lchmod = lchmod; exports.chmod = chmod; exports.lchown = lchown; exports.fchown = fchown; exports.chown = chown; exports.utimes = utimes; exports.futimes = futimes; exports.writeFile = writeFile; exports.appendFile = appendFile; exports.realpath = realpath; return exports; }).call(this, {});
 
-var main________ = (function(exports) {
+var main________ = (function(exports) { 
 
 Object.keys(ConsoleCommand_).forEach(function(k) { exports[k] = ConsoleCommand_[k]; });
 Object.keys(ConsoleIO_).forEach(function(k) { exports[k] = ConsoleIO_[k]; });
@@ -9646,13 +9659,13 @@ var AsyncFS = AsyncFS__;
 
 exports.ConsoleStyle = ConsoleStyle; exports.AsyncFS = AsyncFS; return exports; }).call(this, {});
 
-var main_______ = (function(exports) {
+var main_______ = (function(exports) { 
 
 Object.keys(main________).forEach(function(k) { exports[k] = main________[k]; });
 
 return exports; }).call(this, {});
 
-var Analyzer = (function(exports) {
+var Analyzer = (function(exports) { 
 
 var parse = main___.parse;
 var StringSet = main_______.StringSet, StringMap = main_______.StringMap;
@@ -9725,7 +9738,7 @@ function analyze(ast, resolvePath) {
 
 exports.analyze = analyze; return exports; }).call(this, {});
 
-var Bundler = (function(exports) {
+var Bundler = (function(exports) { 
 
 var AsyncFS = main_______.AsyncFS, StringMap = main_______.StringMap, StringSet = main_______.StringSet;
 var analyze = Analyzer.analyze;
@@ -9912,7 +9925,7 @@ function createBundle(rootPath, locatePackage) {
 
 exports.createBundle = createBundle; return exports; }).call(this, {});
 
-var main_____ = (function(exports) {
+var main_____ = (function(exports) { 
 
 var createBundle = Bundler.createBundle;
 var AsyncFS = main_______.AsyncFS, ConsoleCommand = main_______.ConsoleCommand;
@@ -9945,13 +9958,13 @@ function main() {
 
 exports.createBundle = createBundle; exports.main = main; return exports; }).call(this, {});
 
-var main__ = (function(exports) {
+var main__ = (function(exports) { 
 
 Object.keys(main_____).forEach(function(k) { exports[k] = main_____[k]; });
 
 return exports; }).call(this, {});
 
-var main = (function(exports) {
+var main = (function(exports) { 
 
 var AsyncFS = AsyncFS_;
 
@@ -10034,7 +10047,8 @@ new ConsoleCommand({
             text = translate(text, { 
         
                 global: params.global,
-                runtime: params.runtime
+                runtime: params.runtime,
+                wrap: true
             });
         
             if (params.output) {

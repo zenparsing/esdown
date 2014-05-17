@@ -79,7 +79,8 @@ new ConsoleCommand({
             text = translate(text, { 
         
                 global: params.global,
-                runtime: params.runtime
+                runtime: params.runtime,
+                wrap: true
             });
         
             if (params.output) {

@@ -3,7 +3,6 @@ module Runtime from "Runtime.js";
 import { Replacer } from "Replacer.js";
 
 var SIGNATURE = "/*=es6now=*/";
-
 var WRAP_CALLEE = "(function(fn, deps, name) { " +
 
     // Node.js:
@@ -72,7 +71,7 @@ export function translate(input, options) {
             
     output = replacer.replace(input);
     
-    if (options.wrap !== false)
+    if (options.wrap)
         output = wrap(output, replacer.dependencies, options.global);
     
     return output;

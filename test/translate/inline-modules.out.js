@@ -1,4 +1,4 @@
-var X = (function(exports) {
+var X = (function(exports) { 
 
     function A() {}
     var X;

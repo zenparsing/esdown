@@ -68,6 +68,7 @@ export class Replacer {
         this.exportStack = [this.exports = {}];
         this.imports = {};
         this.dependencies = [];
+        this.strictStack = [];
         this.uid = 0;
         
         var visit = node => {
@@ -166,8 +167,15 @@ export class Replacer {
         return out + node.body.text;
     }
     
+    ModuleBegin() {
+    
+        this.strictStack.push(1);
+    }
+    
     Module(node) {
     
+        // NOTE: Strict directive is included with module wrapper
+        
         var inserted = [];
         
         if (node.createThisBinding)
@@ -284,9 +292,10 @@ export class Replacer {
     
     ModuleDeclaration(node) {
     
-        var out = "var " + node.identifier.text + " = (function(exports) ";
+        var out = "var " + node.identifier.text + " = (function(exports) {";
         
-        out += node.body.text.replace(/\}$/, "");
+        out += this.strictDirective() + " ";
+        out += node.body.text.replace(/^\{|\}$/g, "");
         
         Object.keys(this.exports).forEach(k => {
     
@@ -541,7 +550,7 @@ export class Replacer {
     
         return "var " + node.identifier.text + " = es6now.Class(" + 
             (node.base ? (node.base.text + ", ") : "") +
-            "function(__super) { return " +
+            "function(__super) {" + this.strictDirective() + " return " +
             node.body.text + " });";
     }
     
@@ -559,7 +568,7 @@ export class Replacer {
         return "(" + before + 
             "es6now.Class(" + 
             (node.base ? (node.base.text + ", ") : "") +
-            "function(__super) { return " +
+            "function(__super) {" + this.strictDirective() + "return " +
             node.body.text + " })" +
             after + ")";
     }
@@ -874,6 +883,11 @@ export class Replacer {
             return out;
         
         }).join(", ") + ";";
+    }
+    
+    strictDirective() {
+    
+        return this.strictStack.length > 0 ? "" : ' "use strict";';
     }
     
     lineNumber(offset) {

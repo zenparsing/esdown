@@ -59,7 +59,7 @@ function addExtension() {
             text = source = FS.readFileSync(filename, "utf8");
             
             if (ES6_GUESS.test(text))
-                text = translate(text);
+                text = translate(text, { wrap: true });
         
         } catch (e) {
         
