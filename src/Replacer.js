@@ -648,13 +648,38 @@ export class Replacer {
             sub = node.substitutions,
             out = "",
             i;
-        
-        for (i = 0; i < lit.length; ++i) {
-        
-            if (i > 0)
-                out += " + (" + sub[i - 1].text + ") + ";
             
-            out += JSON.stringify(lit[i].value);
+        if (node.parent.type === "TaggedTemplateExpression") {
+        
+            out = "(es6now.templateSite(" + 
+                "[" + lit.map(x => this.rawToString(x.raw)).join(", ") + "]";
+            
+            // Only output the raw array if it is different from the cooked array
+            for (i = 0; i < lit.length; ++i) {
+            
+                if (lit[i].raw !== lit[i].value) {
+                
+                    out += ", [" + lit.map(x => JSON.stringify(x.raw)).join(", ") + "]";
+                    break;
+                }
+            }
+            
+            out += ")";
+            
+            if (sub.length > 0)
+                out += ", " + sub.map(x => x.text).join(", ");
+            
+            out += ")";
+        
+        } else {
+        
+            for (i = 0; i < lit.length; ++i) {
+        
+                if (i > 0)
+                    out += " + (" + sub[i - 1].text + ") + ";
+            
+                out += this.rawToString(lit[i].raw);
+            }
         }
         
         return out;
@@ -673,6 +698,14 @@ export class Replacer {
             `try { return es6now.async(function*(${ this.joinList(params) }) ` + 
             `${ body }.apply(this, arguments)); ` +
             `} catch (x) { return Promise.reject(x); } }`;
+    }
+    
+    rawToString(raw) {
+        
+        raw = raw.replace(/([^\n])?\n/g, (m, m1) => m1 === "\\" ? m : (m1 || "") + "\\n\\\n");
+        raw = raw.replace(/([^"])?"/g, (m, m1) => m1 === "\\" ? m : (m1 || "") + '\\"');
+        
+        return '"' + raw + '"';
     }
     
     parentFunction(node) {

@@ -23,6 +23,7 @@ this.Symbol = fakeSymbol;
 
 Symbol.iterator = Symbol("iterator");
 
+// Support for iterator protocol
 this.es6now.iterator = function(obj) {
 
     if (global.Symbol && Symbol.iterator && obj[Symbol.iterator] !== void 0)
@@ -34,6 +35,7 @@ this.es6now.iterator = function(obj) {
     return obj;
 };
 
+// Support for computed property names
 this.es6now.computed = function(obj) {
 
     var name, desc, i;
@@ -53,9 +55,17 @@ this.es6now.computed = function(obj) {
     return obj;
 };
 
+// Support for rest parameters
 this.es6now.rest = function(args, pos) {
 
     return arraySlice.call(args, pos);
+};
+
+// Support for tagged templates
+this.es6now.templateSite = function(values, raw) {
+
+    values.raw = raw || values;
+    return values;
 };
 
 function eachKey(obj, fn) {

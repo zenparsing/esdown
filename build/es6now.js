@@ -173,6 +173,7 @@ this.Symbol = fakeSymbol;
 
 Symbol.iterator = Symbol("iterator");
 
+// Support for iterator protocol
 this.es6now.iterator = function(obj) {
 
     if (global.Symbol && Symbol.iterator && obj[Symbol.iterator] !== void 0)
@@ -184,6 +185,7 @@ this.es6now.iterator = function(obj) {
     return obj;
 };
 
+// Support for computed property names
 this.es6now.computed = function(obj) {
 
     var name, desc, i;
@@ -203,9 +205,17 @@ this.es6now.computed = function(obj) {
     return obj;
 };
 
+// Support for rest parameters
 this.es6now.rest = function(args, pos) {
 
     return arraySlice.call(args, pos);
+};
+
+// Support for tagged templates
+this.es6now.templateSite = function(values, raw) {
+
+    values.raw = raw || values;
+    return values;
 };
 
 function eachKey(obj, fn) {
@@ -865,19 +875,797 @@ var Runtime_ = (function(exports) {
 
 var ES6 = 
 
-"var global = this, \n    arraySlice = Array.prototype.slice,\n    toString = Object.prototype.toString;\n\n// === Symbols ===\n\nvar symbolCounter = 0;\n\nfunction fakeSymbol() {\n\n    return \"__$\" + Math.floor(Math.random() * 1e9) + \"$\" + (++symbolCounter) + \"$__\";\n}\n\n// NOTE:  As of Node 0.11.12, V8's Symbol implementation is a little wonky.\n// There is no Object.getOwnPropertySymbols, so reflection doesn't seem to\n// work like it should.  Furthermore, Node blows up when trying to inspect\n// Symbol objects.  We expect to replace this override when V8's symbols\n// catch up with the ES6 specification.\n\nthis.Symbol = fakeSymbol;\n\nSymbol.iterator = Symbol(\"iterator\");\n\nthis.es6now.iterator = function(obj) {\n\n    if (global.Symbol && Symbol.iterator && obj[Symbol.iterator] !== void 0)\n        return obj[Symbol.iterator]();\n    \n    if (Array.isArray(obj))\n        return obj.values();\n    \n    return obj;\n};\n\nthis.es6now.computed = function(obj) {\n\n    var name, desc, i;\n    \n    for (i = 1; i < arguments.length; ++i) {\n    \n        name = \"__$\" + (i - 1);\n        desc = Object.getOwnPropertyDescriptor(obj, name);\n        \n        if (!desc)\n            continue;\n        \n        Object.defineProperty(obj, arguments[i], desc);\n        delete obj[name];\n    }\n    \n    return obj;\n};\n\nthis.es6now.rest = function(args, pos) {\n\n    return arraySlice.call(args, pos);\n};\n\nfunction eachKey(obj, fn) {\n\n    var keys = Object.getOwnPropertyNames(obj),\n        i;\n    \n    for (i = 0; i < keys.length; ++i)\n        fn(keys[i]);\n    \n    if (!Object.getOwnPropertySymbols)\n        return;\n    \n    keys = Object.getOwnPropertySymbols(obj);\n    \n    for (i = 0; i < keys.length; ++i)\n        fn(keys[i]);\n}\n\nfunction addMethods(obj, methods) {\n\n    eachKey(methods, key => {\n    \n        if (key in obj)\n            return;\n        \n        Object.defineProperty(obj, key, {\n        \n            value: methods[key],\n            configurable: true,\n            enumerable: false,\n            writable: true\n        });\n    });\n}\n\n\n// === Object ===\n\naddMethods(Object, {\n\n    is(left, right) {\n    \n        if (left === right)\n            return left !== 0 || 1 / left === 1 / right;\n        \n        return left !== left && right !== right;\n    },\n    \n    assign(target, source) {\n    \n        Object.keys(source).forEach(key => target[key] = source[key]);\n        return target;\n    }\n    \n});\n\n// === Number ===\n\naddMethods(Number, {\n\n    EPSILON: ($=> {\n    \n        var next, result;\n        \n        for (next = 1; 1 + next !== 1; next = next / 2)\n            result = next;\n        \n        return result;\n        \n    })(),\n    \n    MAX_SAFE_INTEGER: 9007199254740992,\n    \n    MIN_SAFE_INTEGER: -9007199254740991,\n    \n    isInteger(val) {\n    \n        typeof val === \"number\" && val | 0 === val;\n    }\n    \n    // TODO: isSafeInteger\n    \n});\n\n// === String === \n\naddMethods(String, {\n\n    raw(callsite, ...args) {\n    \n        var raw = callsite.raw,\n            len = raw.length >>> 0;\n        \n        if (len === 0)\n            return \"\";\n            \n        var s = \"\", i = 0;\n        \n        while (true) {\n        \n            s += raw[i];\n        \n            if (i + 1 === len)\n                return s;\n        \n            s += args[i++];\n        }\n    }\n    \n    // TODO:  fromCodePoint\n    \n});\n\naddMethods(String.prototype, {\n    \n    repeat(count) {\n    \n        if (this == null)\n            throw TypeError();\n        \n        var n = count ? Number(count) : 0;\n        \n        if (isNaN(n))\n            n = 0;\n        \n        // Account for out-of-bounds indices\n        if (n < 0 || n == Infinity)\n            throw RangeError();\n        \n        if (n == 0)\n            return \"\";\n            \n        var result = \"\";\n        \n        while (n--)\n            result += this;\n        \n        return result;\n    },\n    \n    startsWith(search) {\n    \n        var string = String(this);\n        \n        if (this == null || toString.call(search) == \"[object RegExp]\")\n            throw TypeError();\n            \n        var stringLength = this.length,\n            searchString = String(search),\n            searchLength = searchString.length,\n            position = arguments.length > 1 ? arguments[1] : undefined,\n            pos = position ? Number(position) : 0;\n            \n        if (isNaN(pos))\n            pos = 0;\n        \n        var start = Math.min(Math.max(pos, 0), stringLength);\n        \n        return this.indexOf(searchString, pos) == start;\n    },\n    \n    endsWith(search) {\n    \n        if (this == null || toString.call(search) == '[object RegExp]')\n            throw TypeError();\n        \n        var stringLength = this.length,\n            searchString = String(search),\n            searchLength = searchString.length,\n            pos = stringLength;\n        \n        if (arguments.length > 1) {\n        \n            var position = arguments[1];\n        \n            if (position !== undefined) {\n        \n                pos = position ? Number(position) : 0;\n                \n                if (isNaN(pos))\n                    pos = 0;\n            }\n        }\n        \n        var end = Math.min(Math.max(pos, 0), stringLength),\n            start = end - searchLength;\n        \n        if (start < 0)\n            return false;\n            \n        return this.lastIndexOf(searchString, start) == start;\n    },\n    \n    contains(search) {\n    \n        if (this == null)\n            throw TypeError();\n            \n        var stringLength = this.length,\n            searchString = String(search),\n            searchLength = searchString.length,\n            position = arguments.length > 1 ? arguments[1] : undefined,\n            pos = position ? Number(position) : 0;\n        \n        if (isNaN(pos))\n            pos = 0;\n            \n        var start = Math.min(Math.max(pos, 0), stringLength);\n        \n        return this.indexOf(string, searchString, pos) != -1;\n    }\n    \n    // TODO: codePointAt\n    \n});\n\n// === Array ===\n\nclass ArrayIterator {\n\n    constructor(array, kind) {\n    \n        this.array = array;\n        this.current = 0;\n        this.kind = kind;\n    }\n    \n    next() {\n    \n        var length = this.array.length >>> 0,\n            index = this.current;\n        \n        if (index >= length) {\n        \n            this.current = Infinity;\n            return { value: void 0, done: true };\n        }\n        \n        this.current += 1;\n        \n        switch (this.kind) {\n        \n            case \"values\":\n                return { value: this.array[index], done: false };\n            \n            case \"entries\":\n                return { value: [ index, this.array[index] ], done: false };\n            \n            default:\n                return { value: index, done: false };\n        }\n    }\n    \n    [Symbol.iterator]() { return this }\n\n}\n\naddMethods(Array.prototype, {\n\n    values()  { return new ArrayIterator(this, \"values\") },\n    entries() { return new ArrayIterator(this, \"entries\") },\n    keys()    { return new ArrayIterator(this, \"keys\") },\n    [Symbol.iterator]() { return this.values() }\n});\n";
+"var global = this, \n\
+    arraySlice = Array.prototype.slice,\n\
+    toString = Object.prototype.toString;\n\
+\n\
+// === Symbols ===\n\
+\n\
+var symbolCounter = 0;\n\
+\n\
+function fakeSymbol() {\n\
+\n\
+    return \"__$\" + Math.floor(Math.random() * 1e9) + \"$\" + (++symbolCounter) + \"$__\";\n\
+}\n\
+\n\
+// NOTE:  As of Node 0.11.12, V8's Symbol implementation is a little wonky.\n\
+// There is no Object.getOwnPropertySymbols, so reflection doesn't seem to\n\
+// work like it should.  Furthermore, Node blows up when trying to inspect\n\
+// Symbol objects.  We expect to replace this override when V8's symbols\n\
+// catch up with the ES6 specification.\n\
+\n\
+this.Symbol = fakeSymbol;\n\
+\n\
+Symbol.iterator = Symbol(\"iterator\");\n\
+\n\
+// Support for iterator protocol\n\
+this.es6now.iterator = function(obj) {\n\
+\n\
+    if (global.Symbol && Symbol.iterator && obj[Symbol.iterator] !== void 0)\n\
+        return obj[Symbol.iterator]();\n\
+    \n\
+    if (Array.isArray(obj))\n\
+        return obj.values();\n\
+    \n\
+    return obj;\n\
+};\n\
+\n\
+// Support for computed property names\n\
+this.es6now.computed = function(obj) {\n\
+\n\
+    var name, desc, i;\n\
+    \n\
+    for (i = 1; i < arguments.length; ++i) {\n\
+    \n\
+        name = \"__$\" + (i - 1);\n\
+        desc = Object.getOwnPropertyDescriptor(obj, name);\n\
+        \n\
+        if (!desc)\n\
+            continue;\n\
+        \n\
+        Object.defineProperty(obj, arguments[i], desc);\n\
+        delete obj[name];\n\
+    }\n\
+    \n\
+    return obj;\n\
+};\n\
+\n\
+// Support for rest parameters\n\
+this.es6now.rest = function(args, pos) {\n\
+\n\
+    return arraySlice.call(args, pos);\n\
+};\n\
+\n\
+// Support for tagged templates\n\
+this.es6now.templateSite = function(values, raw) {\n\
+\n\
+    values.raw = raw || values;\n\
+    return values;\n\
+};\n\
+\n\
+function eachKey(obj, fn) {\n\
+\n\
+    var keys = Object.getOwnPropertyNames(obj),\n\
+        i;\n\
+    \n\
+    for (i = 0; i < keys.length; ++i)\n\
+        fn(keys[i]);\n\
+    \n\
+    if (!Object.getOwnPropertySymbols)\n\
+        return;\n\
+    \n\
+    keys = Object.getOwnPropertySymbols(obj);\n\
+    \n\
+    for (i = 0; i < keys.length; ++i)\n\
+        fn(keys[i]);\n\
+}\n\
+\n\
+function addMethods(obj, methods) {\n\
+\n\
+    eachKey(methods, key => {\n\
+    \n\
+        if (key in obj)\n\
+            return;\n\
+        \n\
+        Object.defineProperty(obj, key, {\n\
+        \n\
+            value: methods[key],\n\
+            configurable: true,\n\
+            enumerable: false,\n\
+            writable: true\n\
+        });\n\
+    });\n\
+}\n\
+\n\
+\n\
+// === Object ===\n\
+\n\
+addMethods(Object, {\n\
+\n\
+    is(left, right) {\n\
+    \n\
+        if (left === right)\n\
+            return left !== 0 || 1 / left === 1 / right;\n\
+        \n\
+        return left !== left && right !== right;\n\
+    },\n\
+    \n\
+    assign(target, source) {\n\
+    \n\
+        Object.keys(source).forEach(key => target[key] = source[key]);\n\
+        return target;\n\
+    }\n\
+    \n\
+});\n\
+\n\
+// === Number ===\n\
+\n\
+addMethods(Number, {\n\
+\n\
+    EPSILON: ($=> {\n\
+    \n\
+        var next, result;\n\
+        \n\
+        for (next = 1; 1 + next !== 1; next = next / 2)\n\
+            result = next;\n\
+        \n\
+        return result;\n\
+        \n\
+    })(),\n\
+    \n\
+    MAX_SAFE_INTEGER: 9007199254740992,\n\
+    \n\
+    MIN_SAFE_INTEGER: -9007199254740991,\n\
+    \n\
+    isInteger(val) {\n\
+    \n\
+        typeof val === \"number\" && val | 0 === val;\n\
+    }\n\
+    \n\
+    // TODO: isSafeInteger\n\
+    \n\
+});\n\
+\n\
+// === String === \n\
+\n\
+addMethods(String, {\n\
+\n\
+    raw(callsite, ...args) {\n\
+    \n\
+        var raw = callsite.raw,\n\
+            len = raw.length >>> 0;\n\
+        \n\
+        if (len === 0)\n\
+            return \"\";\n\
+            \n\
+        var s = \"\", i = 0;\n\
+        \n\
+        while (true) {\n\
+        \n\
+            s += raw[i];\n\
+        \n\
+            if (i + 1 === len)\n\
+                return s;\n\
+        \n\
+            s += args[i++];\n\
+        }\n\
+    }\n\
+    \n\
+    // TODO:  fromCodePoint\n\
+    \n\
+});\n\
+\n\
+addMethods(String.prototype, {\n\
+    \n\
+    repeat(count) {\n\
+    \n\
+        if (this == null)\n\
+            throw TypeError();\n\
+        \n\
+        var n = count ? Number(count) : 0;\n\
+        \n\
+        if (isNaN(n))\n\
+            n = 0;\n\
+        \n\
+        // Account for out-of-bounds indices\n\
+        if (n < 0 || n == Infinity)\n\
+            throw RangeError();\n\
+        \n\
+        if (n == 0)\n\
+            return \"\";\n\
+            \n\
+        var result = \"\";\n\
+        \n\
+        while (n--)\n\
+            result += this;\n\
+        \n\
+        return result;\n\
+    },\n\
+    \n\
+    startsWith(search) {\n\
+    \n\
+        var string = String(this);\n\
+        \n\
+        if (this == null || toString.call(search) == \"[object RegExp]\")\n\
+            throw TypeError();\n\
+            \n\
+        var stringLength = this.length,\n\
+            searchString = String(search),\n\
+            searchLength = searchString.length,\n\
+            position = arguments.length > 1 ? arguments[1] : undefined,\n\
+            pos = position ? Number(position) : 0;\n\
+            \n\
+        if (isNaN(pos))\n\
+            pos = 0;\n\
+        \n\
+        var start = Math.min(Math.max(pos, 0), stringLength);\n\
+        \n\
+        return this.indexOf(searchString, pos) == start;\n\
+    },\n\
+    \n\
+    endsWith(search) {\n\
+    \n\
+        if (this == null || toString.call(search) == '[object RegExp]')\n\
+            throw TypeError();\n\
+        \n\
+        var stringLength = this.length,\n\
+            searchString = String(search),\n\
+            searchLength = searchString.length,\n\
+            pos = stringLength;\n\
+        \n\
+        if (arguments.length > 1) {\n\
+        \n\
+            var position = arguments[1];\n\
+        \n\
+            if (position !== undefined) {\n\
+        \n\
+                pos = position ? Number(position) : 0;\n\
+                \n\
+                if (isNaN(pos))\n\
+                    pos = 0;\n\
+            }\n\
+        }\n\
+        \n\
+        var end = Math.min(Math.max(pos, 0), stringLength),\n\
+            start = end - searchLength;\n\
+        \n\
+        if (start < 0)\n\
+            return false;\n\
+            \n\
+        return this.lastIndexOf(searchString, start) == start;\n\
+    },\n\
+    \n\
+    contains(search) {\n\
+    \n\
+        if (this == null)\n\
+            throw TypeError();\n\
+            \n\
+        var stringLength = this.length,\n\
+            searchString = String(search),\n\
+            searchLength = searchString.length,\n\
+            position = arguments.length > 1 ? arguments[1] : undefined,\n\
+            pos = position ? Number(position) : 0;\n\
+        \n\
+        if (isNaN(pos))\n\
+            pos = 0;\n\
+            \n\
+        var start = Math.min(Math.max(pos, 0), stringLength);\n\
+        \n\
+        return this.indexOf(string, searchString, pos) != -1;\n\
+    }\n\
+    \n\
+    // TODO: codePointAt\n\
+    \n\
+});\n\
+\n\
+// === Array ===\n\
+\n\
+class ArrayIterator {\n\
+\n\
+    constructor(array, kind) {\n\
+    \n\
+        this.array = array;\n\
+        this.current = 0;\n\
+        this.kind = kind;\n\
+    }\n\
+    \n\
+    next() {\n\
+    \n\
+        var length = this.array.length >>> 0,\n\
+            index = this.current;\n\
+        \n\
+        if (index >= length) {\n\
+        \n\
+            this.current = Infinity;\n\
+            return { value: void 0, done: true };\n\
+        }\n\
+        \n\
+        this.current += 1;\n\
+        \n\
+        switch (this.kind) {\n\
+        \n\
+            case \"values\":\n\
+                return { value: this.array[index], done: false };\n\
+            \n\
+            case \"entries\":\n\
+                return { value: [ index, this.array[index] ], done: false };\n\
+            \n\
+            default:\n\
+                return { value: index, done: false };\n\
+        }\n\
+    }\n\
+    \n\
+    [Symbol.iterator]() { return this }\n\
+\n\
+}\n\
+\n\
+addMethods(Array.prototype, {\n\
+\n\
+    values()  { return new ArrayIterator(this, \"values\") },\n\
+    entries() { return new ArrayIterator(this, \"entries\") },\n\
+    keys()    { return new ArrayIterator(this, \"keys\") },\n\
+    [Symbol.iterator]() { return this.values() }\n\
+});\n\
+";
 
 var Class = 
 
-"var HOP = Object.prototype.hasOwnProperty,\n    STATIC = /^__static_/;\n\n// Returns true if the object has the specified property\nfunction hasOwn(obj, name) {\n\n    return HOP.call(obj, name);\n}\n\n// Returns true if the object has the specified property in\n// its prototype chain\nfunction has(obj, name) {\n\n    for (; obj; obj = Object.getPrototypeOf(obj))\n        if (HOP.call(obj, name))\n            return true;\n    \n    return false;\n}\n\n// Iterates over the descriptors for each own property of an object\nfunction forEachDesc(obj, fn) {\n\n    var names = Object.getOwnPropertyNames(obj), i;\n    \n    for (i = 0; i < names.length; ++i)\n        fn(names[i], Object.getOwnPropertyDescriptor(obj, names[i]));\n    \n    if (Object.getOwnPropertySymbols) {\n    \n        names = Object.getOwnPropertySymbols(obj);\n        \n        for (i = 0; i < names.length; ++i)\n            fn(names[i], Object.getOwnPropertyDescriptor(obj, names[i]));\n    }\n    \n    return obj;\n}\n\n// Performs copy-based inheritance\nfunction inherit(to, from) {\n\n    for (; from; from = Object.getPrototypeOf(from)) {\n    \n        forEachDesc(from, (name, desc) => {\n        \n            if (!has(to, name))\n                Object.defineProperty(to, name, desc);\n        });\n    }\n    \n    return to;\n}\n\nfunction defineMethods(to, from) {\n\n    forEachDesc(from, (name, desc) => {\n    \n        if (typeof name !== \"string\" || !STATIC.test(name))\n            Object.defineProperty(to, name, desc);\n    });\n}\n\nfunction defineStatic(to, from) {\n\n    forEachDesc(from, (name, desc) => {\n    \n        if (typeof name === \"string\" &&\n            STATIC.test(name) && \n            typeof desc.value === \"object\" && \n            desc.value) {\n            \n            defineMethods(to, desc.value);\n        }\n    });\n}\n\nfunction Class(base, def) {\n\n    var parent;\n    \n    if (def === void 0) {\n    \n        // If no base class is specified, then Object.prototype\n        // is the parent prototype\n        def = base;\n        base = null;\n        parent = Object.prototype;\n    \n    } else if (base === null) {\n    \n        // If the base is null, then then then the parent prototype is null\n        parent = null;\n        \n    } else if (typeof base === \"function\") {\n    \n        parent = base.prototype;\n        \n        // Prototype must be null or an object\n        if (parent !== null && Object(parent) !== parent)\n            parent = void 0;\n    }\n    \n    if (parent === void 0)\n        throw new TypeError();\n    \n    // Generate the method collection, closing over \"__super\"\n    var proto = Object.create(parent),\n        props = def(parent),\n        constructor = props.constructor;\n    \n    if (!constructor)\n        throw new Error(\"No constructor specified.\");\n    \n    // Make constructor non-enumerable\n    // if none is provided\n    Object.defineProperty(props, \"constructor\", {\n    \n        enumerable: false,\n        writable: true,\n        configurable: true,\n        value: constructor\n    });\n    \n    // Set prototype methods\n    defineMethods(proto, props);\n    \n    // Set constructor's prototype\n    constructor.prototype = proto;\n    \n    // Set class \"static\" methods\n    defineStatic(constructor, props);\n    \n    // \"Inherit\" from base constructor\n    if (base) inherit(constructor, base);\n    \n    return constructor;\n}\n\nthis.es6now.Class = Class;\n";
+"var HOP = Object.prototype.hasOwnProperty,\n\
+    STATIC = /^__static_/;\n\
+\n\
+// Returns true if the object has the specified property\n\
+function hasOwn(obj, name) {\n\
+\n\
+    return HOP.call(obj, name);\n\
+}\n\
+\n\
+// Returns true if the object has the specified property in\n\
+// its prototype chain\n\
+function has(obj, name) {\n\
+\n\
+    for (; obj; obj = Object.getPrototypeOf(obj))\n\
+        if (HOP.call(obj, name))\n\
+            return true;\n\
+    \n\
+    return false;\n\
+}\n\
+\n\
+// Iterates over the descriptors for each own property of an object\n\
+function forEachDesc(obj, fn) {\n\
+\n\
+    var names = Object.getOwnPropertyNames(obj), i;\n\
+    \n\
+    for (i = 0; i < names.length; ++i)\n\
+        fn(names[i], Object.getOwnPropertyDescriptor(obj, names[i]));\n\
+    \n\
+    if (Object.getOwnPropertySymbols) {\n\
+    \n\
+        names = Object.getOwnPropertySymbols(obj);\n\
+        \n\
+        for (i = 0; i < names.length; ++i)\n\
+            fn(names[i], Object.getOwnPropertyDescriptor(obj, names[i]));\n\
+    }\n\
+    \n\
+    return obj;\n\
+}\n\
+\n\
+// Performs copy-based inheritance\n\
+function inherit(to, from) {\n\
+\n\
+    for (; from; from = Object.getPrototypeOf(from)) {\n\
+    \n\
+        forEachDesc(from, (name, desc) => {\n\
+        \n\
+            if (!has(to, name))\n\
+                Object.defineProperty(to, name, desc);\n\
+        });\n\
+    }\n\
+    \n\
+    return to;\n\
+}\n\
+\n\
+function defineMethods(to, from) {\n\
+\n\
+    forEachDesc(from, (name, desc) => {\n\
+    \n\
+        if (typeof name !== \"string\" || !STATIC.test(name))\n\
+            Object.defineProperty(to, name, desc);\n\
+    });\n\
+}\n\
+\n\
+function defineStatic(to, from) {\n\
+\n\
+    forEachDesc(from, (name, desc) => {\n\
+    \n\
+        if (typeof name === \"string\" &&\n\
+            STATIC.test(name) && \n\
+            typeof desc.value === \"object\" && \n\
+            desc.value) {\n\
+            \n\
+            defineMethods(to, desc.value);\n\
+        }\n\
+    });\n\
+}\n\
+\n\
+function Class(base, def) {\n\
+\n\
+    var parent;\n\
+    \n\
+    if (def === void 0) {\n\
+    \n\
+        // If no base class is specified, then Object.prototype\n\
+        // is the parent prototype\n\
+        def = base;\n\
+        base = null;\n\
+        parent = Object.prototype;\n\
+    \n\
+    } else if (base === null) {\n\
+    \n\
+        // If the base is null, then then then the parent prototype is null\n\
+        parent = null;\n\
+        \n\
+    } else if (typeof base === \"function\") {\n\
+    \n\
+        parent = base.prototype;\n\
+        \n\
+        // Prototype must be null or an object\n\
+        if (parent !== null && Object(parent) !== parent)\n\
+            parent = void 0;\n\
+    }\n\
+    \n\
+    if (parent === void 0)\n\
+        throw new TypeError();\n\
+    \n\
+    // Generate the method collection, closing over \"__super\"\n\
+    var proto = Object.create(parent),\n\
+        props = def(parent),\n\
+        constructor = props.constructor;\n\
+    \n\
+    if (!constructor)\n\
+        throw new Error(\"No constructor specified.\");\n\
+    \n\
+    // Make constructor non-enumerable\n\
+    // if none is provided\n\
+    Object.defineProperty(props, \"constructor\", {\n\
+    \n\
+        enumerable: false,\n\
+        writable: true,\n\
+        configurable: true,\n\
+        value: constructor\n\
+    });\n\
+    \n\
+    // Set prototype methods\n\
+    defineMethods(proto, props);\n\
+    \n\
+    // Set constructor's prototype\n\
+    constructor.prototype = proto;\n\
+    \n\
+    // Set class \"static\" methods\n\
+    defineStatic(constructor, props);\n\
+    \n\
+    // \"Inherit\" from base constructor\n\
+    if (base) inherit(constructor, base);\n\
+    \n\
+    return constructor;\n\
+}\n\
+\n\
+this.es6now.Class = Class;\n\
+";
 
 var Promise = 
 
-"var enqueueMicrotask = ($=> {\n\n    var window = this.window,\n        process = this.process,\n        msgChannel = null,\n        list = [];\n    \n    if (typeof setImmediate === \"function\") {\n    \n        return window ?\n            window.setImmediate.bind(window) :\n            setImmediate;\n    \n    } else if (process && typeof process.nextTick === \"function\") {\n    \n        return process.nextTick;\n        \n    } else if (window && window.MessageChannel) {\n        \n        msgChannel = new window.MessageChannel();\n        msgChannel.port1.onmessage = $=> { if (list.length) list.shift()(); };\n    \n        return fn => {\n        \n            list.push(fn);\n            msgChannel.port2.postMessage(0);\n        };\n    }\n    \n    return fn => setTimeout(fn, 0);\n\n})();\n\n// The following property names are used to simulate the internal data\n// slots that are defined for Promise objects.\n\nvar $status = \"Promise#status\",\n    $value = \"Promise#value\",\n    $onResolve = \"Promise#onResolve\",\n    $onReject = \"Promise#onReject\";\n\n// The following property name is used to simulate the built-in symbol @@isPromise\nvar $$isPromise = \"@@isPromise\";\n\nfunction isPromise(x) { \n\n    return !!x && $$isPromise in Object(x);\n}\n\nfunction promiseDefer(ctor) {\n\n    var d = {};\n\n    d.promise = new ctor((resolve, reject) => {\n        d.resolve = resolve;\n        d.reject = reject;\n    });\n\n    return d;\n}\n\nfunction promiseChain(promise, onResolve, onReject) {\n\n    if (typeof onResolve !== \"function\") onResolve = x => x;\n    if (typeof onReject !== \"function\") onReject = e => { throw e };\n\n    var deferred = promiseDefer(promise.constructor);\n    \n    if (typeof promise[$status] !== \"string\")\n        throw new TypeError(\"Promise method called on a non-promise\");\n\n    switch (promise[$status]) {\n\n        case \"pending\":\n            promise[$onResolve].push([deferred, onResolve]);\n            promise[$onReject].push([deferred, onReject]);\n            break;\n\n        case \"resolved\":\n            promiseReact(deferred, onResolve, promise[$value]);\n            break;\n    \n        case \"rejected\":\n            promiseReact(deferred, onReject, promise[$value]);\n            break;\n    }\n\n    return deferred.promise;\n}\n\nfunction promiseResolve(promise, x) {\n    \n    promiseDone(promise, \"resolved\", x, promise[$onResolve]);\n}\n\nfunction promiseReject(promise, x) {\n    \n    promiseDone(promise, \"rejected\", x, promise[$onReject]);\n}\n\nfunction promiseDone(promise, status, value, reactions) {\n\n    if (promise[$status] !== \"pending\") \n        return;\n        \n    promise[$status] = status;\n    promise[$value] = value;\n    promise[$onResolve] = promise[$onReject] = void 0;\n    \n    for (var i = 0; i < reactions.length; ++i) \n        promiseReact(reactions[i][0], reactions[i][1], value);\n}\n\nfunction promiseUnwrap(deferred, x) {\n\n    if (x === deferred.promise)\n        throw new TypeError(\"Promise cannot wrap itself\");\n    \n    if (isPromise(x))\n        promiseChain(x, deferred.resolve, deferred.reject);\n    else\n        deferred.resolve(x);\n}\n\nfunction promiseReact(deferred, handler, x) {\n\n    enqueueMicrotask($=> {\n    \n        try { promiseUnwrap(deferred, handler(x)) } \n        catch(e) { try { deferred.reject(e) } catch (e) { } }\n    });\n}\n\nclass Promise {\n\n    constructor(init) {\n    \n        if (typeof init !== \"function\")\n            throw new TypeError(\"Promise constructor called without initializer\");\n        \n        this[$value] = void 0;\n        this[$status] = \"pending\";\n        this[$onResolve] = [];\n        this[$onReject] = [];\n    \n        var resolve = x => promiseResolve(this, x),\n            reject = r => promiseReject(this, r);\n        \n        try { init(resolve, reject) } catch (x) { reject(x) }\n    }\n    \n    chain(onResolve, onReject) {\n    \n        return promiseChain(this, onResolve, onReject);\n    }\n    \n    then(onResolve, onReject) {\n\n        if (typeof onResolve !== \"function\") onResolve = x => x;\n        \n        return promiseChain(this, x => {\n    \n            if (x && typeof x === \"object\") {\n            \n                var maybeThen = x.then;\n                \n                if (typeof maybeThen === \"function\")\n                    return maybeThen.call(x, onResolve, onReject);\n            }\n                        \n            return onResolve(x);\n        \n        }, onReject);\n        \n    }\n    \n    catch(onReject) {\n    \n        return this.then(void 0, onReject);\n    }\n    \n    static defer() {\n    \n        return promiseDefer(this);\n    }\n    \n    static accept(x) {\n    \n        var d = promiseDefer(this);\n        d.resolve(x);\n        return d.promise;\n    }\n    \n    static resolve(x) { \n    \n        if (isPromise(x))\n            return x;\n            \n        var d = promiseDefer(this);\n        d.resolve(x);\n        return d.promise;\n    }\n    \n    static reject(x) { \n    \n        var d = promiseDefer(this);\n        d.reject(x);\n        return d.promise;\n    }\n\n    static all(values) {\n\n        // TODO: We should be getting an iterator from values\n        \n        var deferred = promiseDefer(this),\n            count = values.length,\n            resolutions = [];\n            \n        try {\n        \n            if (!Array.isArray(values))\n                throw new Error(\"Invalid argument\");\n        \n            var count = values.length;\n        \n            if (count === 0) {\n        \n                deferred.resolve(resolutions);\n            \n            } else {\n        \n                for (var i = 0; i < values.length; ++i)\n                    this.resolve(values[i]).then(onResolve(i), deferred.reject);\n            }\n            \n        } catch(x) { deferred.reject(x) }\n        \n        return deferred.promise;\n        \n        function onResolve(i) {\n    \n            return x => {\n        \n                resolutions[i] = x;\n            \n                if (--count === 0)\n                    deferred.resolve(resolutions);\n            };\n        }\n    }\n    \n    static race(values) {\n    \n        // TODO: We should be getting an iterator from values\n        \n        var deferred = promiseDefer(this);\n        \n        try {\n        \n            if (!Array.isArray(values))\n                throw new Error(\"Invalid argument\");\n            \n            for (var i = 0; i < values.length; ++i)\n                this.resolve(values[i]).then(deferred.resolve, deferred.reject);\n        \n        } catch(x) { deferred.reject(x) }\n        \n        return deferred.promise;\n    }\n    \n}\n\nPromise.prototype[$$isPromise] = true;\n\nif (this.Promise === void 0)\n    this.Promise = Promise;\n";
+"var enqueueMicrotask = ($=> {\n\
+\n\
+    var window = this.window,\n\
+        process = this.process,\n\
+        msgChannel = null,\n\
+        list = [];\n\
+    \n\
+    if (typeof setImmediate === \"function\") {\n\
+    \n\
+        return window ?\n\
+            window.setImmediate.bind(window) :\n\
+            setImmediate;\n\
+    \n\
+    } else if (process && typeof process.nextTick === \"function\") {\n\
+    \n\
+        return process.nextTick;\n\
+        \n\
+    } else if (window && window.MessageChannel) {\n\
+        \n\
+        msgChannel = new window.MessageChannel();\n\
+        msgChannel.port1.onmessage = $=> { if (list.length) list.shift()(); };\n\
+    \n\
+        return fn => {\n\
+        \n\
+            list.push(fn);\n\
+            msgChannel.port2.postMessage(0);\n\
+        };\n\
+    }\n\
+    \n\
+    return fn => setTimeout(fn, 0);\n\
+\n\
+})();\n\
+\n\
+// The following property names are used to simulate the internal data\n\
+// slots that are defined for Promise objects.\n\
+\n\
+var $status = \"Promise#status\",\n\
+    $value = \"Promise#value\",\n\
+    $onResolve = \"Promise#onResolve\",\n\
+    $onReject = \"Promise#onReject\";\n\
+\n\
+// The following property name is used to simulate the built-in symbol @@isPromise\n\
+var $$isPromise = \"@@isPromise\";\n\
+\n\
+function isPromise(x) { \n\
+\n\
+    return !!x && $$isPromise in Object(x);\n\
+}\n\
+\n\
+function promiseDefer(ctor) {\n\
+\n\
+    var d = {};\n\
+\n\
+    d.promise = new ctor((resolve, reject) => {\n\
+        d.resolve = resolve;\n\
+        d.reject = reject;\n\
+    });\n\
+\n\
+    return d;\n\
+}\n\
+\n\
+function promiseChain(promise, onResolve, onReject) {\n\
+\n\
+    if (typeof onResolve !== \"function\") onResolve = x => x;\n\
+    if (typeof onReject !== \"function\") onReject = e => { throw e };\n\
+\n\
+    var deferred = promiseDefer(promise.constructor);\n\
+    \n\
+    if (typeof promise[$status] !== \"string\")\n\
+        throw new TypeError(\"Promise method called on a non-promise\");\n\
+\n\
+    switch (promise[$status]) {\n\
+\n\
+        case \"pending\":\n\
+            promise[$onResolve].push([deferred, onResolve]);\n\
+            promise[$onReject].push([deferred, onReject]);\n\
+            break;\n\
+\n\
+        case \"resolved\":\n\
+            promiseReact(deferred, onResolve, promise[$value]);\n\
+            break;\n\
+    \n\
+        case \"rejected\":\n\
+            promiseReact(deferred, onReject, promise[$value]);\n\
+            break;\n\
+    }\n\
+\n\
+    return deferred.promise;\n\
+}\n\
+\n\
+function promiseResolve(promise, x) {\n\
+    \n\
+    promiseDone(promise, \"resolved\", x, promise[$onResolve]);\n\
+}\n\
+\n\
+function promiseReject(promise, x) {\n\
+    \n\
+    promiseDone(promise, \"rejected\", x, promise[$onReject]);\n\
+}\n\
+\n\
+function promiseDone(promise, status, value, reactions) {\n\
+\n\
+    if (promise[$status] !== \"pending\") \n\
+        return;\n\
+        \n\
+    promise[$status] = status;\n\
+    promise[$value] = value;\n\
+    promise[$onResolve] = promise[$onReject] = void 0;\n\
+    \n\
+    for (var i = 0; i < reactions.length; ++i) \n\
+        promiseReact(reactions[i][0], reactions[i][1], value);\n\
+}\n\
+\n\
+function promiseUnwrap(deferred, x) {\n\
+\n\
+    if (x === deferred.promise)\n\
+        throw new TypeError(\"Promise cannot wrap itself\");\n\
+    \n\
+    if (isPromise(x))\n\
+        promiseChain(x, deferred.resolve, deferred.reject);\n\
+    else\n\
+        deferred.resolve(x);\n\
+}\n\
+\n\
+function promiseReact(deferred, handler, x) {\n\
+\n\
+    enqueueMicrotask($=> {\n\
+    \n\
+        try { promiseUnwrap(deferred, handler(x)) } \n\
+        catch(e) { try { deferred.reject(e) } catch (e) { } }\n\
+    });\n\
+}\n\
+\n\
+class Promise {\n\
+\n\
+    constructor(init) {\n\
+    \n\
+        if (typeof init !== \"function\")\n\
+            throw new TypeError(\"Promise constructor called without initializer\");\n\
+        \n\
+        this[$value] = void 0;\n\
+        this[$status] = \"pending\";\n\
+        this[$onResolve] = [];\n\
+        this[$onReject] = [];\n\
+    \n\
+        var resolve = x => promiseResolve(this, x),\n\
+            reject = r => promiseReject(this, r);\n\
+        \n\
+        try { init(resolve, reject) } catch (x) { reject(x) }\n\
+    }\n\
+    \n\
+    chain(onResolve, onReject) {\n\
+    \n\
+        return promiseChain(this, onResolve, onReject);\n\
+    }\n\
+    \n\
+    then(onResolve, onReject) {\n\
+\n\
+        if (typeof onResolve !== \"function\") onResolve = x => x;\n\
+        \n\
+        return promiseChain(this, x => {\n\
+    \n\
+            if (x && typeof x === \"object\") {\n\
+            \n\
+                var maybeThen = x.then;\n\
+                \n\
+                if (typeof maybeThen === \"function\")\n\
+                    return maybeThen.call(x, onResolve, onReject);\n\
+            }\n\
+                        \n\
+            return onResolve(x);\n\
+        \n\
+        }, onReject);\n\
+        \n\
+    }\n\
+    \n\
+    catch(onReject) {\n\
+    \n\
+        return this.then(void 0, onReject);\n\
+    }\n\
+    \n\
+    static defer() {\n\
+    \n\
+        return promiseDefer(this);\n\
+    }\n\
+    \n\
+    static accept(x) {\n\
+    \n\
+        var d = promiseDefer(this);\n\
+        d.resolve(x);\n\
+        return d.promise;\n\
+    }\n\
+    \n\
+    static resolve(x) { \n\
+    \n\
+        if (isPromise(x))\n\
+            return x;\n\
+            \n\
+        var d = promiseDefer(this);\n\
+        d.resolve(x);\n\
+        return d.promise;\n\
+    }\n\
+    \n\
+    static reject(x) { \n\
+    \n\
+        var d = promiseDefer(this);\n\
+        d.reject(x);\n\
+        return d.promise;\n\
+    }\n\
+\n\
+    static all(values) {\n\
+\n\
+        // TODO: We should be getting an iterator from values\n\
+        \n\
+        var deferred = promiseDefer(this),\n\
+            count = values.length,\n\
+            resolutions = [];\n\
+            \n\
+        try {\n\
+        \n\
+            if (!Array.isArray(values))\n\
+                throw new Error(\"Invalid argument\");\n\
+        \n\
+            var count = values.length;\n\
+        \n\
+            if (count === 0) {\n\
+        \n\
+                deferred.resolve(resolutions);\n\
+            \n\
+            } else {\n\
+        \n\
+                for (var i = 0; i < values.length; ++i)\n\
+                    this.resolve(values[i]).then(onResolve(i), deferred.reject);\n\
+            }\n\
+            \n\
+        } catch(x) { deferred.reject(x) }\n\
+        \n\
+        return deferred.promise;\n\
+        \n\
+        function onResolve(i) {\n\
+    \n\
+            return x => {\n\
+        \n\
+                resolutions[i] = x;\n\
+            \n\
+                if (--count === 0)\n\
+                    deferred.resolve(resolutions);\n\
+            };\n\
+        }\n\
+    }\n\
+    \n\
+    static race(values) {\n\
+    \n\
+        // TODO: We should be getting an iterator from values\n\
+        \n\
+        var deferred = promiseDefer(this);\n\
+        \n\
+        try {\n\
+        \n\
+            if (!Array.isArray(values))\n\
+                throw new Error(\"Invalid argument\");\n\
+            \n\
+            for (var i = 0; i < values.length; ++i)\n\
+                this.resolve(values[i]).then(deferred.resolve, deferred.reject);\n\
+        \n\
+        } catch(x) { deferred.reject(x) }\n\
+        \n\
+        return deferred.promise;\n\
+    }\n\
+    \n\
+}\n\
+\n\
+Promise.prototype[$$isPromise] = true;\n\
+\n\
+if (this.Promise === void 0)\n\
+    this.Promise = Promise;\n\
+";
 
 var Async = 
 
-"this.es6now.async = function(iterable) {\n    \n    var iter = es6now.iterator(iterable),\n        resolver,\n        promise;\n    \n    promise = new Promise((resolve, reject) => resolver = { resolve, reject });\n    resume(void 0, false);\n    return promise;\n    \n    function resume(value, error) {\n    \n        if (error && !(\"throw\" in iter))\n            return resolver.reject(value);\n        \n        try {\n        \n            // Invoke the iterator/generator\n            var result = error ? iter.throw(value) : iter.next(value),\n                value = Promise.resolve(result.value),\n                done = result.done;\n            \n            if (result.done)\n                value.chain(resolver.resolve, resolver.reject);\n            else\n                value.chain(x => resume(x, false), x => resume(x, true));\n            \n        } catch (x) { resolver.reject(x) }\n        \n    }\n};\n";
+"this.es6now.async = function(iterable) {\n\
+    \n\
+    var iter = es6now.iterator(iterable),\n\
+        resolver,\n\
+        promise;\n\
+    \n\
+    promise = new Promise((resolve, reject) => resolver = { resolve, reject });\n\
+    resume(void 0, false);\n\
+    return promise;\n\
+    \n\
+    function resume(value, error) {\n\
+    \n\
+        if (error && !(\"throw\" in iter))\n\
+            return resolver.reject(value);\n\
+        \n\
+        try {\n\
+        \n\
+            // Invoke the iterator/generator\n\
+            var result = error ? iter.throw(value) : iter.next(value),\n\
+                value = Promise.resolve(result.value),\n\
+                done = result.done;\n\
+            \n\
+            if (result.done)\n\
+                value.chain(resolver.resolve, resolver.reject);\n\
+            else\n\
+                value.chain(x => resume(x, false), x => resume(x, true));\n\
+            \n\
+        } catch (x) { resolver.reject(x) }\n\
+        \n\
+    }\n\
+};\n\
+";
 
 
 
@@ -943,12 +1731,13 @@ var AST = {
         this.value = value; // (string) The value of the string literal
     },
 
-    TemplatePart: function(value, isEnd, start, end) {
+    TemplatePart: function(value, raw, isEnd, start, end) {
     
         this.type = "TemplatePart";
         this.start = start;
         this.end = end;
         this.value = value; // (string) The string value of the template fragment
+        this.raw = raw;
         this.templateEnd = isEnd; // (boolean) True if this template fragment terminates the template literal
     },
 
@@ -2549,7 +3338,8 @@ var Scanner_ = (function(exports) {
 var Unicode = Unicode_;
 
 var identifierEscape = /\\u([0-9a-fA-F]{4})/g,
-    newlineSequence = /\r\n?|[\n\u2028\u2029]/g;
+    newlineSequence = /\r\n?|[\n\u2028\u2029]/g,
+    crNewline = /\r\n?/g;
 
 // === Reserved Words ===
 var reservedWord = new RegExp("^(?:" +
@@ -2733,6 +3523,12 @@ var Scanner = es6now.Class(function(__super) { return {
         return { line: line, column: column, lineOffset: pos + 1 };
     },
     
+    rawValue: function(start, end) {
+    
+        // Line endings are normalized to <LF>
+        return this.input.slice(start, end).replace(crNewline, "\n");
+    },
+    
     addLineBreak: function(offset) {
     
         if (offset > this.lastLineBreak)
@@ -2833,7 +3629,7 @@ var Scanner = es6now.Class(function(__super) { return {
         return val;
     },
     
-    readStringEscape: function() {
+    readStringEscape: function(continuationChar) {
     
         this.offset++;
         
@@ -2856,14 +3652,14 @@ var Scanner = es6now.Class(function(__super) { return {
                 if (this.peekChar() === "\n")
                     this.offset++;
                 
-                return "";
+                return continuationChar;
             
             case "\n":
             case "\u2028":
             case "\u2029":
             
                 this.addLineBreak(this.offset - 1);
-                return "";
+                return continuationChar;
 
             case "0":
             case "1":
@@ -3174,9 +3970,9 @@ var Scanner = es6now.Class(function(__super) { return {
             
             if (chr === "\\") {
             
-                esc = this.readStringEscape();
+                esc = this.readStringEscape("\n");
                 
-                if (!esc) 
+                if (esc === null) 
                     return this.Error();
                 
                 val += esc;
@@ -3215,7 +4011,7 @@ var Scanner = es6now.Class(function(__super) { return {
             
             if (chr === "\\") {
             
-                esc = this.readStringEscape();
+                esc = this.readStringEscape("");
                 
                 if (esc === null)
                     return this.Error();
@@ -3529,7 +4325,7 @@ var Scanner = es6now.Class(function(__super) { return {
             pattern.lastIndex = this.offset;
             
             m = pattern.exec(this.input);
-            if (!m) return this.Error();
+            if (!m) return this.Error(msg);
             
             this.offset = m.index + m[0].length;
             
@@ -3550,7 +4346,7 @@ var Scanner = es6now.Class(function(__super) { return {
         return "EOF";
     },
     
-    Error: function() {
+    Error: function(msg) {
     
         if (this.start === this.offset)
             this.offset++;
@@ -5089,7 +5885,15 @@ var Parser = es6now.Class(function(__super) { return {
     TemplatePart: function() {
     
         var token = this.readToken("TEMPLATE", "template"),
-            node = new AST.TemplatePart(token.value, token.templateEnd, token.start, token.end);
+            end = token.templateEnd,
+            node;
+        
+        node = new AST.TemplatePart(
+            token.value, 
+            this.scanner.rawValue(token.start + 1, token.end - (end ? 1 : 2)), 
+            end, 
+            token.start, 
+            token.end);
         
         if (token.strictError)
             this.addStrictError(token.strictError, node);
@@ -5101,7 +5905,12 @@ var Parser = es6now.Class(function(__super) { return {
     
         // TODO:  Validate regular expression against RegExp grammar (21.2.1)
         var token = this.readToken("REGEX");
-        return new AST.RegularExpression(token.value, token.regexFlags, token.start, token.end);
+        
+        return new AST.RegularExpression(
+            token.value, 
+            token.regexFlags, 
+            token.start, 
+            token.end);
     },
     
     BindingIdentifier: function() {
@@ -6709,7 +7518,7 @@ Object.assign(Parser.prototype, Validate.prototype);
 
 exports.Parser = Parser; return exports; }).call(this, {});
 
-var main________ = (function(exports) {
+var main______ = (function(exports) {
 
 var Parser = Parser_.Parser;
 var AST = AST_.AST;
@@ -6730,9 +7539,9 @@ function parse(input, options) {
 
 exports.AST = AST; exports.Parser = Parser; exports.parse = parse; exports.default = parse; return exports; }).call(this, {});
 
-var main______ = (function(exports) {
+var main___ = (function(exports) {
 
-Object.keys(main________).forEach(function(k) { exports[k] = main________[k]; });
+Object.keys(main______).forEach(function(k) { exports[k] = main______[k]; });
 
 return exports; }).call(this, {});
 
@@ -6748,7 +7557,7 @@ var Replacer_ = (function(exports) {
 
 */
 
-var Parser = main______.Parser, AST = main______.AST;
+var Parser = main___.Parser, AST = main___.AST;
 
 var HAS_SCHEMA = /^[a-z]+:/i,
     NODE_SCHEMA = /^(?:npm|node):/i;
@@ -7382,19 +8191,44 @@ var Replacer = es6now.Class(function(__super) { return {
             return this.wrapComputed(node);
     },
     
-    TemplateExpression: function(node) {
+    TemplateExpression: function(node) { var __this = this;
     
         var lit = node.literals,
             sub = node.substitutions,
             out = "",
             i;
-        
-        for (i = 0; i < lit.length; ++i) {
-        
-            if (i > 0)
-                out += " + (" + sub[i - 1].text + ") + ";
             
-            out += JSON.stringify(lit[i].value);
+        if (node.parent.type === "TaggedTemplateExpression") {
+        
+            out = "(es6now.templateSite(" + 
+                "[" + lit.map((function(x) { return __this.rawToString(x.raw); })).join(", ") + "]";
+            
+            // Only output the raw array if it is different from the cooked array
+            for (i = 0; i < lit.length; ++i) {
+            
+                if (lit[i].raw !== lit[i].value) {
+                
+                    out += ", [" + lit.map((function(x) { return JSON.stringify(x.raw); })).join(", ") + "]";
+                    break;
+                }
+            }
+            
+            out += ")";
+            
+            if (sub.length > 0)
+                out += ", " + sub.map((function(x) { return x.text; })).join(", ");
+            
+            out += ")";
+        
+        } else {
+        
+            for (i = 0; i < lit.length; ++i) {
+        
+                if (i > 0)
+                    out += " + (" + sub[i - 1].text + ") + ";
+            
+                out += this.rawToString(lit[i].raw);
+            }
         }
         
         return out;
@@ -7413,6 +8247,14 @@ var Replacer = es6now.Class(function(__super) { return {
             "try { return es6now.async(function*(" + (this.joinList(params)) + ") " + 
             "" + (body) + ".apply(this, arguments)); " +
             "} catch (x) { return Promise.reject(x); } }";
+    },
+    
+    rawToString: function(raw) {
+        
+        raw = raw.replace(/([^\n])?\n/g, (function(m, m1) { return m1 === "\\" ? m : (m1 || "") + "\\n\\\n"; }));
+        raw = raw.replace(/([^"])?"/g, (function(m, m1) { return m1 === "\\" ? m : (m1 || "") + '\\"'; }));
+        
+        return '"' + raw + '"';
     },
     
     parentFunction: function(node) {
@@ -7963,20 +8805,20 @@ var ConsoleStyle = (function(exports) {
 
 var ConsoleStyle = {
 
-    green: function(msg) { return "\u001b[32m" + (msg) + "\u001b[39m" },
+    green: function(msg) { return "\x1B[32m" + (msg) + "\x1B[39m" },
 
-    red: function(msg) { return "\u001b[31m" + (msg) + "\u001b[39m" },
+    red: function(msg) { return "\x1B[31m" + (msg) + "\x1B[39m" },
 
-    gray: function(msg) { return "\u001b[90m" + (msg) + "\u001b[39m" },
+    gray: function(msg) { return "\x1B[90m" + (msg) + "\x1B[39m" },
 
-    bold: function(msg) { return "\u001b[1m" + (msg) + "\u001b[22m" },
+    bold: function(msg) { return "\x1B[1m" + (msg) + "\x1B[22m" },
 
 };
 
 
 exports.ConsoleStyle = ConsoleStyle; return exports; }).call(this, {});
 
-var main___ = (function(exports) {
+var main____ = (function(exports) {
 
 Object.keys(ConsoleCommand).forEach(function(k) { exports[k] = ConsoleCommand[k]; });
 Object.keys(ConsoleIO).forEach(function(k) { exports[k] = ConsoleIO[k]; });
@@ -7987,7 +8829,7 @@ return exports; }).call(this, {});
 
 var main_ = (function(exports) {
 
-Object.keys(main___).forEach(function(k) { exports[k] = main___[k]; });
+Object.keys(main____).forEach(function(k) { exports[k] = main____[k]; });
 
 return exports; }).call(this, {});
 
@@ -7996,11 +8838,13 @@ var NodeRun = (function(exports) {
 var translate = Translator.translate;
 var isPackageURI = PackageLocator.isPackageURI, locatePackage = PackageLocator.locatePackage;
 var Style = main_.ConsoleStyle;
+var parse = main___.parse;
 
 var FS = require("fs"),
     REPL = require("repl"),
     VM = require("vm"),
-    Path = require("path");
+    Path = require("path"),
+    Util = require("util");
 
 var ES6_GUESS = /(?:^|\n)\s*(?:import|export|class)\s/;
 
@@ -8118,7 +8962,7 @@ function startREPL() {
                 
                 script = VM.createScript(text, { filename: filename, displayErrors: displayErrors });
                 
-                result = this.useGlobal ?
+                result = repl.useGlobal ?
                     script.runInThisContext(text, { displayErrors: displayErrors }) :
                     script.runInContext(context, { displayErrors: displayErrors });
                 
@@ -8157,6 +9001,32 @@ function startREPL() {
                 this.displayPrompt();
             }
         });
+        
+        repl.defineCommand("parse", {
+        
+            help: "Parse a script",
+            
+            action: function(input) {
+            
+                var text;
+            
+                try {
+            
+                    text = Util.inspect(parse(input), { colors: true, depth: 10 });
+            
+                } catch (x) {
+            
+                    text = x instanceof SyntaxError ?
+                        formatSyntaxError(x, "REPL") :
+                        x.toString();
+                }
+            
+                console.log(text);
+            
+                this.displayPrompt();
+            }
+            
+        });
     }
     
 }
@@ -8168,22 +9038,22 @@ var ConsoleStyle_ = (function(exports) {
 
 function green(msg) {
 
-    return "\u001b[32m" + (msg) + "\u001b[39m";
+    return "\x1B[32m" + (msg) + "\x1B[39m";
 }
 
 function red(msg) {
 
-    return "\u001b[31m" + (msg) + "\u001b[39m";
+    return "\x1B[31m" + (msg) + "\x1B[39m";
 }
 
 function gray(msg) {
 
-    return "\u001b[90m" + (msg) + "\u001b[39m";
+    return "\x1B[90m" + (msg) + "\x1B[39m";
 }
 
 function bold(msg) {
 
-    return "\u001b[1m" + (msg) + "\u001b[22m";
+    return "\x1B[1m" + (msg) + "\x1B[22m";
 }
 
 exports.green = green; exports.red = red; exports.gray = gray; exports.bold = bold; return exports; }).call(this, {});
@@ -8755,7 +9625,7 @@ var
 
 exports.exists = exists; exports.readFile = readFile; exports.close = close; exports.open = open; exports.read = read; exports.write = write; exports.rename = rename; exports.truncate = truncate; exports.rmdir = rmdir; exports.fsync = fsync; exports.mkdir = mkdir; exports.sendfile = sendfile; exports.readdir = readdir; exports.fstat = fstat; exports.lstat = lstat; exports.stat = stat; exports.readlink = readlink; exports.symlink = symlink; exports.link = link; exports.unlink = unlink; exports.fchmod = fchmod; exports.lchmod = lchmod; exports.chmod = chmod; exports.lchown = lchown; exports.fchown = fchown; exports.chown = chown; exports.utimes = utimes; exports.futimes = futimes; exports.writeFile = writeFile; exports.appendFile = appendFile; exports.realpath = realpath; return exports; }).call(this, {});
 
-var main_______ = (function(exports) {
+var main________ = (function(exports) {
 
 Object.keys(ConsoleCommand_).forEach(function(k) { exports[k] = ConsoleCommand_[k]; });
 Object.keys(ConsoleIO_).forEach(function(k) { exports[k] = ConsoleIO_[k]; });
@@ -8774,16 +9644,16 @@ var AsyncFS = AsyncFS__;
 
 exports.ConsoleStyle = ConsoleStyle; exports.AsyncFS = AsyncFS; return exports; }).call(this, {});
 
-var main_____ = (function(exports) {
+var main_______ = (function(exports) {
 
-Object.keys(main_______).forEach(function(k) { exports[k] = main_______[k]; });
+Object.keys(main________).forEach(function(k) { exports[k] = main________[k]; });
 
 return exports; }).call(this, {});
 
 var Analyzer = (function(exports) {
 
-var parse = main______.parse;
-var StringSet = main_____.StringSet, StringMap = main_____.StringMap;
+var parse = main___.parse;
+var StringSet = main_______.StringSet, StringMap = main_______.StringMap;
 
 function analyze(ast, resolvePath) {
 
@@ -8855,7 +9725,7 @@ exports.analyze = analyze; return exports; }).call(this, {});
 
 var Bundler = (function(exports) {
 
-var AsyncFS = main_____.AsyncFS, StringMap = main_____.StringMap, StringSet = main_____.StringSet;
+var AsyncFS = main_______.AsyncFS, StringMap = main_______.StringMap, StringSet = main_______.StringSet;
 var analyze = Analyzer.analyze;
 
 var Path = require("path");
@@ -9040,10 +9910,10 @@ function createBundle(rootPath, locatePackage) {
 
 exports.createBundle = createBundle; return exports; }).call(this, {});
 
-var main____ = (function(exports) {
+var main_____ = (function(exports) {
 
 var createBundle = Bundler.createBundle;
-var AsyncFS = main_____.AsyncFS, ConsoleCommand = main_____.ConsoleCommand;
+var AsyncFS = main_______.AsyncFS, ConsoleCommand = main_______.ConsoleCommand;
 
 
 function main() {
@@ -9075,7 +9945,7 @@ exports.createBundle = createBundle; exports.main = main; return exports; }).cal
 
 var main__ = (function(exports) {
 
-Object.keys(main____).forEach(function(k) { exports[k] = main____[k]; });
+Object.keys(main_____).forEach(function(k) { exports[k] = main_____[k]; });
 
 return exports; }).call(this, {});
 

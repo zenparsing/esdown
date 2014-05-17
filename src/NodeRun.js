@@ -1,11 +1,13 @@
 import { translate } from "Translator.js";
 import { isPackageURI, locatePackage } from "PackageLocator.js";
 import { ConsoleStyle as Style } from "package:zencmd";
+import { parse } from "package:esparse";
 
 var FS = require("fs"),
     REPL = require("repl"),
     VM = require("vm"),
-    Path = require("path");
+    Path = require("path"),
+    Util = require("util");
 
 var ES6_GUESS = /(?:^|\n)\s*(?:import|export|class)\s/;
 
@@ -123,7 +125,7 @@ export function startREPL() {
                 
                 script = VM.createScript(text, { filename, displayErrors });
                 
-                result = this.useGlobal ?
+                result = repl.useGlobal ?
                     script.runInThisContext(text, { displayErrors }) :
                     script.runInContext(context, { displayErrors });
                 
@@ -161,6 +163,32 @@ export function startREPL() {
             
                 this.displayPrompt();
             }
+        });
+        
+        repl.defineCommand("parse", {
+        
+            help: "Parse a script",
+            
+            action(input) {
+            
+                var text;
+            
+                try {
+            
+                    text = Util.inspect(parse(input), { colors: true, depth: 10 });
+            
+                } catch (x) {
+            
+                    text = x instanceof SyntaxError ?
+                        formatSyntaxError(x, "REPL") :
+                        x.toString();
+                }
+            
+                console.log(text);
+            
+                this.displayPrompt();
+            }
+            
         });
     }
     
