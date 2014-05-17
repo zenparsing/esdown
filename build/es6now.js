@@ -7599,25 +7599,22 @@ var RootNode = es6now.Class(AST.Node, function(__super) { return {
 
 var Replacer = es6now.Class(function(__super) { return {
 
-    constructor: function Replacer(options) {
+    replace: function(input, options) { var __this = this;
         
         options || (options = {});
         
         this.loadCall = options.loadCall || ((function(url) { return "__load(" + JSON.stringify(url) + ")"; }));
         this.mapURI = options.mapURI || ((function(uri) { return uri; }));
-    },
-    
-    replace: function(input) { var __this = this;
         
         var parser = new Parser,
-            root = parser.parse(input, { module: true });
+            root = parser.parse(input, { module: options.module });
         
         this.input = input;
         this.parser = parser;
         this.exportStack = [this.exports = {}];
         this.imports = {};
         this.dependencies = [];
-        this.strictStack = [];
+        this.isStrict = false;
         this.uid = 0;
         
         var visit = (function(node) {
@@ -7627,6 +7624,18 @@ var Replacer = es6now.Class(function(__super) { return {
             // Call pre-order traversal method
             if (__this[node.type + "Begin"])
                 __this[node.type + "Begin"](node);
+                
+            var strict = __this.isStrict;
+            
+            // Set the strictness for implicitly strict nodes
+            switch (node.type) {
+            
+                case "Module":
+                case "ModuleDeclaration":
+                case "ClassDeclaration":
+                case "ClassExpresion":
+                    __this.isStrict = true;
+            }
             
             // Perform a depth-first traversal
             node.children().forEach((function(child) {
@@ -7634,6 +7643,9 @@ var Replacer = es6now.Class(function(__super) { return {
                 child.parent = node;
                 visit(child);
             }));
+            
+            // Restore strictness
+            __this.isStrict = strict;
             
             var text = null;
             
@@ -7714,11 +7726,6 @@ var Replacer = es6now.Class(function(__super) { return {
         out = this.syncNewlines(node.left.start, node.body.start, out);
         
         return out + node.body.text;
-    },
-    
-    ModuleBegin: function() {
-    
-        this.strictStack.push(1);
     },
     
     Module: function(node) {
@@ -8117,7 +8124,7 @@ var Replacer = es6now.Class(function(__super) { return {
         return "(" + before + 
             "es6now.Class(" + 
             (node.base ? (node.base.text + ", ") : "") +
-            "function(__super) {" + this.strictDirective() + "return " +
+            "function(__super) {" + this.strictDirective() + " return " +
             node.body.text + " })" +
             after + ")";
     },
@@ -8436,7 +8443,7 @@ var Replacer = es6now.Class(function(__super) { return {
     
     strictDirective: function() {
     
-        return this.strictStack.length > 0 ? "" : ' "use strict";';
+        return this.isStrict ? "" : ' "use strict";';
     },
     
     lineNumber: function(offset) {
@@ -8466,7 +8473,7 @@ var Replacer = es6now.Class(function(__super) { return {
         }));
         
         return text;
-    }
+    }, constructor: function Replacer() {}
 
 } });
 
@@ -8530,7 +8537,7 @@ function translate(input, options) {
 
     options || (options = {});
     
-    var replacer = new Replacer(options),
+    var replacer = new Replacer,
         output;
     
     input = sanitize(input);
@@ -8546,7 +8553,7 @@ function translate(input, options) {
             input;
     }
             
-    output = replacer.replace(input);
+    output = replacer.replace(input, options);
     
     if (options.wrap)
         output = wrap(output, replacer.dependencies, options.global);
@@ -8909,7 +8916,7 @@ function addExtension() {
             text = source = FS.readFileSync(filename, "utf8");
             
             if (ES6_GUESS.test(text))
-                text = translate(text, { wrap: true });
+                text = translate(text, { wrap: true, module: true });
         
         } catch (e) {
         
@@ -8962,7 +8969,7 @@ function startREPL() {
             
             try {
             
-                text = translate(input, { wrap: false });
+                text = translate(input, { wrap: false, module: false });
             
             } catch (x) {
             
@@ -8990,6 +8997,25 @@ function startREPL() {
         }
     });
     
+    function parseAction(input, module) {
+    
+        var text, ast;
+            
+        try {
+    
+            ast = parse(input, { module: module });
+            text = Util.inspect(ast, { colors: true, depth: 10 });
+    
+        } catch (x) {
+    
+            text = x instanceof SyntaxError ?
+                formatSyntaxError(x, "REPL") :
+                x.toString();
+        }
+    
+        console.log(text);
+    }
+    
     if (typeof repl.defineCommand === "function") {
     
         repl.defineCommand("translate", {
@@ -9002,7 +9028,7 @@ function startREPL() {
             
                 try {
             
-                    text = translate(input, { wrap: false });
+                    text = translate(input, { wrap: false, module: false });
             
                 } catch (x) {
             
@@ -9023,21 +9049,19 @@ function startREPL() {
             
             action: function(input) {
             
-                var text;
+                parseAction(input, false);
+                this.displayPrompt();
+            }
             
-                try {
+        });
+        
+        repl.defineCommand("parseModule", {
+        
+            help: "Parse a module",
             
-                    text = Util.inspect(parse(input), { colors: true, depth: 10 });
+            action: function(input) {
             
-                } catch (x) {
-            
-                    text = x instanceof SyntaxError ?
-                        formatSyntaxError(x, "REPL") :
-                        x.toString();
-                }
-            
-                console.log(text);
-            
+                parseAction(input, true);
                 this.displayPrompt();
             }
             
@@ -9977,6 +10001,8 @@ var locatePackage = PackageLocator.locatePackage;
 var FS = require("fs");
 var Path = require("path");
 
+
+
 function getOutPath(inPath, outPath) {
 
     var stat;
@@ -9991,98 +10017,109 @@ function getOutPath(inPath, outPath) {
     return outPath;
 }
 
-new ConsoleCommand({
+function main() {
 
-    params: {
+    new ConsoleCommand({
+
+        params: {
     
-        "input": {
+            "input": {
         
-            positional: true,
-            required: false
+                positional: true,
+                required: false
+            }
+        },
+    
+        execute: function(params) {
+    
+            process.argv.splice(1, 1);
+        
+            if (params.input) runModule(params.input);
+            else startREPL();
         }
-    },
     
-    execute: function(params) {
-    
-        process.argv.splice(1, 1);
-        
-        if (params.input) runModule(params.input);
-        else startREPL();
-    }
-    
-}).add("-", {
+    }).add("-", {
 
-    params: {
+        params: {
             
-        "input": {
+            "input": {
 
-            short: "i",
-            positional: true,
-            required: true
+                short: "i",
+                positional: true,
+                required: true
+            },
+        
+            "output": {
+            
+                short: "o",
+                positional: true,
+                required: false
+            },
+        
+            "global": { short: "g" },
+        
+            "bundle": { short: "b", flag: true },
+        
+            "runtime": { short: "r", flag: true }
         },
-        
-        "output": {
-            
-            short: "o",
-            positional: true,
-            required: false
-        },
-        
-        "global": { short: "g" },
-        
-        "bundle": { short: "b", flag: true },
-        
-        "runtime": { short: "r", flag: true }
-    },
     
-    execute: function(params) {
+        execute: function(params) {
         
-        var promise = 
-            params.bundle ? createBundle(params.input, locatePackage) :
-            params.input ? AsyncFS.readFile(params.input, { encoding: "utf8" }) :
-            Promise.resolve("");
+            var promise = 
+                params.bundle ? createBundle(params.input, locatePackage) :
+                params.input ? AsyncFS.readFile(params.input, { encoding: "utf8" }) :
+                Promise.resolve("");
         
-        promise.then((function(text) {
+            promise.then((function(text) {
         
-            text = translate(text, { 
+                text = translate(text, { 
         
-                global: params.global,
-                runtime: params.runtime,
-                wrap: true
-            });
+                    global: params.global,
+                    runtime: params.runtime,
+                    wrap: true,
+                    module: true
+                });
         
-            if (params.output) {
+                if (params.output) {
             
-                var outPath = getOutPath(params.input, params.output);
-                return AsyncFS.writeFile(outPath, text, "utf8");
+                    var outPath = getOutPath(params.input, params.output);
+                    return AsyncFS.writeFile(outPath, text, "utf8");
             
-            } else {
+                } else {
             
-                process.stdout.write(text + "\n");
-            }
+                    process.stdout.write(text + "\n");
+                }
             
-        })).then(null, (function(x) {
+            })).then(null, (function(x) {
             
-            if (x instanceof SyntaxError) {
+                if (x instanceof SyntaxError) {
             
-                var filename;
+                    var filename;
                 
-                if (!params.bundle) 
-                    filename = Path.resolve(params.input);
+                    if (!params.bundle) 
+                        filename = Path.resolve(params.input);
                 
-                process.stdout.write("\nSyntax Error: " + (formatSyntaxError(x, filename)) + "\n");
-                return;
-            }
+                    process.stdout.write("\nSyntax Error: " + (formatSyntaxError(x, filename)) + "\n");
+                    return;
+                }
             
-            setTimeout((function($) { throw x }), 0);
-        }));
-    }
+                setTimeout((function($) { throw x }), 0);
+            }));
+        }
 
-}).run();
+    }).run();
+}
+
+// TODO:  Use a "main" export instead of this ugliness
+if (typeof require === "function" && 
+    typeof module !== "undefined" &&
+    require.main === module) {
+ 
+    main();   
+}
 
 
-
-return exports; }).call(this, {});
+exports.translate = translate; return exports; }).call(this, {});
 
 Object.keys(main).forEach(function(k) { exports[k] = main[k]; });
 

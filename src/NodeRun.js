@@ -59,7 +59,7 @@ function addExtension() {
             text = source = FS.readFileSync(filename, "utf8");
             
             if (ES6_GUESS.test(text))
-                text = translate(text, { wrap: true });
+                text = translate(text, { wrap: true, module: true });
         
         } catch (e) {
         
@@ -112,7 +112,7 @@ export function startREPL() {
             
             try {
             
-                text = translate(input, { wrap: false });
+                text = translate(input, { wrap: false, module: false });
             
             } catch (x) {
             
@@ -140,6 +140,25 @@ export function startREPL() {
         }
     });
     
+    function parseAction(input, module) {
+    
+        var text, ast;
+            
+        try {
+    
+            ast = parse(input, { module });
+            text = Util.inspect(ast, { colors: true, depth: 10 });
+    
+        } catch (x) {
+    
+            text = x instanceof SyntaxError ?
+                formatSyntaxError(x, "REPL") :
+                x.toString();
+        }
+    
+        console.log(text);
+    }
+    
     if (typeof repl.defineCommand === "function") {
     
         repl.defineCommand("translate", {
@@ -152,7 +171,7 @@ export function startREPL() {
             
                 try {
             
-                    text = translate(input, { wrap: false });
+                    text = translate(input, { wrap: false, module: false });
             
                 } catch (x) {
             
@@ -173,21 +192,19 @@ export function startREPL() {
             
             action(input) {
             
-                var text;
+                parseAction(input, false);
+                this.displayPrompt();
+            }
             
-                try {
+        });
+        
+        repl.defineCommand("parseModule", {
+        
+            help: "Parse a module",
             
-                    text = Util.inspect(parse(input), { colors: true, depth: 10 });
+            action(input) {
             
-                } catch (x) {
-            
-                    text = x instanceof SyntaxError ?
-                        formatSyntaxError(x, "REPL") :
-                        x.toString();
-                }
-            
-                console.log(text);
-            
+                parseAction(input, true);
                 this.displayPrompt();
             }
             

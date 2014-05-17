@@ -66,6 +66,15 @@ this.es6now.templateSite = function(values, raw) {
     return values;
 };
 
+this.es6now.runMain = function(module, args) {
+
+    if (module && typeof module.main === "function") {
+    
+        var result = module.main(args);
+        Promise.resolve(result).then(null, x => setTimeout($=> { throw x }, 0));
+    }
+};
+
 function eachKey(obj, fn) {
 
     var keys = Object.getOwnPropertyNames(obj),
