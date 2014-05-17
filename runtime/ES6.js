@@ -113,6 +113,7 @@ addMethods(Object, {
         return left !== left && right !== right;
     },
     
+    // TODO: Multiple sources
     assign(target, source) {
     
         Object.keys(source).forEach(key => target[key] = source[key]);
@@ -140,12 +141,13 @@ addMethods(Number, {
     
     MIN_SAFE_INTEGER: -9007199254740991,
     
-    isInteger(val) {
+    isInteger(val) { return typeof val === "number" && val | 0 === val },
     
-        typeof val === "number" && val | 0 === val;
-    }
+    isFinite(val) { return typeof val === "number" && global.isFinite(val) },
     
-    // TODO: isSafeInteger
+    isNaN(val) { return val !== val },
+    
+    isSafeInteger(val) { return Number.isInteger(val) && Math.abs(val) <= Number.MAX_SAFE_INTEGER }
     
 });
 

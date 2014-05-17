@@ -8941,6 +8941,8 @@ function startREPL() {
     
         prompt: "es6now> ",
         
+        useGlobal: true,
+        
         eval: function(input, context, filename, cb) {
         
             var text, result, script, displayErrors = false;
