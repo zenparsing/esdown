@@ -41,6 +41,6 @@ var A = es6now.Class(B, function(__super) { return { constructor: function A() {
 
  });
 
-(((function() { var C = es6now.Class(function(__super) {return { constructor: function C() {} } }); return C; })()));
+(((function() { var C = es6now.Class(function(__super) { return { constructor: function C() {} } }); return C; })()));
 
-new (es6now.Class(function(__super) {return { constructor: function() {} } }));
+new (es6now.Class(function(__super) { return { constructor: function() {} } }));

@@ -53,7 +53,7 @@ export function translate(input, options) {
 
     options || (options = {});
     
-    var replacer = new Replacer(options),
+    var replacer = new Replacer,
         output;
     
     input = sanitize(input);
@@ -69,7 +69,7 @@ export function translate(input, options) {
             input;
     }
             
-    output = replacer.replace(input);
+    output = replacer.replace(input, options);
     
     if (options.wrap)
         output = wrap(output, replacer.dependencies, options.global);

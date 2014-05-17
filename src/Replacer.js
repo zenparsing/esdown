@@ -50,25 +50,22 @@ class RootNode extends AST.Node {
 
 export class Replacer {
 
-    constructor(options) {
+    replace(input, options) {
         
         options || (options = {});
         
         this.loadCall = options.loadCall || (url => "__load(" + JSON.stringify(url) + ")");
         this.mapURI = options.mapURI || (uri => uri);
-    }
-    
-    replace(input) {
         
         var parser = new Parser,
-            root = parser.parse(input, { module: true });
+            root = parser.parse(input, { module: options.module });
         
         this.input = input;
         this.parser = parser;
         this.exportStack = [this.exports = {}];
         this.imports = {};
         this.dependencies = [];
-        this.strictStack = [];
+        this.isStrict = false;
         this.uid = 0;
         
         var visit = node => {
@@ -78,6 +75,18 @@ export class Replacer {
             // Call pre-order traversal method
             if (this[node.type + "Begin"])
                 this[node.type + "Begin"](node);
+                
+            var strict = this.isStrict;
+            
+            // Set the strictness for implicitly strict nodes
+            switch (node.type) {
+            
+                case "Module":
+                case "ModuleDeclaration":
+                case "ClassDeclaration":
+                case "ClassExpresion":
+                    this.isStrict = true;
+            }
             
             // Perform a depth-first traversal
             node.children().forEach(child => {
@@ -85,6 +94,9 @@ export class Replacer {
                 child.parent = node;
                 visit(child);
             });
+            
+            // Restore strictness
+            this.isStrict = strict;
             
             var text = null;
             
@@ -165,11 +177,6 @@ export class Replacer {
         out = this.syncNewlines(node.left.start, node.body.start, out);
         
         return out + node.body.text;
-    }
-    
-    ModuleBegin() {
-    
-        this.strictStack.push(1);
     }
     
     Module(node) {
@@ -568,7 +575,7 @@ export class Replacer {
         return "(" + before + 
             "es6now.Class(" + 
             (node.base ? (node.base.text + ", ") : "") +
-            "function(__super) {" + this.strictDirective() + "return " +
+            "function(__super) {" + this.strictDirective() + " return " +
             node.body.text + " })" +
             after + ")";
     }
@@ -887,7 +894,7 @@ export class Replacer {
     
     strictDirective() {
     
-        return this.strictStack.length > 0 ? "" : ' "use strict";';
+        return this.isStrict ? "" : ' "use strict";';
     }
     
     lineNumber(offset) {
