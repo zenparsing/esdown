@@ -137,4 +137,4 @@ function Class(base, def) {
     return constructor;
 }
 
-this.es6now.Class = Class;
+_es6now.Class = Class;

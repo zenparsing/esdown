@@ -24,7 +24,7 @@ this.Symbol = fakeSymbol;
 Symbol.iterator = Symbol("iterator");
 
 // Support for iterator protocol
-this.es6now.iterator = function(obj) {
+_es6now.iterator = function(obj) {
 
     if (global.Symbol && Symbol.iterator && obj[Symbol.iterator] !== void 0)
         return obj[Symbol.iterator]();
@@ -36,7 +36,7 @@ this.es6now.iterator = function(obj) {
 };
 
 // Support for computed property names
-this.es6now.computed = function(obj) {
+_es6now.computed = function(obj) {
 
     var name, desc, i;
     
@@ -56,16 +56,25 @@ this.es6now.computed = function(obj) {
 };
 
 // Support for rest parameters
-this.es6now.rest = function(args, pos) {
+_es6now.rest = function(args, pos) {
 
     return arraySlice.call(args, pos);
 };
 
 // Support for tagged templates
-this.es6now.templateSite = function(values, raw) {
+_es6now.templateSite = function(values, raw) {
 
     values.raw = raw || values;
     return values;
+};
+
+_es6now.runMain = function(module, args) {
+
+    if (module && typeof module.main === "function") {
+    
+        var result = module.main(args);
+        Promise.resolve(result).then(null, x => setTimeout($=> { throw x }, 0));
+    }
 };
 
 function eachKey(obj, fn) {
@@ -115,6 +124,7 @@ addMethods(Object, {
         return left !== left && right !== right;
     },
     
+    // TODO: Multiple sources
     assign(target, source) {
     
         Object.keys(source).forEach(key => target[key] = source[key]);
@@ -142,12 +152,13 @@ addMethods(Number, {
     
     MIN_SAFE_INTEGER: -9007199254740991,
     
-    isInteger(val) {
+    isInteger(val) { return typeof val === "number" && val | 0 === val },
     
-        typeof val === "number" && val | 0 === val;
-    }
+    isFinite(val) { return typeof val === "number" && global.isFinite(val) },
     
-    // TODO: isSafeInteger
+    isNaN(val) { return val !== val },
+    
+    isSafeInteger(val) { return Number.isInteger(val) && Math.abs(val) <= Number.MAX_SAFE_INTEGER }
     
 });
 
@@ -474,7 +485,7 @@ function Class(base, def) {
     return constructor;
 }
 
-this.es6now.Class = Class;
+_es6now.Class = Class;
 `;
 
 export var Promise = 
@@ -759,7 +770,7 @@ if (this.Promise === void 0)
 
 export var Async = 
 
-`this.es6now.async = function(iterable) {
+`_es6now.async = function(iterable) {
     
     var iter = es6now.iterator(iterable),
         resolver,

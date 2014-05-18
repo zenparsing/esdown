@@ -156,7 +156,7 @@ export class Replacer {
             value = "",
             out = "";
         
-        out += `${ iter } = es6now.iterator(${ node.right.text }); `;
+        out += `${ iter } = _es6now.iterator(${ node.right.text }); `;
         out += "for (";
         
         if (node.left.type === "VariableDeclaration") {
@@ -555,7 +555,7 @@ export class Replacer {
     
     ClassDeclaration(node) {
     
-        return "var " + node.identifier.text + " = es6now.Class(" + 
+        return "var " + node.identifier.text + " = _es6now.Class(" + 
             (node.base ? (node.base.text + ", ") : "") +
             "function(__super) {" + this.strictDirective() + " return " +
             node.body.text + " });";
@@ -573,7 +573,7 @@ export class Replacer {
         }
         
         return "(" + before + 
-            "es6now.Class(" + 
+            "_es6now.Class(" + 
             (node.base ? (node.base.text + ", ") : "") +
             "function(__super) {" + this.strictDirective() + " return " +
             node.body.text + " })" +
@@ -667,7 +667,7 @@ export class Replacer {
             
         if (node.parent.type === "TaggedTemplateExpression") {
         
-            out = "(es6now.templateSite(" + 
+            out = "(_es6now.templateSite(" + 
                 "[" + lit.map(x => this.rawToString(x.raw)).join(", ") + "]";
             
             // Only output the raw array if it is different from the cooked array
@@ -711,7 +711,7 @@ export class Replacer {
         var outerParams = params.map((x, i) => "__" + i).join(", ");
         
         return `${head}(${outerParams}) { ` +
-            `try { return es6now.async(function*(${ this.joinList(params) }) ` + 
+            `try { return _es6now.async(function*(${ this.joinList(params) }) ` + 
             `${ body }.apply(this, arguments)); ` +
             `} catch (x) { return Promise.reject(x); } }`;
     }
@@ -823,7 +823,7 @@ export class Replacer {
     
         var name = node.params[node.params.length - 1].identifier.value,
             pos = node.params.length - 1,
-            slice = "es6now.rest(arguments, " + pos + ")";
+            slice = "_es6now.rest(arguments, " + pos + ")";
         
         return "var " + name + " = " + slice + ";";
     }
@@ -858,7 +858,7 @@ export class Replacer {
     wrapComputed(node, text) {
     
         if (node.computedNames)
-            return "es6now.computed(" + (text || this.stringify(node)) + ", " + node.computedNames.join(",") + ")";
+            return "_es6now.computed(" + (text || this.stringify(node)) + ", " + node.computedNames.join(",") + ")";
     }
     
     addTempVar(node, value) {
