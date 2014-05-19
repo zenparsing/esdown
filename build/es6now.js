@@ -8577,8 +8577,14 @@ function translate(input, options) {
             
     output = replacer.replace(input, options);
     
-    if (options.wrap)
+    if (options.wrap) {
+    
+        // Doesn't make sense to create a module wrapper for a non-module
+        if (!options.module)
+            throw new Error("Cannot wrap a non-module");
+        
         output = wrap(output, replacer.dependencies, options.global);
+    }
     
     return output;
 }
