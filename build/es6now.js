@@ -8429,7 +8429,7 @@ var Replacer = _es6now.Class(function(__super) { return {
     wrapComputed: function(node, text) {
     
         if (node.computedNames)
-            return "_es6now.computed(" + (text || this.stringify(node)) + ", " + node.computedNames.join(",") + ")";
+            return "_es6now.computed(" + (text || this.stringify(node)) + ", " + node.computedNames.join(", ") + ")";
     },
     
     addTempVar: function(node, value) {

@@ -858,7 +858,7 @@ export class Replacer {
     wrapComputed(node, text) {
     
         if (node.computedNames)
-            return "_es6now.computed(" + (text || this.stringify(node)) + ", " + node.computedNames.join(",") + ")";
+            return "_es6now.computed(" + (text || this.stringify(node)) + ", " + node.computedNames.join(", ") + ")";
     }
     
     addTempVar(node, value) {
