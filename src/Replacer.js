@@ -701,16 +701,16 @@ export class Replacer {
         return out;
     }
     
+    ComprehensionFor(node) {
+    
+        return "for (var " + node.left.text + " of " + node.right.text + ")";
+    }
+    
     ArrayComprehension(node) {
     
         var out = "(function() { var __array = []; ";
         
-        node.qualifiers.forEach(q => {
-        
-            out += q.type === "ComprehensionFor" ?
-                "for (var " + q.left.text + " of " + q.right.text + ") " :
-                q.text + " ";
-        });
+        node.qualifiers.forEach(q => { out += q.text + " " });
         
         out += "__array.push(" + node.expression.text + "); ";
         out += "return __array; ";
@@ -724,12 +724,7 @@ export class Replacer {
     
         var out = "(function*() { ";
         
-        node.qualifiers.forEach(q => {
-        
-            out += q.type === "ComprehensionFor" ?
-                "for (var " + q.left.text + " of " + q.right.text + ") " :
-                q.text + " ";
-        });
+        node.qualifiers.forEach(q => { out += q.text + " " });
         
         out += "yield (" + node.expression.text + "); ";
         out += "}).call(this)"

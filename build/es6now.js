@@ -9018,7 +9018,7 @@ function runModule(path) {
     }
 }
 
-function startREPL() {
+function startREPL() { var __this = this;
 
     addExtension();
     
@@ -9028,7 +9028,7 @@ function startREPL() {
         
         useGlobal: true,
         
-        eval: function(input, context, filename, cb) {
+        eval: function(input, context, filename, cb) { var __this = this;
         
             var text, result, script, displayErrors = false;
             
@@ -9058,7 +9058,19 @@ function startREPL() {
                 return cb(x);
             }
             
-            return Promise.resolve(result).then((function(x) { return cb(null, x); }), (function(err) { return cb(err); }));
+            if (result instanceof Promise) {
+            
+                // Without displayPrompt, asynchronously calling the "eval"
+                // callback results in no text being displayed on the screen.
+                
+                result
+                .then((function(x) { return cb(null, x); }), (function(err) { return cb(err, null); }))
+                .then((function($) { return __this.displayPrompt(); }));
+                
+            } else {
+            
+                cb(null, result);
+            }
         }
     });
     
