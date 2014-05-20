@@ -782,7 +782,7 @@ if (this.Promise === void 0)
 
 _es6now.async = function(iterable) {
     
-    var iter = es6now.iterator(iterable),
+    var iter = _es6now.iterator(iterable),
         resolver,
         promise;
     
@@ -1658,7 +1658,7 @@ var Async =
 
 "_es6now.async = function(iterable) {\n\
     \n\
-    var iter = es6now.iterator(iterable),\n\
+    var iter = _es6now.iterator(iterable),\n\
         resolver,\n\
         promise;\n\
     \n\
@@ -8270,6 +8270,43 @@ var Replacer = _es6now.Class(function(__super) { return {
         }
         
         return out;
+    },
+    
+    ArrayComprehension: function(node) {
+    
+        var out = "(function() { var __array = []; ";
+        
+        node.qualifiers.forEach((function(q) {
+        
+            out += q.type === "ComprehensionFor" ?
+                "for (var " + q.left.text + " of " + q.right.text + ") " :
+                q.text + " ";
+        }));
+        
+        out += "__array.push(" + node.expression.text + "); ";
+        out += "return __array; ";
+        out += "}).call(this)"
+        
+        // Run replacer over this input to translate for-of statements
+        return new Replacer().replace(out);
+    },
+    
+    GeneratorComprehension: function(node) {
+    
+        var out = "(function*() { ";
+        
+        node.qualifiers.forEach((function(q) {
+        
+            out += q.type === "ComprehensionFor" ?
+                "for (var " + q.left.text + " of " + q.right.text + ") " :
+                q.text + " ";
+        }));
+        
+        out += "yield (" + node.expression.text + "); ";
+        out += "}).call(this)"
+        
+        // Run replacer over this input to translate for-of statements
+        return new Replacer().replace(out);
     },
     
     asyncFunction: function(ident, params, body) {

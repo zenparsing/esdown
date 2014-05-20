@@ -1,6 +1,6 @@
 _es6now.async = function(iterable) {
     
-    var iter = es6now.iterator(iterable),
+    var iter = _es6now.iterator(iterable),
         resolver,
         promise;
     

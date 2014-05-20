@@ -701,6 +701,43 @@ export class Replacer {
         return out;
     }
     
+    ArrayComprehension(node) {
+    
+        var out = "(function() { var __array = []; ";
+        
+        node.qualifiers.forEach(q => {
+        
+            out += q.type === "ComprehensionFor" ?
+                "for (var " + q.left.text + " of " + q.right.text + ") " :
+                q.text + " ";
+        });
+        
+        out += "__array.push(" + node.expression.text + "); ";
+        out += "return __array; ";
+        out += "}).call(this)"
+        
+        // Run replacer over this input to translate for-of statements
+        return new Replacer().replace(out);
+    }
+    
+    GeneratorComprehension(node) {
+    
+        var out = "(function*() { ";
+        
+        node.qualifiers.forEach(q => {
+        
+            out += q.type === "ComprehensionFor" ?
+                "for (var " + q.left.text + " of " + q.right.text + ") " :
+                q.text + " ";
+        });
+        
+        out += "yield (" + node.expression.text + "); ";
+        out += "}).call(this)"
+        
+        // Run replacer over this input to translate for-of statements
+        return new Replacer().replace(out);
+    }
+    
     asyncFunction(ident, params, body) {
     
         var head = "function";
