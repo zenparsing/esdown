@@ -136,7 +136,19 @@ export function startREPL() {
                 return cb(x);
             }
             
-            return Promise.resolve(result).then(x => cb(null, x), err => cb(err));
+            if (result instanceof Promise) {
+            
+                // Without displayPrompt, asynchronously calling the "eval"
+                // callback results in no text being displayed on the screen.
+                
+                result
+                .then(x => cb(null, x), err => cb(err, null))
+                .then($=> this.displayPrompt());
+                
+            } else {
+            
+                cb(null, result);
+            }
         }
     });
     
