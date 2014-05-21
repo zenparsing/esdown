@@ -66,13 +66,21 @@ _es6now.templateSite = function(values, raw) {
     return values;
 };
 
-_es6now.runMain = function(module, args) {
+// Support for destructuring
+_es6now.path = function(obj, path, def) {
 
-    if (module && typeof module.main === "function") {
+    if (!path)
+        return obj;
     
-        var result = module.main(args);
-        Promise.resolve(result).then(null, x => setTimeout($=> { throw x }, 0));
+    for (var i = 0; i < path.length; ++i) {
+    
+        if (!obj || typeof obj !== "object")
+            throw new TypeError();
+                
+        obj = obj[path[i]];
     }
+    
+    return obj === void 0 ? def : obj;
 };
 
 function eachKey(obj, fn) {

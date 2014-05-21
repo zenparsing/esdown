@@ -218,13 +218,21 @@ _es6now.templateSite = function(values, raw) {
     return values;
 };
 
-_es6now.runMain = function(module, args) {
+// Support for destructuring
+_es6now.path = function(obj, path, def) {
 
-    if (module && typeof module.main === "function") {
+    if (!path)
+        return obj;
     
-        var result = module.main(args);
-        Promise.resolve(result).then(null, (function(x) { return setTimeout((function($) { throw x }), 0); }));
+    for (var i = 0; i < path.length; ++i) {
+    
+        if (!obj || typeof obj !== "object")
+            throw new TypeError();
+                
+        obj = obj[path[i]];
     }
+    
+    return obj === void 0 ? def : obj;
 };
 
 function eachKey(obj, fn) {
@@ -954,13 +962,21 @@ _es6now.templateSite = function(values, raw) {\n\
     return values;\n\
 };\n\
 \n\
-_es6now.runMain = function(module, args) {\n\
+// Support for destructuring\n\
+_es6now.path = function(obj, path, def) {\n\
 \n\
-    if (module && typeof module.main === \"function\") {\n\
+    if (!path)\n\
+        return obj;\n\
     \n\
-        var result = module.main(args);\n\
-        Promise.resolve(result).then(null, x => setTimeout($=> { throw x }, 0));\n\
+    for (var i = 0; i < path.length; ++i) {\n\
+    \n\
+        if (!obj || typeof obj !== \"object\")\n\
+            throw new TypeError();\n\
+                \n\
+        obj = obj[path[i]];\n\
     }\n\
+    \n\
+    return obj === void 0 ? def : obj;\n\
 };\n\
 \n\
 function eachKey(obj, fn) {\n\
@@ -7608,6 +7624,17 @@ function preserveNewlines(text, height) {
     return text;
 }
 
+var PatternTreeNode = _es6now.Class(function(__super) { return {
+
+    constructor: function PatternTreeNode(name, init) {
+    
+        this.name = name;
+        this.initializer = init;
+        this.children = [];
+        this.target = "";
+    }
+} });
+
 var RootNode = _es6now.Class(AST.Node, function(__super) { return {
 
     constructor: function RootNode(root, end) {
@@ -8272,16 +8299,16 @@ var Replacer = _es6now.Class(function(__super) { return {
         return out;
     },
     
+    ComprehensionFor: function(node) {
+    
+        return "for (var " + node.left.text + " of " + node.right.text + ")";
+    },
+    
     ArrayComprehension: function(node) {
     
         var out = "(function() { var __array = []; ";
         
-        node.qualifiers.forEach((function(q) {
-        
-            out += q.type === "ComprehensionFor" ?
-                "for (var " + q.left.text + " of " + q.right.text + ") " :
-                q.text + " ";
-        }));
+        node.qualifiers.forEach((function(q) { out += q.text + " " }));
         
         out += "__array.push(" + node.expression.text + "); ";
         out += "return __array; ";
@@ -8295,18 +8322,147 @@ var Replacer = _es6now.Class(function(__super) { return {
     
         var out = "(function*() { ";
         
-        node.qualifiers.forEach((function(q) {
-        
-            out += q.type === "ComprehensionFor" ?
-                "for (var " + q.left.text + " of " + q.right.text + ") " :
-                q.text + " ";
-        }));
+        node.qualifiers.forEach((function(q) { out += q.text + " " }));
         
         out += "yield (" + node.expression.text + "); ";
         out += "}).call(this)"
         
         // Run replacer over this input to translate for-of statements
         return new Replacer().replace(out);
+    },
+    
+    VariableDeclarator: function(node) {
+        
+        if (!this.isPattern(node.pattern))
+            return null;
+            
+        var list = this.translatePattern(node.pattern, node.initializer.text, true);
+        
+        return list.join(", ");
+    },
+    
+    AssignmentExpression: function(node) {
+    
+        if (!this.isPattern(node.left))
+            return null;
+        
+        var temp = this.addTempVar(node),
+            list = this.translatePattern(node.left, temp, false);
+        
+        list.unshift(temp + " = " + node.right.text);
+        list.push(temp);
+        
+        return "(" + list.join(", ") + ")";
+    },
+    
+    isPattern: function(node) {
+    
+        switch (node.type) {
+        
+            case "ArrayPattern":
+            case "ObjectPattern":
+                return true;
+        }
+        
+        return false;
+    },
+    
+    translatePattern: function(node, start, declaration) { var __this = this;
+        
+        var path = [], 
+            assign = [], 
+            out = "";
+    
+        var visit = (function(tree, start) {
+        
+            var target = tree.target,
+                reset = false,
+                out = "";
+            
+            if (!target && (tree.children.length > 1 || tree.initializer)) {
+            
+                target = __this.addTempVar(node, null, declaration);
+                reset = true;
+            }
+            
+            if (target) {
+            
+                out = target + " = _es6now.path(" + start;
+            
+                if (path.length > 0) {
+            
+                    out += ", " + JSON.stringify(path);
+            
+                    if (tree.initializer)
+                        out += ", " + tree.initializer;
+                }
+            
+                out += ")";
+            
+                assign.push(out);
+            }
+            
+            if (reset) {
+            
+                start = target;
+                path = [];
+            }
+            
+            tree.children.forEach((function(c) {
+            
+                path.push(c.name);
+                visit(c, start);
+                path.pop();
+            }));
+        });
+        
+        visit(this.createPatternTree(node), start);
+        
+        return assign;
+    },
+    
+    createPatternTree: function(ast, parent) { var __this = this;
+
+        if (!parent)
+            parent = new PatternTreeNode("", null);
+        
+        var child, init;
+    
+        switch (ast.type) {
+    
+            case "ArrayPattern":
+        
+                ast.elements.forEach((function(e, i) { 
+            
+                    init = e.initializer ? e.initializer.text : "";
+                    child = new PatternTreeNode(String(i), init);
+                    
+                    parent.children.push(child);
+                    __this.createPatternTree(e.pattern, child);
+                }));
+                
+                break;
+        
+            case "ObjectPattern":
+        
+                ast.properties.forEach((function(p) { 
+            
+                    init = p.initializer ? p.initializer.text : "";
+                    child = new PatternTreeNode(p.name.text, init);
+                    
+                    parent.children.push(child);
+                    __this.createPatternTree(p.pattern || p.name, child);
+                }));
+        
+                break;
+            
+            default:
+            
+                parent.target = ast.text;
+                break;
+        }
+        
+        return parent;
     },
     
     asyncFunction: function(ident, params, body) {
@@ -8469,7 +8625,7 @@ var Replacer = _es6now.Class(function(__super) { return {
             return "_es6now.computed(" + (text || this.stringify(node)) + ", " + node.computedNames.join(", ") + ")";
     },
     
-    addTempVar: function(node, value) {
+    addTempVar: function(node, value, noDeclare) {
     
         var p = this.parentFunction(node);
         
@@ -8478,14 +8634,19 @@ var Replacer = _es6now.Class(function(__super) { return {
         
         var name = "__$" + p.tempVars.length;
         
-        p.tempVars.push({ name: name, value: value });
+        p.tempVars.push({ name: name, value: value, noDeclare: noDeclare });
         
         return name;
     },
     
     tempVars: function(node) {
     
-        if (!node.tempVars || node.tempVars.length === 0)
+        if (!node.tempVars)
+            return null;
+        
+        var list = node.tempVars.filter((function(item) { return !item.noDeclare; }));
+        
+        if (list.length === 0)
             return null;
         
         return "var " + node.tempVars.map((function(item) {

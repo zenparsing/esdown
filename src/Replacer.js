@@ -37,6 +37,17 @@ function preserveNewlines(text, height) {
     return text;
 }
 
+class PatternTreeNode {
+
+    constructor(name, init) {
+    
+        this.name = name;
+        this.initializer = init;
+        this.children = [];
+        this.target = "";
+    }
+}
+
 class RootNode extends AST.Node {
 
     constructor(root, end) {
@@ -733,6 +744,140 @@ export class Replacer {
         return new Replacer().replace(out);
     }
     
+    VariableDeclarator(node) {
+        
+        if (!this.isPattern(node.pattern))
+            return null;
+            
+        var list = this.translatePattern(node.pattern, node.initializer.text, true);
+        
+        return list.join(", ");
+    }
+    
+    AssignmentExpression(node) {
+    
+        if (!this.isPattern(node.left))
+            return null;
+        
+        var temp = this.addTempVar(node),
+            list = this.translatePattern(node.left, temp, false);
+        
+        list.unshift(temp + " = " + node.right.text);
+        list.push(temp);
+        
+        return "(" + list.join(", ") + ")";
+    }
+    
+    isPattern(node) {
+    
+        switch (node.type) {
+        
+            case "ArrayPattern":
+            case "ObjectPattern":
+                return true;
+        }
+        
+        return false;
+    }
+    
+    translatePattern(node, start, declaration) {
+        
+        var path = [], 
+            assign = [], 
+            out = "";
+    
+        var visit = (tree, start) => {
+        
+            var target = tree.target,
+                reset = false,
+                out = "";
+            
+            if (!target && (tree.children.length > 1 || tree.initializer)) {
+            
+                target = this.addTempVar(node, null, declaration);
+                reset = true;
+            }
+            
+            if (target) {
+            
+                out = target + " = _es6now.path(" + start;
+            
+                if (path.length > 0) {
+            
+                    out += ", " + JSON.stringify(path);
+            
+                    if (tree.initializer)
+                        out += ", " + tree.initializer;
+                }
+            
+                out += ")";
+            
+                assign.push(out);
+            }
+            
+            if (reset) {
+            
+                start = target;
+                path = [];
+            }
+            
+            tree.children.forEach(c => {
+            
+                path.push(c.name);
+                visit(c, start);
+                path.pop();
+            });
+        };
+        
+        visit(this.createPatternTree(node), start);
+        
+        return assign;
+    }
+    
+    createPatternTree(ast, parent) {
+
+        if (!parent)
+            parent = new PatternTreeNode("", null);
+        
+        var child, init;
+    
+        switch (ast.type) {
+    
+            case "ArrayPattern":
+        
+                ast.elements.forEach((e, i) => { 
+            
+                    init = e.initializer ? e.initializer.text : "";
+                    child = new PatternTreeNode(String(i), init);
+                    
+                    parent.children.push(child);
+                    this.createPatternTree(e.pattern, child);
+                });
+                
+                break;
+        
+            case "ObjectPattern":
+        
+                ast.properties.forEach(p => { 
+            
+                    init = p.initializer ? p.initializer.text : "";
+                    child = new PatternTreeNode(p.name.text, init);
+                    
+                    parent.children.push(child);
+                    this.createPatternTree(p.pattern || p.name, child);
+                });
+        
+                break;
+            
+            default:
+            
+                parent.target = ast.text;
+                break;
+        }
+        
+        return parent;
+    }
+    
     asyncFunction(ident, params, body) {
     
         var head = "function";
@@ -893,7 +1038,7 @@ export class Replacer {
             return "_es6now.computed(" + (text || this.stringify(node)) + ", " + node.computedNames.join(", ") + ")";
     }
     
-    addTempVar(node, value) {
+    addTempVar(node, value, noDeclare) {
     
         var p = this.parentFunction(node);
         
@@ -902,14 +1047,19 @@ export class Replacer {
         
         var name = "__$" + p.tempVars.length;
         
-        p.tempVars.push({ name, value });
+        p.tempVars.push({ name, value, noDeclare });
         
         return name;
     }
     
     tempVars(node) {
     
-        if (!node.tempVars || node.tempVars.length === 0)
+        if (!node.tempVars)
+            return null;
+        
+        var list = node.tempVars.filter(item => !item.noDeclare);
+        
+        if (list.length === 0)
             return null;
         
         return "var " + node.tempVars.map(item => {
