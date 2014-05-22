@@ -213,38 +213,18 @@ export class Replacer {
     
     FunctionBody(node) {
         
-        var p = node.parent,
-            inserted = [];
+        var insert = this.functionInsert(node.parent);
         
-        if (p.createThisBinding)
-            inserted.push("var __this = this;");
-        
-        if (p.createRestBinding)
-            inserted.push(this.restParamVar(p));
-        
-        if (p.tempVars)
-            inserted.push(this.tempVars(p));
-        
-        p.params.forEach(param => {
-        
-            if (!param.useDefault)
-                return;
-            
-            var name = param.pattern.value;
-            inserted.push(`if (${ name } === void 0) ${ name } = ${ param.initializer.text };`);
-        });
-        
-        if (inserted.length > 0)
-            return "{ " + inserted.join(" ") + this.stringify(node).slice(1);
+        if (insert)
+            return "{ " + insert + " " + this.stringify(node).slice(1);
     }
     
     FormalParameter(node) {
     
-        if (node.pattern.type === "Identifier" && node.initializer) {
+        if (this.isPattern(node.pattern))
+            return this.addTempVar(node, null, true);
         
-            node.useDefault = true;
-            return node.pattern.text;
-        }
+        return node.pattern.text;
     }
     
     RestParameter(node) {
@@ -521,8 +501,12 @@ export class Replacer {
         
         if (node.body.type !== "FunctionBody") {
         
-            var rest = node.createRestBinding ? (this.restParamVar(node) + " ") : "";
-            body = "{ " + rest + "return " + body + "; }";
+            var insert = this.functionInsert(node);
+            
+            if (insert)
+                insert += " ";
+            
+            body = "{ " + insert + "return " + body + "; }";
         }
         
         return node.kind === "async" ?
@@ -756,11 +740,13 @@ export class Replacer {
     
     AssignmentExpression(node) {
     
-        if (!this.isPattern(node.left))
+        var left = this.unwrapParens(node.left);
+        
+        if (!this.isPattern(left))
             return null;
         
         var temp = this.addTempVar(node),
-            list = this.translatePattern(node.left, temp, false);
+            list = this.translatePattern(left, temp, false);
         
         list.unshift(temp + " = " + node.right.text);
         list.push(temp);
@@ -778,6 +764,14 @@ export class Replacer {
         }
         
         return false;
+    }
+    
+    unwrapParens(node) {
+    
+        while (node && node.type === "ParenExpression")
+            node = node.expression;
+        
+        return node;
     }
     
     translatePattern(node, start, declaration) {
@@ -1038,6 +1032,38 @@ export class Replacer {
             return "_es6now.computed(" + (text || this.stringify(node)) + ", " + node.computedNames.join(", ") + ")";
     }
     
+    functionInsert(node) {
+    
+        var inserted = [];
+        
+        if (node.createThisBinding)
+            inserted.push("var __this = this;");
+        
+        if (node.createRestBinding)
+            inserted.push(this.restParamVar(node));
+        
+        var temps = this.tempVars(node);
+        
+        if (temps)
+            inserted.push(temps);
+        
+        node.params.forEach(param => {
+        
+            if (!param.pattern)
+                return;
+            
+            var name = param.pattern.text;
+            
+            if (param.initializer)
+                inserted.push(`if (${ name } === void 0) ${ name } = ${ param.initializer.text };`);
+            
+            if (this.isPattern(param.pattern))
+                inserted.push("var " +  this.translatePattern(param.pattern, name, true).join(", ") + ";"); 
+        });
+        
+        return inserted.join(" ");
+    }
+    
     addTempVar(node, value, noDeclare) {
     
         var p = this.parentFunction(node);
@@ -1055,12 +1081,12 @@ export class Replacer {
     tempVars(node) {
     
         if (!node.tempVars)
-            return null;
+            return "";
         
         var list = node.tempVars.filter(item => !item.noDeclare);
         
         if (list.length === 0)
-            return null;
+            return "";
         
         return "var " + node.tempVars.map(item => {
         

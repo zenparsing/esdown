@@ -8,7 +8,7 @@ __$4 = _es6now.iterator(y); for (var x; __$5 = __$4.next(), x = __$5.value, !__$
     z;
 }
 
-function f() { var __$0, __$1;
+function f() { var __$0, __$1; 
 
     __$0 = _es6now.iterator(y); for (var x; __$1 = __$0.next(), x = __$1.value, !__$1.done;) ;
 }

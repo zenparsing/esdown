@@ -324,7 +324,7 @@ addMethods(Number, {
 
 addMethods(String, {
 
-    raw: function(callsite) { var args = _es6now.rest(arguments, 1);
+    raw: function(callsite) { var args = _es6now.rest(arguments, 1); 
     
         var raw = callsite.raw,
             len = raw.length >>> 0;
@@ -504,7 +504,7 @@ addMethods(Array.prototype, _es6now.computed({
 
 }).call(this);
 
-(function() { var __this = this;
+(function() { var __this = this; 
 
 var enqueueMicrotask = ((function($) {
 
@@ -641,7 +641,7 @@ function promiseReact(deferred, handler, x) {
 
 var Promise = _es6now.Class(function(__super) { return {
 
-    constructor: function Promise(init) { var __this = this;
+    constructor: function Promise(init) { var __this = this; 
     
         if (typeof init !== "function")
             throw new TypeError("Promise constructor called without initializer");
@@ -831,7 +831,7 @@ var FS = require("fs");
 // generating function
 function wrap(fn) {
 
-	return function() { var args = _es6now.rest(arguments, 0);
+	return function() { var args = _es6now.rest(arguments, 0); 
 	
 		return new Promise((function(resolve, reject) {
 		    
@@ -2484,7 +2484,7 @@ function isNode(x) {
 
 var NodeBase = _es6now.Class(function(__super) { return {
 
-    children: function() { var __this = this;
+    children: function() { var __this = this; 
     
         var list = [];
         
@@ -7648,7 +7648,7 @@ var RootNode = _es6now.Class(AST.Node, function(__super) { return {
 
 var Replacer = _es6now.Class(function(__super) { return {
 
-    replace: function(input, options) { var __this = this;
+    replace: function(input, options) { var __this = this; 
         
         options || (options = {});
         
@@ -7800,38 +7800,18 @@ var Replacer = _es6now.Class(function(__super) { return {
     
     FunctionBody: function(node) {
         
-        var p = node.parent,
-            inserted = [];
+        var insert = this.functionInsert(node.parent);
         
-        if (p.createThisBinding)
-            inserted.push("var __this = this;");
-        
-        if (p.createRestBinding)
-            inserted.push(this.restParamVar(p));
-        
-        if (p.tempVars)
-            inserted.push(this.tempVars(p));
-        
-        p.params.forEach((function(param) {
-        
-            if (!param.useDefault)
-                return;
-            
-            var name = param.pattern.value;
-            inserted.push("if (" + (name) + " === void 0) " + (name) + " = " + (param.initializer.text) + ";");
-        }));
-        
-        if (inserted.length > 0)
-            return "{ " + inserted.join(" ") + this.stringify(node).slice(1);
+        if (insert)
+            return "{ " + insert + " " + this.stringify(node).slice(1);
     },
     
     FormalParameter: function(node) {
     
-        if (node.pattern.type === "Identifier" && node.initializer) {
+        if (this.isPattern(node.pattern))
+            return this.addTempVar(node, null, true);
         
-            node.useDefault = true;
-            return node.pattern.text;
-        }
+        return node.pattern.text;
     },
     
     RestParameter: function(node) {
@@ -7895,7 +7875,7 @@ var Replacer = _es6now.Class(function(__super) { return {
         this.exportStack.push(this.exports = {});
     },
     
-    ModuleDeclaration: function(node) { var __this = this;
+    ModuleDeclaration: function(node) { var __this = this; 
     
         var out = "var " + node.identifier.text + " = (function(exports) {";
         
@@ -8108,8 +8088,12 @@ var Replacer = _es6now.Class(function(__super) { return {
         
         if (node.body.type !== "FunctionBody") {
         
-            var rest = node.createRestBinding ? (this.restParamVar(node) + " ") : "";
-            body = "{ " + rest + "return " + body + "; }";
+            var insert = this.functionInsert(node);
+            
+            if (insert)
+                insert += " ";
+            
+            body = "{ " + insert + "return " + body + "; }";
         }
         
         return node.kind === "async" ?
@@ -8256,7 +8240,7 @@ var Replacer = _es6now.Class(function(__super) { return {
             return this.wrapComputed(node);
     },
     
-    TemplateExpression: function(node) { var __this = this;
+    TemplateExpression: function(node) { var __this = this; 
     
         var lit = node.literals,
             sub = node.substitutions,
@@ -8343,11 +8327,13 @@ var Replacer = _es6now.Class(function(__super) { return {
     
     AssignmentExpression: function(node) {
     
-        if (!this.isPattern(node.left))
+        var left = this.unwrapParens(node.left);
+        
+        if (!this.isPattern(left))
             return null;
         
         var temp = this.addTempVar(node),
-            list = this.translatePattern(node.left, temp, false);
+            list = this.translatePattern(left, temp, false);
         
         list.unshift(temp + " = " + node.right.text);
         list.push(temp);
@@ -8367,7 +8353,15 @@ var Replacer = _es6now.Class(function(__super) { return {
         return false;
     },
     
-    translatePattern: function(node, start, declaration) { var __this = this;
+    unwrapParens: function(node) {
+    
+        while (node && node.type === "ParenExpression")
+            node = node.expression;
+        
+        return node;
+    },
+    
+    translatePattern: function(node, start, declaration) { var __this = this; 
         
         var path = [], 
             assign = [], 
@@ -8421,7 +8415,7 @@ var Replacer = _es6now.Class(function(__super) { return {
         return assign;
     },
     
-    createPatternTree: function(ast, parent) { var __this = this;
+    createPatternTree: function(ast, parent) { var __this = this; 
 
         if (!parent)
             parent = new PatternTreeNode("", null);
@@ -8625,6 +8619,38 @@ var Replacer = _es6now.Class(function(__super) { return {
             return "_es6now.computed(" + (text || this.stringify(node)) + ", " + node.computedNames.join(", ") + ")";
     },
     
+    functionInsert: function(node) { var __this = this; 
+    
+        var inserted = [];
+        
+        if (node.createThisBinding)
+            inserted.push("var __this = this;");
+        
+        if (node.createRestBinding)
+            inserted.push(this.restParamVar(node));
+        
+        var temps = this.tempVars(node);
+        
+        if (temps)
+            inserted.push(temps);
+        
+        node.params.forEach((function(param) {
+        
+            if (!param.pattern)
+                return;
+            
+            var name = param.pattern.text;
+            
+            if (param.initializer)
+                inserted.push("if (" + (name) + " === void 0) " + (name) + " = " + (param.initializer.text) + ";");
+            
+            if (__this.isPattern(param.pattern))
+                inserted.push("var " +  __this.translatePattern(param.pattern, name, true).join(", ") + ";"); 
+        }));
+        
+        return inserted.join(" ");
+    },
+    
     addTempVar: function(node, value, noDeclare) {
     
         var p = this.parentFunction(node);
@@ -8642,12 +8668,12 @@ var Replacer = _es6now.Class(function(__super) { return {
     tempVars: function(node) {
     
         if (!node.tempVars)
-            return null;
+            return "";
         
         var list = node.tempVars.filter((function(item) { return !item.noDeclare; }));
         
         if (list.length === 0)
-            return null;
+            return "";
         
         return "var " + node.tempVars.map((function(item) {
         
@@ -9016,7 +9042,7 @@ var ConsoleIO = _es6now.Class(function(__super) { return {
         this._outStream.setEncoding(this._outEnc = enc);
     },
     
-    readLine: function() { var __this = this;
+    readLine: function() { var __this = this; 
     
         return new Promise((function(resolve) {
         
@@ -9179,7 +9205,7 @@ function runModule(path) {
     }
 }
 
-function startREPL() { var __this = this;
+function startREPL() { var __this = this; 
 
     addExtension();
     
@@ -9189,7 +9215,7 @@ function startREPL() { var __this = this;
         
         useGlobal: true,
         
-        eval: function(input, context, filename, cb) { var __this = this;
+        eval: function(input, context, filename, cb) { var __this = this; 
         
             var text, result, script, displayErrors = false;
             
@@ -9538,7 +9564,7 @@ var ConsoleIO = _es6now.Class(function(__super) { return {
         this._outStream.setEncoding(this._outEnc = enc);
     },
     
-    readLine: function() { var __this = this;
+    readLine: function() { var __this = this; 
     
         return new Promise((function(resolve) {
         
@@ -9616,7 +9642,7 @@ var StringMap = _es6now.Class(function(__super) { return {
         return Object.keys(this._map);
     },
     
-    values: function() { var __this = this;
+    values: function() { var __this = this; 
     
         return Object.keys(this._map).map((function(key) { return __this._map[key]; }));
     },
@@ -9674,7 +9700,7 @@ var StringSet = _es6now.Class(function(__super) { return {
         return this._map.keys();
     },
     
-    forEach: function(fn, thisArg) { var __this = this;
+    forEach: function(fn, thisArg) { var __this = this; 
     
         this._map.forEach((function(value, key) { return fn.call(thisArg, value, key, __this); }));
     }
@@ -9843,7 +9869,7 @@ var FS = require("fs");
 // generating function
 function wrap(fn) {
 
-	return function() { var args = _es6now.rest(arguments, 0);
+	return function() { var args = _es6now.rest(arguments, 0); 
 	
 		return new Promise((function(resolve, reject) {
 		    
