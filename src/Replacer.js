@@ -1052,7 +1052,7 @@ export class Replacer {
             if (!param.pattern)
                 return;
             
-            var name = param.pattern.text;
+            var name = param.text;
             
             if (param.initializer)
                 inserted.push(`if (${ name } === void 0) ${ name } = ${ param.initializer.text };`);
