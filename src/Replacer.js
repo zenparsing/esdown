@@ -841,6 +841,9 @@ export class Replacer {
         
                 ast.elements.forEach((e, i) => { 
             
+                    if (!e)
+                        return;
+                    
                     init = e.initializer ? e.initializer.text : "";
                     child = new PatternTreeNode(String(i), init);
                     

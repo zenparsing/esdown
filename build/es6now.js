@@ -8428,6 +8428,9 @@ var Replacer = _es6now.Class(function(__super) { return {
         
                 ast.elements.forEach((function(e, i) { 
             
+                    if (!e)
+                        return;
+                    
                     init = e.initializer ? e.initializer.text : "";
                     child = new PatternTreeNode(String(i), init);
                     
