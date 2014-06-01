@@ -7650,6 +7650,7 @@ var PatternTreeNode = _es6now.Class(function(__super) { return {
         this.initializer = init;
         this.children = [];
         this.target = "";
+        this.rest = false;
     }
 } });
 
@@ -8387,7 +8388,6 @@ var Replacer = _es6now.Class(function(__super) { return {
         var visit = (function(tree, base) {
         
             var target = tree.target,
-                access = base, 
                 str = "", 
                 temp;
             
@@ -8395,8 +8395,10 @@ var Replacer = _es6now.Class(function(__super) { return {
             // identifier, then no brackets.  Perhaps parser should expose
             // an isIdentifier function.
             
-            if (tree.name)
-                access = "" + (base) + "[" + (JSON.stringify(tree.name)) + "]";
+            var access =
+                tree.rest ? "_es6now.rest(" + (base) + ", " + (tree.name) + ")" :
+                tree.name ? "" + (base) + "[" + (JSON.stringify(tree.name)) + "]" :
+                base;
             
             if (tree.initializer) {
             
@@ -8457,7 +8459,11 @@ var Replacer = _es6now.Class(function(__super) { return {
                         return;
                     
                     init = e.initializer ? e.initializer.text : "";
+                    
                     child = new PatternTreeNode(String(i), init);
+                    
+                    if (e.type === "PatternRestElement")
+                        child.rest = true;
                     
                     parent.children.push(child);
                     __this.createPatternTree(e.pattern, child);
@@ -8477,10 +8483,7 @@ var Replacer = _es6now.Class(function(__super) { return {
                 }));
         
                 break;
-            
-            // TODO: case "PatternRestElement"
-            // Mark the node as being a rest element somehow
-            
+                
             default:
             
                 parent.target = ast.text;
