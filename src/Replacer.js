@@ -733,7 +733,7 @@ export class Replacer {
         if (!this.isPattern(node.pattern))
             return null;
             
-        var list = this.translatePattern(node.pattern, node.initializer.text, true);
+        var list = this.translatePattern(node.pattern, node.initializer.text);
         
         return list.join(", ");
     }
@@ -746,7 +746,7 @@ export class Replacer {
             return null;
         
         var temp = this.addTempVar(node),
-            list = this.translatePattern(left, temp, false);
+            list = this.translatePattern(left, temp);
         
         list.unshift(temp + " = " + node.right.text);
         list.push(temp);
@@ -774,58 +774,65 @@ export class Replacer {
         return node;
     }
     
-    translatePattern(node, start, declaration) {
-        
-        var path = [], 
-            assign = [], 
-            out = "";
+    translatePattern(node, base) {
     
-        var visit = (tree, start) => {
+        var outer = [],
+            inner = [];
+        
+        var visit = (tree, base) => {
         
             var target = tree.target,
-                reset = false,
-                out = "";
+                access = base, 
+                str = "", 
+                temp;
             
-            if (!target && (tree.children.length > 1 || tree.initializer)) {
+            // TODO:  If name is integer, then no quotes.  If name is
+            // identifier, then no brackets.  Perhaps parser should expose
+            // an isIdentifier function.
             
-                target = this.addTempVar(node, null, declaration);
-                reset = true;
+            if (tree.name)
+                access = `${ base }[${ JSON.stringify(tree.name) }]`;
+            
+            if (tree.initializer) {
+            
+                temp = this.addTempVar(node);
+                inner.push(`${ temp } = ${ access }`);
+                
+                str = `${ temp } === void 0 ? ${ tree.initializer } : ${ temp }`;
+                
+                if (!tree.target)
+                    str = `${ temp } = _es6now.obj(${ str })`;
+                
+                inner.push(str);
+                    
+            } else if (tree.target) {
+            
+                inner.push(`${ access }`);
+            
+            } else {
+            
+                temp = this.addTempVar(node);
+                inner.push(`${ temp } = _es6now.obj(${ access })`);
             }
             
-            if (target) {
+            if (tree.target) {
             
-                out = target + " = _es6now.path(" + start;
-            
-                if (path.length > 0) {
-            
-                    out += ", " + JSON.stringify(path);
-            
-                    if (tree.initializer)
-                        out += ", " + tree.initializer;
-                }
-            
-                out += ")";
-            
-                assign.push(out);
+                outer.push(inner.length === 1 ?
+                    `${ target } = ${ inner[0] }` :
+                    `${ target } = (${ inner.join(", ") })`);
+                
+                inner.length = 0;
             }
             
-            if (reset) {
+            if (temp)
+                base = temp;
             
-                start = target;
-                path = [];
-            }
-            
-            tree.children.forEach(c => {
-            
-                path.push(c.name);
-                visit(c, start);
-                path.pop();
-            });
+            tree.children.forEach(c => visit(c, base));
         };
-        
-        visit(this.createPatternTree(node), start);
-        
-        return assign;
+
+        visit(this.createPatternTree(node), base);
+
+        return outer;
     }
     
     createPatternTree(ast, parent) {
@@ -865,6 +872,9 @@ export class Replacer {
                 });
         
                 break;
+            
+            // TODO: case "PatternRestElement"
+            // Mark the node as being a rest element somehow
             
             default:
             
@@ -1045,11 +1055,6 @@ export class Replacer {
         if (node.createRestBinding)
             inserted.push(this.restParamVar(node));
         
-        var temps = this.tempVars(node);
-        
-        if (temps)
-            inserted.push(temps);
-        
         node.params.forEach(param => {
         
             if (!param.pattern)
@@ -1061,8 +1066,14 @@ export class Replacer {
                 inserted.push(`if (${ name } === void 0) ${ name } = ${ param.initializer.text };`);
             
             if (this.isPattern(param.pattern))
-                inserted.push("var " +  this.translatePattern(param.pattern, name, true).join(", ") + ";"); 
+                inserted.push("var " +  this.translatePattern(param.pattern, name).join(", ") + ";"); 
         });
+        
+        var temps = this.tempVars(node);
+        
+        // Add temp var declarations to the top of the insert
+        if (temps)
+            inserted.unshift(temps);
         
         return inserted.join(" ");
     }
@@ -1091,7 +1102,7 @@ export class Replacer {
         if (list.length === 0)
             return "";
         
-        return "var " + node.tempVars.map(item => {
+        return "var " + list.map(item => {
         
             var out = item.name;
             

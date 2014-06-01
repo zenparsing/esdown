@@ -235,6 +235,15 @@ _es6now.path = function(obj, path, def) {
     return obj === void 0 ? def : obj;
 };
 
+// Throws an error if the argument is not an object
+_es6now.obj = function(obj) {
+
+    if (!obj || typeof obj !== "object")
+        throw new TypeError();
+    
+    return obj;
+};
+
 function eachKey(obj, fn) {
 
     var keys = Object.getOwnPropertyNames(obj),
@@ -977,6 +986,15 @@ _es6now.path = function(obj, path, def) {\n\
     }\n\
     \n\
     return obj === void 0 ? def : obj;\n\
+};\n\
+\n\
+// Throws an error if the argument is not an object\n\
+_es6now.obj = function(obj) {\n\
+\n\
+    if (!obj || typeof obj !== \"object\")\n\
+        throw new TypeError();\n\
+    \n\
+    return obj;\n\
 };\n\
 \n\
 function eachKey(obj, fn) {\n\
@@ -8320,7 +8338,7 @@ var Replacer = _es6now.Class(function(__super) { return {
         if (!this.isPattern(node.pattern))
             return null;
             
-        var list = this.translatePattern(node.pattern, node.initializer.text, true);
+        var list = this.translatePattern(node.pattern, node.initializer.text);
         
         return list.join(", ");
     },
@@ -8333,7 +8351,7 @@ var Replacer = _es6now.Class(function(__super) { return {
             return null;
         
         var temp = this.addTempVar(node),
-            list = this.translatePattern(left, temp, false);
+            list = this.translatePattern(left, temp);
         
         list.unshift(temp + " = " + node.right.text);
         list.push(temp);
@@ -8361,58 +8379,65 @@ var Replacer = _es6now.Class(function(__super) { return {
         return node;
     },
     
-    translatePattern: function(node, start, declaration) { var __this = this; 
-        
-        var path = [], 
-            assign = [], 
-            out = "";
+    translatePattern: function(node, base) { var __this = this; 
     
-        var visit = (function(tree, start) {
+        var outer = [],
+            inner = [];
+        
+        var visit = (function(tree, base) {
         
             var target = tree.target,
-                reset = false,
-                out = "";
+                access = base, 
+                str = "", 
+                temp;
             
-            if (!target && (tree.children.length > 1 || tree.initializer)) {
+            // TODO:  If name is integer, then no quotes.  If name is
+            // identifier, then no brackets.  Perhaps parser should expose
+            // an isIdentifier function.
             
-                target = __this.addTempVar(node, null, declaration);
-                reset = true;
+            if (tree.name)
+                access = "" + (base) + "[" + (JSON.stringify(tree.name)) + "]";
+            
+            if (tree.initializer) {
+            
+                temp = __this.addTempVar(node);
+                inner.push("" + (temp) + " = " + (access) + "");
+                
+                str = "" + (temp) + " === void 0 ? " + (tree.initializer) + " : " + (temp) + "";
+                
+                if (!tree.target)
+                    str = "" + (temp) + " = _es6now.obj(" + (str) + ")";
+                
+                inner.push(str);
+                    
+            } else if (tree.target) {
+            
+                inner.push("" + (access) + "");
+            
+            } else {
+            
+                temp = __this.addTempVar(node);
+                inner.push("" + (temp) + " = _es6now.obj(" + (access) + ")");
             }
             
-            if (target) {
+            if (tree.target) {
             
-                out = target + " = _es6now.path(" + start;
-            
-                if (path.length > 0) {
-            
-                    out += ", " + JSON.stringify(path);
-            
-                    if (tree.initializer)
-                        out += ", " + tree.initializer;
-                }
-            
-                out += ")";
-            
-                assign.push(out);
+                outer.push(inner.length === 1 ?
+                    "" + (target) + " = " + (inner[0]) + "" :
+                    "" + (target) + " = (" + (inner.join(", ")) + ")");
+                
+                inner.length = 0;
             }
             
-            if (reset) {
+            if (temp)
+                base = temp;
             
-                start = target;
-                path = [];
-            }
-            
-            tree.children.forEach((function(c) {
-            
-                path.push(c.name);
-                visit(c, start);
-                path.pop();
-            }));
+            tree.children.forEach((function(c) { return visit(c, base); }));
         });
-        
-        visit(this.createPatternTree(node), start);
-        
-        return assign;
+
+        visit(this.createPatternTree(node), base);
+
+        return outer;
     },
     
     createPatternTree: function(ast, parent) { var __this = this; 
@@ -8452,6 +8477,9 @@ var Replacer = _es6now.Class(function(__super) { return {
                 }));
         
                 break;
+            
+            // TODO: case "PatternRestElement"
+            // Mark the node as being a rest element somehow
             
             default:
             
@@ -8632,11 +8660,6 @@ var Replacer = _es6now.Class(function(__super) { return {
         if (node.createRestBinding)
             inserted.push(this.restParamVar(node));
         
-        var temps = this.tempVars(node);
-        
-        if (temps)
-            inserted.push(temps);
-        
         node.params.forEach((function(param) {
         
             if (!param.pattern)
@@ -8648,8 +8671,14 @@ var Replacer = _es6now.Class(function(__super) { return {
                 inserted.push("if (" + (name) + " === void 0) " + (name) + " = " + (param.initializer.text) + ";");
             
             if (__this.isPattern(param.pattern))
-                inserted.push("var " +  __this.translatePattern(param.pattern, name, true).join(", ") + ";"); 
+                inserted.push("var " +  __this.translatePattern(param.pattern, name).join(", ") + ";"); 
         }));
+        
+        var temps = this.tempVars(node);
+        
+        // Add temp var declarations to the top of the insert
+        if (temps)
+            inserted.unshift(temps);
         
         return inserted.join(" ");
     },
@@ -8678,7 +8707,7 @@ var Replacer = _es6now.Class(function(__super) { return {
         if (list.length === 0)
             return "";
         
-        return "var " + node.tempVars.map((function(item) {
+        return "var " + list.map((function(item) {
         
             var out = item.name;
             

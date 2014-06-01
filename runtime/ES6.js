@@ -66,21 +66,13 @@ _es6now.templateSite = function(values, raw) {
     return values;
 };
 
-// Support for destructuring
-_es6now.path = function(obj, path, def) {
+// Throws an error if the argument is not an object
+_es6now.obj = function(obj) {
 
-    if (!path)
-        return obj;
+    if (!obj || typeof obj !== "object")
+        throw new TypeError();
     
-    for (var i = 0; i < path.length; ++i) {
-    
-        if (!obj || typeof obj !== "object")
-            throw new TypeError();
-                
-        obj = obj[path[i]];
-    }
-    
-    return obj === void 0 ? def : obj;
+    return obj;
 };
 
 function eachKey(obj, fn) {

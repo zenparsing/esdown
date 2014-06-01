@@ -85,6 +85,15 @@ _es6now.path = function(obj, path, def) {
     return obj === void 0 ? def : obj;
 };
 
+// Throws an error if the argument is not an object
+_es6now.obj = function(obj) {
+
+    if (!obj || typeof obj !== "object")
+        throw new TypeError();
+    
+    return obj;
+};
+
 function eachKey(obj, fn) {
 
     var keys = Object.getOwnPropertyNames(obj),
