@@ -1,32 +1,30 @@
-=== Overview ===
+## Overview ##
 
-es6now is an ES6 to ES3/5 compiler.  It will translate some ECMAScript 6 
+**es6now** is an ES6 to ES3/5 compiler.  It will translate some ECMAScript 6 
 features, fairly accurately, for use in Node and browsers.  The emphasis 
 here is not on completeness.  The goal is to take advantage of important 
 ES6  features  while still  retaining  transparent debuggability,  using 
 straightforward source transformations.
 
-=== Instructions ===
+## Instructions ##
 
-Copy build/es6now and build/es6now.js in your path and smoke it. Or, use
-npm:
+*You'll need Node.js 0.11 or later for async functions.*
 
-    you$ npm install -g es6now
+Install globally with NPM (you may need to `sudo` this):
 
-(You'll need Node.js 0.11 or later for async functions.)
-
+    npm install -g es6now
 
 Start a REPL by running it without any arguments:
 
-    you$ es6now
+    es6now
 
 Execute a module by adding a path:
 
-    you$ es6now main.js
+    es6now main.js
 
 Translate a module by using a hyphen:
 
-    you$ es6now - src/main.js build/es6now.js -b -r
+    es6now - src/main.js build/es6now.js -b -r
 
     --input, -i  (1)    The file to translate.
     --output, -o (2)    The file to write to. If not set, then the output

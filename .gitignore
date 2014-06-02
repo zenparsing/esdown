@@ -1,4 +1,5 @@
 .DS_Store
 _*
 node_modules
+build/es6now.js
 
