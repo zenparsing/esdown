@@ -10,3 +10,4 @@ x.apply(void 0, [a].concat(b).concat([c]));
 (a.concat([b]));
 ([a].concat(b));
 (a.concat([b]).concat(c));
+(a.slice(0));

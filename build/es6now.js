@@ -7862,7 +7862,7 @@ var Replacer = _es6now.Class(function(__super) { return {
     ArrayLiteral: function(node) {
     
         if (node.hasSpread)
-            return "(" + this.toSpread(node.elements) + ")";
+            return "(" + this.toSpread(node.elements, true) + ")";
     },
     
     MethodDefinition: function(node) {
@@ -8014,7 +8014,7 @@ var Replacer = _es6now.Class(function(__super) { return {
             argText;
         
         if (node.hasSpread)
-            spread = this.toSpread(args);
+            spread = this.toSpread(args, false);
         
         if (node.isSuperCall) {
         
@@ -8380,7 +8380,7 @@ var Replacer = _es6now.Class(function(__super) { return {
         return node;
     },
     
-    toSpread: function(elems) {
+    toSpread: function(elems, newArray) {
     
         var list = [],
             last = -1,
@@ -8401,6 +8401,8 @@ var Replacer = _es6now.Class(function(__super) { return {
         
         if (last < elems.length - 1)
             list.push("[" + this.joinList(elems.slice(last + 1)) + "]");
+        else if (list.length === 1 && newArray)
+            list[0] = list[0] + ".slice(0)";
         
         var out = list[0];
         

@@ -257,7 +257,7 @@ export class Replacer {
     ArrayLiteral(node) {
     
         if (node.hasSpread)
-            return "(" + this.toSpread(node.elements) + ")";
+            return "(" + this.toSpread(node.elements, true) + ")";
     }
     
     MethodDefinition(node) {
@@ -409,7 +409,7 @@ export class Replacer {
             argText;
         
         if (node.hasSpread)
-            spread = this.toSpread(args);
+            spread = this.toSpread(args, false);
         
         if (node.isSuperCall) {
         
@@ -775,7 +775,7 @@ export class Replacer {
         return node;
     }
     
-    toSpread(elems) {
+    toSpread(elems, newArray) {
     
         var list = [],
             last = -1,
@@ -796,6 +796,8 @@ export class Replacer {
         
         if (last < elems.length - 1)
             list.push("[" + this.joinList(elems.slice(last + 1)) + "]");
+        else if (list.length === 1 && newArray)
+            list[0] = list[0] + ".slice(0)";
         
         var out = list[0];
         
