@@ -5,3 +5,8 @@ function f(a) { var __this = this; var args = _es6now.rest(arguments, 1);  (func
 x.apply(void 0, args);
 x.apply(void 0, [a].concat(args));
 (__$0 = x).y.apply(__$0, [a].concat(args));
+x.apply(void 0, [a].concat(b).concat([c]));
+([a, b].concat(c).concat(d).concat([e]));
+(a.concat([b]));
+([a].concat(b));
+(a.concat([b]).concat(c));

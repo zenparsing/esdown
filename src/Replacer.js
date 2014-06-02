@@ -254,6 +254,12 @@ export class Replacer {
             return this.wrapComputed(node);
     }
     
+    ArrayLiteral(node) {
+    
+        if (node.hasSpread)
+            return "(" + this.toSpread(node.elements) + ")";
+    }
+    
     MethodDefinition(node) {
     
         switch (node.kind) {
@@ -402,13 +408,8 @@ export class Replacer {
             calleeText,
             argText;
         
-        if (node.hasSpreadArg) {
-        
-            spread = args.pop().expression.text;
-            
-            if (args.length > 0)
-                spread = "[" + this.joinList(args) + "].concat(" + spread + ")";
-        }
+        if (node.hasSpread)
+            spread = this.toSpread(args);
         
         if (node.isSuperCall) {
         
@@ -440,8 +441,7 @@ export class Replacer {
     
     SpreadExpression(node) {
     
-        if (node.parent.type === "CallExpression")
-            node.parent.hasSpreadArg = true;
+        node.parent.hasSpread = true;
     }
     
     SuperExpression(node) {
@@ -773,6 +773,36 @@ export class Replacer {
             node = node.expression;
         
         return node;
+    }
+    
+    toSpread(elems) {
+    
+        var list = [],
+            last = -1,
+            i;
+        
+        for (i = 0; i < elems.length; ++i) {
+        
+            if (elems[i].type === "SpreadExpression") {
+            
+                if (last < i - 1)
+                    list.push("[" + this.joinList(elems.slice(last + 1, i)) + "]");
+                
+                list.push(elems[i].expression.text);
+                
+                last = i;
+            }
+        }
+        
+        if (last < elems.length - 1)
+            list.push("[" + this.joinList(elems.slice(last + 1)) + "]");
+        
+        var out = list[0];
+        
+        for (i = 1; i < list.length; ++i)
+            out += ".concat(" + list[i] + ")";
+        
+        return out;
     }
     
     translatePattern(node, base) {
