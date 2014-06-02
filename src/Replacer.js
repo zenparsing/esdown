@@ -257,7 +257,7 @@ export class Replacer {
     ArrayLiteral(node) {
     
         if (node.hasSpread)
-            return "(" + this.toSpread(node.elements, true) + ")";
+            return "(" + this.spreadList(node.elements, true) + ")";
     }
     
     MethodDefinition(node) {
@@ -297,7 +297,7 @@ export class Replacer {
     
     ModuleDeclaration(node) {
     
-        var out = "var " + node.identifier.text + " = (function(exports) {";
+        var out = "var " + node.identifier.text + " = function(exports) {";
         
         out += this.strictDirective() + " ";
         out += node.body.text.replace(/^\{|\}$/g, "");
@@ -310,7 +310,7 @@ export class Replacer {
         this.exportStack.pop();
         this.exports = this.exportStack[this.exportStack.length - 1];
         
-        out += "return exports; }).call(this, {});";
+        out += "return exports; }.call(this, {});";
         
         return out;
     }
@@ -409,7 +409,7 @@ export class Replacer {
             argText;
         
         if (node.hasSpread)
-            spread = this.toSpread(args, false);
+            spread = this.spreadList(args, false);
         
         if (node.isSuperCall) {
         
@@ -510,9 +510,11 @@ export class Replacer {
             body = "{ " + insert + "return " + body + "; }";
         }
         
-        return node.kind === "async" ?
-            "(" + this.asyncFunction(null, node.params, body) + ")" :
-            "(function(" + this.joinList(node.params) + ") " + body + ")";
+        var text = node.kind === "async" ?
+            this.asyncFunction(null, node.params, body) :
+            "function(" + this.joinList(node.params) + ") " + body;
+        
+        return this.wrapFunctionExpression(text, node);
     }
     
     ThisExpression(node) {
@@ -564,16 +566,16 @@ export class Replacer {
         
         if (node.identifier) {
         
-            before = "(function() { var " + node.identifier.text + " = ";
-            after = "; return " + node.identifier.text + "; })()";
+            before = "function() { var " + node.identifier.text + " = ";
+            after = "; return " + node.identifier.text + "; }()";
         }
         
-        return "(" + before + 
+        return before + 
             "_es6now.Class(" + 
             (node.base ? (node.base.text + ", ") : "") +
             "function(__super) {" + this.strictDirective() + " return " +
             node.body.text + " })" +
-            after + ")";
+            after;
     }
     
     ClassElement(node) {
@@ -775,7 +777,7 @@ export class Replacer {
         return node;
     }
     
-    toSpread(elems, newArray) {
+    spreadList(elems, newArray) {
     
         var list = [],
             last = -1,
@@ -943,21 +945,27 @@ export class Replacer {
         return '"' + raw + '"';
     }
     
+    isVarScope(node) {
+    
+        switch (node.type) {
+        
+            case "ArrowFunction":
+            case "FunctionDeclaration":
+            case "FunctionExpression":
+            case "MethodDefinition":
+            case "Script":
+            case "Module":
+                return true;
+        }
+        
+        return false;
+    }
+    
     parentFunction(node) {
     
-        for (var p = node.parent; p; p = p.parent) {
-        
-            switch (p.type) {
-            
-                case "ArrowFunction":
-                case "FunctionDeclaration":
-                case "FunctionExpression":
-                case "MethodDefinition":
-                case "Script":
-                case "Module":
-                    return p;
-            }
-        }
+        for (var p = node.parent; p; p = p.parent)
+            if (this.isVarScope(p))
+                return p;
         
         return null;
     }
@@ -1163,6 +1171,25 @@ export class Replacer {
     
         var height = this.lineNumber(end - 1) - this.lineNumber(start);
         return preserveNewlines(text, height);
+    }
+    
+    wrapFunctionExpression(text, node) {
+    
+        for (var p = node.parent; p; p = p.parent) {
+        
+            if (this.isVarScope(p))
+                break;
+         
+            if (p.type === "ExpressionStatement") {
+            
+                if (p.start === node.start)
+                    return "(" + text + ")";
+                
+                break;
+            }
+        }
+        
+        return text;
     }
     
     joinList(list) {

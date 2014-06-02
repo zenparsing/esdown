@@ -37,4 +37,4 @@ var __this = this; (function(ident) { return "abc"; });
 
 (function(ident) { return __this.method(); });
 
-var identity = (function(obj) { return obj; });
+var identity = function(obj) { return obj; };
