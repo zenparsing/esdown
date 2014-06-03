@@ -570,12 +570,12 @@ export class Replacer {
             after = "; return " + node.identifier.text + "; }()";
         }
         
-        return before + 
+        return "(" + before + 
             "_es6now.Class(" + 
             (node.base ? (node.base.text + ", ") : "") +
             "function(__super) {" + this.strictDirective() + " return " +
             node.body.text + " })" +
-            after;
+            after + ")";
     }
     
     ClassElement(node) {
