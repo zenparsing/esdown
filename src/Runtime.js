@@ -1,27 +1,9 @@
-export var ES6 = 
+export var API = 
 
 `var global = this, 
     arraySlice = Array.prototype.slice,
-    toString = Object.prototype.toString;
-
-// === Symbols ===
-
-var symbolCounter = 0;
-
-function fakeSymbol() {
-
-    return "__$" + Math.floor(Math.random() * 1e9) + "$" + (++symbolCounter) + "$__";
-}
-
-// NOTE:  As of Node 0.11.12, V8's Symbol implementation is a little wonky.
-// There is no Object.getOwnPropertySymbols, so reflection doesn't seem to
-// work like it should.  Furthermore, Node blows up when trying to inspect
-// Symbol objects.  We expect to replace this override when V8's symbols
-// catch up with the ES6 specification.
-
-this.Symbol = fakeSymbol;
-
-Symbol.iterator = Symbol("iterator");
+    hasOwn = Object.prototype.hasOwnProperty,
+    staticName = /^__static_/;
 
 // Support for iterator protocol
 _es6now.iterator = function(obj) {
@@ -68,23 +50,6 @@ _es6now.templateSite = function(values, raw) {
     return values;
 };
 
-// Support for destructuring
-_es6now.path = function(obj, path, def) {
-
-    if (!path)
-        return obj;
-    
-    for (var i = 0; i < path.length; ++i) {
-    
-        if (!obj || typeof obj !== "object")
-            throw new TypeError();
-                
-        obj = obj[path[i]];
-    }
-    
-    return obj === void 0 ? def : obj;
-};
-
 // Throws an error if the argument is not an object
 _es6now.obj = function(obj) {
 
@@ -93,6 +58,197 @@ _es6now.obj = function(obj) {
     
     return obj;
 };
+
+// Support for async functions
+_es6now.async = function(iterable) {
+    
+    var iter = _es6now.iterator(iterable),
+        resolver,
+        promise;
+    
+    promise = new Promise((resolve, reject) => resolver = { resolve, reject });
+    resume(void 0, false);
+    return promise;
+    
+    function resume(value, error) {
+    
+        if (error && !("throw" in iter))
+            return resolver.reject(value);
+        
+        try {
+        
+            // Invoke the iterator/generator
+            var result = error ? iter.throw(value) : iter.next(value),
+                value = Promise.resolve(result.value),
+                done = result.done;
+            
+            if (result.done)
+                value.chain(resolver.resolve, resolver.reject);
+            else
+                value.chain(x => resume(x, false), x => resume(x, true));
+            
+        } catch (x) { resolver.reject(x) }
+        
+    }
+};
+
+// Returns true if the object has the specified property in
+// its prototype chain
+function has(obj, name) {
+
+    for (; obj; obj = Object.getPrototypeOf(obj))
+        if (hasOwn.call(obj, name))
+            return true;
+    
+    return false;
+}
+
+// Iterates over the descriptors for each own property of an object
+function forEachDesc(obj, fn) {
+
+    var names = Object.getOwnPropertyNames(obj), i;
+    
+    for (i = 0; i < names.length; ++i)
+        fn(names[i], Object.getOwnPropertyDescriptor(obj, names[i]));
+    
+    if (Object.getOwnPropertySymbols) {
+    
+        names = Object.getOwnPropertySymbols(obj);
+        
+        for (i = 0; i < names.length; ++i)
+            fn(names[i], Object.getOwnPropertyDescriptor(obj, names[i]));
+    }
+    
+    return obj;
+}
+
+// Performs copy-based inheritance
+function inherit(to, from) {
+
+    for (; from; from = Object.getPrototypeOf(from)) {
+    
+        forEachDesc(from, (name, desc) => {
+        
+            if (!has(to, name))
+                Object.defineProperty(to, name, desc);
+        });
+    }
+    
+    return to;
+}
+
+function defineMethods(to, from) {
+
+    forEachDesc(from, (name, desc) => {
+    
+        if (typeof name !== "string" || !staticName.test(name))
+            Object.defineProperty(to, name, desc);
+    });
+}
+
+function defineStatic(to, from) {
+
+    forEachDesc(from, (name, desc) => {
+    
+        if (typeof name === "string" &&
+            staticName.test(name) && 
+            typeof desc.value === "object" && 
+            desc.value) {
+            
+            defineMethods(to, desc.value);
+        }
+    });
+}
+
+function Class(base, def) {
+
+    var parent;
+    
+    if (def === void 0) {
+    
+        // If no base class is specified, then Object.prototype
+        // is the parent prototype
+        def = base;
+        base = null;
+        parent = Object.prototype;
+    
+    } else if (base === null) {
+    
+        // If the base is null, then then then the parent prototype is null
+        parent = null;
+        
+    } else if (typeof base === "function") {
+    
+        parent = base.prototype;
+        
+        // Prototype must be null or an object
+        if (parent !== null && Object(parent) !== parent)
+            parent = void 0;
+    }
+    
+    if (parent === void 0)
+        throw new TypeError;
+    
+    // Generate the method collection, closing over "__super"
+    var proto = Object.create(parent),
+        props = def(parent),
+        constructor = props.constructor;
+    
+    if (!constructor)
+        throw new Error("No constructor specified.");
+    
+    // Make constructor non-enumerable
+    // if none is provided
+    Object.defineProperty(props, "constructor", {
+    
+        enumerable: false,
+        writable: true,
+        configurable: true,
+        value: constructor
+    });
+    
+    // Set prototype methods
+    defineMethods(proto, props);
+    
+    // Set constructor's prototype
+    constructor.prototype = proto;
+    
+    // Set class "static" methods
+    defineStatic(constructor, props);
+    
+    // "Inherit" from base constructor
+    if (base) inherit(constructor, base);
+    
+    return constructor;
+}
+
+_es6now.Class = Class;
+
+`;
+
+export var ES6 = 
+
+`var global = this, 
+    toString = Object.prototype.toString;
+
+// === Symbols ===
+
+var symbolCounter = 0;
+
+function fakeSymbol() {
+
+    return "__$" + Math.floor(Math.random() * 1e9) + "$" + (++symbolCounter) + "$__";
+}
+
+// NOTE:  As of Node 0.11.12, V8's Symbol implementation is a little wonky.
+// There is no Object.getOwnPropertySymbols, so reflection doesn't seem to
+// work like it should.  Furthermore, Node blows up when trying to inspect
+// Symbol objects.  We expect to replace this override when V8's symbols
+// catch up with the ES6 specification.
+
+this.Symbol = fakeSymbol;
+
+Symbol.iterator = Symbol("iterator");
 
 function eachKey(obj, fn) {
 
@@ -359,150 +515,6 @@ addMethods(Array.prototype, {
     keys()    { return new ArrayIterator(this, "keys") },
     [Symbol.iterator]() { return this.values() }
 });
-`;
-
-export var Class = 
-
-`var HOP = Object.prototype.hasOwnProperty,
-    STATIC = /^__static_/;
-
-// Returns true if the object has the specified property
-function hasOwn(obj, name) {
-
-    return HOP.call(obj, name);
-}
-
-// Returns true if the object has the specified property in
-// its prototype chain
-function has(obj, name) {
-
-    for (; obj; obj = Object.getPrototypeOf(obj))
-        if (HOP.call(obj, name))
-            return true;
-    
-    return false;
-}
-
-// Iterates over the descriptors for each own property of an object
-function forEachDesc(obj, fn) {
-
-    var names = Object.getOwnPropertyNames(obj), i;
-    
-    for (i = 0; i < names.length; ++i)
-        fn(names[i], Object.getOwnPropertyDescriptor(obj, names[i]));
-    
-    if (Object.getOwnPropertySymbols) {
-    
-        names = Object.getOwnPropertySymbols(obj);
-        
-        for (i = 0; i < names.length; ++i)
-            fn(names[i], Object.getOwnPropertyDescriptor(obj, names[i]));
-    }
-    
-    return obj;
-}
-
-// Performs copy-based inheritance
-function inherit(to, from) {
-
-    for (; from; from = Object.getPrototypeOf(from)) {
-    
-        forEachDesc(from, (name, desc) => {
-        
-            if (!has(to, name))
-                Object.defineProperty(to, name, desc);
-        });
-    }
-    
-    return to;
-}
-
-function defineMethods(to, from) {
-
-    forEachDesc(from, (name, desc) => {
-    
-        if (typeof name !== "string" || !STATIC.test(name))
-            Object.defineProperty(to, name, desc);
-    });
-}
-
-function defineStatic(to, from) {
-
-    forEachDesc(from, (name, desc) => {
-    
-        if (typeof name === "string" &&
-            STATIC.test(name) && 
-            typeof desc.value === "object" && 
-            desc.value) {
-            
-            defineMethods(to, desc.value);
-        }
-    });
-}
-
-function Class(base, def) {
-
-    var parent;
-    
-    if (def === void 0) {
-    
-        // If no base class is specified, then Object.prototype
-        // is the parent prototype
-        def = base;
-        base = null;
-        parent = Object.prototype;
-    
-    } else if (base === null) {
-    
-        // If the base is null, then then then the parent prototype is null
-        parent = null;
-        
-    } else if (typeof base === "function") {
-    
-        parent = base.prototype;
-        
-        // Prototype must be null or an object
-        if (parent !== null && Object(parent) !== parent)
-            parent = void 0;
-    }
-    
-    if (parent === void 0)
-        throw new TypeError();
-    
-    // Generate the method collection, closing over "__super"
-    var proto = Object.create(parent),
-        props = def(parent),
-        constructor = props.constructor;
-    
-    if (!constructor)
-        throw new Error("No constructor specified.");
-    
-    // Make constructor non-enumerable
-    // if none is provided
-    Object.defineProperty(props, "constructor", {
-    
-        enumerable: false,
-        writable: true,
-        configurable: true,
-        value: constructor
-    });
-    
-    // Set prototype methods
-    defineMethods(proto, props);
-    
-    // Set constructor's prototype
-    constructor.prototype = proto;
-    
-    // Set class "static" methods
-    defineStatic(constructor, props);
-    
-    // "Inherit" from base constructor
-    if (base) inherit(constructor, base);
-    
-    return constructor;
-}
-
-_es6now.Class = Class;
 `;
 
 export var Promise = 
@@ -783,40 +795,5 @@ Promise.prototype[$$isPromise] = true;
 
 if (this.Promise === void 0)
     this.Promise = Promise;
-`;
-
-export var Async = 
-
-`_es6now.async = function(iterable) {
-    
-    var iter = _es6now.iterator(iterable),
-        resolver,
-        promise;
-    
-    promise = new Promise((resolve, reject) => resolver = { resolve, reject });
-    resume(void 0, false);
-    return promise;
-    
-    function resume(value, error) {
-    
-        if (error && !("throw" in iter))
-            return resolver.reject(value);
-        
-        try {
-        
-            // Invoke the iterator/generator
-            var result = error ? iter.throw(value) : iter.next(value),
-                value = Promise.resolve(result.value),
-                done = result.done;
-            
-            if (result.done)
-                value.chain(resolver.resolve, resolver.reject);
-            else
-                value.chain(x => resume(x, false), x => resume(x, true));
-            
-        } catch (x) { resolver.reject(x) }
-        
-    }
-};
 `;
 

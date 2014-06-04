@@ -1,3 +1,5 @@
+// Builds the Runtime.js module from the modules in the runtime folder
+
 var FS = require("fs"),
     Path = require("path");
 
@@ -5,7 +7,7 @@ var EXT = /\.[\S\s]+$/;
 
 var runtimePath = Path.resolve(__dirname, "../runtime/"),
     outPath = Path.resolve(__dirname, "../src/Runtime.js"),
-    files = [ "ES6.js", "Class.js", "Promise.js", "Async.js" ];
+    files = [ "API.js", "ES6.js", "Promise.js" ];
 
 function run() {
 

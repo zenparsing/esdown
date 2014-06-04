@@ -1,18 +1,101 @@
-var HOP = Object.prototype.hasOwnProperty,
-    STATIC = /^__static_/;
+var global = this, 
+    arraySlice = Array.prototype.slice,
+    hasOwn = Object.prototype.hasOwnProperty,
+    staticName = /^__static_/;
 
-// Returns true if the object has the specified property
-function hasOwn(obj, name) {
+// Support for iterator protocol
+_es6now.iterator = function(obj) {
 
-    return HOP.call(obj, name);
-}
+    if (global.Symbol && Symbol.iterator && obj[Symbol.iterator] !== void 0)
+        return obj[Symbol.iterator]();
+    
+    if (Array.isArray(obj))
+        return obj.values();
+    
+    return obj;
+};
+
+// Support for computed property names
+_es6now.computed = function(obj) {
+
+    var name, desc, i;
+    
+    for (i = 1; i < arguments.length; ++i) {
+    
+        name = "__$" + (i - 1);
+        desc = Object.getOwnPropertyDescriptor(obj, name);
+        
+        if (!desc)
+            continue;
+        
+        Object.defineProperty(obj, arguments[i], desc);
+        delete obj[name];
+    }
+    
+    return obj;
+};
+
+// Support for rest parameters
+_es6now.rest = function(args, pos) {
+
+    return arraySlice.call(args, pos);
+};
+
+// Support for tagged templates
+_es6now.templateSite = function(values, raw) {
+
+    values.raw = raw || values;
+    return values;
+};
+
+// Throws an error if the argument is not an object
+_es6now.obj = function(obj) {
+
+    if (!obj || typeof obj !== "object")
+        throw new TypeError();
+    
+    return obj;
+};
+
+// Support for async functions
+_es6now.async = function(iterable) {
+    
+    var iter = _es6now.iterator(iterable),
+        resolver,
+        promise;
+    
+    promise = new Promise((resolve, reject) => resolver = { resolve, reject });
+    resume(void 0, false);
+    return promise;
+    
+    function resume(value, error) {
+    
+        if (error && !("throw" in iter))
+            return resolver.reject(value);
+        
+        try {
+        
+            // Invoke the iterator/generator
+            var result = error ? iter.throw(value) : iter.next(value),
+                value = Promise.resolve(result.value),
+                done = result.done;
+            
+            if (result.done)
+                value.chain(resolver.resolve, resolver.reject);
+            else
+                value.chain(x => resume(x, false), x => resume(x, true));
+            
+        } catch (x) { resolver.reject(x) }
+        
+    }
+};
 
 // Returns true if the object has the specified property in
 // its prototype chain
 function has(obj, name) {
 
     for (; obj; obj = Object.getPrototypeOf(obj))
-        if (HOP.call(obj, name))
+        if (hasOwn.call(obj, name))
             return true;
     
     return false;
@@ -56,7 +139,7 @@ function defineMethods(to, from) {
 
     forEachDesc(from, (name, desc) => {
     
-        if (typeof name !== "string" || !STATIC.test(name))
+        if (typeof name !== "string" || !staticName.test(name))
             Object.defineProperty(to, name, desc);
     });
 }
@@ -66,7 +149,7 @@ function defineStatic(to, from) {
     forEachDesc(from, (name, desc) => {
     
         if (typeof name === "string" &&
-            STATIC.test(name) && 
+            staticName.test(name) && 
             typeof desc.value === "object" && 
             desc.value) {
             
@@ -102,7 +185,7 @@ function Class(base, def) {
     }
     
     if (parent === void 0)
-        throw new TypeError();
+        throw new TypeError;
     
     // Generate the method collection, closing over "__super"
     var proto = Object.create(parent),
@@ -138,3 +221,4 @@ function Class(base, def) {
 }
 
 _es6now.Class = Class;
+

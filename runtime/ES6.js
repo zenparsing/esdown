@@ -1,5 +1,4 @@
 var global = this, 
-    arraySlice = Array.prototype.slice,
     toString = Object.prototype.toString;
 
 // === Symbols ===
@@ -20,60 +19,6 @@ function fakeSymbol() {
 this.Symbol = fakeSymbol;
 
 Symbol.iterator = Symbol("iterator");
-
-// Support for iterator protocol
-_es6now.iterator = function(obj) {
-
-    if (global.Symbol && Symbol.iterator && obj[Symbol.iterator] !== void 0)
-        return obj[Symbol.iterator]();
-    
-    if (Array.isArray(obj))
-        return obj.values();
-    
-    return obj;
-};
-
-// Support for computed property names
-_es6now.computed = function(obj) {
-
-    var name, desc, i;
-    
-    for (i = 1; i < arguments.length; ++i) {
-    
-        name = "__$" + (i - 1);
-        desc = Object.getOwnPropertyDescriptor(obj, name);
-        
-        if (!desc)
-            continue;
-        
-        Object.defineProperty(obj, arguments[i], desc);
-        delete obj[name];
-    }
-    
-    return obj;
-};
-
-// Support for rest parameters
-_es6now.rest = function(args, pos) {
-
-    return arraySlice.call(args, pos);
-};
-
-// Support for tagged templates
-_es6now.templateSite = function(values, raw) {
-
-    values.raw = raw || values;
-    return values;
-};
-
-// Throws an error if the argument is not an object
-_es6now.obj = function(obj) {
-
-    if (!obj || typeof obj !== "object")
-        throw new TypeError();
-    
-    return obj;
-};
 
 function eachKey(obj, fn) {
 
