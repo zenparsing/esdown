@@ -49,10 +49,8 @@ function wrapRuntimeModule(text) {
     return "(function() {\n\n" + text + "\n\n}).call(this);\n\n";
 }
 
-export function translate(input, options) {
+export function translate(input, options = {}) {
 
-    options || (options = {});
-    
     var replacer = new Replacer,
         output;
     
@@ -61,7 +59,6 @@ export function translate(input, options) {
     if (options.runtime) {
             
         input = "\n\n" +
-            "this._es6now = {};\n\n" +
             wrapRuntimeModule(Runtime.API) + 
             wrapRuntimeModule(Runtime.ES6) +
             wrapRuntimeModule(Runtime.Promise) +
