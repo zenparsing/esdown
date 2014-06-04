@@ -7,9 +7,8 @@ var FS = require("fs"),
     REPL = require("repl"),
     VM = require("vm"),
     Path = require("path"),
-    Util = require("util");
-
-var ES6_GUESS = /(?:^|\n)\s*(?:import|export|class)\s/;
+    Util = require("util"),
+    global = this;
 
 export function formatSyntaxError(e, filename) {
 
@@ -58,8 +57,11 @@ function addExtension() {
         
             text = source = FS.readFileSync(filename, "utf8");
             
-            if (ES6_GUESS.test(text))
-                text = translate(text, { wrap: true, module: true });
+            // Only translate as a module if the source module is requesting 
+            // via import syntax
+            var m = !!module.parent.__es6;
+            
+            text = translate(text, { wrap: m, module: m });
         
         } catch (e) {
         
@@ -86,12 +88,14 @@ export function runModule(path) {
     if (stat && stat.isDirectory())
         path = Path.join(path, "main.js");
 
-    var m = require(path);
+    // "__load" is defined in the module wrapper and ensures that the
+    // target is loaded as a module
+    
+    var m = __load(path);
 
     if (m && typeof m.main === "function") {
     
         var result = m.main(process.argv);
-        
         Promise.resolve(result).then(null, x => setTimeout($=> { throw x }, 0));
     }
 }
@@ -99,6 +103,9 @@ export function runModule(path) {
 export function startREPL() {
 
     addExtension();
+    
+    // Provide a way to load a module from the REPL
+    global.loadModule = path => __load(global.require.resolve(path));
     
     var prompt = ">>> ", contPrompt = "... ";
     
@@ -114,7 +121,7 @@ export function startREPL() {
             
             try {
             
-                text = translate(input, { wrap: false, module: false });
+                text = translate(input, { module: false });
             
             } catch (x) {
             
@@ -130,7 +137,7 @@ export function startREPL() {
                 script = VM.createScript(text, { filename, displayErrors });
                 
                 result = repl.useGlobal ?
-                    script.runInThisContext(text, { displayErrors }) :
+                    script.runInThisContext({ displayErrors }) :
                     script.runInContext(context, { displayErrors });
                 
             } catch (x) {

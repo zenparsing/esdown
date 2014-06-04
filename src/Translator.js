@@ -7,26 +7,26 @@ var WRAP_CALLEE = "(function(fn, deps, name) { " +
 
     // Node.js:
     "if (typeof exports !== 'undefined') " +
-        "fn.call(typeof global === 'object' ? global : this, require, exports); " +
+        "fn.call(typeof global === 'object' ? global : this, require, exports, module); " +
         
     // Insane module transport:
     "else if (typeof define === 'function' && define.amd) " +
-        "define(['require', 'exports'].concat(deps), fn); " +
+        "define(['require', 'exports', 'module'].concat(deps), fn); " +
         
     // DOM global module:
     "else if (typeof window !== 'undefined' && name) " +
-        "fn.call(window, null, window[name] = {}); " +
+        "fn.call(window, null, window[name] = {}, {}); " +
     
     // Hail Mary:
     "else " +
-        "fn.call(window || this, null, {}); " +
+        "fn.call(window || this, null, {}, {}); " +
 
 "})";
 
-var WRAP_HEADER = "function(require, exports) { " +
+var WRAP_HEADER = "function(require, exports, module) { " +
     "'use strict'; " +
     "function __load(p) { " +
-        "var e = require(p); " +
+        "module.__es6 = 1; var e = require(p); module.__es6 = 0; " +
         "return typeof e === 'object' ? e : { 'default': e }; " +
     "} ";
 
