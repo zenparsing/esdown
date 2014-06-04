@@ -140,8 +140,10 @@ function Class(base, def) {
 
 this._es6now = {
 
+    Class: Class,
+
     // Support for iterator protocol
-    iterator(obj) {
+    iter(obj) {
 
         if (global.Symbol && Symbol.iterator && obj[Symbol.iterator] !== void 0)
             return obj[Symbol.iterator]();
@@ -172,14 +174,8 @@ this._es6now = {
         return obj;
     },
 
-    // Support for rest parameters
-    rest(args, pos) {
-
-        return arraySlice.call(args, pos);
-    },
-
     // Support for tagged templates
-    templateSite(values, raw) {
+    callSite(values, raw) {
 
         values.raw = raw || values;
         return values;
@@ -197,7 +193,7 @@ this._es6now = {
     // Support for async functions
     async(iterable) {
     
-        var iter = _es6now.iterator(iterable),
+        var iter = _es6now.iter(iterable),
             resolver,
             promise;
     
@@ -225,9 +221,8 @@ this._es6now = {
             } catch (x) { resolver.reject(x) }
         
         }
-    },
+    }
     
-    Class: Class
 };
 `;
 

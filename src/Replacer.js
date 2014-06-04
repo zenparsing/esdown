@@ -168,7 +168,7 @@ export class Replacer {
             value = "",
             out = "";
         
-        out += `${ iter } = _es6now.iterator(${ node.right.text }); `;
+        out += `${ iter } = _es6now.iter(${ node.right.text }); `;
         out += "for (";
         
         if (node.left.type === "VariableDeclaration") {
@@ -665,7 +665,7 @@ export class Replacer {
             
         if (node.parent.type === "TaggedTemplateExpression") {
         
-            out = "(_es6now.templateSite(" + 
+            out = "(_es6now.callSite(" + 
                 "[" + lit.map(x => this.rawToString(x.raw)).join(", ") + "]";
             
             // Only output the raw array if it is different from the cooked array
@@ -825,7 +825,7 @@ export class Replacer {
             // an isIdentifier function.
             
             var access =
-                tree.rest ? `_es6now.rest(${ base }, ${ tree.name })` :
+                tree.rest ? `${ base }.slice(${ tree.name })` :
                 tree.name ? `${ base }[${ JSON.stringify(tree.name) }]` :
                 base;
             
@@ -1050,7 +1050,11 @@ export class Replacer {
     
         var name = node.params[node.params.length - 1].identifier.value,
             pos = node.params.length - 1,
-            slice = "_es6now.rest(arguments, " + pos + ")";
+            temp = this.addTempVar(node, null, true);
+        
+        return `for (var ${ name } = [], ${ temp } = ${ pos }; ` +
+            `${ temp } < arguments.length; ` +
+            `++${ temp }) ${ name }.push(arguments[${ temp }]);`;
         
         return "var " + name + " = " + slice + ";";
     }
@@ -1123,7 +1127,7 @@ export class Replacer {
     
     addTempVar(node, value, noDeclare) {
     
-        var p = this.parentFunction(node);
+        var p = this.isVarScope(node) ? node : this.parentFunction(node);
         
         if (!p.tempVars)
             p.tempVars = [];
