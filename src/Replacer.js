@@ -791,23 +791,23 @@ export class Replacer {
             if (elems[i].type === "SpreadExpression") {
             
                 if (last < i - 1)
-                    list.push("[" + this.joinList(elems.slice(last + 1, i)) + "]");
+                    list.push({ type: "s", args: this.joinList(elems.slice(last + 1, i)) });
                 
-                list.push(elems[i].expression.text);
+                list.push({ type: "i", args: elems[i].expression.text });
                 
                 last = i;
             }
         }
         
         if (last < elems.length - 1)
-            list.push("[" + this.joinList(elems.slice(last + 1)) + "]");
-        else if (list.length === 1 && newArray)
-            list[0] = "(" + list[0] + ").slice(0)";
+            list.push({ type: "s", args: this.joinList(elems.slice(last + 1)) });
         
-        var out = list[0];
+        var out = "(_es6now.spread()";
         
-        for (i = 1; i < list.length; ++i)
-            out += ".concat(" + list[i] + ")";
+        for (i = 0; i < list.length; ++i)
+            out += `.${ list[i].type }(${ list[i].args })`;
+        
+        out += ".a)";
         
         return out;
     }

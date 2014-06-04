@@ -221,6 +221,41 @@ this._es6now = {
             } catch (x) { resolver.reject(x) }
         
         }
+    },
+    
+    // Support for spread operations
+    spread() {
+    
+        return {
+        
+            a: [], 
+            
+            // Add items
+            s() { 
+            
+                for (var i = 0; i < arguments.length; ++i) 
+                    this.a.push(arguments[i]);
+                
+                return this;
+            },
+            
+            // Add the contents of iterables
+            i(list) {
+            
+                if (Array.isArray(list)) {
+                
+                    this.a.push.apply(this.a, list);
+                
+                } else {
+                
+                    for (var item of list)
+                        this.a.push(item);
+                }
+                
+                return this;
+            }
+            
+        };
     }
     
 };
