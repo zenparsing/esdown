@@ -8,6 +8,7 @@ var FS = require("fs"),
     VM = require("vm"),
     Path = require("path"),
     Util = require("util"),
+    Module = module.constructor,
     global = this;
 
 export function formatSyntaxError(e, filename) {
@@ -37,13 +38,12 @@ export function formatSyntaxError(e, filename) {
 
 function addExtension() {
 
-    var Module = module.constructor,
-        resolveFilename = Module._resolveFilename;
+    var resolveFilename = Module._resolveFilename;
     
     Module._resolveFilename = (filename, parent) => {
     
         if (isPackageURI(filename))
-            filename = locatePackage(filename);
+            filename = locatePackage(filename, Path.dirname(parent.filename));
         
         return resolveFilename(filename, parent);
     };

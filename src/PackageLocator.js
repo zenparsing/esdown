@@ -2,7 +2,8 @@ var Path = require("path"),
     FS = require("fs");
 
 var PACKAGE_URI = /^package:/i,
-    JS_PACKAGE_ROOT = process.env["JS_PACKAGE_ROOT"] || "",
+    NODE_PATH = process.env["NODE_PATH"] || "",
+    Module = module.constructor,
     packageRoots;
 
 export function isPackageURI(uri) {
@@ -10,18 +11,20 @@ export function isPackageURI(uri) {
     return PACKAGE_URI.test(uri);
 }
 
-export function locatePackage(uri) {
+export function locatePackage(uri, base) {
     
     var name = uri.replace(PACKAGE_URI, ""),
         path;
     
     if (name === uri)
-        throw new Error("Not a package URI.");
+        throw new Error("Not a package URI");
     
     if (!packageRoots)
-        packageRoots = JS_PACKAGE_ROOT.split(/;/g).map(v => v.trim());
+        packageRoots = NODE_PATH.split(Path.delimiter).map(v => v.trim());
     
-    var found = packageRoots.some(root => {
+    var list = Module._nodeModulePaths(base).concat(packageRoots);
+    
+    var found = list.some(root => {
     
         var stat = null;
         
