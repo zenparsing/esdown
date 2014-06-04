@@ -12,3 +12,6 @@ function f() {
 
     for (var x of y);
 }
+
+if (true)
+    for (var x of y);

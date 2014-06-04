@@ -168,18 +168,21 @@ export class Replacer {
             value = "",
             out = "";
         
-        out += `${ iter } = _es6now.iter(${ node.right.text }); `;
         out += "for (";
         
         if (node.left.type === "VariableDeclaration") {
         
-            out += node.left.text;
+            iter = this.addTempVar(node, null, true);
+            out += node.left.text + ", ";
             value = node.left.declarations[0].pattern.value;
         
         } else {
         
+            iter = this.addTempVar(node);
             value = node.left.text;
         }
+        
+        out += `${ iter } = _es6now.iter(${ node.right.text })`
         
         out += `; ${ iterResult } = ${ iter }.next()`;
         out += `, ${ value } = ${ iterResult }.value`;
