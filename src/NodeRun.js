@@ -100,9 +100,11 @@ export function startREPL() {
 
     addExtension();
     
-    var repl = REPL.start({ 
+    var prompt = ">>> ", contPrompt = "... ";
     
-        prompt: "es6now> ",
+    var repl = REPL.start({ 
+        
+        prompt, 
         
         useGlobal: true,
         
@@ -151,6 +153,21 @@ export function startREPL() {
             }
         }
     });
+    
+    // Override displayPrompt so that ellipses are displayed for
+    // cross-line continuations
+    
+    if (typeof repl.displayPrompt === "function" && 
+        typeof repl._prompt === "string") {
+    
+        var displayPrompt = repl.displayPrompt;
+    
+        repl.displayPrompt = function(preserveCursor) {
+    
+            this._prompt = this.bufferedCommand ? contPrompt : prompt;
+            return displayPrompt.call(this, preserveCursor);
+        };
+    }
     
     function parseAction(input, module) {
     
