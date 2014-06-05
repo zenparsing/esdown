@@ -1,8 +1,8 @@
 module AsyncFS from "AsyncFS.js";
 
-import { runModule, startREPL, formatSyntaxError } from "NodeRun.js";
 import { ConsoleCommand } from "package:zencmd";
-import { createBundle } from "package:js-bundle";
+import { runModule, startREPL, formatSyntaxError } from "NodeRun.js";
+import { createBundle } from "Bundler.js";
 import { translate } from "Translator.js";
 import { locatePackage } from "PackageLocator.js";
 
