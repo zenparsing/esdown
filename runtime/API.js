@@ -212,9 +212,9 @@ this._es6now = {
                     done = result.done;
             
                 if (result.done)
-                    value.chain(resolver.resolve, resolver.reject);
+                    value.then(resolver.resolve, resolver.reject);
                 else
-                    value.chain(x => resume(x, false), x => resume(x, true));
+                    value.then(x => resume(x, false), x => resume(x, true));
             
             } catch (x) { resolver.reject(x) }
         
