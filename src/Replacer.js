@@ -39,12 +39,14 @@ function preserveNewlines(text, height) {
 
 class PatternTreeNode {
 
-    constructor(name, init) {
+    constructor(name, init, skip) {
     
         this.name = name;
         this.initializer = init;
         this.children = [];
         this.target = "";
+        this.skip = skip | 0;
+        this.array = false;
         this.rest = false;
     }
 }
@@ -820,15 +822,17 @@ export class Replacer {
         var visit = (tree, base) => {
         
             var target = tree.target,
+                dType = tree.array ? "arrayd" : "objd",
                 str = "", 
                 temp;
             
-            // TODO:  If name is integer, then no quotes.  If name is
+            // ENHANCEMENT:  If name is integer, then no quotes.  If name is
             // identifier, then no brackets.  Perhaps parser should expose
             // an isIdentifier function.
             
             var access =
-                tree.rest ? `${ base }.slice(${ tree.name })` :
+                tree.rest ? `${ base }.rest(${ tree.skip }, ${ tree.name })` :
+                tree.skip ? `${ base }.at(${ tree.skip }, ${ tree.name })` :
                 tree.name ? `${ base }[${ JSON.stringify(tree.name) }]` :
                 base;
             
@@ -840,7 +844,7 @@ export class Replacer {
                 str = `${ temp } === void 0 ? ${ tree.initializer } : ${ temp }`;
                 
                 if (!tree.target)
-                    str = `${ temp } = _es6now.obj(${ str })`;
+                    str = `${ temp } = _es6now.${ dType }(${ str })`;
                 
                 inner.push(str);
                     
@@ -851,7 +855,7 @@ export class Replacer {
             } else {
             
                 temp = this.addTempVar(node);
-                inner.push(`${ temp } = _es6now.obj(${ access })`);
+                inner.push(`${ temp } = _es6now.${ dType }(${ access })`);
             }
             
             if (tree.target) {
@@ -879,26 +883,33 @@ export class Replacer {
         if (!parent)
             parent = new PatternTreeNode("", null);
         
-        var child, init;
+        var child, init, skip = 1;
     
         switch (ast.type) {
     
             case "ArrayPattern":
+            
+                parent.array = true;
         
                 ast.elements.forEach((e, i) => { 
             
-                    if (!e)
+                    if (!e) {
+                    
+                        ++skip;
                         return;
+                    }
                     
                     init = e.initializer ? e.initializer.text : "";
                     
-                    child = new PatternTreeNode(String(i), init);
+                    child = new PatternTreeNode(String(i), init, skip);
                     
                     if (e.type === "PatternRestElement")
                         child.rest = true;
                     
                     parent.children.push(child);
                     this.createPatternTree(e.pattern, child);
+                    
+                    skip = 1;
                 });
                 
                 break;

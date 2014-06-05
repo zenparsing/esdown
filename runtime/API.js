@@ -179,15 +179,6 @@ this._es6now = {
         return values;
     },
 
-    // Throws an error if the argument is not an object
-    obj(obj) {
-
-        if (!obj || typeof obj !== "object")
-            throw new TypeError();
-    
-        return obj;
-    },
-
     // Support for async functions
     async(iterable) {
     
@@ -253,6 +244,56 @@ this._es6now = {
                 return this;
             }
             
+        };
+    },
+    
+    // Support for object destructuring
+    objd(obj) {
+    
+        if (!obj || typeof obj !== "object")
+           throw new TypeError;
+        
+        return obj;
+    },
+    
+    // Support for array destructuring
+    arrayd(obj) {
+    
+        if (Array.isArray(obj)) {
+        
+            return { 
+            
+                at(skip, pos) { return obj[pos] },
+                rest(skip, pos) { return obj.slice(pos) }
+            };
+        }
+        
+        var iter = _es6now.iter(obj);
+        
+        return {
+        
+            at(skip) {
+            
+                var r;
+                
+                while (skip--)
+                    r = iter.next();
+                
+                return r.value;
+            },
+            
+            rest(skip) {
+                
+                var a = [], r;
+                
+                while (--skip)
+                    r = iter.next();
+                
+                while (r = iter.next(), !r.done)
+                    a.push(r.value);
+                
+                return a;
+            }
         };
     }
     
