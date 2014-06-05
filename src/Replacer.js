@@ -932,7 +932,12 @@ export class Replacer {
         if (ident)
             head += " " + ident.text;
         
-        var outerParams = params.map((x, i) => "__" + i).join(", ");
+        var outerParams = params.map((x, i) => {
+        
+            var p = x.pattern || x.identifier;
+            return p.type === "Identifier" ? p.value : "__$" + i;
+            
+        }).join(", ");
         
         return `${head}(${outerParams}) { ` +
             `try { return _es6now.async(function*(${ this.joinList(params) }) ` + 
