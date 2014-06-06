@@ -284,4 +284,5 @@ addMethods(Array.prototype, {
     entries() { return new ArrayIterator(this, "entries") },
     keys()    { return new ArrayIterator(this, "keys") },
     [Symbol.iterator]() { return this.values() }
+    
 });

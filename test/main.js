@@ -1,5 +1,7 @@
-import { translate } from "../src/Translator.js";
 import { runTests } from "package:moon-unit";
+import { translate } from "../src/Translator.js";
+import { tests as stringTests } from "shim/string.js";
+import { tests as objectTests } from "shim/object.js";
 
 var FS = require("fs"),
     Path = require("path");
@@ -67,6 +69,12 @@ export function main(args) {
                 if (x !== stop)
                     throw x;
             }
+        },
+        
+        "ES6 Shims": {
+        
+            "Object": objectTests,
+            "String": stringTests
         }
         
     });
