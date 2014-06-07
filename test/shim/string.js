@@ -14,6 +14,33 @@ function testObjectCoercible(test, fn) {
 
 export var tests = {
 
+    "raw" (test) {
+    
+        var callSite = {};
+        
+        callSite.raw = [ "The total is ", " ($", " with tax)" ];
+        
+        test._("works with an array")
+        .equals(String.raw(callSite, 10, 11), "The total is 10 ($11 with tax)")
+        .equals(String.raw(callSite, "{total}", "{total * 1.01}"), "The total is {total} (${total * 1.01} with tax)");
+        
+        callSite.raw = { 0: "The total is ", 1: " ($", 2: " with tax)", length: 3 };
+        
+        test._("works with an object")
+        .equals(String.raw(callSite, 10, 11), "The total is 10 ($11 with tax)")
+        .equals(String.raw(callSite, "{total}", "{total * 1.01}"), "The total is {total} (${total * 1.01} with tax)");
+        
+        callSite.raw = [ "The total is ", " ($", " with tax)" ];
+        test._("fewer substitutions")
+        .equals(String.raw(callSite, 10), "The total is 10 ($");
+        
+        callSite.raw = {};
+        test._("empty callsite returns empty string")
+        .equals(String.raw(callSite, "{total}", "{total * 1.01}"), "")
+        .equals(String.raw(callSite), "");
+        
+    },
+
     "repeat" (test) {
     
         var repeat = "".repeat;
@@ -88,7 +115,7 @@ export var tests = {
         
         obj = {
         
-            toString() { return "abc"; },
+            toString() { return "abc" },
             startsWith: startsWith
         };
         
