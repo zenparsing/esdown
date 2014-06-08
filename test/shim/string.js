@@ -156,6 +156,44 @@ export var tests = {
         .throws($=> "abc".startsWith(/a/), TypeError)
         .throws($=> "abc".startsWith(new RegExp("a")), TypeError)
         ;
+    },
+    
+    "endsWith" (test) {
+    
+        var endsWith = "".endsWith;
+        
+        test._("throws a TypeError when called on null or undefined");
+        testObjectCoercible(test, endsWith);
+        
+        test._("should be truthy if and only if correct")
+        .assert("test".endsWith("st"))
+        .assert(!"test".endsWith("te"))
+        .assert(!"".endsWith("/"))
+        .assert(!"#".endsWith("/"))
+        .assert(!"##".endsWith("///"))
+        .assert("abc".endsWith("abc"))
+        .assert("abcd".endsWith("bcd"))
+        .assert("abc".endsWith("c"))
+        .assert(!"abc".endsWith("abcd"))
+        .assert(!"abc".endsWith("bbc"))
+        .assert(!"abc".endsWith("b"))
+        .assert("abc".endsWith("abc", 3))
+        .assert("abc".endsWith("bc", 3))
+        .assert("abc".endsWith("a", 1))
+        .assert(!"abc".endsWith("abc", 1))
+        .assert("abc".endsWith("b", 2))
+        .assert(!"abc".endsWith("d", 2))
+        .assert(!"abc".endsWith("dcd", 2))
+        .assert(!"abc".endsWith("a", 42))
+        .assert("abc".endsWith("bc", Infinity))
+        .assert(!"abc".endsWith("a", Infinity))
+        .assert("abc".endsWith("bc", undefined))
+        .assert(!"abc".endsWith("bc", -43))
+        .assert(!"abc".endsWith("bc", -Infinity))
+        .assert(!"abc".endsWith("bc", NaN))
+        ;
+
+        // More to copy...
     }
     
 };

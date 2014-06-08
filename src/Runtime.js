@@ -366,7 +366,7 @@ function polyfill(obj, methods) {
     });
 }
 
-function toInt(val) {
+function toInteger(val) {
 
     var n = +val;
     
@@ -377,7 +377,7 @@ function toInt(val) {
 
 function toLength(val) {
 
-    var n = toInt(val);
+    var n = toInteger(val);
     return n < 0 ? 0 : Math.min(n, Number.MAX_SAFE_INTEGER);
 }
 
@@ -459,6 +459,15 @@ polyfill(String, {
     
 });
 
+// Repeat a string by "squaring"
+function repeat(s, n) {
+
+    if (n < 1) return "";
+    if (n % 2) return repeat(s, n - 1) + s;
+    var half = repeat(s, n / 2);
+    return half + half;
+}
+
 polyfill(String.prototype, {
     
     repeat(count) {
@@ -466,24 +475,14 @@ polyfill(String.prototype, {
         if (this == null)
             throw TypeError();
         
-        var n = count ? Number(count) : 0;
+        var string = String(this);
         
-        if (isNaN(n))
-            n = 0;
+        count = toInteger(count);
         
-        // Account for out-of-bounds indices
-        if (n < 0 || n == Infinity)
-            throw RangeError();
+        if (count < 0 || count === Infinity)
+            throw new RangeError();
         
-        if (n == 0)
-            return "";
-            
-        var result = "";
-        
-        while (n--)
-            result += this;
-        
-        return result;
+        return repeat(string, count);
     },
     
     startsWith(search) {
@@ -496,73 +495,34 @@ polyfill(String.prototype, {
         search = String(search);
         
         var pos = arguments.length > 1 ? arguments[1] : undefined,
-            start = Math.max(toInt(pos), 0);
+            start = Math.max(toInteger(pos), 0);
         
         return string.slice(start, start + search.length) === search;
-            
-        var stringLength = this.length,
-            searchString = String(search),
-            searchLength = searchString.length,
-            position = arguments.length > 1 ? arguments[1] : undefined,
-            pos = position ? Number(position) : 0;
-            
-        if (isNaN(pos))
-            pos = 0;
-        
-        var start = Math.min(Math.max(pos, 0), stringLength);
-        
-        return string.indexOf(searchString, pos) == start;
     },
     
     endsWith(search) {
     
+        var string = String(this);
+        
         if (this == null || toString.call(search) == '[object RegExp]')
             throw TypeError();
         
-        var stringLength = this.length,
-            searchString = String(search),
-            searchLength = searchString.length,
-            pos = stringLength;
+        search = String(search);
         
-        if (arguments.length > 1) {
+        var len = string.length,
+            arg = arguments.length > 1 ? arguments[1] : undefined,
+            pos = arg === undefined ? len : toInteger(arg),
+            end = Math.min(Math.max(pos, 0), len);
         
-            var position = arguments[1];
-        
-            if (position !== undefined) {
-        
-                pos = position ? Number(position) : 0;
-                
-                if (isNaN(pos))
-                    pos = 0;
-            }
-        }
-        
-        var end = Math.min(Math.max(pos, 0), stringLength),
-            start = end - searchLength;
-        
-        if (start < 0)
-            return false;
-            
-        return string.lastIndexOf(searchString, start) == start;
+        return string.slice(end - search.length, end) === search;
     },
     
     contains(search) {
     
-        if (this == null)
-            throw TypeError();
-            
-        var stringLength = this.length,
-            searchString = String(search),
-            searchLength = searchString.length,
-            position = arguments.length > 1 ? arguments[1] : undefined,
-            pos = position ? Number(position) : 0;
+        var pos = arguments.length > 1 ? arguments[1] : undefined;
         
-        if (isNaN(pos))
-            pos = 0;
-            
-        var start = Math.min(Math.max(pos, 0), stringLength);
-        
-        return this.indexOf(string, searchString, pos) != -1;
+        // Somehow this trick makes method 100% compat with the spec.
+        return stringIndexOf.call(this, search, pos) !== -1;
     }
     
     // TODO: codePointAt
