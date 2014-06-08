@@ -1,5 +1,4 @@
-module Runtime from "Runtime.js";
-
+import { Runtime } from "Runtime.js";
 import { Replacer } from "Replacer.js";
 
 var SIGNATURE = "/*=es6now=*/";

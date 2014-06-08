@@ -1,7 +1,7 @@
-import { translate } from "Translator.js";
-import { isPackageURI, locatePackage } from "PackageLocator.js";
 import { ConsoleStyle as Style } from "package:zencmd";
 import { parse } from "package:esparse";
+import { translate } from "Translator.js";
+import { isPackageURI, locatePackage } from "PackageLocator.js";
 
 var FS = require("fs"),
     REPL = require("repl"),

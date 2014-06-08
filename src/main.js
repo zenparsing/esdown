@@ -1,6 +1,5 @@
-module AsyncFS from "AsyncFS.js";
-
 import { ConsoleCommand } from "package:zencmd";
+import { readFile, writeFile } from "AsyncFS.js";
 import { runModule, startREPL, formatSyntaxError } from "NodeRun.js";
 import { createBundle } from "Bundler.js";
 import { translate } from "Translator.js";
@@ -75,7 +74,7 @@ function main() {
         
             var promise = 
                 params.bundle ? createBundle(params.input, locatePackage) :
-                params.input ? AsyncFS.readFile(params.input, { encoding: "utf8" }) :
+                params.input ? readFile(params.input, { encoding: "utf8" }) :
                 Promise.resolve("");
         
             promise.then(text => {
@@ -91,7 +90,7 @@ function main() {
                 if (params.output) {
             
                     var outPath = getOutPath(params.input, params.output);
-                    return AsyncFS.writeFile(outPath, text, "utf8");
+                    return writeFile(outPath, text, "utf8");
             
                 } else {
             

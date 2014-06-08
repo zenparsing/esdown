@@ -11,7 +11,7 @@ var runtimePath = Path.resolve(__dirname, "../runtime/"),
 
 function run() {
 
-    var output = "";
+    var output = "export var Runtime = {};\n\n";
     
     files.forEach(function(file) {
     
@@ -19,7 +19,7 @@ function run() {
             Path.join(runtimePath, file), 
             { encoding: "utf8" });
         
-        output += "export var " + file.replace(EXT, "") + " = \n\n`" + source + "`;\n\n";
+        output += "Runtime." + file.replace(EXT, "") + " = \n\n`" + source + "`;\n\n";
     });
     
     FS.writeFileSync(outPath, output);

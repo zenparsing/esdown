@@ -1,4 +1,6 @@
-export var API = 
+export var Runtime = {};
+
+Runtime.API = 
 
 `var global = this, 
     arraySlice = Array.prototype.slice,
@@ -302,7 +304,7 @@ this._es6now = {
 };
 `;
 
-export var ES6 = 
+Runtime.ES6 = 
 
 `var global = this, 
     toString = Object.prototype.toString;
@@ -343,27 +345,45 @@ function eachKey(obj, fn) {
         fn(keys[i]);
 }
 
-function addMethods(obj, methods) {
+function polyfill(obj, methods) {
 
     eachKey(methods, key => {
     
-        if (key in obj)
+        if (key in obj && !global._testES6Shims)
             return;
         
-        Object.defineProperty(obj, key, {
+        var desc = {
         
             value: methods[key],
             configurable: true,
             enumerable: false,
             writable: true
-        });
+        };
+        
+        try { Object.defineProperty(obj, key, desc) }
+        catch (x) { }
+        
     });
 }
 
+function toInt(val) {
+
+    var n = +val;
+    
+    return (Number.isNaN(n)) ? 0 :
+        (n === 0 || !Number.isFinite(n)) ? n :
+        Math.sign(n) * Math.floor(Math.abs(n));
+}
+
+function toLength(val) {
+
+    var n = toInt(val);
+    return n < 0 ? 0 : Math.min(n, Number.MAX_SAFE_INTEGER);
+}
 
 // === Object ===
 
-addMethods(Object, {
+polyfill(Object, {
 
     is(left, right) {
     
@@ -384,7 +404,7 @@ addMethods(Object, {
 
 // === Number ===
 
-addMethods(Number, {
+polyfill(Number, {
 
     EPSILON: ($=> {
     
@@ -413,12 +433,12 @@ addMethods(Number, {
 
 // === String === 
 
-addMethods(String, {
+polyfill(String, {
 
     raw(callsite, ...args) {
     
         var raw = callsite.raw,
-            len = raw.length >>> 0;
+            len = toLength(raw.length);
         
         if (len === 0)
             return "";
@@ -428,19 +448,18 @@ addMethods(String, {
         while (true) {
         
             s += raw[i];
-        
-            if (i + 1 === len)
-                return s;
-        
+            if (i + 1 === len || i >= args.length) break;
             s += args[i++];
         }
+        
+        return s;
     }
     
     // TODO:  fromCodePoint
     
 });
 
-addMethods(String.prototype, {
+polyfill(String.prototype, {
     
     repeat(count) {
     
@@ -473,6 +492,13 @@ addMethods(String.prototype, {
         
         if (this == null || toString.call(search) == "[object RegExp]")
             throw TypeError();
+        
+        search = String(search);
+        
+        var pos = arguments.length > 1 ? arguments[1] : undefined,
+            start = Math.max(toInt(pos), 0);
+        
+        return string.slice(start, start + search.length) === search;
             
         var stringLength = this.length,
             searchString = String(search),
@@ -485,7 +511,7 @@ addMethods(String.prototype, {
         
         var start = Math.min(Math.max(pos, 0), stringLength);
         
-        return this.indexOf(searchString, pos) == start;
+        return string.indexOf(searchString, pos) == start;
     },
     
     endsWith(search) {
@@ -517,7 +543,7 @@ addMethods(String.prototype, {
         if (start < 0)
             return false;
             
-        return this.lastIndexOf(searchString, start) == start;
+        return string.lastIndexOf(searchString, start) == start;
     },
     
     contains(search) {
@@ -584,16 +610,17 @@ class ArrayIterator {
 
 }
 
-addMethods(Array.prototype, {
+polyfill(Array.prototype, {
 
     values()  { return new ArrayIterator(this, "values") },
     entries() { return new ArrayIterator(this, "entries") },
     keys()    { return new ArrayIterator(this, "keys") },
     [Symbol.iterator]() { return this.values() }
+    
 });
 `;
 
-export var Promise = 
+Runtime.Promise = 
 
 `var enqueueMicrotask = ($=> {
 

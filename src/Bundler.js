@@ -1,5 +1,4 @@
-module AsyncFS from "AsyncFS.js";
-
+import { readFile } from "AsyncFS.js";
 import { parse } from "package:esparse";
 import { Dictionary, NameSet } from "Dictionary.js";
 import { locatePackage } from "PackageLocator.js";
@@ -117,7 +116,7 @@ export function createBundle(rootPath) {
         
         var dir = Path.dirname(path);
         
-        AsyncFS.readFile(path, { encoding: "utf8" }).then(code => {
+        readFile(path, { encoding: "utf8" }).then(code => {
     
             var node = analyze(code, p => {
             
