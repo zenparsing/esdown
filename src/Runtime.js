@@ -472,25 +472,25 @@ polyfill(String.prototype, {
     
     repeat(count) {
     
-        if (this == null)
-            throw TypeError();
+        if (this == null) 
+            throw new TypeError;
         
         var string = String(this);
         
         count = toInteger(count);
         
         if (count < 0 || count === Infinity)
-            throw new RangeError();
+            throw new RangeError;
         
         return repeat(string, count);
     },
     
     startsWith(search) {
-    
-        var string = String(this);
         
         if (this == null || toString.call(search) == "[object RegExp]")
-            throw TypeError();
+            throw new TypeError;
+        
+        var string = String(this);
         
         search = String(search);
         
@@ -501,11 +501,11 @@ polyfill(String.prototype, {
     },
     
     endsWith(search) {
-    
-        var string = String(this);
         
         if (this == null || toString.call(search) == '[object RegExp]')
-            throw TypeError();
+            throw new TypeError;
+        
+        var string = String(this);
         
         search = String(search);
         
@@ -523,11 +523,81 @@ polyfill(String.prototype, {
         
         // Somehow this trick makes method 100% compat with the spec.
         return stringIndexOf.call(this, search, pos) !== -1;
+    },
+    
+    codePointAt(pos) {
+    
+        if (this == null) 
+            throw new TypeError;
+        
+        var string = String(this),
+            len = string.length;
+        
+        pos = toInteger(pos);
+        
+        if (pos < 0 || pos >= len) 
+            return undefined;
+        
+        var a = string.charCodeAt(pos);
+        
+        if (a < 0xD800 || a > 0xDBFF || pos + 1 === len) 
+            return a;
+        
+        var b = string.charCodeAt(pos + 1);
+        
+        if (b < 0xDC00 || b > 0xDFFF) 
+            return a;
+        
+        return ((a - 0xD800) * 1024) + (b - 0xDC00) + 0x10000;
+    },
+    
+    [Symbol.iterator]() { 
+    
+        if (this == null)
+            throw new TypeError;
+        
+        return new StringIterator(this);
     }
     
-    // TODO: codePointAt
-    
 });
+
+class StringIterator {
+
+    constructor(string) {
+    
+        this.string = string;
+        this.current = 0;
+    }
+    
+    next() {
+    
+        var s = this.string, 
+            i = this.current,
+            len = s.length;
+        
+        if (i >= len) {
+        
+            this.current = Infinity;
+            return { value: void 0, done: true };
+        }
+        
+        var c = s.charCodeAt(i),
+            chars = 1;
+        
+        if (!(c < 0xD800 || c > 0xDBFF || i + 1 >= s.length)) {
+        
+            c = s.charCodeAt(i + 1);
+            chars = c < 0xDC00 || c > 0xDFFF ? 1 : 2;
+        }
+        
+        this.current = i + chars;
+        
+        return { value: s.slice(i, this.current), done: false };
+    }
+    
+    [Symbol.iterator]() { return this }
+    
+}
 
 // === Array ===
 
