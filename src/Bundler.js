@@ -1,6 +1,5 @@
 import { readFile } from "AsyncFS.js";
 import { parse } from "package:esparse";
-import { Dictionary, NameSet } from "Dictionary.js";
 import { locatePackage } from "PackageLocator.js";
 
 var Path = require("path");
@@ -12,8 +11,8 @@ export function analyze(ast, resolvePath) {
     if (typeof ast === "string")
         ast = parse(ast, { module: true });
     
-    var edges = new Dictionary,
-        identifiers = new NameSet;
+    var edges = new Map,
+        identifiers = new Set;
     
     visit(ast, true);
     
@@ -97,8 +96,8 @@ export function createBundle(rootPath) {
     
     rootPath = Path.resolve(rootPath);
     
-    var nodes = new Dictionary,
-        nodeNames = new NameSet,
+    var nodes = new Map,
+        nodeNames = new Set,
         sort = [],
         pending = 0,
         resolver,
@@ -130,10 +129,10 @@ export function createBundle(rootPath) {
             node.path = path;
             node.source = code;
             node.visited = false;
-            node.inEdges = new NameSet;
+            node.inEdges = new Set;
             node.name = "";
             
-            node.edges.keys().forEach(visit);
+            node.edges.forEach((val, key) => visit(key));
             
             pending -= 1;
             
@@ -170,7 +169,7 @@ export function createBundle(rootPath) {
         nodes.forEach(node => {
         
             var name = identFromPath(node.path),
-                identifiers = new NameSet;
+                identifiers = new Set;
             
             // Build list of top-level identifiers in referencing modules
             node.inEdges.forEach(key => {

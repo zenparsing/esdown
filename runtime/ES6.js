@@ -388,7 +388,7 @@ class ArrayIterator {
     
     next() {
     
-        var length = this.array.length >>> 0,
+        var length = toLength(this.array.length),
             index = this.current;
         
         if (index >= length) {

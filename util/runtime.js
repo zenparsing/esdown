@@ -7,7 +7,7 @@ var EXT = /\.[\S\s]+$/;
 
 var runtimePath = Path.resolve(__dirname, "../runtime/"),
     outPath = Path.resolve(__dirname, "../src/Runtime.js"),
-    files = [ "API.js", "ES6.js", "Promise.js" ];
+    files = [ "API.js", "ES6.js", "MapSet.js", "Promise.js" ];
 
 function run() {
 

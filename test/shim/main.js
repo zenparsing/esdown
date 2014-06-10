@@ -2,6 +2,8 @@ import { runTests } from "package:moon-unit";
 
 import "init.js";
 import "../../runtime/ES6.js";
+import "../../runtime/MapSet.js";
+import "../../runtime/Promise.js";
 
 import { tests as stringTests } from "string.js";
 import { tests as objectTests } from "object.js";

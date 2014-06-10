@@ -39,12 +39,9 @@ var $status = "Promise#status",
     $onResolve = "Promise#onResolve",
     $onReject = "Promise#onReject";
 
-// The following property name is used to simulate the built-in symbol @@isPromise
-var $$isPromise = "@@isPromise";
-
 function isPromise(x) { 
 
-    return !!x && $$isPromise in Object(x);
+    return !!x && $status in Object(x);
 }
 
 function promiseDefer(ctor) {
@@ -269,8 +266,6 @@ class Promise {
     }
     
 }
-
-Promise.prototype[$$isPromise] = true;
 
 if (this.Promise === void 0)
     this.Promise = Promise;
