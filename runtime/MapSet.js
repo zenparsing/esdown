@@ -46,7 +46,7 @@ class Map {
     constructor() {
     
         if (arguments.length > 0)
-            throw new Error("Not implemented");
+            throw new Error("Arguments to Map constructor are not supported");
         
         this._data = {};
     }
@@ -72,7 +72,7 @@ class Map {
         var thisArg = arguments[1];
         
         if (typeof fn !== "function")
-            throw new TypeError;
+            throw new TypeError(fn + " is not a function");
         
         Object.keys(this._data).forEach(k => fn.call(thisArg, this._data[k], k, this));
     }
@@ -93,7 +93,7 @@ class Map {
     set(key, val) {
     
         if (typeof key !== "string")
-            throw new Error("Not implemented");
+            throw new Error("Map does not support non-string keys");
         
         this._data[key] = val;
     }
@@ -116,7 +116,7 @@ class Set {
     constructor() {
     
         if (arguments.length > 0)
-            throw new Error("Not implemented");
+            throw new Error("Arguments to Set constructor are not supported");
         
         this._data = {};
     }
@@ -142,7 +142,7 @@ class Set {
         var thisArg = arguments[1];
         
         if (typeof fn !== "function")
-            throw new TypeError;
+            throw new TypeError(fn + " is not a function");
         
         Object.keys(this._data).forEach(k => fn.call(thisArg, this._data[k], k, this));
     }
@@ -155,7 +155,7 @@ class Set {
     add(val) {
     
         if (typeof val !== "string")
-            throw new Error("Not implemented");
+            throw new Error("Set does not support non-string values");
         
         this._data[val] = val;
     }

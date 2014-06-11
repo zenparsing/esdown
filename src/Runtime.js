@@ -383,7 +383,7 @@ function isRegExp(val) {
 function toObject(val) {
 
     if (val == null)
-        throw new TypeError;
+        throw new TypeError(val + " is not an object");
     
     return Object(val);
 }
@@ -400,6 +400,12 @@ function iteratorMethod(obj) {
         return function() { return this };
     
     return m;
+}
+
+function assertThis(val, name) {
+
+    if (val == null)
+        throw new TypeError(name + " called on null or undefined");
 }
 
 // === Symbols ===
@@ -520,7 +526,7 @@ polyfill(String, {
             next = Number(next);
             
             if (!sameValue(next, toInteger(next)) || next < 0 || next > 0x10ffff)
-                throw new RangeError;
+                throw new RangeError("Invalid code point " + next);
             
             if (next < 0x10000) {
             
@@ -590,23 +596,24 @@ polyfill(String.prototype, {
     
     repeat(count) {
     
-        if (this == null) 
-            throw new TypeError;
+        assertThis(this, "String.prototype.repeat");
         
         var string = String(this);
         
         count = toInteger(count);
         
         if (count < 0 || count === Infinity)
-            throw new RangeError;
+            throw new RangeError("Invalid count value");
         
         return repeat(string, count);
     },
     
     startsWith(search) {
         
-        if (this == null || isRegExp(search))
-            throw new TypeError;
+        assertThis(this, "String.prototype.startsWith");
+        
+        if (isRegExp(search))
+            throw new TypeError("First argument to String.prototype.startsWith must not be a regular expression");
         
         var string = String(this);
         
@@ -620,8 +627,10 @@ polyfill(String.prototype, {
     
     endsWith(search) {
         
-        if (this == null || isRegExp(search))
-            throw new TypeError;
+        assertThis(this, "String.prototype.endsWith");
+        
+        if (isRegExp(search))
+            throw new TypeError("First argument to String.prototype.endsWith must not be a regular expression");
         
         var string = String(this);
         
@@ -637,8 +646,7 @@ polyfill(String.prototype, {
     
     contains(search) {
     
-        if (this == null)
-            throw new TypeError;
+        assertThis(this, "String.prototype.contains");
         
         var string = String(this),
             pos = arguments.length > 1 ? arguments[1] : undefined;
@@ -649,8 +657,7 @@ polyfill(String.prototype, {
     
     codePointAt(pos) {
     
-        if (this == null) 
-            throw new TypeError;
+        assertThis(this, "String.prototype.codePointAt");
         
         var string = String(this),
             len = string.length;
@@ -675,9 +682,7 @@ polyfill(String.prototype, {
     
     [Symbol.iterator]() { 
     
-        if (this == null)
-            throw new TypeError;
-        
+        assertThis(this, "String.prototype[Symbol.iterator]");
         return new StringIterator(this);
     }
     
@@ -728,8 +733,7 @@ polyfill(Array, {
 
     from(list) {
     
-        if (list == null)
-            throw new TypeError;
+        assertThis(this, "Array.from");
         
         var ctor = typeof this === "function" ? this : Array,
             map = arguments[1],
@@ -761,7 +765,13 @@ polyfill(Array, {
         return out;
     },
     
-    of(...items) { return this === Array ? items : this.from(items) }
+    of(...items) { 
+    
+        if (list == null)
+            throw new TypeError("Array.of called on null or undefined");
+        
+        return this === Array ? items : this.from(items);
+    }
     
 });
 
@@ -771,7 +781,7 @@ function arrayFind(obj, pred, thisArg, type) {
         val;
     
     if (typeof pred !== "function")
-        throw new TypeError;
+        throw new TypeError(pred + " is not a function");
     
     for (var i = 0; i < len; ++i) {
     
@@ -913,7 +923,7 @@ class Map {
     constructor() {
     
         if (arguments.length > 0)
-            throw new Error("Not implemented");
+            throw new Error("Arguments to Map constructor are not supported");
         
         this._data = {};
     }
@@ -939,7 +949,7 @@ class Map {
         var thisArg = arguments[1];
         
         if (typeof fn !== "function")
-            throw new TypeError;
+            throw new TypeError(fn + " is not a function");
         
         Object.keys(this._data).forEach(k => fn.call(thisArg, this._data[k], k, this));
     }
@@ -960,7 +970,7 @@ class Map {
     set(key, val) {
     
         if (typeof key !== "string")
-            throw new Error("Not implemented");
+            throw new Error("Map does not support non-string keys");
         
         this._data[key] = val;
     }
@@ -983,7 +993,7 @@ class Set {
     constructor() {
     
         if (arguments.length > 0)
-            throw new Error("Not implemented");
+            throw new Error("Arguments to Set constructor are not supported");
         
         this._data = {};
     }
@@ -1009,7 +1019,7 @@ class Set {
         var thisArg = arguments[1];
         
         if (typeof fn !== "function")
-            throw new TypeError;
+            throw new TypeError(fn + " is not a function");
         
         Object.keys(this._data).forEach(k => fn.call(thisArg, this._data[k], k, this));
     }
@@ -1022,7 +1032,7 @@ class Set {
     add(val) {
     
         if (typeof val !== "string")
-            throw new Error("Not implemented");
+            throw new Error("Set does not support non-string values");
         
         this._data[val] = val;
     }
