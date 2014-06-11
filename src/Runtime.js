@@ -738,9 +738,13 @@ polyfill(Array, {
         var ctor = typeof this === "function" ? this : Array,
             map = arguments[1],
             thisArg = arguments[2],
-            getIter = iteratorMethod(list),
             i = 0,
             out;
+        
+        if (map !== void 0 && typeof map !== "function")
+            throw new TypeError(map + " is not a function");
+        
+        var getIter = iteratorMethod(list);
         
         if (getIter) {
         
@@ -749,8 +753,11 @@ polyfill(Array, {
             
             out = new ctor;
             
-            while (result = iter.next(), !result.done)
-                out[i++] = result.value;
+            while (result = iter.next(), !result.done) {
+            
+                out[i++] = map ? map.call(thisArg, result.value, i) : result.value;
+                out.length = i;
+            }
         
         } else {
         
@@ -760,6 +767,8 @@ polyfill(Array, {
             
             for (; i < len; ++i)
                 out[i] = map ? map.call(thisArg, list[i], i) : list[i];
+            
+            out.length = len;
         }
         
         return out;
@@ -767,7 +776,7 @@ polyfill(Array, {
     
     of(...items) { 
     
-        if (list == null)
+        if (items == null)
             throw new TypeError("Array.of called on null or undefined");
         
         return this === Array ? items : this.from(items);
