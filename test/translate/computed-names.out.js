@@ -7,7 +7,7 @@
     __$1: 2
 }, "x", "y"));
 
-var C = _es6now.Class(function(__super) { return _es6now.computed({
+var C = _es6now.class(function(__super) { return _es6now.computed({
 
     __$0: function() {},
     

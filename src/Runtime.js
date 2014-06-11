@@ -78,7 +78,7 @@ function defineStatic(to, from) {
 }
 
 // Builds a class
-function Class(base, def) {
+function buildClass(base, def) {
 
     var parent;
     
@@ -142,7 +142,7 @@ function Class(base, def) {
 
 this._es6now = {
 
-    Class: Class,
+    class: buildClass,
 
     // Support for iterator protocol
     iter(obj) {

@@ -558,7 +558,7 @@ export class Replacer {
     
     ClassDeclaration(node) {
     
-        return "var " + node.identifier.text + " = _es6now.Class(" + 
+        return "var " + node.identifier.text + " = _es6now.class(" + 
             (node.base ? (node.base.text + ", ") : "") +
             "function(__super) {" + this.strictDirective() + " return " +
             node.body.text + " });";
@@ -576,7 +576,7 @@ export class Replacer {
         }
         
         return "(" + before + 
-            "_es6now.Class(" + 
+            "_es6now.class(" + 
             (node.base ? (node.base.text + ", ") : "") +
             "function(__super) {" + this.strictDirective() + " return " +
             node.body.text + " })" +
