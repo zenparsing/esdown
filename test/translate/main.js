@@ -1,5 +1,5 @@
 import { runTests } from "package:moon-unit";
-import { translate } from "../src/Translator.js";
+import { translate } from "../../src/Translator.js";
 
 var FS = require("fs"),
     Path = require("path");
@@ -27,7 +27,7 @@ export function main(args) {
         outputFiles = [],
         stop = {};
     
-    getFilePaths(__dirname + "/translate").forEach(path => {
+    getFilePaths(__dirname + "/input").forEach(path => {
     
         if (path.slice(-3) === ".js") {
         

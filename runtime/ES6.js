@@ -428,7 +428,7 @@ polyfill(Array, {
     
         assertThis(this, "Array.from");
         
-        var ctor = typeof this === "function" ? this : Array,
+        var ctor = typeof this === "function" ? this : Array, // TODO: Always use "this"?
             map = arguments[1],
             thisArg = arguments[2],
             i = 0,
