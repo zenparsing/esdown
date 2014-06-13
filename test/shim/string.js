@@ -131,7 +131,7 @@ export var tests = {
                 return "xyz";
             },
             
-            startsWith: startsWith
+            startsWith
         };
         
         var idx = {
@@ -192,8 +192,224 @@ export var tests = {
         .assert(!"abc".endsWith("bc", -Infinity))
         .assert(!"abc".endsWith("bc", NaN))
         ;
-
-        // More to copy...
+        
+        if (hasStrict) {
+        
+            test._("throws when called with null or undefined")
+            .throws($=> "".endsWith.call(null, "ull"), TypeError)
+            .throws($=> "".endsWith.call(void 0, "ned"), TypeError)
+            ;
+        }
+        
+        var obj = {
+        
+            toString() { return "abc" },
+            endsWith
+        };
+        
+        test
+        ._("can be called on a non-string")
+        .assert(obj.endsWith("abc"))
+        .assert(!obj.endsWith("ab"))
+        ;
+        
+        var gotPos = false, gotStr = false;
+        
+        obj.toString = $=> {
+        
+            test.assert(!gotPos);
+            gotStr = true;
+            return "xyz";
+        };
+        
+        var index = {
+        
+            valueOf() { 
+            
+                test.assert(gotStr);
+                gotPos = true;
+                return 42;
+            }
+        };
+        
+        obj.endsWith("elephant", index);
+        test.assert(gotPos);
+        
+        test
+        
+        ._("coerces first argument to a string")
+        .assert("abcd".endsWith({ toString() { return "cd" } }))
+        .assert(!"abcd".endsWith({ toString() { return "foo" } }))
+        
+        ._("regex argument not allowed")
+        .throws($=> "abcd".endsWith(/abc/), TypeError)
+        .throws($=> "abcd".endsWith(new RegExp("abc")), TypeError)
+        
+        ._("handles negative and zero positions correctly")
+        .assert(!"abcd".endsWith("bcd", 0))
+        .assert(!"abcd".endsWith("bcd", -2))
+        .assert(!"abcd".endsWith("b", -2))
+        .assert(!"abcd".endsWith("ab", -2))
+        
+        ;
+    },
+    
+    "contains" (test) {
+    
+        var contains = "".contains;
+        
+        test._("throws a TypeError when called on null or undefined");
+        testObjectCoercible(test, contains);
+        
+        test._("should be truthy if and only if correct")
+        .assert("test".contains("es"))
+        .assert("abc".contains("a"))
+        .assert("abc".contains("b"))
+        .assert("abc".contains("abc"))
+        .assert("abc".contains("bc"))
+        .assert(!"abc".contains("d"))
+        .assert(!"abc".contains("abcd"))
+        .assert(!"abc".contains("ac"))
+        .assert("abc".contains("abc", 0))
+        .assert("abc".contains("bc", 0))
+        .assert(!"abc".contains("de", 0))
+        .assert("abc".contains("bc", 1))
+        .assert("abc".contains("c", 1))
+        .assert(!"abc".contains("a", 1))
+        .assert(!"abc".contains("abc", 1))
+        .assert("abc".contains("c", 2))
+        .assert(!"abc".contains("d", 2))
+        .assert(!"abc".contains("dcd, 2"))
+        .assert(!"abc".contains("a", 42))
+        .assert(!"abc".contains("a", Infinity))
+        .assert("abc".contains("ab", -43))
+        .assert(!"abc".contains("cd", -42))
+        .assert("abc".contains("ab", -Infinity))
+        .assert(!"abc".contains("cd", -Infinity))
+        .assert("abc".contains("ab", NaN))
+        .assert(!"abc".contains("cd", NaN))
+        
+        ;
+        
+        var obj = {
+        
+            toString() { return "abc" },
+            contains
+        };
+        
+        test
+        ._("can be called on a non-string")
+        .assert(obj.contains("abc"))
+        .assert(!obj.contains("cd"))
+        ;
+        
+        var gotPos = false, gotStr = false;
+        
+        obj.toString = $=> {
+        
+            test.assert(!gotPos);
+            gotStr = true;
+            return "xyz";
+        };
+        
+        var index = {
+        
+            valueOf() { 
+            
+                test.assert(gotStr);
+                gotPos = true;
+                return 42;
+            }
+        };
+        
+        obj.contains("elephant", index);
+        test.assert(gotPos);
+    },
+    
+    "codePointAt" (test) {
+    
+        test._("throws a TypeError when called on null or undefined");
+        testObjectCoercible(test, "".codePointAt);
+        
+        test
+        
+        ._("works with ascii")
+        .equals("abc".codePointAt(0), 97)
+        .equals("abc".codePointAt(1), 98)
+        .equals("abc".codePointAt(2), 99)
+        
+        ._("works with unicode")
+        .equals("\u2500".codePointAt(0), 0x2500)
+        .equals("\ud800\udc00".codePointAt(0), 0x10000)
+        .equals("\udbff\udfff".codePointAt(0), 0x10ffff)
+        .equals("\ud800\udc00\udbff\udfff".codePointAt(0), 0x10000)
+        .equals("\ud800\udc00\udbff\udfff".codePointAt(1), 0xdc00)
+        .equals("\ud800\udc00\udbff\udfff".codePointAt(2), 0x10ffff)
+        .equals("\ud800\udc00\udbff\udfff".codePointAt(3), 0xdfff)
+        
+        ._("returns undefined when position is negative or too large")
+        .equals("abc".codePointAt(-1), void 0)
+        .equals("abc".codePointAt("abc".length), void 0)
+        
+        ;
+    },
+    
+    "fromCodePoint" (test) {
+    
+        test._("throws RangeError for invalid cod points");
+        
+        ["abc", {}, -1, 0x10FFFF + 1]
+        .forEach(val => test.throws($=> String.fromCodePont(val)), RangeError);
+        
+        test
+        
+        ._("returns the empty string with no args")
+        .equals(String.fromCodePoint(), "")
+        
+        ._("has a length of zero")
+        .equals(String.fromCodePoint.length, 0)
+        
+        ;
+        
+        test._("returns the correct string for valid code points");
+        
+        ($=> {
+        
+            var chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789…?!",
+                list = [];
+            
+            for (var i = 0; i < chars.length; ++i) {
+            
+                list.push(chars.charCodeAt(i));
+                test.equals(String.fromCodePoint(chars.charCodeAt(i)), chars.charAt(i));
+            }
+            
+            test.equals(String.fromCodePoint.apply(String, list), chars);
+        
+        })();
+        
+        test
+        ._("works with unicode")
+        .equals(String.fromCodePoint(0x2500), "\u2500")
+        .equals(String.fromCodePoint(0x010000), "\ud800\udc00")
+        .equals(String.fromCodePoint(0x10FFFF), "\udbff\udfff")
+        ;
+    },
+    
+    "@@iterator" (test) {
+    
+        test
+        
+        ._("works with ascii strings")
+        .equals(Array.from(Object("abc")), ["a", "b", "c"])
+        
+        ._("works with surrogate characters")
+        .equals(
+            Array.from(Object("\u2500\ud800\udc00\udbff\udfff\ud800")), 
+            ["\u2500", "\ud800\udc00", "\udbff\udfff", "\ud800" ]
+        )
+        ;
+        
     }
     
 };

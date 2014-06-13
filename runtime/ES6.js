@@ -82,7 +82,8 @@ function toObject(val) {
 
 function iteratorMethod(obj) {
 
-    if (typeof obj !== "object")
+    // TODO:  What about typeof === "string"?
+    if (!obj || typeof obj !== "object")
         return null;
     
     var m = obj[Symbol.iterator];
@@ -269,13 +270,13 @@ class StringIterator {
         var c = s.charCodeAt(i),
             chars = 1;
         
-        if (!(c < 0xD800 || c > 0xDBFF || i + 1 >= s.length)) {
+        if (c >= 0xD800 && c <= 0xDBFF && i + 1 < s.length) {
         
             c = s.charCodeAt(i + 1);
-            chars = c < 0xDC00 || c > 0xDFFF ? 1 : 2;
+            chars = (c < 0xDC00 || c > 0xDFFF) ? 1 : 2;
         }
         
-        this.current = i + chars;
+        this.current += chars;
         
         return { value: s.slice(i, this.current), done: false };
     }

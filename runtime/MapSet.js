@@ -46,7 +46,7 @@ class Map {
     constructor() {
     
         if (arguments.length > 0)
-            throw new Error("Arguments to Map constructor are not supported");
+            throw new Error("Arguments to Map constructor are not supported in es6now");
         
         this._data = {};
     }
@@ -93,7 +93,7 @@ class Map {
     set(key, val) {
     
         if (typeof key !== "string")
-            throw new Error("Map does not support non-string keys");
+            throw new Error("Map does not support non-string keys in es6now");
         
         this._data[key] = val;
     }
@@ -116,7 +116,7 @@ class Set {
     constructor() {
     
         if (arguments.length > 0)
-            throw new Error("Arguments to Set constructor are not supported");
+            throw new Error("Arguments to Set constructor are not supported in es6now");
         
         this._data = {};
     }
@@ -155,7 +155,7 @@ class Set {
     add(val) {
     
         if (typeof val !== "string")
-            throw new Error("Set does not support non-string values");
+            throw new Error("Set does not support non-string values in es6now");
         
         this._data[val] = val;
     }
