@@ -1,44 +1,78 @@
-var HOP = Object.prototype.hasOwnProperty;
+var ORIGIN = {}, 
+    REMOVED = {};
+
+class MapNode {
+
+    constructor(key, val) {
+    
+        this.key = key;
+        this.value = val;
+        this.prev = this;
+        this.next = this;
+    }
+    
+    insert(next) {
+    
+        this.next = next;
+        this.prev = next.prev;
+        this.prev.next = this;
+        this.next.prev = this;
+    }
+    
+    remove() {
+    
+        this.prev.next = this.next;
+        this.next.prev = this.prev;
+        this.key = REMOVED;
+    }
+
+}
 
 class MapIterator {
 
-    constructor(data, kind) {
+    constructor(node, kind) {
     
-        this.data = data;
-        this.current = 0;
+        this.current = node;
         this.kind = kind;
     }
 
     next() {
-    
-        var array = Object.keys(this.data),
-            length = array.length,
-            index = this.current;
         
-        if (index >= length) {
+        var node = this.current;
         
-            this.current = Infinity;
+        while (node.key === REMOVED)
+            node = this.current = this.current.next;
+        
+        if (node.key === ORIGIN)
             return { value: void 0, done: true };
-        }
         
-        this.current += 1;
-        
-        var key = array[index];
+        this.current = this.current.next;
         
         switch (this.kind) {
         
             case "values":
-                return { value: this.data[key], done: false };
+                return { value: node.key, done: false };
             
             case "entries":
-                return { value: [ key, this.data[key] ], done: false };
+                return { value: [ node.key, node.value ], done: false };
             
             default:
-                return { value: key, done: false };
+                return { value: node.value, done: false };
         }
     }
     
     [Symbol.iterator]() { return this }
+}
+
+function hashKey(key) {
+
+    switch (typeof key) {
+    
+        case "string": return "$" + key;
+        case "number": return String(key);
+    }
+    
+    throw new TypeError("Map and Set keys must be strings or numbers in es6now");
 }
 
 class Map {
@@ -48,19 +82,28 @@ class Map {
         if (arguments.length > 0)
             throw new Error("Arguments to Map constructor are not supported in es6now");
         
-        this._data = {};
+        this._index = {};
+        this._origin = new MapNode(ORIGIN);
     }
     
     clear() {
-    
-        this._data = {};
+        
+        for (var node = this._origin.next; node !== this._origin; node = node.next)
+            node.key = REMOVED;
+        
+        this._index = {};
+        this._origin = new MapNode(ORIGIN);
     }
     
     delete(key) {
         
-        if (typeof key === "string" && HOP.call(this._data, key)) {
+        var h = hashKey(k), 
+            node = this._index[h];
         
-            delete this._data[key];
+        if (node) {
+        
+            node.remove();
+            delete this._index[h];
             return true;
         }
         
@@ -74,42 +117,55 @@ class Map {
         if (typeof fn !== "function")
             throw new TypeError(fn + " is not a function");
         
-        Object.keys(this._data).forEach(k => fn.call(thisArg, this._data[k], k, this));
+        for (var node = this._origin.next; node !== this._origin; node = node.next)
+            if (node.key !== REMOVED)
+                fn.call(thisArg, node.value, node.key, this);
     }
     
     get(key) {
     
-        if (typeof key === "string" && HOP.call(this._data, key))
-            return this._data[key];
+        var h = hashKey(key), 
+            node = this._index[h];
         
-        return void 0;
+        return node ? node.value : void 0;
     }
     
     has(key) {
     
-        return typeof key === "string" && HOP.call(this._data, key);
+        return hashKey(key) in this._index;
     }
     
     set(key, val) {
     
-        if (typeof key !== "string")
-            throw new Error("Map does not support non-string keys in es6now");
+        var h = hashKey(key),
+            node = this._index[h];
         
-        this._data[key] = val;
+        if (node) {
+        
+            node.value = val;
+            return;
+        }
+
+        node = new MapNode(key, val);
+        
+        this._index[h] = node;
+        node.insert(this._origin);
     }
     
     get size() {
     
-        return Object.keys(this._data).length;
+        return Object.keys(this._index).length;
     }
     
-    keys() { return new MapIterator(this._data, "keys") }
-    values() { return new MapIterator(this._data, "values") }
-    entries() { return new MapIterator(this._data, "entries") }
+    keys() { return new MapIterator(this._origin.next, "keys") }
+    values() { return new MapIterator(this._origin.next, "values") }
+    entries() { return new MapIterator(this._origin.next, "entries") }
     
-    [Symbol.iterator]() { return new MapIterator(this._data, "entries") }
+    [Symbol.iterator]() { return new MapIterator(this._origin.next, "entries") }
     
 }
+
+var mapSet = Map.prototype.set;
 
 class Set {
 
@@ -118,60 +174,22 @@ class Set {
         if (arguments.length > 0)
             throw new Error("Arguments to Set constructor are not supported in es6now");
         
-        this._data = {};
+        this._index = {};
+        this._origin = new MapNode(ORIGIN);
     }
     
-    clear() {
+    add(key) { return mapSet.call(this, key, key) }
     
-        this._data = {};
-    }
-    
-    delete(val) {
-    
-        if (typeof val === "string" && HOP.call(this._data, val)) {
-        
-            delete this._data[val];
-            return true;
-        }
-        
-        return false;
-    }
-    
-    forEach(fn) {
-    
-        var thisArg = arguments[1];
-        
-        if (typeof fn !== "function")
-            throw new TypeError(fn + " is not a function");
-        
-        Object.keys(this._data).forEach(k => fn.call(thisArg, this._data[k], k, this));
-    }
-    
-    has(val) {
-    
-        return typeof val === "string" && HOP.call(this._data, val);
-    }
-    
-    add(val) {
-    
-        if (typeof val !== "string")
-            throw new Error("Set does not support non-string values in es6now");
-        
-        this._data[val] = val;
-    }
-    
-    get size() {
-    
-        return Object.keys(this._data).length;
-    }
-    
-    keys() { return new MapIterator(this._data, "keys") }
-    values() { return new MapIterator(this._data, "values") }
-    entries() { return new MapIterator(this._data, "entries") }
-    
-    [Symbol.iterator]() { return new MapIterator(this._data, "entries") }
+    [Symbol.iterator]() { return new MapIterator(this._origin.next, "entries") }
     
 }
+
+// Copy shared prototype members to Set
+["clear", "delete", "forEach", "has", "size", "keys", "values", "entries"].forEach(k => {
+
+    var d = Object.getOwnPropertyDescriptor(Map.prototype, k);
+    Object.defineProperty(Set.prototype, k, d);
+});
 
 if (this.Map === void 0 || !this.Map.prototype.forEach) {
 
