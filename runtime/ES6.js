@@ -127,17 +127,19 @@ polyfill(Object, {
 
     is: sameValue,
     
-    assign(target, ...sources) {
+    assign(target, source) {
     
         var error;
         
         target = toObject(target);
         
-        sources.forEach(source => {
+        for (var i = 1; i < arguments.length; ++i) {
         
+            source = arguments[i];
+            
             try { Object.keys(source).forEach(key => target[key] = source[key]) }
             catch (x) { error = error || x }
-        });
+        }
         
         if (error)
             throw error;
