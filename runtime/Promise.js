@@ -207,28 +207,17 @@ class Promise {
 
     static all(values) {
 
-        // TODO: We should be getting an iterator from values
-        
         var deferred = promiseDefer(this),
-            count = values.length,
-            resolutions = [];
+            resolutions = [],
+            count = 0;
             
         try {
         
-            if (!Array.isArray(values))
-                throw new Error("Invalid argument");
-        
-            var count = values.length;
-        
-            if (count === 0) {
-        
-                deferred.resolve(resolutions);
+            for (var item of values)
+                this.resolve(item).then(onResolve(count++), deferred.reject);
             
-            } else {
-        
-                for (var i = 0; i < values.length; ++i)
-                    this.resolve(values[i]).then(onResolve(i), deferred.reject);
-            }
+            if (count === 0)
+                deferred.resolve(resolutions);
             
         } catch(x) { deferred.reject(x) }
         
@@ -248,17 +237,12 @@ class Promise {
     
     static race(values) {
     
-        // TODO: We should be getting an iterator from values
-        
         var deferred = promiseDefer(this);
         
         try {
         
-            if (!Array.isArray(values))
-                throw new Error("Invalid argument");
-            
-            for (var i = 0; i < values.length; ++i)
-                this.resolve(values[i]).then(deferred.resolve, deferred.reject);
+            for (var item of values)
+                this.resolve(item).then(deferred.resolve, deferred.reject);
         
         } catch(x) { deferred.reject(x) }
         
