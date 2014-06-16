@@ -15,3 +15,6 @@ function f({a, b: c} = d) {}
 
 ([a, b]) => {}
 ([a, b], ...args) => foo
+
+try { x() }
+catch ([m]) {}

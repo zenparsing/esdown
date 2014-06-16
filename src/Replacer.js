@@ -165,48 +165,52 @@ export class Replacer {
     
     ForOfStatement(node) {
     
-        var iter = this.addTempVar(node),
-            iterResult = this.addTempVar(node),
-            value = "",
-            out = "";
+        var iter = this.addTempVar(node, null, true),
+            iterResult = this.addTempVar(node, null, true),
+            decl = "",
+            binding,
+            out;
         
-        out += "for (";
+        out = `for (var ${ iter } = _es6now.iter(${ node.right.text }), ${ iterResult }; `;
+        out += `${ iterResult } = ${ iter }.next(), !${ iterResult }.done;)`;
         
         if (node.left.type === "VariableDeclaration") {
         
-            iter = this.addTempVar(node, null, true);
-            out += node.left.text + ", ";
-            value = node.left.declarations[0].pattern.value;
+            decl = node.left.kind + " ";
+            binding = node.left.declarations[0].pattern;
         
         } else {
         
-            iter = this.addTempVar(node);
-            value = node.left.text;
+            binding = this.unwrapParens(node.left);
         }
-        
-        out += `${ iter } = _es6now.iter(${ node.right.text })`
-        
-        out += `; ${ iterResult } = ${ iter }.next()`;
-        out += `, ${ value } = ${ iterResult }.value`;
-        out += `, !${ iterResult }.done`;
-        out += ";) ";
         
         out = this.syncNewlines(node.left.start, node.body.start, out);
         
-        return out + node.body.text;
+        var body = node.body.text;
+        
+        // Remove braces from block bodies
+        if (node.body.type === "Block") body = body.slice(1, -1);
+        else body += " ";
+        
+        var assign = this.isPattern(binding) ?
+            this.translatePattern(binding, `${ iterResult }.value`).join(", ") :
+            `${ binding.text } = ${ iterResult }.value`;
+        
+        return `${ out } { ${ decl }${ assign }; ${ body }}`;
     }
     
     Module(node) {
     
         // NOTE: Strict directive is included with module wrapper
         
-        var inserted = [];
+        var inserted = [],
+            temps = this.tempVars(node);
         
         if (node.createThisBinding)
             inserted.push("var __this = this;");
         
-        if (node.tempVars)
-            inserted.push(this.tempVars(node));
+        if (temps)
+            inserted.push(temps);
         
         if (inserted.length > 0)
             return inserted.join(" ") + " " + this.stringify(node);
@@ -736,9 +740,21 @@ export class Replacer {
         return new Replacer().replace(out);
     }
     
+    CatchClause(node) {
+    
+        if (!this.isPattern(node.param))
+            return null;
+        
+        var temp = this.addTempVar(node, null, true),
+            assign = this.translatePattern(node.param, temp).join(", "),
+            body = node.body.text.slice(1);
+        
+        return `catch (${ temp }) { let ${ assign }; ${ body }`;
+    }
+    
     VariableDeclarator(node) {
         
-        if (!this.isPattern(node.pattern))
+        if (!node.initializer || !this.isPattern(node.pattern))
             return null;
             
         var list = this.translatePattern(node.pattern, node.initializer.text);

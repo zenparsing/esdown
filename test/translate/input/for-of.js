@@ -15,3 +15,7 @@ function f() {
 
 if (true)
     for (var x of y);
+
+for ([x] of y) z;
+
+for (var [x] of y) z;
