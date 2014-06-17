@@ -10,6 +10,7 @@ import { tests as objectTests } from "object.js";
 import { tests as arrayTests } from "array.js";
 import { tests as numberTests } from "number.js";
 import { tests as mapTests } from "mapset.js";
+import { tests as promiseTests } from "promise.js";
 
 export function main(args) {
     
@@ -21,7 +22,8 @@ export function main(args) {
             "String": stringTests,
             "Array": arrayTests,
             "Number": numberTests,
-            "Map and Set": mapTests
+            "Map and Set": mapTests,
+            "Promise": promiseTests
         }
         
     });
