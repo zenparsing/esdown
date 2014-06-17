@@ -1,4 +1,5 @@
-var ORIGIN = {}, 
+var global = this,
+    ORIGIN = {}, 
     REMOVED = {};
 
 class MapNode {
@@ -51,13 +52,13 @@ class MapIterator {
         switch (this.kind) {
         
             case "values":
-                return { value: node.key, done: false };
+                return { value: node.value, done: false };
             
             case "entries":
                 return { value: [ node.key, node.value ], done: false };
             
             default:
-                return { value: node.value, done: false };
+                return { value: node.key, done: false };
         }
     }
     
@@ -97,7 +98,7 @@ class Map {
     
     delete(key) {
         
-        var h = hashKey(k), 
+        var h = hashKey(key), 
             node = this._index[h];
         
         if (node) {
@@ -117,7 +118,7 @@ class Map {
         if (typeof fn !== "function")
             throw new TypeError(fn + " is not a function");
         
-        for (var node = this._origin.next; node !== this._origin; node = node.next)
+        for (var node = this._origin.next; node.key !== ORIGIN; node = node.next)
             if (node.key !== REMOVED)
                 fn.call(thisArg, node.value, node.key, this);
     }
@@ -191,7 +192,7 @@ class Set {
     Object.defineProperty(Set.prototype, k, d);
 });
 
-if (this.Map === void 0 || !this.Map.prototype.forEach) {
+if (global._testES6Shims || this.Map === void 0 || !this.Map.prototype.forEach) {
 
     this.Map = Map;
     this.Set = Set;
