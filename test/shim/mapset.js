@@ -21,8 +21,11 @@ function makeTests(factory) {
     
             var set = empty();
             
-            if (!set.add)
+            if (!set.add) {
+            
+                test._("no method").assert(true);
                 return;
+            }
         
             test._("inserts key into the set");
             data.forEach(([key, val]) => set.add(key, val));
@@ -128,8 +131,11 @@ function makeTests(factory) {
     
             var map = fresh();
             
-            if (!map.get)
+            if (!map.get) {
+            
+                test._("no method").assert(true);
                 return;
+            }
         
             test._("returns the value stored with the key");
             data.forEach(([key, val]) => test.equals(map.get(key), val));
@@ -152,8 +158,11 @@ function makeTests(factory) {
     
             var map = empty();
             
-            if (!map.set)
+            if (!map.set) {
+            
+                test._("no method").assert(true);
                 return;
+            }
         
             test._("inserts key into the map");
             data.forEach(([key, val]) => map.set(key, val));

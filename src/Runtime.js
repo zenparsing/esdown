@@ -332,19 +332,16 @@ function polyfill(obj, methods) {
 
     eachKey(methods, key => {
     
-        if (key in obj && !global._testES6Shims)
+        if (key in obj)
             return;
         
-        var desc = {
+        Object.defineProperty(obj, key, {
         
             value: methods[key],
             configurable: true,
             enumerable: false,
             writable: true
-        };
-        
-        try { Object.defineProperty(obj, key, desc) }
-        catch (x) { }
+        });
         
     });
 }
@@ -1081,7 +1078,7 @@ class Set {
     Object.defineProperty(Set.prototype, k, d);
 });
 
-if (global._testES6Shims || this.Map === void 0 || !this.Map.prototype.forEach) {
+if (!this.Map || !this.Map.prototype.forEach) {
 
     this.Map = Map;
     this.Set = Set;
@@ -1343,7 +1340,7 @@ class Promise {
     
 }
 
-if (this.Promise === void 0)
+if (!this.Promise)
     this.Promise = Promise;
 `;
 

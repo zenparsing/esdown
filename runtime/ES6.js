@@ -27,16 +27,13 @@ function polyfill(obj, methods) {
         if (key in obj)
             return;
         
-        var desc = {
+        Object.defineProperty(obj, key, {
         
             value: methods[key],
             configurable: true,
             enumerable: false,
             writable: true
-        };
-        
-        try { Object.defineProperty(obj, key, desc) }
-        catch (x) { }
+        });
         
     });
 }
