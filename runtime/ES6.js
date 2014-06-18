@@ -24,7 +24,7 @@ function polyfill(obj, methods) {
 
     eachKey(methods, key => {
     
-        if (key in obj && !global._testES6Shims)
+        if (key in obj)
             return;
         
         var desc = {

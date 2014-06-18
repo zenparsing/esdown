@@ -192,7 +192,7 @@ class Set {
     Object.defineProperty(Set.prototype, k, d);
 });
 
-if (global._testES6Shims || this.Map === void 0 || !this.Map.prototype.forEach) {
+if (!this.Map || !this.Map.prototype.forEach) {
 
     this.Map = Map;
     this.Set = Set;

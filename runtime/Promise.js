@@ -251,5 +251,5 @@ class Promise {
     
 }
 
-if (this.Promise === void 0)
+if (!this.Promise)
     this.Promise = Promise;
