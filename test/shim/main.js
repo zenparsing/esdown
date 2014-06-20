@@ -1,3 +1,5 @@
+// PRE-BUILD
+
 import { runTests } from "package:moon-unit";
 
 import "init.js";

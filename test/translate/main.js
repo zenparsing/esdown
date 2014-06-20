@@ -1,8 +1,12 @@
+// PRE-BUILD
+
 import { runTests } from "package:moon-unit";
 import { translate } from "../../src/Translator.js";
 
 var FS = require("fs"),
     Path = require("path");
+
+var failFile = __dirname + "/_test-fail.js";
 
 function statPath(path) {
 
@@ -26,6 +30,9 @@ export function main(args) {
     var inputFiles = [],
         outputFiles = [],
         stop = {};
+    
+    if (FS.existsSync(failFile))
+        FS.unlinkSync(failFile);
     
     getFilePaths(__dirname + "/input").forEach(path => {
     
@@ -53,7 +60,7 @@ export function main(args) {
             
                     if (!ok) {
             
-                        FS.writeFileSync(__dirname + "/_test-fail.js", output);
+                        FS.writeFileSync(failFile, output);
                 
                         console.log("");
                         console.log(output);

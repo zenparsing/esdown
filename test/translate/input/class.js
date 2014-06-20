@@ -35,6 +35,7 @@ class A {
 class A extends B {
 
     constructor() { super() }
+    static f() { super() }
 }
 
 class A extends B {

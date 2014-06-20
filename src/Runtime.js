@@ -109,14 +109,13 @@ function buildClass(base, def) {
     
     // Generate the method collection, closing over "__super"
     var proto = Object.create(parent),
-        props = def(parent),
+        props = def(parent, base || Function.prototype),
         constructor = props.constructor;
     
     if (!constructor)
-        throw new Error("No constructor specified.");
+        throw new Error("No constructor specified");
     
     // Make constructor non-enumerable
-    // if none is provided
     Object.defineProperty(props, "constructor", {
     
         enumerable: false,
@@ -307,7 +306,6 @@ this._es6now = {
 Runtime.ES6 = 
 
 `var global = this;
-
 
 // === Polyfill Utilities ===
 

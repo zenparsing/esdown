@@ -1,6 +1,5 @@
 var global = this;
 
-
 // === Polyfill Utilities ===
 
 function eachKey(obj, fn) {

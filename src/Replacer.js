@@ -455,7 +455,18 @@ export class Replacer {
     
     SuperExpression(node) {
     
-        var p = node.parent;
+        var proto = "__super",
+            p = node.parent,
+            elem = p;
+        
+        while (elem && elem.type !== "ClassElement")
+            elem = elem.parent;
+        
+        if (elem.static) {
+        
+            proto = "__csuper";
+            elem.parent.hasStaticSuper = true;
+        }
         
         if (p.type === "CallExpression") {
         
@@ -472,7 +483,7 @@ export class Replacer {
                     "[" + JSON.stringify(m.name.text) + "]";
             }
             
-            return "__super" + name;
+            return proto + name;
             
         } else {
         
@@ -488,7 +499,7 @@ export class Replacer {
             p.isSuperCall = true;
         }
         
-        return "__super";
+        return proto;
     }
     
     MemberExpression(node) {
@@ -562,9 +573,14 @@ export class Replacer {
     
     ClassDeclaration(node) {
     
+        var params = "__super";
+        
+        if (node.body.hasStaticSuper)
+            params += ", __csuper";
+        
         return "var " + node.identifier.text + " = _es6now.class(" + 
             (node.base ? (node.base.text + ", ") : "") +
-            "function(__super) {" + this.strictDirective() + " return " +
+            "function(" + params + ") {" + this.strictDirective() + " return " +
             node.body.text + " });";
     }
     
@@ -579,10 +595,15 @@ export class Replacer {
             after = "; return " + node.identifier.text + "; }()";
         }
         
+        var params = "__super";
+        
+        if (node.body.hasStaticSuper)
+            params += ", __csuper";
+        
         return "(" + before + 
             "_es6now.class(" + 
             (node.base ? (node.base.text + ", ") : "") +
-            "function(__super) {" + this.strictDirective() + " return " +
+            "function(" + params + ") {" + this.strictDirective() + " return " +
             node.body.text + " })" +
             after + ")";
     }
