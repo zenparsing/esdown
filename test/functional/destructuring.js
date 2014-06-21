@@ -27,5 +27,12 @@ export var tests = {
         
         [,,, ...args] = [1, 2, 3, 4, 5, 6, 7];
         test.equals(args, [4, 5, 6, 7]);
+        
+        (([a, , ...args]) => {
+        
+            test._("function arguments")
+            test.equals(a, 1).equals(args, [3, 4, 5]);
+            
+        })([1, 2, 3, 4, 5]);
     }
 };
