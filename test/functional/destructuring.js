@@ -34,5 +34,22 @@ export var tests = {
             test.equals(a, 1).equals(args, [3, 4, 5]);
             
         })([1, 2, 3, 4, 5]);
-    }
+    },
+    
+    "object patterns" (test) {
+    
+        var a, b, c;
+        
+        ({ a, b }) = { a: 1, b: 2 };
+        test._("assignment").equals([a, b], [1, 2]);
+        
+        var { a, b } = { a: 1, b: 2 };
+        test._("declaration").equals([a, b], [1, 2]);
+        
+        ({ c: a, d: b }) = { c: 1, d: 2 };
+        test._("renaming").equals([a, b], [1, 2]);
+        
+        ({ a = "foo", c: b = "bar" }) = {};
+        test._("defaults").equals([a, b], ["foo", "bar"]);
+    },
 };
