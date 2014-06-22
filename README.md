@@ -1,10 +1,8 @@
 ## Overview ##
 
-**es6now** is an ES6 to ES3/5 compiler.  It will translate some ECMAScript 6 
-features, fairly accurately, for use in Node and browsers.  The emphasis 
-here is not on completeness.  The goal is to take advantage of important 
-ES6  features  while still  retaining  transparent debuggability,  using 
-straightforward source transformations.
+**es6now** is an ES6 to ES5 compiler, written in ES6.  It will allow you to
+write programs using ECMAScript 6 features without having to wait for Node
+or browsers to fully implement ES6.
 
 ## Instructions ##
 
