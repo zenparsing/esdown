@@ -119,6 +119,15 @@ export function startREPL() {
         
             var text, result, script, displayErrors = false;
             
+            // Node 0.10.x pessimistically wraps all input in parens and then
+            // re-evaluates function expressions as function declarations.  Since
+            // Node is unaware of class declarations, this causes classes to 
+            // always be interpreted as expressions in the REPL.
+            
+            // Remove wrapping parens for function and class declaration forms
+            if (/^\((class|function\*?)\s.*?\n\)$/.test(input))
+                input = input.slice(1, -1);
+            
             try {
             
                 text = translate(input, { module: false });
