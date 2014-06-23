@@ -40,13 +40,23 @@ function polyfill(obj, methods) {
 
 // === Spec Helpers ===
 
+var sign = Math.sign || function(val) {
+
+    var n = +val;
+    
+    if (n === 0 || Number.isNaN(n))
+        return n;
+    
+    return n < 0 ? -1 : 1;
+};
+
 function toInteger(val) {
 
     var n = +val;
     
     return n !== n /* n is NaN */ ? 0 :
         (n === 0 || !isFinite(n)) ? n :
-        Math.sign(n) * Math.floor(Math.abs(n));
+        sign(n) * Math.floor(Math.abs(n));
 }
 
 function toLength(val) {
@@ -177,6 +187,8 @@ polyfill(Number, {
     MAX_SAFE_INTEGER: 9007199254740991,
     MIN_SAFE_INTEGER: -9007199254740991,
     
+    parseInt: global.parseInt,
+    parseFloat: global.parseFloat,
     isInteger: isInteger,
     isFinite(val) { return typeof val === "number" && isFinite(val) },
     isNaN(val) { return val !== val },

@@ -9,6 +9,8 @@ try { delete Number.EPSILON } catch (x) {}
 try { delete Number.MAX_SAFE_INTEGER } catch (x) {}
 try { delete Number.MIN_SAFE_INTEGER } catch (x) {}
 
+delete Math.sign;
+
 delete Number.isInteger;
 delete Number.isFinite;
 delete Number.isNaN;
