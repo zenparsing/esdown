@@ -104,6 +104,8 @@ export function startREPL() {
 
     addExtension();
     
+    console.log(`es6now ${ _es6now.version } (Node ${ process.version })`);
+    
     // Provide a way to load a module from the REPL
     global.loadModule = path => __load(global.require.resolve(path));
     
