@@ -127,7 +127,7 @@ export function startREPL() {
             // always be interpreted as expressions in the REPL.
             
             // Remove wrapping parens for function and class declaration forms
-            if (/^\((class|function\*?)\s.*?\n\)$/.test(input))
+            if (/^\((class|function\*?)\s[\s\S]*?\n\)$/.test(input))
                 input = input.slice(1, -1);
             
             try {
