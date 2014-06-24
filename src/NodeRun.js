@@ -113,7 +113,14 @@ export function startREPL() {
     console.log(`es6now ${ _es6now.version } (Node ${ process.version })`);
     
     // Provide a way to load a module from the REPL
-    global.loadModule = path => __load(global.require.resolve(path));
+    global.loadModule = path => {
+    
+        // Add a leading "." for relative paths
+        if (!isPackageURI(path) && !path.startsWith("."))
+            path = "./" + path;
+        
+        return __load(global.require.resolve(path));
+    };
     
     var prompt = ">>> ", contPrompt = "... ";
     
