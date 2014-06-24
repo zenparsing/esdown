@@ -36,14 +36,32 @@ export function formatSyntaxError(e, filename) {
     return msg;
 }
 
+function locateModule(path, base) {
+
+    if (isPackageURI(path))
+        return locatePackage(path, base);
+    
+    path = Path.resolve(base, path);
+    
+    var stat;
+
+    try { stat = FS.statSync(path) }
+    catch (x) {}
+
+    if (stat && stat.isDirectory())
+        path = Path.join(path, "main.js");
+    
+    return path;
+}
+
 function addExtension() {
 
     var resolveFilename = Module._resolveFilename;
     
     Module._resolveFilename = (filename, parent) => {
     
-        if (isPackageURI(filename))
-            filename = locatePackage(filename, Path.dirname(parent.filename));
+        if (parent.__es6)
+            filename = locateModule(filename, Path.dirname(parent.filename));
         
         return resolveFilename(filename, parent);
     };
@@ -79,15 +97,8 @@ export function runModule(path) {
 
     addExtension();
     
-    var path = Path.resolve(process.cwd(), path),
-        stat;
-
-    try { stat = FS.statSync(path) }
-    catch (x) {}
-
-    if (stat && stat.isDirectory())
-        path = Path.join(path, "main.js");
-
+    var path = locateModule(path, process.cwd());
+    
     // "__load" is defined in the module wrapper and ensures that the
     // target is loaded as a module
     
@@ -112,15 +123,8 @@ export function startREPL() {
     
     console.log(`es6now ${ _es6now.version } (Node ${ process.version })`);
     
-    // Provide a way to load a module from the REPL
-    global.loadModule = path => {
-    
-        // Add a leading "." for relative paths
-        if (!isPackageURI(path) && !path.startsWith("."))
-            path = "./" + path;
-        
-        return __load(global.require.resolve(path));
-    };
+    // Provide a way to load an ES6 module from the REPL
+    global.loadModule = path => __load(locateModule(path, process.cwd()));
     
     var prompt = ">>> ", contPrompt = "... ";
     
