@@ -102,6 +102,12 @@ export function runModule(path) {
 
 export function startREPL() {
 
+    // Node 0.10.x pessimistically wraps all input in parens and then
+    // re-evaluates function expressions as function declarations.  Since
+    // Node is unaware of class declarations, this causes classes to 
+    // always be interpreted as expressions in the REPL.
+    var removeParens = global.process.version.startsWith("v0.10.");
+    
     addExtension();
     
     console.log(`es6now ${ _es6now.version } (Node ${ process.version })`);
@@ -120,14 +126,9 @@ export function startREPL() {
         eval(input, context, filename, cb) {
         
             var text, result, script, displayErrors = false;
-            
-            // Node 0.10.x pessimistically wraps all input in parens and then
-            // re-evaluates function expressions as function declarations.  Since
-            // Node is unaware of class declarations, this causes classes to 
-            // always be interpreted as expressions in the REPL.
-            
+                        
             // Remove wrapping parens for function and class declaration forms
-            if (/^\((class|function\*?)\s[\s\S]*?\n\)$/.test(input))
+            if (removeParens && /^\((class|function\*?)\s[\s\S]*?\n\)$/.test(input))
                 input = input.slice(1, -1);
             
             try {
