@@ -1,6 +1,6 @@
 {
     "name": "es6now",
-    "version": "0.7.1",
+    "version": "0.7.2",
     "description": "ES6 to ES5 compiler",
     "homepage": "https://github.com/zenparsing/es6now",
     "bin": {
