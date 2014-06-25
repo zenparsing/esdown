@@ -218,11 +218,33 @@ export function startREPL() {
         console.log(text);
     }
     
-    if (typeof repl.defineCommand === "function") {
+    var commands = {
     
-        repl.defineCommand("translate", {
+        "help": {
+        
+            help: "Show REPL commands",
+            
+            action() {
+            
+                var list = Object.keys(this.commands).sort(),
+                    len = list.reduce((n, key) => Math.max(n, key.length), 0);
+                    
+                list.forEach(key => {
+                
+                    var help = this.commands[key].help || "",
+                        pad = " ".repeat(4 + len - key.length);
+                    
+                    this.outputStream.write(key + pad + help + "\n");
+                });
+                
+                this.displayPrompt();
+            }
+        
+        },
     
-            help: "Translate ES6 to ES5",
+        "translate": {
+    
+            help: "Translate ES6 to ES5 and show the result (es6now)",
         
             action(input) {
             
@@ -243,11 +265,11 @@ export function startREPL() {
             
                 this.displayPrompt();
             }
-        });
+        },
         
-        repl.defineCommand("parse", {
+        "parse": {
         
-            help: "Parse a script",
+            help: "Parse a script and show the AST (es6now)",
             
             action(input) {
             
@@ -255,11 +277,11 @@ export function startREPL() {
                 this.displayPrompt();
             }
             
-        });
+        },
         
-        repl.defineCommand("parseModule", {
+        "parseModule": {
         
-            help: "Parse a module",
+            help: "Parse a module and show the AST (es6now)",
             
             action(input) {
             
@@ -267,7 +289,9 @@ export function startREPL() {
                 this.displayPrompt();
             }
             
-        });
-    }
+        },
+    };
     
+    if (typeof repl.defineCommand === "function")
+        Object.keys(commands).forEach(key => repl.defineCommand(key, commands[key]));
 }
