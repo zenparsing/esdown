@@ -1,12 +1,13 @@
 ## Overview ##
 
 **es6now** is an ES6 to ES5 compiler, written in ES6.  It will allow you to
-write programs using ECMAScript 6 features without having to wait for Node
-or browsers to fully implement ES6.
+write programs using next-generation Javascript features without having to 
+wait for Node or browsers to fully implement ES6.
+
+Read the [Feature Guide](docs/features.md) for more information about the 
+ES6 features that you can use with **es6now**.
 
 ## Instructions ##
-
-*You'll need Node.js 0.11 or later for async functions.*
 
 Install globally with NPM (you may need to `sudo` this):
 
