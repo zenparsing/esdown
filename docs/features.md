@@ -4,6 +4,11 @@
 
 The following ES6 language features are supported by **es6now**:
 
+### Modules ###
+
+Modules allow you to structure your code in separate files.  Read the
+[Module Guide](modules.md) for more information.
+
 ### Arrow Fuctions ###
 
 [Arrow functions](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/arrow_functions)
