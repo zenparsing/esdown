@@ -1,17 +1,6 @@
-/*
-
-== Notes ==
-
-- With this approach, we can't have cyclic dependencies.  But there are
-  many other restrictions as well.  They may be lifted at some point in
-  the future.
-
-*/
-
 import { Parser, AST } from "package:esparse";
 
-var HAS_SCHEMA = /^[a-z]+:/i,
-    NODE_SCHEMA = /^(?:npm|node):/i;
+var HAS_SCHEMA = /^[a-z]+:/i;
 
 var RESERVED_WORD = new RegExp("^(?:" +
     "break|case|catch|class|const|continue|debugger|default|delete|do|" +
@@ -1066,9 +1055,7 @@ export class Replacer {
     
         url = this.mapURI(url.trim());
         
-        if (NODE_SCHEMA.test(url))
-            url = url.replace(NODE_SCHEMA, "");
-        else if (!HAS_SCHEMA.test(url) && url.charAt(0) !== "/")
+        if (!HAS_SCHEMA.test(url) && url.charAt(0) !== "/")
             url = "./" + url;
         
         if (typeof this.imports[url] !== "string") {
