@@ -1,4 +1,4 @@
-import { ConsoleCommand } from "package:zencmd";
+import { ConsoleCommand } from "package:zen-cmd";
 import { readFile, writeFile } from "AsyncFS.js";
 import { runModule, startREPL, formatSyntaxError } from "NodeRun.js";
 import { createBundle } from "Bundler.js";

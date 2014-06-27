@@ -1,4 +1,4 @@
-import { ConsoleStyle as Style } from "package:zencmd";
+import { ConsoleStyle as Style } from "package:zen-cmd";
 import { parse } from "package:esparse";
 import { translate } from "Translator.js";
 import { isPackageURI, locatePackage } from "PackageLocator.js";
