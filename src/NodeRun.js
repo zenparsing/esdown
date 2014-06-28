@@ -56,14 +56,26 @@ function locateModule(path, base) {
 
 function addExtension() {
 
-    var resolveFilename = Module._resolveFilename;
+    var moduleLoad = Module._load;
     
-    Module._resolveFilename = (filename, parent) => {
+    Module._load = (request, parent, isMain) => {
     
-        if (parent.__es6)
-            filename = locateModule(filename, Path.dirname(parent.filename));
+        var es6 = parent.__es6;
         
-        return resolveFilename(filename, parent);
+        if (!es6 && request.startsWith("module:")) {
+        
+            request = request.replace(/^module:/, "");
+            es6 = parent.__es6 = 1;
+        }
+        
+        if (es6)
+            request = locateModule(request, Path.dirname(parent.filename));
+        
+        var m = moduleLoad(request, parent, isMain);
+        
+        parent.__es6 = 0;
+        
+        return m;
     };
     
     // Compile ES6 js files
@@ -122,9 +134,6 @@ export function startREPL() {
     addExtension();
     
     console.log(`es6now ${ _es6now.version } (Node ${ process.version })`);
-    
-    // Provide a way to load an ES6 module from the REPL
-    global.loadModule = path => __load(locateModule(path, process.cwd()));
     
     var prompt = ">>> ", contPrompt = "... ";
     
