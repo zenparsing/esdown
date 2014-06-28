@@ -4,6 +4,9 @@
 write programs using next-generation Javascript features without having to 
 wait for Node or browsers to fully implement ES6.
 
+**es6now** can also be used as a runtime environment for executing ES6 programs
+on top of Node.
+
 Read the [Feature Guide](docs/features.md) for more information about the 
 ES6 features that you can use with **es6now**.
 
