@@ -135,6 +135,9 @@ export function startREPL() {
     
     console.log(`es6now ${ _es6now.version } (Node ${ process.version })`);
     
+    // Provide a way to load an ES6 module from the REPL
+    global.loadModule = path => __load(locateModule(path, process.cwd()));
+    
     var prompt = ">>> ", contPrompt = "... ";
     
     var repl = REPL.start({ 
