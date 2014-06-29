@@ -68,7 +68,7 @@ import { parse } from "package:esparse";
 ```
 
 **Forth**, if the resulting path is a directory, then it will attempt to load the file 
-named "main.js" in that directory.
+named **main.js** in that directory.
 
 ```js
 // Imports "x" from "some-directory/main.js", relative to the current module, and only if
