@@ -83,7 +83,7 @@ These rules are meant to work well across server and browser environments.
 It is possible to create packages which can be used as both old-style and new-style
 modules.
 
-In order to expose an old-style package to ES modules, add a **main.js** file at the
+To expose an old-style package to ES modules, add a **main.js** file at the
 package root which looks something like this:
 
 ```js
@@ -99,7 +99,7 @@ export var
 export var baz = oldStyle;
 ```
 
-In order to expose a new-style module to old-style clients, you can add a **index.js**
+To expose a new-style module to old-style clients, you can add a **index.js**
 file at the package root which looks something like this:
 
 ```js
