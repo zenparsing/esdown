@@ -59,7 +59,7 @@ import { x } from "some-file.js";
 ```
 
 **Third**, if the module URL begins with a scheme named "package", we use Node's standard 
-package lookup algorithm, which searches up the path tree for ".node_modules" folders. Because 
+package lookup algorithm, which searches up the path tree for "node_modules" folders. Because 
 we use Node's package lookup algorithm, NPM can be used to transparently install ES6 modules.
 
 ```js
