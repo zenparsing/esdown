@@ -42,7 +42,8 @@ The ES6 specification dodges this question, so we're on our own.
 In **es6now** running on Node, the following rules apply:
 
 **First**, `require` works the same way that it always does, except that non-module ES6 
-features are translated to ES5.
+features are translated to ES5.  Importantly, the `require` function can't be used to load
+ES6 modules (with an exception noted below).
 
 ```js
 // No change to the behavior of require
@@ -67,8 +68,8 @@ we use Node's package lookup algorithm, NPM can be used to transparently install
 import { parse } from "package:esparse";
 ```
 
-**Forth**, if the resulting path is a directory, then it will attempt to load the file 
-named **main.js** in that directory.
+**Forth**, if the path resulting from the previous rules is a directory, then it will attempt 
+to load the file named **main.js** in that directory.
 
 ```js
 // Imports "x" from "some-directory/main.js", relative to the current module, and only if
