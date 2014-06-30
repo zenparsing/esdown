@@ -99,7 +99,17 @@ export var
 export var baz = oldStyle;
 ```
 
-To expose a new-style module to old-style clients, you can add a **index.js**
+If you want to import from an old-style module and cannot add a **main.js** file, then
+you can create a proxy module locally within your package.
+
+```js
+export const { foo } = require("some-package");
+
+// For old-style modules which use the "module.exports = " idiom:
+export const foo = require("some-package");
+```
+
+To expose a new-style module to old-style clients, you can add an **index.js**
 file at the package root which looks something like this:
 
 ```js
@@ -107,4 +117,4 @@ module.exports = require("module:main.js");
 ```
 
 When the argument to `require` begins with "module:", **es6now** will load the target
-as an ES6 module.
+as an ES6 module, using ES6 module lookup rules.
