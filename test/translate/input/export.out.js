@@ -1,6 +1,6 @@
 var _M0 = __load("./Z.js"); var __$0; function A() {}
 var X, Y;
-var J = (__$0 = _es6now.objd(obj), __$0["J"]), K = __$0["K"];
+var J = (__$0 = _es6now.objd(obj), __$0.J), K = __$0.K;
 
 function B() {}
 

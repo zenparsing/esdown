@@ -49,6 +49,9 @@ export var tests = {
         ({ c: a, d: b }) = { c: 1, d: 2 };
         test._("renaming").equals([a, b], [1, 2]);
         
+        ({ "a": a, 0: b }) = { a: 1, 0: 2 };
+        test._("string and number property names").equals([a, b], [1, 2]);
+        
         ({ a = "foo", c: b = "bar" }) = {};
         test._("defaults").equals([a, b], ["foo", "bar"]);
     },

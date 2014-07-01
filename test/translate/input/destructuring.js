@@ -7,6 +7,7 @@
 
 ({ a, b: c }) = foo;
 ({ a: [b, c] }) = foo;
+({ "a": a, 0: b }) = foo;
 
 var [a, b] = foo,
     { c, c: d } = foo;

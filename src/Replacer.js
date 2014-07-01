@@ -842,6 +842,13 @@ export class Replacer {
     
     translatePattern(node, base) {
     
+        function propGet(name) {
+        
+            return /^[\.\d'"]/.test(name) ?
+                "[" + name + "]" :
+                "." + name;
+        }
+        
         var outer = [],
             inner = [],
             targets = [];
@@ -862,7 +869,7 @@ export class Replacer {
             var access =
                 tree.rest ? `${ base }.rest(${ tree.skip }, ${ tree.name })` :
                 tree.skip ? `${ base }.at(${ tree.skip }, ${ tree.name })` :
-                tree.name ? `${ base }[${ JSON.stringify(tree.name) }]` :
+                tree.name ? base + propGet(tree.name) :
                 base;
             
             if (tree.initializer) {
