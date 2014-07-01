@@ -230,6 +230,24 @@ export function startREPL() {
         console.log(text);
     }
     
+    function translateAction(input, module) {
+    
+        var text;
+            
+        try {
+    
+            text = translate(input, { wrap: false, module: true });
+    
+        } catch (x) {
+    
+            text = x instanceof SyntaxError ?
+                formatSyntaxError(x, "REPL") :
+                x.toString();
+        }
+    
+        console.log(text);
+    }
+    
     var commands = {
     
         "help": {
@@ -256,25 +274,22 @@ export function startREPL() {
     
         "translate": {
     
-            help: "Translate ES6 to ES5 and show the result (es6now)",
+            help: "Translate an ES6 script to ES5 and show the result (es6now)",
         
             action(input) {
             
-                var text;
+                translateAction(input, false);
+                this.displayPrompt();
+            }
+        },
+        
+        "translateModule": {
+        
+            help: "Translate an ES6 module to ES5 and show the result (es6now)",
+        
+            action(input) {
             
-                try {
-            
-                    text = translate(input, { wrap: false, module: false });
-            
-                } catch (x) {
-            
-                    text = x instanceof SyntaxError ?
-                        formatSyntaxError(x, "REPL") :
-                        x.toString();
-                }
-            
-                console.log(text);
-            
+                translateAction(input, true);
                 this.displayPrompt();
             }
         },
