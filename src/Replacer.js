@@ -131,14 +131,7 @@ export class Replacer {
         
         Object.keys(this.exports).forEach(k => {
     
-            output += "\nexports";
-            
-            if (RESERVED_WORD.test(k))
-                output += "[" + JSON.stringify(k) + "]";
-            else
-                output += "." + k;
-            
-            output += " = " + this.exports[k] + ";";
+            output += `\nexports.${ k } = ${ this.exports[k] };`;
         });
         
         return output;

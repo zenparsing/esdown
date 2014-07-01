@@ -22,4 +22,4 @@ exports.K = K;
 exports.B = B;
 exports.C = C;
 exports.D = C;
-exports["default"] = C;
+exports.default = C;
