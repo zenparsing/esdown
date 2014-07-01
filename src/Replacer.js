@@ -358,9 +358,16 @@ export class Replacer {
             case "VariableDeclaration":
             
                 binding.declarations.forEach(decl => {
+                
+                    if (this.isPattern(decl.pattern)) {
+                    
+                        decl.pattern.patternTargets.forEach(x => exports[x] = x);
+                        
+                    } else {
             
-                    ident = decl.pattern.text;
-                    exports[ident] = ident;
+                        ident = decl.pattern.text;
+                        exports[ident] = ident;
+                    }
                 });
                 
                 return binding.text + ";";
@@ -843,7 +850,10 @@ export class Replacer {
     translatePattern(node, base) {
     
         var outer = [],
-            inner = [];
+            inner = [],
+            targets = [];
+        
+        node.patternTargets = targets;
         
         var visit = (tree, base) => {
         
@@ -886,6 +896,8 @@ export class Replacer {
             
             if (tree.target) {
             
+                targets.push(target);
+                
                 outer.push(inner.length === 1 ?
                     `${ target } = ${ inner[0] }` :
                     `${ target } = (${ inner.join(", ") })`);

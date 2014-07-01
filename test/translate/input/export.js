@@ -1,5 +1,6 @@
 export function A() {}
-export var X;
+export var X, Y;
+export var { J, K } = obj;
 
 function B() {}
 export { B };
