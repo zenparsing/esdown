@@ -24,8 +24,8 @@ var WRAP_CALLEE = "(function(fn, deps, name) { " +
 
 var WRAP_HEADER = "function(require, exports, module) { " +
     "'use strict'; " +
-    "function __load(p) { " +
-        "module.__es6 = 1; var e = require(p); module.__es6 = 0; " +
+    "function __load(p, l) { " +
+        "module.__es6 = !l; var e = require(p); module.__es6 = false; " +
         "return typeof e === 'object' ? e : { 'default': e }; " +
     "} ";
 

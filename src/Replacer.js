@@ -1,6 +1,7 @@
 import { Parser, AST } from "package:esparse";
 
-var HAS_SCHEMA = /^[a-z]+:/i;
+var HAS_SCHEMA = /^[a-z]+:/i,
+    NODE_SCHEMA = /^node:/i;
 
 var RESERVED_WORD = new RegExp("^(?:" +
     "break|case|catch|class|const|continue|debugger|default|delete|do|" +
@@ -57,7 +58,6 @@ export class Replacer {
         
         options || (options = {});
         
-        this.loadCall = options.loadCall || (url => "__load(" + JSON.stringify(url) + ")");
         this.mapURI = options.mapURI || (uri => uri);
         
         var parser = new Parser,
@@ -116,12 +116,15 @@ export class Replacer {
         var output = visit(new RootNode(root, input.length)),
             head = "";
         
-        this.dependencies.forEach(url => {
+        this.dependencies.forEach(dep => {
         
             if (head) head += ", ";
             else head = "var ";
             
-            head += this.imports[url] + " = " + this.loadCall(url);
+            var url = dep.url,
+                legacyFlag = dep.legacy ? ", 1" : "";
+            
+            head += `${ this.imports[url] } = __load(${ JSON.stringify(dep.url) }${ legacyFlag })`;
         });
         
         if (head) 
@@ -862,10 +865,6 @@ export class Replacer {
                 str = "", 
                 temp;
             
-            // ENHANCEMENT:  If name is integer, then no quotes.  If name is
-            // identifier, then no brackets.  Perhaps parser should expose
-            // an isIdentifier function.
-            
             var access =
                 tree.rest ? `${ base }.rest(${ tree.skip }, ${ tree.name })` :
                 tree.skip ? `${ base }.at(${ tree.skip }, ${ tree.name })` :
@@ -1065,15 +1064,24 @@ export class Replacer {
     
     moduleIdent(url) {
     
-        url = this.mapURI(url.trim());
+        var legacy = false;
         
-        if (!HAS_SCHEMA.test(url) && url.charAt(0) !== "/")
+        url = this.mapURI(url.trim());
+   
+        if (NODE_SCHEMA.test(url)) {
+        
+            url = url.replace(NODE_SCHEMA, "");     
+            legacy = true;
+        
+        } else if (!HAS_SCHEMA.test(url) && url.charAt(0) !== "/") {
+        
             url = "./" + url;
+        }
         
         if (typeof this.imports[url] !== "string") {
         
             this.imports[url] = "_M" + (this.uid++);
-            this.dependencies.push(url);
+            this.dependencies.push({ url, legacy });
         }
         
         return this.imports[url];

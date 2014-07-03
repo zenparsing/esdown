@@ -65,7 +65,7 @@ function addExtension() {
         if (!es6 && request.startsWith("module:")) {
         
             request = request.replace(/^module:/, "");
-            es6 = parent.__es6 = 1;
+            es6 = parent.__es6 = true;
         }
         
         if (es6)
@@ -73,7 +73,7 @@ function addExtension() {
         
         var m = moduleLoad(request, parent, isMain);
         
-        parent.__es6 = 0;
+        parent.__es6 = false;
         
         return m;
     };

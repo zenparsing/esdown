@@ -1,4 +1,6 @@
 import { a, b, c, C, F } from "import-export-from.js";
+import { legacyRelative } from "node:./import-export-legacy.js";
+import { default as legacyPackage } from "node:pkg";
 
 export var tests = {
 
@@ -19,5 +21,18 @@ export var tests = {
         
         ;
     },
+    
+    "legacy import" (test) {
+    
+        test
+        
+        ._("relative import")
+        .equals(legacyRelative, "legacy-relative")
+        
+        ._("package import with default")
+        .equals(legacyPackage, "legacy-package")
+        
+        ;
+    }
 
 };
