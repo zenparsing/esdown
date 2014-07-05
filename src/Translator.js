@@ -51,6 +51,7 @@ function wrapRuntimeModule(text) {
 export function translate(input, options = {}) {
 
     var replacer = new Replacer,
+        functionWrap = !options.module,
         output;
     
     input = sanitize(input);
@@ -64,8 +65,19 @@ export function translate(input, options = {}) {
             wrapRuntimeModule(Runtime.Promise) +
             input;
     }
-            
+    
+    if (functionWrap) {
+    
+        // Node modules are wrapped inside of a function expression, which allows
+        // return statements
+        input = "(function(){" + input + "})";
+    }
+    
     output = replacer.replace(input, options);
+    
+    // Remove function expression wrapper for non-modules
+    if (functionWrap)
+        output = output.slice(12, -2);
     
     if (options.wrap) {
     

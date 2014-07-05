@@ -89,21 +89,9 @@ function addExtension() {
             
             // Only translate as a module if the source module is requesting 
             // via import syntax
-            if (module.parent.__es6) {
+            var m = !!module.parent.__es6;
             
-                text = translate(text, { wrap: true, module: true });
-                
-            } else {
-            
-                // Node modules are wrapped in function expressions, so return statements
-                // are allowed
-                text = "(function() {" + text + "})";
-                
-                text = translate(text, { wrap: false, module: false });
-                
-                // Remove function wrapper
-                text = text.slice(13, -2);
-            }
+            text = translate(text, { wrap: m, module: m });
         
         } catch (e) {
         
