@@ -436,7 +436,7 @@ polyfill(Array, {
 
     from(list) {
     
-        assertThis(this, "Array.from");
+        list = toObject(list);
         
         var ctor = typeof this === "function" ? this : Array, // TODO: Always use "this"?
             map = arguments[1],
@@ -479,10 +479,20 @@ polyfill(Array, {
     
     of(...items) { 
     
-        if (items == null)
-            throw new TypeError("Array.of called on null or undefined");
+        var ctor = typeof this === "function" ? this : Array; // TODO: Always use "this"?
         
-        return this === Array ? items : this.from(items);
+        if (ctor === Array)
+            return items;
+        
+        var len = items.length,
+            out = new ctor(len);
+        
+        for (var i = 0; i < len; ++i)
+            out[i] = items[i];
+        
+        out.length = len;
+        
+        return out;
     }
     
 });

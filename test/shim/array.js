@@ -40,6 +40,9 @@ export var tests = {
         ._("works with other constructors")
         .equals(Array.from.call(Foo, ["a", "b", "c"]), Foo.of("a", "b", "c"))
         
+        ._("can be called without a this")
+        .equals(Array.from.call(void 0, ["a", "b", "c"]), ["a", "b", "c"])
+        
         ._("supports a map function")
         .equals(Array.from([1, 2, 3], x => x * 2), [2, 4, 6])
         
@@ -81,7 +84,10 @@ export var tests = {
         ._("function length property")
         .equals(Array.of.length, 0)
         ._("create an array from arguments")
-        .equals(Array.of(1, null, void 0), [1, null, void 0]);
+        .equals(Array.of(1, null, void 0), [1, null, void 0])
+        ._("can be called without this")
+        .equals(Array.of.call(void 0, 0, 1), [0, 1])
+        ;
     },
 
     "copyWithin" (test) {
