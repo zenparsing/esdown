@@ -26,7 +26,8 @@ var WRAP_HEADER = "function(require, exports, module) { " +
     "'use strict'; " +
     "function __load(p, l) { " +
         "module.__es6 = !l; var e = require(p); module.__es6 = false; " +
-        "return typeof e === 'object' ? e : { 'default': e }; " +
+        "if (e && l) e.exports = e; " +
+        "return e; " +
     "} ";
 
 var WRAP_FOOTER = "\n\n}";
