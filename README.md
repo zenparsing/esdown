@@ -42,3 +42,33 @@ Translate a module by using a hyphen:
     --global, -g        If specified, the name of the global variable to 
                         dump this module's exports into, if the resulting
                         script is not executed within any module system.
+
+## API ##
+
+**es6now** can also be used as a library.  First, install locally with NPM:
+
+    npm install es6now
+
+### translate(input, options = {}) ###
+
+Translates ES6 code to ES5.  The following options are defined:
+
+- **module**: (Boolean) If `true`, parse the input as a module.  Otherwise, parse the input
+  as a script.  The default is `false`.
+- **runtime**:  (Boolean) If `true`, include the **es6now** runtime library in the output.
+  The default is `false`.
+- **wrap**:  (Boolean) If `true`, wrap the output in boilerplate which will ensure compatibility
+  with Node and AMD modules.  The default is `false`.
+- **global**:  (String) If specified, the name of the global variable which will be used to
+  expose the module if it is loaded as a plain script in the browser.
+
+Example:
+
+```js
+var es6now = require("es6now");
+
+var output = es6now.translate("class C { foo() {} }", {
+    module: true,
+    wrap: true
+});
+```
