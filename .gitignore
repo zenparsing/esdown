@@ -2,4 +2,4 @@
 _*
 node_modules
 build/es6now.js
-
+bin/es6now

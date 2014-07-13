@@ -24,7 +24,7 @@ function getOutPath(inPath, outPath) {
     return outPath;
 }
 
-function main() {
+export function main() {
 
     new ConsoleCommand({
 
@@ -115,12 +115,4 @@ function main() {
         }
 
     }).run();
-}
-
-// TODO:  Use a "main" export instead of this ugliness
-if (typeof require === "function" && 
-    typeof module !== "undefined" &&
-    require.main === module) {
- 
-    main();   
 }

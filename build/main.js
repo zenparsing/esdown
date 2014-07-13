@@ -1,4 +1,6 @@
-require("child_process").spawn(
+import { spawn } from "node:child_process";
+
+spawn(
     "es6now", 
-    "- ../src/main.js es6now.js -b -r".split(/ /g), 
+    "- ../src/main.js ../build/es6now.js -b -r".split(/ /g), 
     { stdio: "inherit", cwd: __dirname });
