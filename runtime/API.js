@@ -137,7 +137,7 @@ function buildClass(base, def) {
 
 this._es6now = {
 
-    version: "0.7.8",
+    version: "0.7.9",
 
     class: buildClass,
 
