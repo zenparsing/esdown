@@ -94,9 +94,11 @@ export function translate(input, options = {}) {
 
 export function wrap(text, dep, global) {
 
+    dep = (dep || []).map(dep => dep.url);
+    
     return SIGNATURE + WRAP_CALLEE + "(" + 
         WRAP_HEADER + text + WRAP_FOOTER + ", " + 
-        JSON.stringify(dep || []) + ", " + 
+        JSON.stringify(dep) + ", " + 
         JSON.stringify(global || "") +
     ");";
 }
