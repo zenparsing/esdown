@@ -8,5 +8,10 @@
     },
     "scripts": {
         "preinstall": "node util/make-cmd.js"
+    },
+    "devDependencies": {
+        "esparse": "*",
+        "zen-cmd": "*",
+        "moon-unit": "*"
     }
 }
