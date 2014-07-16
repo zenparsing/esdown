@@ -1,3 +1,9 @@
+/*
+
+Restores es6now.js from the most recent copy in "_prev" created with "archive.js".
+
+*/
+
 var FS = require("fs"),
     Path = require("path");
 

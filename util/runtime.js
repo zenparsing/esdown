@@ -1,4 +1,9 @@
-// Builds the Runtime.js module from the modules in the runtime folder
+/*
+
+Builds the "src/Runtime.js" module from the scripts in the "runtime" folder.  Must be
+run before building es6now if there are changes to runtime components.
+
+*/
 
 var FS = require("fs"),
     Path = require("path");

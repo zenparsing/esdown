@@ -8,7 +8,8 @@ Creates the "es6now" command target dynamically when the package is installed.  
 
 On linux we can't specify command arguments on the shebang line, so we need to launch node
 with a shell script.  The $0 variable isn't reliable through symlinks, so we inject the
-script path directly into the shell script.
+script path directly into the shell script.  If you move package folder to a new location,
+you can rerun this script to fix the script path.
 
 For windows, NPM will create a "cmd" file which proxies to the "bin" file.  In that case,
 arguments on the shebang line work fine so we just copy the "es6now-cli.js" file and let

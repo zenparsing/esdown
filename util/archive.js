@@ -1,3 +1,11 @@
+/*
+
+Archive the current es6now.js build file to the "_prev" folder.  Always run this before
+building, since a bad build will clobber es6now.  If you create a bad build, you can 
+restore es6now.js using "restore.js".
+
+*/
+
 var FS = require("fs"),
     Path = require("path");
 
