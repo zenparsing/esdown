@@ -12,8 +12,8 @@ Modules allow you to structure your code in separate files.  Read the
 ### Arrow Fuctions ###
 
 [Arrow functions](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/arrow_functions)
-are a more concise way to to write a function expression which
-closes over the parent function's `this` variable.
+are a more concise way to to write a function expressions.  Arrow functions close over
+the parent function's `this` variable.
 
 ```js
 paths.forEach(path => {
@@ -126,7 +126,7 @@ f("bar"); // "bar"
 
 With destructuring syntax, you can "unpack" values from arrays, iterables, and objects.
 
-With arrays:
+Array destructuring:
 
 ```js
 var array = [1, 2, 3];
@@ -151,7 +151,7 @@ console.log(a, b, rest); // 1, 2, [3, 4, 5]
 console.log(a, b); // 1, 43
 ```
 
-With objects:
+Object destructuring:
 
 ```js
 // Unpacking an object
@@ -164,7 +164,8 @@ console.log(a, b, cc); // 1, 2, 3
 console.log(a, b); // 1, 2
 ```
 
-Within function parameter lists:
+Destructuring within function parameter lists:
+
 ```js
 function f({ foo, bar }) {
     console.log(foo, bar);
@@ -178,7 +179,7 @@ f({ foo: "foo", bar: "bar" });
 
 ### Computed Properties ###
 
-Computed properties allow you to use a dynamic name values in an object literal.
+Computed properties allow you to use a dynamic property names in an object literal.
 
 ```js
 var name = "es6now";
@@ -189,7 +190,7 @@ var obj = {
 
 ### Shorthand Properties ###
 
-You can leave off the property value in an object literal in some cases.
+You can leave off the property value in an object literal if it's a varialbe name:
 
 ```js
 var a = "foo";
@@ -266,9 +267,9 @@ for (var item of c)
 
 ### Comprehensions ###
 
-*This feature might be removed from ES6*
+*Warning: this feature might be removed from ES6*
 
-Comprehensions provide a consice way to iterate over some collection.
+Comprehensions provide a concise way to iterate over some collections.
 
 Array comprehensions:
 
