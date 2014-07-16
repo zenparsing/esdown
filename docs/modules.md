@@ -79,12 +79,43 @@ import { x } from "some-directory";
 
 These rules are meant to work well across server and browser environments.
 
-### Interoperability Between Old-Style and New-Style Modules ###
+### Loading Old-Style Modules ###
+
+You can import from old-style Node modules (including Node's built-in modules) using the 
+**node** URL scheme.  
+
+```js
+// Import from Node's built-in modules
+import { readFile } from "node:fs";
+
+// Import from an old-style Node module using a package path
+import { groupBy } from "node:underscore";
+
+// Import from an old-style Node module using a relative path
+import { breakdance } from "node:./old-school";
+```
+
+For URLs using the **node** scheme, the path is interpreted exactly like `require`.
+
+### Loading New-Style Modules From Old-Style Modules ###
+
+Old-style modules can import from new-style modules by adding "module:" to the `require` 
+path.
+
+```js
+// Using an ES module from an old-style module
+var newStyle = require("module:newStyle.js");
+```
+
+When the argument to `require` begins with "module:", **es6now** will load the target
+as an ES6 module, using ES6 module lookup rules.
+
+### Writing Interoperable Packages ###
 
 It is possible to create packages which can be used as both old-style and new-style
 modules.
 
-To expose an old-style package to ES modules, add a **main.js** file at the
+To expose an old-style package to new-style modules, add a **main.js** file at the
 package root which looks something like this:
 
 ```js
@@ -100,22 +131,9 @@ export var
 export var baz = oldStyle;
 ```
 
-If you want to import from an old-style module and cannot add a **main.js** file, then
-you can create a proxy module locally within your package.
-
-```js
-export const { foo } = require("some-package");
-
-// For old-style modules which use the "module.exports = " idiom:
-export const foo = require("some-package");
-```
-
-To expose a new-style module to old-style clients, you can add an **index.js**
+To expose a new-style package to old-style clients, you can add an **index.js**
 file at the package root which looks something like this:
 
 ```js
 module.exports = require("module:main.js");
 ```
-
-When the argument to `require` begins with "module:", **es6now** will load the target
-as an ES6 module, using ES6 module lookup rules.
