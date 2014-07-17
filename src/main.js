@@ -28,20 +28,11 @@ export function main() {
 
     new ConsoleCommand({
 
-        params: {
-    
-            "input": {
-        
-                positional: true,
-                required: false
-            }
-        },
-    
-        execute(params) {
+        execute(input) {
     
             process.argv.splice(1, 1);
         
-            if (params.input) runModule(params.input);
+            if (input) runModule(input);
             else startREPL();
         }
     
