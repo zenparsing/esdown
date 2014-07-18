@@ -12,7 +12,7 @@ Modules allow you to structure your code in separate files.  Read the
 ### Arrow Fuctions ###
 
 [Arrow functions](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/arrow_functions)
-are a more concise way to to write a function expressions.  Arrow functions close over
+are a more concise way to to write a function expression.  Arrow functions close over
 the parent function's `this` variable.
 
 ```js
@@ -34,7 +34,6 @@ class C {
 
     // "constructor" initializes the new object
     constructor() {
-    
         this.snakesOnPlane = 3;
     }
 
@@ -319,9 +318,10 @@ A **[Promise](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/
 **Other**:
 - [Number Extensions](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number)
 
-## ES6 Features Not Supported ##
+## ES6 Features Not Translated ##
 
-The following ES6 features are not supported by **es6now**:
+The following ES6 features are not translated by **es6now**.  You can still use these
+features if your JS engine supports them.
 
 - Block-scoped variables (let and const)
 - Generators
