@@ -12,7 +12,7 @@ Modules allow you to structure your code in separate files.  Read the
 ### Arrow Fuctions ###
 
 [Arrow functions](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/arrow_functions)
-are a more concise way to to write a function expression.  Arrow functions close over
+are a more concise way to to write function expressions.  Arrow functions close over
 the parent function's `this` variable.
 
 ```js
