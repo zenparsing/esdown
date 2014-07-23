@@ -97,6 +97,14 @@ import { breakdance } from "node:./old-school";
 
 For URLs using the **node** scheme, the path is interpreted exactly like `require`.
 
+If you are importing from an old-style module that overwrites the export object using
+the `module.exports = function() {}` pattern, you can import it using the special name 
+`exports`.
+
+```js
+import { exports as mkdirp } from "node:mkdirp";
+```
+
 ### Loading New-Style Modules From Old-Style Modules ###
 
 Old-style modules can import from new-style modules by adding "module:" to the `require` 
