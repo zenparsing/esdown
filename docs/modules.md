@@ -4,7 +4,7 @@
 
 ### Overview and Syntax ###
 
-In ES6, modules are static, compile-time collections of named exports.  There are several 
+In ES6, modules are static, compile-time collections of named exports.  There are several
 ways to export things from a module.
 
 ```js
@@ -25,7 +25,7 @@ export { baz as bazzer };
 Those named exports can be imported by another module.
 
 ```js
-import { foo, C, bar, bazzer as boo } from "my-module.js";
+import { foo, C, bar, bazzer as boo } from "./my-module.js";
 ```
 
 ### Module Lookup Rules ###
@@ -37,39 +37,47 @@ import { x } from "foo";
 ```
 
 This will import the export named "x" from the module at "foo".  But what does "foo" mean?
-The ES6 specification dodges this question, so we're on our own.
 
 In **es6now** running on Node, the following rules apply:
 
-**First**, `require` works the same way that it always does, except that non-module ES6 
+**First**, `require` works the same way that it always does, except that non-module ES6
 features are translated to ES5.  Importantly, the `require` function can't be used to load
 ES6 modules (with an exception noted below).
 
 ```js
 // No change to the behavior of require
 var FS = require("fs");
-var module = require("./something-relative"); 
+var module = require("./something-relative");
 ```
 
-**Second**, specifiers are always valid URLs (or URIs, if you prefer that term) and obey 
-standard URL semantics.  Relative paths work just like they do on the web.
+**Second**, specifiers that begin with the following patterns are interpreted as URLs
+and obey standard URL semantics.
+
+- `./`
+- `../`
+- `/`
+- `scheme:`
+
+File extensions are not automatically appended.
 
 ```js
 // Import "x" from the module at "some-file.js", relative to the current module
-import { x } from "some-file.js";
+import { x } from "./some-file.js";
 ```
 
-**Third**, if the module URL begins with a scheme named "package", we use Node's standard 
-package lookup algorithm, which searches up the path tree for "node_modules" folders. Because 
-we use Node's package lookup algorithm, NPM can be used to transparently install ES6 modules.
+**Third**, if the module specifier does not match any of the patterns from the second
+rule, then it is interpreted as a package name.  To locate packages, we use Node's
+standard package lookup algorithm, which searches up the path tree for "node_modules"
+folders. Because we use Node's package lookup algorithm, NPM can be used to transparently
+install ES6 modules.
 
 ```js
 // Uses Node's standard package lookup algorithm to find the package "esparse"
-import { parse } from "package:esparse";
+import { parse } from "esparse";
 ```
 
-**Forth**, if the path resulting from the previous rules is a directory, then it will attempt 
-to load the file named **main.js** in that directory.
+**Forth**, if the path resulting from the previous rules is a directory, then it will
+attempt to load the file named **main.js** in that directory.
 
 ```js
 // Imports "x" from "some-directory/main.js", relative to the current module, and only if
@@ -81,8 +89,8 @@ These rules are meant to work well across server and browser environments.
 
 ### Loading Old-Style Modules ###
 
-You can import from old-style Node modules (including Node's built-in modules) using the 
-**node** URL scheme.  
+You can import from old-style Node modules (including Node's built-in modules) using the
+**node** URL scheme.
 
 ```js
 // Import from Node's built-in modules
@@ -98,7 +106,7 @@ import { breakdance } from "node:./old-school";
 For URLs using the **node** scheme, the path is interpreted exactly like `require`.
 
 If you are importing from an old-style module that overwrites the export object using
-the `module.exports = function() {}` pattern, you can import it using the special name 
+the `module.exports = function() {}` pattern, you can import it using the special name
 `exports`.
 
 ```js
@@ -107,7 +115,7 @@ import { exports as mkdirp } from "node:mkdirp";
 
 ### Loading New-Style Modules From Old-Style Modules ###
 
-Old-style modules can import from new-style modules by adding "module:" to the `require` 
+Old-style modules can import from new-style modules by adding "module:" to the `require`
 path.
 
 ```js
@@ -131,7 +139,7 @@ package root which looks something like this:
 var oldStyle = require("./");
 
 // Export items from that variable
-export var 
+export var
     foo = oldStyle.foo,
     bar = oldStyle.bar;
 
