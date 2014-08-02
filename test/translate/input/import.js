@@ -4,12 +4,12 @@ import { C as C2, D as D2 } from "Z.js";
 import { A } from X;
 import { A } from X.Y;
 import { A, B } from X.Y;
-module B from "B.js";
+import * as B from "B.js";
 import {
   A,
   B,
 } from X;
-import { A } 
+import { A }
     from X;
 ;
 import {} from "A.js";

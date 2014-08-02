@@ -131,10 +131,14 @@ export class Replacer {
 
         output = head + output;
 
-        Object.keys(this.exports).forEach(k => {
+        var exports = Object.keys(this.exports);
 
-            output += `\nexports.${ k } = ${ this.exports[k] };`;
-        });
+        if (exports.length > 0) {
+
+            output += "\n";
+            output += exports.map(k => `exports.${ k } = ${ this.exports[k] };`).join("\n");
+            output += "\n";
+        }
 
         return output;
     }
