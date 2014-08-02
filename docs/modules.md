@@ -1,7 +1,5 @@
 ## The es6now Module System ##
 
-*Warning: The ES6 module system is still under active development.*
-
 ### Overview and Syntax ###
 
 In ES6, modules are static, compile-time collections of named exports.  There are several
@@ -82,7 +80,7 @@ attempt to load the file named **main.js** in that directory.
 ```js
 // Imports "x" from "some-directory/main.js", relative to the current module, and only if
 // "some-directory" is a directory.
-import { x } from "some-directory";
+import { x } from "./some-directory";
 ```
 
 These rules are meant to work well across server and browser environments.
