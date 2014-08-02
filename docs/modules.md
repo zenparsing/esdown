@@ -118,7 +118,7 @@ path.
 
 ```js
 // Using an ES module from an old-style module
-var newStyle = require("module:newStyle.js");
+var newStyle = require("module:./new-style.js");
 ```
 
 When the argument to `require` begins with "module:", **es6now** will load the target
@@ -149,5 +149,5 @@ To expose a new-style package to old-style clients, you can add an **index.js**
 file at the package root which looks something like this:
 
 ```js
-module.exports = require("module:main.js");
+module.exports = require("module:./main.js");
 ```
