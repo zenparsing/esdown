@@ -12,5 +12,3 @@ export { C as default };
 
 export * from Z;
 export * from "./Z.js";
-
-export module X {}
