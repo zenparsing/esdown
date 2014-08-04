@@ -1,10 +1,31 @@
-var Path = require("path"),
-    FS = require("fs");
+import * as Path from "node:path";
+import * as FS from "node:fs";
 
 var NODE_PATH = process.env["NODE_PATH"] || "",
-    NOT_PACKAGE = /^(?:\.{0,2}\/|[a-z]+:)/,
+    NOT_PACKAGE = /^(?:\.{0,2}\/|[a-z]+:)/i,
     Module = module.constructor,
     packageRoots;
+
+export function locateModule(path, base) {
+
+    if (isPackageSpecifier(path))
+        return locatePackage(path, base);
+
+    if (path.charAt(0) !== "." && path.charAt(0) !== "/")
+        return path;
+
+    path = Path.resolve(base, path);
+
+    var stat;
+
+    try { stat = FS.statSync(path) }
+    catch (x) {}
+
+    if (stat && stat.isDirectory())
+        path = Path.join(path, "main.js");
+
+    return path;
+}
 
 export function isPackageSpecifier(spec) {
 

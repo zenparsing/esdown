@@ -2,6 +2,7 @@ import { Runtime } from "./Runtime.js";
 import { Replacer } from "./Replacer.js";
 
 var SIGNATURE = "/*=es6now=*/";
+
 var WRAP_CALLEE = "(function(fn, deps, name) { " +
 
     // Node.js:
@@ -51,7 +52,7 @@ function wrapRuntimeModule(text) {
 
 export function translate(input, options = {}) {
 
-    var replacer = new Replacer,
+    var replacer = options.replacer || new Replacer,
         functionWrap = !options.module,
         output;
 
@@ -59,7 +60,7 @@ export function translate(input, options = {}) {
 
     if (options.runtime) {
 
-        input = "\n\n" +
+        input = "\n" +
             wrapRuntimeModule(Runtime.API) +
             wrapRuntimeModule(Runtime.ES6) +
             wrapRuntimeModule(Runtime.MapSet) +
@@ -74,7 +75,7 @@ export function translate(input, options = {}) {
         input = "(function(){" + input + "})";
     }
 
-    output = replacer.replace(input, options);
+    output = replacer.replace(input, { module: options.module });
 
     // Remove function expression wrapper for non-modules
     if (functionWrap)
@@ -86,15 +87,16 @@ export function translate(input, options = {}) {
         if (!options.module)
             throw new Error("Cannot wrap a non-module");
 
-        output = wrap(output, replacer.dependencies, options.global);
+        output = wrapModule(
+            output,
+            replacer.dependencies.map(d => d.url),
+            options.global);
     }
 
     return output;
 }
 
-export function wrap(text, dep, global) {
-
-    dep = (dep || []).map(dep => dep.url);
+export function wrapModule(text, dep, global) {
 
     return SIGNATURE + WRAP_CALLEE + "(" +
         WRAP_HEADER + text + WRAP_FOOTER + ", " +
@@ -107,4 +109,3 @@ export function isWrapped(text) {
 
     return text.indexOf(SIGNATURE) === 0;
 }
-

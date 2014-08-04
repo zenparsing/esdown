@@ -1,19 +1,19 @@
-var FS = require("fs");
+import * as FS from "node:fs";
 
 // Wraps a standard Node async function with a promise
 // generating function
 function wrap(fn) {
 
 	return function(...args) {
-	
+
 		return new Promise((resolve, reject) => {
-		    
+
             args.push((err, data) => {
-        
+
                 if (err) reject(err);
                 else resolve(data);
             });
-            
+
             fn.apply(null, args);
         });
 	};
@@ -22,12 +22,12 @@ function wrap(fn) {
 export function exists(path) {
 
     return new Promise(resolve => {
-    
+
         FS.exists(path, result => resolve(result));
     });
 }
 
-export var 
+export var
     readFile = wrap(FS.readFile),
     close = wrap(FS.close),
     open = wrap(FS.open),

@@ -1,104 +1,102 @@
-import { parse } from "esparse";
+import * as Path from "node:path";
 import { readFile } from "./AsyncFS.js";
-import { locatePackage } from "./PackageLocator.js";
+import { isPackageSpecifier, locateModule } from "./Locator.js";
+import { translate, wrapModule } from "./Translator.js";
+import { Replacer } from "./Replacer.js";
+import { isLegacyScheme, removeScheme, hasScheme } from "./Schema.js";
 
-var Path = require("path");
 
-var EXTERNAL_URL = /[a-z][a-z]+:/i;
+class Node {
 
-export function analyze(ast, resolvePath) {
+    constructor(path, name) {
 
-    if (typeof ast === "string")
-        ast = parse(ast, { module: true });
+        this.path = path;
+        this.name = name;
+        this.edges = new Set;
+        this.output = null;
+    }
+}
 
-    var edges = new Map,
-        identifiers = new Set;
+class GraphBuilder {
 
-    visit(ast, true);
+    constructor(root) {
 
-    return { edges, identifiers };
-
-    function visit(node, topLevel) {
-
-        switch (node.type) {
-
-            case "ExportsList":
-            case "ImportDeclaration":
-            case "ImportDefaultDeclaration":
-            case "ModuleImport":
-
-                addEdge(node.from);
-                break;
-
-            case "Identifier":
-
-                if (node.context === "declaration" && topLevel)
-                    identifiers.add(node.value);
-
-                break;
-
-            // TODO: Add generator, block (let, const, function in block)?
-            case "ClassExpression":
-            case "ClassBody":
-            case "FunctionExpression":
-            case "FormalParameter":
-            case "FunctionBody":
-
-                topLevel = false;
-                break;
-
-        }
-
-        node.children().forEach(child => visit(child, topLevel));
+        this.nodes = new Map;
+        this.nextID = 1;
+        this.root = this.add(root);
     }
 
-    function addEdge(spec) {
+    has(key) {
 
-        if (!spec || spec.type !== "StringLiteral")
-            return;
+        return this.nodes.has(key);
+    }
 
-        var path = resolvePath(spec.value);
+    add(key) {
 
-        if (path) {
+        if (this.nodes.has(key))
+            return this.nodes.get(key);
 
-            if (edges.has(path))
-                edges.get(path).push(spec);
-            else
-                edges.set(path, [spec]);
-        }
+        var name = "_M" + (this.nextID++),
+            node = new Node(key, name);
+
+        this.nodes.set(key, node);
+        return node;
+    }
+
+    sort(key = this.root.path) {
+
+        var visited = new Set,
+            list = [];
+
+        var visit = key => {
+
+            if (visited.has(key))
+                return;
+
+            visited.add(key);
+            var node = this.nodes.get(key);
+            node.edges.forEach(visit);
+            list.push(node);
+        };
+
+        visit(key);
+
+        return list;
+    }
+
+    process(key, input) {
+
+        if (!this.nodes.has(key))
+            throw new Error("Node not found");
+
+        var node = this.nodes.get(key);
+
+        if (node.output !== null)
+            throw new Error("Node already processed");
+
+        var replacer = new Replacer,
+            dir = Path.dirname(node.path);
+
+        replacer.identifyModule = path => {
+
+            path = locateModule(path, dir);
+            node.edges.add(path);
+            return this.add(path).name;
+        };
+
+        node.output = translate(input, { replacer, module: true });
+
+        return node;
     }
 
 }
 
-function identFromPath(path) {
-
-    // TODO: Make this unicode friendly.  Can we export some
-    // functions or patterns from the parser to help?
-
-    var name = Path.basename(path);
-
-    // Remove the file extension
-    name = name.replace(/\..*$/i, "");
-
-    // Replace dashes
-    name = name.replace(/-(\S?)/g, (m, m1) => m1 ? m1.toUpperCase() : "");
-
-    // Replace any other non-ident chars with _
-    name = name.replace(/[^a-z0-9$_]+/ig, "_");
-
-    // Make sure the name doesn't start with a number
-    name = name.replace(/^[0-9]+/, "");
-
-    return name;
-}
-
-export function createBundle(rootPath) {
+export function bundle(rootPath, options = {}) {
 
     rootPath = Path.resolve(rootPath);
 
-    var nodes = new Map,
-        nodeNames = new Set,
-        sort = [],
+    var builder = new GraphBuilder(rootPath),
+        visited = new Set,
         pending = 0,
         resolver,
         allFetched;
@@ -107,32 +105,26 @@ export function createBundle(rootPath) {
 
     function visit(path) {
 
-        if (nodes.has(path))
+        // Exit if module has already been processed
+        if (visited.has(path))
             return;
 
-        nodes.set(path, null);
+        visited.add(path);
         pending += 1;
-
-        var dir = Path.dirname(path);
 
         readFile(path, { encoding: "utf8" }).then(code => {
 
-            var node = analyze(code, p => {
+            var node = builder.process(path, code);
 
-                try { p = locatePackage(p, dir) }
-                catch (x) {}
+            node.edges.forEach(path => {
 
-                return EXTERNAL_URL.test(p) ? null : Path.resolve(dir, p);
+                // If we want to optionally limit the scope of the bundle, we
+                // will need to apply some kind of filter here.
+
+                // Do not bundle any files that start with a scheme prefix
+                if (!hasScheme(path))
+                    visit(path);
             });
-
-            nodes.set(path, node);
-            node.path = path;
-            node.source = code;
-            node.visited = false;
-            node.inEdges = new Set;
-            node.name = "";
-
-            node.edges.forEach((val, key) => visit(key));
 
             pending -= 1;
 
@@ -145,100 +137,53 @@ export function createBundle(rootPath) {
                 err.filename = path;
 
             resolver.reject(err);
-
         });
-    }
-
-    function traverse(path, from) {
-
-        var node = nodes.get(path);
-
-        if (from)
-            node.inEdges.add(from);
-
-        if (node.visited)
-            return;
-
-        node.visited = true;
-        node.edges.forEach((val, key) => traverse(key, path));
-        sort.push(path);
-    }
-
-    function assignNames() {
-
-        nodes.forEach(node => {
-
-            var name = identFromPath(node.path),
-                identifiers = new Set;
-
-            // Build list of top-level identifiers in referencing modules
-            node.inEdges.forEach(key => {
-
-                nodes.get(key).identifiers.forEach(k => identifiers.add(k));
-            });
-
-            // Resolve naming conflicts IMPROVE
-            while (identifiers.has(name) || nodeNames.has(name))
-                name += "_";
-
-            nodeNames.add(node.name = name);
-        });
-    }
-
-    function getModifiedSource(node) {
-
-        var offset = 0,
-            source = "",
-            ranges = [];
-
-        // Build list of ranges to replace
-        node.edges.forEach((val, key) => {
-
-            var ref = nodes.get(key);
-
-            val.forEach(range => {
-
-                ranges.push({ start: range.start, end: range.end, name: ref.name });
-            });
-        });
-
-        // Sort the list of ranges in order of appearance
-        ranges.sort((a, b) => a.start - b.start);
-
-        // Build modified source with replace subranges
-        ranges.forEach(range => {
-
-            source += node.source.slice(offset, range.start);
-            source += range.name;
-
-            offset = range.end;
-        });
-
-        source += node.source.slice(offset);
-
-        return source;
     }
 
     visit(rootPath);
 
     return allFetched.then($=> {
 
-        traverse(rootPath, null);
-        assignNames();
+        var nodes = builder.sort(),
+            dependencies = [],
+            output = "";
 
-        var out = "";
+        var varList = nodes.map(node => {
 
-        sort.forEach(path => {
+            if (node.output === null) {
 
-            var node = nodes.get(path);
+                var path = node.path,
+                    legacy = "";
 
-            out += "module " + node.name + " {\n\n";
-            out += getModifiedSource(node);
-            out += "\n\n}\n\n";
+                if (isLegacyScheme(path)) {
+
+                    path = removeScheme(node.path);
+                    legacy = ", 1";
+                }
+
+                dependencies.push(path);
+
+                return `${ node.name } = __load(${ JSON.stringify(path) }${ legacy })`;
+            }
+
+            return `${ node.name } = ${ node.path === rootPath ? "exports" : "{}" }`;
+
+        }).join(", ");
+
+        if (varList)
+            output += "var " + varList + ";\n";
+
+        nodes.filter(n => n.output !== null).forEach(node => {
+
+            output +=
+                "\n(function(exports) {\n\n" +
+                node.output +
+                "\n\n}).call(this, " + node.name + ");\n";
         });
 
-        out += "export * from " + nodes.get(rootPath).name + ";\n";
+        if (options.runtime)
+            output = translate("", { runtime: true, module: true }) + "\n\n" + output;
 
-        return out;
+        return wrapModule(output, dependencies, options.global);
     });
 }

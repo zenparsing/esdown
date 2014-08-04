@@ -1,14 +1,12 @@
+import * as FS from "node:fs";
+import * as Path from "node:path";
 import { ConsoleCommand } from "zen-cmd";
 import { readFile, writeFile } from "./AsyncFS.js";
 import { runModule, startREPL, formatSyntaxError } from "./NodeRun.js";
-import { createBundle } from "./Bundler.js";
+import { bundle } from "./Bundler.js";
 import { translate } from "./Translator.js";
-import { locatePackage } from "./PackageLocator.js";
 
-var FS = require("fs");
-var Path = require("path");
-
-export { translate };
+export { translate, bundle };
 
 function getOutPath(inPath, outPath) {
 
@@ -63,20 +61,35 @@ export function main() {
 
         execute(params) {
 
-            var promise =
-                params.bundle ? createBundle(params.input, locatePackage) :
-                params.input ? readFile(params.input, { encoding: "utf8" }) :
-                Promise.resolve("");
+            var promise = null;
 
-            promise.then(text => {
+            if (params.bundle) {
 
-                text = translate(text, {
+                promise = bundle(params.input, {
 
                     global: params.global,
-                    runtime: params.runtime,
-                    wrap: true,
-                    module: true
+                    runtime: params.runtime
                 });
+
+            } else {
+
+                promise = params.input ?
+                    readFile(params.input, { encoding: "utf8" }) :
+                    Promise.resolve("");
+
+                promise = promise.then(text => {
+
+                    return translate(text, {
+
+                        global: params.global,
+                        runtime: params.runtime,
+                        wrap: true,
+                        module: true
+                    });
+                });
+            }
+
+            promise.then(text => {
 
                 if (params.output) {
 

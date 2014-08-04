@@ -1,14 +1,15 @@
+import * as FS from "node:fs";
+import * as REPL from "node:repl";
+import * as VM from "node:vm";
+import * as Path from "node:path";
+import * as Util from "node:util";
+
 import { ConsoleStyle as Style } from "zen-cmd";
 import { parse } from "esparse";
 import { translate } from "./Translator.js";
-import { isPackageSpecifier, locatePackage } from "./PackageLocator.js";
+import { isPackageSpecifier, locateModule } from "./Locator.js";
 
-var FS = require("fs"),
-    REPL = require("repl"),
-    VM = require("vm"),
-    Path = require("path"),
-    Util = require("util"),
-    Module = module.constructor,
+var Module = module.constructor,
     global = this;
 
 export function formatSyntaxError(e, filename) {
@@ -34,24 +35,6 @@ export function formatSyntaxError(e, filename) {
     }
 
     return msg;
-}
-
-function locateModule(path, base) {
-
-    if (isPackageSpecifier(path))
-        return locatePackage(path, base);
-
-    path = Path.resolve(base, path);
-
-    var stat;
-
-    try { stat = FS.statSync(path) }
-    catch (x) {}
-
-    if (stat && stat.isDirectory())
-        path = Path.join(path, "main.js");
-
-    return path;
 }
 
 function addExtension() {

@@ -1,6 +1,8 @@
 import { Parser, AST } from "esparse";
+import { isLegacyScheme, removeScheme } from "./Schema.js";
 
-var NODE_SCHEMA = /^node:/i;
+var NODE_SCHEME = /^node:/i,
+    URI_SCHEME = /^[a-z]+:/i;
 
 var RESERVED_WORD = new RegExp("^(?:" +
     "break|case|catch|class|const|continue|debugger|default|delete|do|" +
@@ -53,11 +55,7 @@ class RootNode extends AST.Node {
 
 export class Replacer {
 
-    replace(input, options) {
-
-        options || (options = {});
-
-        this.mapURI = options.mapURI || (uri => uri);
+    replace(input, options = {}) {
 
         var parser = new Parser,
             root = parser.parse(input, { module: options.module });
@@ -538,9 +536,14 @@ export class Replacer {
 
         if (fn.type === "ArrowFunction") {
 
-            while (fn = this.parentFunction(fn))
-                if (fn.type !== "ArrowFunction")
+            while (fn = this.parentFunction(fn)) {
+
+                if (fn.type !== "ArrowFunction") {
+
                     fn.createThisBinding = true;
+                    break;
+                }
+            }
 
             return "__this";
         }
@@ -1061,19 +1064,19 @@ export class Replacer {
     modulePath(node) {
 
         return node.type === "StringLiteral" ?
-            this.moduleIdent(node.value) :
+            this.identifyModule(node.value) :
             this.stringify(node);
     }
 
-    moduleIdent(url) {
+    identifyModule(url) {
 
         var legacy = false;
 
-        url = this.mapURI(url.trim());
+        url = url.trim();
 
-        if (NODE_SCHEMA.test(url)) {
+        if (isLegacyScheme(url)) {
 
-            url = url.replace(NODE_SCHEMA, "");
+            url = removeScheme(url).trim();
             legacy = true;
         }
 
