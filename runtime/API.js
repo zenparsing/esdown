@@ -1,7 +1,13 @@
-var global = this,
-    arraySlice = Array.prototype.slice,
+var arraySlice = Array.prototype.slice,
     hasOwn = Object.prototype.hasOwnProperty,
     staticName = /^__static_/;
+
+function globalObject() {
+
+    try { return global.global; } catch (x) {}
+    try { return window.window; } catch (x) {}
+    return null;
+}
 
 // Returns true if the object has the specified property in
 // its prototype chain
@@ -139,12 +145,14 @@ this._es6now = {
 
     version: "0.8.1",
 
+    global: globalObject(),
+
     class: buildClass,
 
     // Support for iterator protocol
     iter(obj) {
 
-        if (global.Symbol && Symbol.iterator && obj[Symbol.iterator] !== void 0)
+        if (typeof Symbol !== "undefined" && Symbol.iterator && obj[Symbol.iterator] !== void 0)
             return obj[Symbol.iterator]();
 
         if (Array.isArray(obj))

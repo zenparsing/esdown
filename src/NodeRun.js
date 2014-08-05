@@ -9,8 +9,7 @@ import { parse } from "esparse";
 import { translate } from "./Translator.js";
 import { isPackageSpecifier, locateModule } from "./Locator.js";
 
-var Module = module.constructor,
-    global = this;
+var Module = module.constructor;
 
 export function formatSyntaxError(e, filename) {
 
