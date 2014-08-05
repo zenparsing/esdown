@@ -36,5 +36,5 @@ delete Array.prototype.entries;
 delete Array.prototype.keys;
 delete Array.prototype[Symbol.iterator];
 
-delete this.Map;
-delete this.Promise;
+delete _es6now.global.Map;
+delete _es6now.global.Promise;
