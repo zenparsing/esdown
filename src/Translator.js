@@ -7,7 +7,7 @@ var WRAP_CALLEE = "(function(fn, deps, name) { " +
 
     // Node.js:
     "if (typeof exports !== 'undefined') " +
-        "fn.call(typeof global === 'object' ? global : this, require, exports, module); " +
+        "fn(require, exports, module); " +
 
     // Insane module transport:
     "else if (typeof define === 'function' && define.amd) " +
@@ -15,11 +15,11 @@ var WRAP_CALLEE = "(function(fn, deps, name) { " +
 
     // DOM global module:
     "else if (typeof window !== 'undefined' && name) " +
-        "fn.call(window, null, window[name] = {}, {}); " +
+        "fn(null, window[name] = {}, {}); " +
 
     // Hail Mary:
     "else " +
-        "fn.call(window || this, null, {}, {}); " +
+        "fn(null, {}, {}); " +
 
 "})";
 

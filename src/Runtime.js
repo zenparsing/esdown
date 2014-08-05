@@ -2,16 +2,17 @@ export var Runtime = {};
 
 Runtime.API = 
 
-`var arraySlice = Array.prototype.slice,
-    hasOwn = Object.prototype.hasOwnProperty,
-    staticName = /^__static_/;
+`function globalObject() {
 
-function globalObject() {
-
-    try { return global.global; } catch (x) {}
-    try { return window.window; } catch (x) {}
+    try { return global.global } catch (x) {}
+    try { return window.window } catch (x) {}
     return null;
 }
+
+var arraySlice = Array.prototype.slice,
+    hasOwn = Object.prototype.hasOwnProperty,
+    staticName = /^__static_/,
+    Global = globalObject();
 
 // Returns true if the object has the specified property in
 // its prototype chain
@@ -145,11 +146,11 @@ function buildClass(base, def) {
     return constructor;
 }
 
-this._es6now = {
+Global._es6now = {
 
     version: "0.8.1",
 
-    global: globalObject(),
+    global: Global,
 
     class: buildClass,
 
@@ -424,7 +425,8 @@ function assertThis(val, name) {
 
 // === Symbols ===
 
-var symbolCounter = 0;
+var symbolCounter = 0,
+    global = _es6now.global;
 
 function fakeSymbol() {
 
@@ -437,7 +439,7 @@ function fakeSymbol() {
 // Symbol objects.  We expect to replace this override when V8's symbols
 // catch up with the ES6 specification.
 
-this.Symbol = fakeSymbol;
+global.Symbol = fakeSymbol;
 
 Symbol.iterator = Symbol("iterator");
 
@@ -1119,8 +1121,8 @@ Runtime.Promise =
 
 var enqueueMicrotask = ($=> {
 
-    var window = this.window,
-        process = this.process,
+    var window = global.window,
+        process = global.process,
         msgChannel = null,
         list = [];
 

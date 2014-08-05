@@ -2,8 +2,8 @@ var global = _es6now.global;
 
 var enqueueMicrotask = ($=> {
 
-    var window = this.window,
-        process = this.process,
+    var window = global.window,
+        process = global.process,
         msgChannel = null,
         list = [];
 

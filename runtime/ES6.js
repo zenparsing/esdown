@@ -107,7 +107,8 @@ function assertThis(val, name) {
 
 // === Symbols ===
 
-var symbolCounter = 0;
+var symbolCounter = 0,
+    global = _es6now.global;
 
 function fakeSymbol() {
 
@@ -120,7 +121,7 @@ function fakeSymbol() {
 // Symbol objects.  We expect to replace this override when V8's symbols
 // catch up with the ES6 specification.
 
-this.Symbol = fakeSymbol;
+global.Symbol = fakeSymbol;
 
 Symbol.iterator = Symbol("iterator");
 
