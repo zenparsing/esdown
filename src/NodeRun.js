@@ -73,7 +73,7 @@ function addExtension() {
             // via import syntax
             var m = !!module.parent.__es6;
 
-            text = translate(text, { wrap: m, module: m });
+            text = translate(text, { wrap: m, module: m, functionContext: !m });
 
         } catch (e) {
 
