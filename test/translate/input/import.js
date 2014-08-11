@@ -1,16 +1,13 @@
 import { A } from "Z.js";
 import { A, B } from "Z.js";
 import { C as C2, D as D2 } from "Z.js";
-import { A } from X;
-import { A } from X.Y;
-import { A, B } from X.Y;
 import * as B from "B.js";
 import {
   A,
   B,
-} from X;
+} from "A.js";
 import { A }
-    from X;
+    from "A.js";
 ;
 import {} from "A.js";
 import x from "A.js";

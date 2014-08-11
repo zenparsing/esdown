@@ -62,7 +62,7 @@ export class Replacer {
 
         this.input = input;
         this.parser = parser;
-        this.exportStack = [this.exports = {}];
+        this.exports = {};
         this.imports = {};
         this.dependencies = [];
         this.isStrict = false;
@@ -82,7 +82,6 @@ export class Replacer {
             switch (node.type) {
 
                 case "Module":
-                case "ModuleDeclaration":
                 case "ClassDeclaration":
                 case "ClassExpresion":
                     this.isStrict = true;
@@ -285,31 +284,6 @@ export class Replacer {
         return "var " + node.identifier.text + " = " + this.modulePath(node.from) + ";";
     }
 
-    ModuleDeclarationBegin(node) {
-
-        this.exportStack.push(this.exports = {});
-    }
-
-    ModuleDeclaration(node) {
-
-        var out = "var " + node.identifier.text + " = function(exports) {";
-
-        out += this.strictDirective() + " ";
-        out += node.body.text.replace(/^\{|\}$/g, "");
-
-        Object.keys(this.exports).forEach(k => {
-
-            out += "exports." + k + " = " + this.exports[k] + "; ";
-        });
-
-        this.exportStack.pop();
-        this.exports = this.exportStack[this.exportStack.length - 1];
-
-        out += "return exports; }.call(this, {});";
-
-        return out;
-    }
-
     ImportDeclaration(node) {
 
         var moduleSpec = this.modulePath(node.from),
@@ -371,7 +345,6 @@ export class Replacer {
 
             case "FunctionDeclaration":
             case "ClassDeclaration":
-            case "ModuleDeclaration":
 
                 ident = binding.identifier.text;
                 exports[ident] = ident;
@@ -725,38 +698,6 @@ export class Replacer {
         }
 
         return out;
-    }
-
-    ComprehensionFor(node) {
-
-        return "for (var " + node.left.text + " of " + node.right.text + ")";
-    }
-
-    ArrayComprehension(node) {
-
-        var out = "(function() { var __array = []; ";
-
-        node.qualifiers.forEach(q => { out += q.text + " " });
-
-        out += "__array.push(" + node.expression.text + "); ";
-        out += "return __array; ";
-        out += "}).call(this)"
-
-        // Run replacer over this input to translate for-of statements
-        return new Replacer().replace(out);
-    }
-
-    GeneratorComprehension(node) {
-
-        var out = "(function*() { ";
-
-        node.qualifiers.forEach(q => { out += q.text + " " });
-
-        out += "yield (" + node.expression.text + "); ";
-        out += "}).call(this)"
-
-        // Run replacer over this input to translate for-of statements
-        return new Replacer().replace(out);
     }
 
     CatchClause(node) {
