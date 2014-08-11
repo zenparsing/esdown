@@ -5,11 +5,11 @@ var SIGNATURE = "/*=es6now=*/";
 
 var WRAP_CALLEE = "(function(fn, deps, name) { " +
 
-    // Node.js:
+    // CommonJS:
     "if (typeof exports !== 'undefined') " +
         "fn(require, exports, module); " +
 
-    // Insane module transport:
+    // AMD:
     "else if (typeof define === 'function' && define.amd) " +
         "define(['require', 'exports', 'module'].concat(deps), fn); " +
 
@@ -52,9 +52,6 @@ function wrapRuntimeModule(text) {
 
 export function translate(input, options = {}) {
 
-    var replacer = options.replacer || new Replacer,
-        output;
-
     input = sanitize(input);
 
     if (options.runtime) {
@@ -72,7 +69,8 @@ export function translate(input, options = {}) {
     if (options.functionContext)
         input = "(function(){" + input + "})";
 
-    output = replacer.replace(input, { module: options.module });
+    var replacer = options.replacer || new Replacer,
+        output = replacer.replace(input, { module: options.module });
 
     // Remove function expression wrapper for node-modules
     if (options.functionContext)
