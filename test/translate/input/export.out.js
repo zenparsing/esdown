@@ -12,6 +12,12 @@ function C() {}
 
 Object.keys(_M0).forEach(function(k) { exports[k] = _M0[k]; });
 
+function F() {}
+var G = _es6now.class(function(__super) { return { constructor: function G() {} } });
+exports["default"] = function() {};
+exports["default"] = (_es6now.class(function(__super) { return { constructor: function() {} } }));
+exports["default"] = 1 + 1;
+
 exports.A = A;
 exports.X = X;
 exports.Y = Y;
@@ -20,4 +26,4 @@ exports.K = K;
 exports.B = B;
 exports.C = C;
 exports.D = C;
-exports.default = C;
+exports.default = G;

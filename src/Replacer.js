@@ -318,17 +318,16 @@ export class Replacer {
 
     ExportDeclaration(node) {
 
-        var binding = node.declaration,
-            bindingType = binding ? binding.type : "*",
+        var target = node.declaration,
             exports = this.exports,
             ident;
 
         // Exported declarations
-        switch (binding.type) {
+        switch (target.type) {
 
             case "VariableDeclaration":
 
-                binding.declarations.forEach(decl => {
+                target.declarations.forEach(decl => {
 
                     if (this.isPattern(decl.pattern)) {
 
@@ -341,27 +340,39 @@ export class Replacer {
                     }
                 });
 
-                return binding.text + ";";
+                return target.text + ";";
 
             case "FunctionDeclaration":
             case "ClassDeclaration":
 
-                ident = binding.identifier.text;
+                ident = target.identifier.text;
                 exports[ident] = ident;
-                return binding.text;
+                return target.text;
+
+            case "DefaultExport":
+
+                switch (target.binding.type) {
+
+                    case "ClassDeclaration":
+                    case "FunctionDeclaration":
+                        exports["default"] = target.binding.identifier.text;
+                        return target.binding.text;
+                }
+
+                return `exports["default"] = ${ target.binding.text };`;
         }
 
-        var from = binding.from,
+        var from = target.from,
             fromPath = from ? this.modulePath(from) : "",
             out = "";
 
-        if (!binding.specifiers) {
+        if (!target.specifiers) {
 
             out += "Object.keys(" + fromPath + ").forEach(function(k) { exports[k] = " + fromPath + "[k]; });";
 
         } else {
 
-            binding.specifiers.forEach(spec => {
+            target.specifiers.forEach(spec => {
 
                 var local = spec.local.text,
                     exported = spec.exported ? spec.exported.text : local;

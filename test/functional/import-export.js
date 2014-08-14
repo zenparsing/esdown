@@ -1,6 +1,8 @@
+import def from "./import-export-default.js";
+import { isHoisted } from "./import-export-default.js";
 import { a, b, c, C, F } from "./import-export-from.js";
 import { legacyRelative } from "node:./import-export-legacy.js";
-import { exports as legacyPackage } from "node:pkg";
+import legacyPackage from "node:pkg";
 
 export var tests = {
 
@@ -31,6 +33,18 @@ export var tests = {
 
         ._("package import with default")
         .equals(legacyPackage(), "legacy-package")
+
+        ;
+    },
+
+    "default export" (test) {
+
+        test
+
+        ._("default function")
+        .equals(def(), "default-export")
+        ._("default declarations are hoisted")
+        .equals(isHoisted, true)
 
         ;
     }
