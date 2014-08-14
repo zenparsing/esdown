@@ -40,17 +40,15 @@ function addExtension() {
 
     var moduleLoad = Module._load;
 
+    Module.prototype.importSync = function(path) {
+
+        this.__es6 = true;
+        return this.require(path);
+    };
+
     Module._load = (request, parent, isMain) => {
 
-        var es6 = parent.__es6;
-
-        if (!es6 && request.startsWith("module:")) {
-
-            request = request.replace(/^module:/, "");
-            es6 = parent.__es6 = true;
-        }
-
-        if (es6)
+        if (parent.__es6)
             request = locateModule(request, Path.dirname(parent.filename));
 
         var m = moduleLoad(request, parent, isMain);
