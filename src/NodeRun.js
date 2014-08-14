@@ -42,7 +42,9 @@ function addExtension() {
 
     Module.prototype.importSync = function(path) {
 
-        this.__es6 = true;
+        if (/^node:/.test(path)) path = path.slice(5);
+        else this.__es6 = true;
+
         return this.require(path);
     };
 
