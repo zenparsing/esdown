@@ -32,6 +32,26 @@ The following form can ben used to import everything from a module:
 import * as MyModule from "./my-module.js";
 ```
 
+You can also provide a **default** export:
+
+```js
+export default function foo() {
+    // Do something
+}
+```
+
+Default exports can be imported using special syntax:
+
+```js
+import bar from "./foo-module.js"
+```
+
+Or they can be imported using the name "default":
+
+```js
+import { default as bar } from "./foo-module.js";
+```
+
 ### Module Lookup Rules ###
 
 Consider the following import declaration:
@@ -46,7 +66,7 @@ In **es6now** running on Node, the following rules apply:
 
 **First**, `require` works the same way that it always does, except that non-module ES6
 features are translated to ES5.  Importantly, the `require` function can't be used to load
-ES6 modules (with an exception noted below).
+ES6 modules.
 
 ```js
 // No change to the behavior of require
@@ -110,25 +130,22 @@ import { breakdance } from "node:./old-school";
 For URLs using the **node** scheme, the path is interpreted exactly like `require`.
 
 If you are importing from an old-style module that overwrites the export object using
-the `module.exports = function() {}` pattern, you can import it using the special name
-`exports`.
+the `module.exports = function() {}` pattern, it will be available as the **default**
+export.
 
 ```js
-import { exports as mkdirp } from "node:mkdirp";
+import mkdirp from "node:mkdirp";
 ```
 
 ### Loading New-Style Modules From Old-Style Modules ###
 
-Old-style modules can import from new-style modules by adding "module:" to the `require`
-path.
+Old-style modules can import from new-style modules using the `importSync` method of
+Node's `module` object.
 
 ```js
 // Using an ES module from an old-style module
-var newStyle = require("module:./new-style.js");
+var newStyle = module.importSync("./new-style.js");
 ```
-
-When the argument to `require` begins with "module:", **es6now** will load the target
-as an ES6 module, using ES6 module lookup rules.
 
 ### Writing Interoperable Packages ###
 
@@ -155,5 +172,5 @@ To expose a new-style package to old-style clients, you can add an **index.js**
 file at the package root which looks something like this:
 
 ```js
-module.exports = require("module:./main.js");
+module.exports = module.importSync("./main.js");
 ```
