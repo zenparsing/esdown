@@ -174,3 +174,18 @@ file at the package root which looks something like this:
 ```js
 module.exports = module.importSync("./main.js");
 ```
+
+### The main function ###
+
+When a module is run directly by **es6now** from the command line, and that module
+exports a function named `main`, **es6now** will execute that function automatically.
+
+```js
+export function main() {
+
+    console.log("Runs automatically if this module is executed directly.");
+}
+```
+
+If the **main** function returns a Promise which eventually rejects, it will report
+the corresponding error and stack track to the console.
