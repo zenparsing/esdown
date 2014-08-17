@@ -9,7 +9,7 @@ The following ES6 language features are supported by **es6now**:
 Modules allow you to structure your code in separate files.  Read the
 [Module Guide](modules.md) for more information.
 
-### Arrow Fuctions ###
+### Arrow Functions ###
 
 [Arrow functions](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/arrow_functions)
 are a more concise way to to write function expressions.  Arrow functions close over
@@ -163,7 +163,7 @@ console.log(a, b, cc); // 1, 2, 3
 console.log(a, b); // 1, 2
 ```
 
-Destructuring within function parameter lists:
+Function arguments can also be destructured:
 
 ```js
 function f({ foo, bar }) {
@@ -178,7 +178,7 @@ f({ foo: "foo", bar: "bar" });
 
 ### Computed Properties ###
 
-Computed properties allow you to use a dynamic property names in an object literal.
+Computed properties allow you to use dynamic property names in an object literal.
 
 ```js
 var name = "es6now";
@@ -189,7 +189,8 @@ var obj = {
 
 ### Shorthand Properties ###
 
-You can leave off the property value in an object literal if it's a varialbe name:
+You can leave off the property name in an object literal if the value is a simple
+variable.
 
 ```js
 var a = "foo";
@@ -212,7 +213,7 @@ var obj = {
 
 ### For-Of Statements ###
 
-For-of statments loop over *iterators*.
+For-of statements loop over *iterators*.
 
 ```js
 var list = [1, 2, 3];
@@ -246,7 +247,7 @@ class C {
     constructor() {
        this.list = [1, 2, 3];
     }
-    
+
     [Symbol.iterator]() {
         // Delegate to the list's iterator
         return this.list[Symbol.iterator]();
@@ -264,24 +265,10 @@ for (var item of c)
 // >>> 3
 ```
 
-### Comprehensions ###
-
-*Warning: this feature might be removed from ES6*
-
-Comprehensions provide a concise way to iterate over some collections.
-
-Array comprehensions:
-
-```js
-var input = [1, 2, 3];
-var array = [for x of input x * 2];
-console.log(array); // [2, 4, 6]
-```
-
 ### Map and Set ###
 
-**[Map](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map)** and 
-**[Set](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Set)** 
+**[Map](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map)** and
+**[Set](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Set)**
 are new built-in standard library collection classes.
 
 *Limitation: es6now only supports strings and numbers as keys within Map and Set.*
@@ -325,7 +312,7 @@ features if your JS engine supports them.
 
 - Block-scoped variables (let and const)
 - Generators
-- Math polyfills
+- Math extras
 - Proxies
 - Reflect namespace
 - Dynamic module loading

@@ -54,6 +54,9 @@ import { default as bar } from "./foo-module.js";
 
 ### Module Lookup Rules ###
 
+*NOTE: There is currently no specification explaining how ES6 modules will be incorporated
+into Node.  Much of the following design is experimental.  Feedback is welcome.*
+
 Consider the following import declaration:
 
 ```js
@@ -103,6 +106,9 @@ import { parse } from "esparse";
 **Forth**, if the path resulting from the previous rules is a directory, then it will
 attempt to load the file named **main.js** in that directory.
 
+*OPEN ISSUE: Perhaps this should be "default.js" instead?  This would more smoothly
+integrate with precendent set on the web.*
+
 ```js
 // Imports "x" from "some-directory/main.js", relative to the current module, and only if
 // "some-directory" is a directory.
@@ -136,6 +142,11 @@ export.
 ```js
 import mkdirp from "node:mkdirp";
 ```
+
+*OPEN QUESTION:  Should we attempt to automatically guess whether we are looking at
+an old-style or new-style package based on whether the folder has a "default.js" file?
+This would improve the interoperability experience for older packages and might allow
+us to eliminate the "node" scheme.*
 
 ### Loading New-Style Modules From Old-Style Modules ###
 
