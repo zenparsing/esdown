@@ -114,14 +114,11 @@ export function startREPL() {
     // re-evaluates function expressions as function declarations.  Since
     // Node is unaware of class declarations, this causes classes to
     // always be interpreted as expressions in the REPL.
-    var removeParens = global.process.version.startsWith("v0.10.");
+    var removeParens = process.version.startsWith("v0.10.");
 
     addExtension();
 
     console.log(`es6now ${ _es6now.version } (Node ${ process.version })`);
-
-    // Provide a way to load an ES6 module from the REPL
-    global.loadModule = path => __load(locateModule(path, process.cwd()));
 
     var prompt = ">>> ", contPrompt = "... ";
 

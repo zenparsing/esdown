@@ -6,6 +6,26 @@ var NODE_PATH = process.env["NODE_PATH"] || "",
     Module = module.constructor,
     packageRoots;
 
+function isFile(path) {
+
+    var stat;
+
+    try { stat = FS.statSync(path) }
+    catch (x) {}
+
+    return stat && stat.isFile();
+}
+
+function isDirectory(path) {
+
+    var stat;
+
+    try { stat = FS.statSync(path) }
+    catch (x) {}
+
+    return stat && stat.isDirectory();
+}
+
 export function locateModule(path, base) {
 
     if (isPackageSpecifier(path))
@@ -16,13 +36,8 @@ export function locateModule(path, base) {
 
     path = Path.resolve(base, path);
 
-    var stat;
-
-    try { stat = FS.statSync(path) }
-    catch (x) {}
-
-    if (stat && stat.isDirectory())
-        path = Path.join(path, "main.js");
+    if (isDirectory(path))
+        path = Path.join(path, "default.js");
 
     return path;
 }
@@ -46,14 +61,8 @@ export function locatePackage(name, base) {
 
     var found = list.some(root => {
 
-        var stat = null;
-
-        path = Path.join(Path.resolve(root, name), "main.js");
-
-        try { stat = FS.statSync(path); }
-        catch (x) {}
-
-        return stat && stat.isFile();
+        path = Path.resolve(root, name, "default.js");
+        return isFile(path);
     });
 
     if (found)

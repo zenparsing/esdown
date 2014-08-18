@@ -104,13 +104,10 @@ import { parse } from "esparse";
 ```
 
 **Forth**, if the path resulting from the previous rules is a directory, then it will
-attempt to load the file named **main.js** in that directory.
-
-*OPEN ISSUE: Perhaps this should be "default.js" instead?  This would more smoothly
-integrate with precendent set on the web.*
+attempt to load the file named **default.js** in that directory.
 
 ```js
-// Imports "x" from "some-directory/main.js", relative to the current module, and only if
+// Imports "x" from "some-directory/default.js", relative to the current module, and only if
 // "some-directory" is a directory.
 import { x } from "./some-directory";
 ```
@@ -163,7 +160,7 @@ var newStyle = module.importSync("./new-style.js");
 It is possible to create packages which can be used as both old-style and new-style
 modules.
 
-To expose an old-style package to new-style modules, add a **main.js** file at the
+To expose an old-style package to new-style modules, add a **default.js** file at the
 package root which looks something like this:
 
 ```js
@@ -183,7 +180,7 @@ To expose a new-style package to old-style clients, you can add an **index.js**
 file at the package root which looks something like this:
 
 ```js
-module.exports = module.importSync("./main.js");
+module.exports = module.importSync("./");
 ```
 
 ### The main function ###
