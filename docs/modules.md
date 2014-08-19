@@ -177,7 +177,7 @@ export var
     bar = oldStyle.bar;
 
 // For old-style modules which use the "module.exports = " idiom:
-export var baz = oldStyle;
+export default oldStyle;
 ```
 
 To expose a new-style package to old-style clients, you can add an **index.js**
