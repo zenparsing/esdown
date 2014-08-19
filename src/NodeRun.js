@@ -42,10 +42,19 @@ function addExtension() {
 
     Module.prototype.importSync = function(path) {
 
-        if (/^node:/.test(path)) path = path.slice(5);
-        else this.__es6 = true;
+        if (/^node:/.test(path)) {
 
-        return this.require(path);
+            path = path.slice(5);
+            this.__es6 = false;
+
+        } else {
+
+            this.__es6 = true;
+        }
+
+        var e = this.require(path);
+        if (e && !this.__es6) e.default = e;
+        return e;
     };
 
     Module._load = (request, parent, isMain) => {
