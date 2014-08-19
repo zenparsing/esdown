@@ -26,20 +26,39 @@ function isDirectory(path) {
     return stat && stat.isDirectory();
 }
 
+function getFolderEntry(dir) {
+
+    var path;
+
+    // Look for an ES entry point (default.js)
+    path = Path.join(dir, "default.js");
+
+    if (isFile(path))
+        return { path };
+
+    // Look for a legacy entry point (package.json or index.js)
+    path = Module._findPath("./", [dir]);
+
+    if (path)
+        return { path, legacy: true };
+
+    return null;
+}
+
 export function locateModule(path, base) {
 
     if (isPackageSpecifier(path))
         return locatePackage(path, base);
 
     if (path.charAt(0) !== "." && path.charAt(0) !== "/")
-        return path;
+        return { path };
 
     path = Path.resolve(base, path);
 
     if (isDirectory(path))
-        path = Path.join(path, "default.js");
+        return getFolderEntry(path);
 
-    return path;
+    return { path };
 }
 
 export function isPackageSpecifier(spec) {
@@ -52,21 +71,23 @@ export function locatePackage(name, base) {
     if (NOT_PACKAGE.test(name))
         throw new Error("Not a package specifier");
 
-    var path;
+    var pathInfo;
 
     if (!packageRoots)
         packageRoots = NODE_PATH.split(Path.delimiter).map(v => v.trim());
 
     var list = Module._nodeModulePaths(base).concat(packageRoots);
 
-    var found = list.some(root => {
+    list.some(root => {
 
-        path = Path.resolve(root, name, "default.js");
-        return isFile(path);
+        pathInfo = getFolderEntry(Path.resolve(root, name));
+
+        if (pathInfo)
+            return true;
     });
 
-    if (found)
-        return path;
+    if (!pathInfo)
+        throw new Error(`Package ${ name } could not be found.`);
 
-    throw new Error(`Package ${name} could not be found.`);
+    return pathInfo;
 }

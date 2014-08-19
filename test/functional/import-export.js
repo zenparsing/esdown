@@ -2,7 +2,7 @@ import def from "./import-export-default.js";
 import { isHoisted } from "./import-export-default.js";
 import { a, b, c, C, F } from "./import-export-from.js";
 import { legacyRelative } from "node:./import-export-legacy.js";
-import legacyPackage from "node:pkg";
+import legacyPackage from "pkg";
 
 export var tests = {
 

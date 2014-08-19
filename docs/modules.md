@@ -104,7 +104,9 @@ import { parse } from "esparse";
 ```
 
 **Forth**, if the path resulting from the previous rules is a directory, then it will
-attempt to load the file named **default.js** in that directory.
+attempt to load the file named **default.js** in that directory.  If a **default.js**
+file cannot be found, it will attempt to load the directory as an old-style Node
+module using `package.json` and `index.js` files.
 
 ```js
 // Imports "x" from "some-directory/default.js", relative to the current module, and only if
@@ -140,10 +142,12 @@ export.
 import mkdirp from "node:mkdirp";
 ```
 
-*OPEN QUESTION:  Should we attempt to automatically guess whether we are looking at
-an old-style or new-style package based on whether the folder has a "default.js" file?
-This would improve the interoperability experience for older packages and might allow
-us to eliminate the "node" scheme.*
+The **node** scheme is not required for old-style packages or folders which do not have
+a **default.js** entry point.
+
+```js
+import mkdirp from "mkdirp";
+```
 
 ### Loading New-Style Modules From Old-Style Modules ###
 

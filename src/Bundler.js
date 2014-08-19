@@ -79,7 +79,8 @@ class GraphBuilder {
 
         replacer.identifyModule = path => {
 
-            path = locateModule(path, dir);
+            // REVISIT:  Does not currently allow bundling of legacy modules
+            path = locateModule(path, dir).path;
             node.edges.add(path);
             return this.add(path).name;
         };

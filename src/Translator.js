@@ -26,8 +26,11 @@ var WRAP_CALLEE = "(function(fn, deps, name) { " +
 var WRAP_HEADER = "function(require, exports, module) { " +
     "'use strict'; " +
     "function __load(p, l) { " +
-        "module.__es6 = !l; var e = require(p); module.__es6 = false; " +
-        "if (e && l) e.default = e; " +
+        "var m = module, e; " +
+        "m.__es6 = !l; " +
+        "var e = require(p); " +
+        "if (e && !m.__es6) e.default = e; " +
+        "m.__es6 = false; " +
         "return e; " +
     "} ";
 

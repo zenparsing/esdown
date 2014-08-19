@@ -50,14 +50,17 @@ function addExtension() {
 
     Module._load = (request, parent, isMain) => {
 
-        if (parent.__es6)
-            request = locateModule(request, Path.dirname(parent.filename));
+        if (parent.__es6) {
 
-        var m = moduleLoad(request, parent, isMain);
+            var loc = locateModule(request, Path.dirname(parent.filename));
 
-        parent.__es6 = false;
+            request = loc.path;
 
-        return m;
+            if (loc.legacy)
+                parent.__es6 = false;
+        }
+
+        return moduleLoad(request, parent, isMain);
     };
 
     // Compile ES6 js files
@@ -94,12 +97,12 @@ export function runModule(path) {
     if (isPackageSpecifier(path))
         path = "./" + path;
 
-    path = locateModule(path, process.cwd());
+    var loc = locateModule(path, process.cwd());
 
     // "__load" is defined in the module wrapper and ensures that the
     // target is loaded as a module
 
-    var m = __load(path);
+    var m = __load(loc.path);
 
     if (m && typeof m.main === "function") {
 
