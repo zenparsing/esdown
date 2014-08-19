@@ -28,7 +28,7 @@ var WRAP_HEADER = "function(require, exports, module) { " +
     "function __load(p, l) { " +
         "module.__es6 = !l; " +
         "var e = require(p); " +
-        "if (e && !module.__es6) e.default = e; " +
+        "if (e && e.constructor !== Object) e.default = e; " +
         "return e; " +
     "} ";
 

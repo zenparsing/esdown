@@ -69,7 +69,9 @@ function addExtension() {
                 parent.__es6 = false;
         }
 
-        return moduleLoad(request, parent, isMain);
+        var m = moduleLoad(request, parent, isMain);
+        parent.__es6 = false;
+        return m;
     };
 
     // Compile ES6 js files
