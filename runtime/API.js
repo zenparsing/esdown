@@ -144,7 +144,7 @@ function buildClass(base, def) {
 
 Global._es6now = {
 
-    version: "0.8.8",
+    version: "0.8.9",
 
     global: Global,
 
