@@ -53,7 +53,7 @@ function addExtension() {
         }
 
         var e = this.require(path);
-        if (e && !this.__es6) e.default = e;
+        if (e && e.constructor !== Object) e.default = e;
         return e;
     };
 
