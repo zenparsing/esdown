@@ -28,6 +28,11 @@ function preserveNewlines(text, height) {
     return text;
 }
 
+function isAsyncType(type) {
+
+    return type === "async" || type === "async-generator";
+}
+
 class PatternTreeNode {
 
     constructor(name, init, skip) {
@@ -264,7 +269,8 @@ export class Replacer {
                     node.body.text;
 
             case "async":
-                return node.name.text + ": " + this.asyncFunction(null, node.params, node.body.text);
+            case "async-generator":
+                return node.name.text + ": " + this.asyncFunction(null, node.params, node.body.text, node.kind);
 
             case "generator":
                 return node.name.text + ": function*(" +
@@ -508,7 +514,7 @@ export class Replacer {
         }
 
         var text = node.kind === "async" ?
-            this.asyncFunction(null, node.params, body) :
+            this.asyncFunction(null, node.params, body, "async") :
             "function(" + this.joinList(node.params) + ") " + body;
 
         return this.wrapFunctionExpression(text, node);
@@ -538,19 +544,25 @@ export class Replacer {
         if (node.operator !== "await")
             return;
 
-        return "(yield " + node.expression.text + ")";
+        var gen = this.parentFunction(node).kind === "async-generator",
+            text = node.expression.text;
+
+        if (this.parentFunction(node).kind === "async-generator")
+            text = `(__await.value = ${ text }, __await)`;
+
+        return `(yield ${ text })`;
     }
 
     FunctionDeclaration(node) {
 
-        if (node.kind === "async")
-            return this.asyncFunction(node.identifier, node.params, node.body.text);
+        if (isAsyncType(node.kind))
+            return this.asyncFunction(node.identifier, node.params, node.body.text, node.kind);
     }
 
     FunctionExpression(node) {
 
-        if (node.kind === "async")
-            return this.asyncFunction(node.identifier, node.params, node.body.text);
+        if (isAsyncType(node.kind))
+            return this.asyncFunction(node.identifier, node.params, node.body.text, node.kind);
     }
 
     ClassDeclaration(node) {
@@ -931,7 +943,7 @@ export class Replacer {
         return parent;
     }
 
-    asyncFunction(ident, params, body) {
+    asyncFunction(ident, params, body, kind) {
 
         var head = "function";
 
@@ -945,10 +957,20 @@ export class Replacer {
 
         }).join(", ");
 
-        return `${head}(${outerParams}) { ` +
-            `try { return _es6now.async(function*(${ this.joinList(params) }) ` +
-            `${ body }.apply(this, arguments)); ` +
-            `} catch (x) { return Promise.reject(x); } }`;
+        var wrapper = kind === "async-generator" ? "asyncGen" : "async";
+
+        if (kind === "async-generator") {
+
+            return `${head}(${outerParams}) { var __await = {}; ` +
+                `return _es6now.asyncGen(__await, function*(${ this.joinList(params) }) ` +
+                `${ body }.apply(this, arguments)); }`;
+
+        } else {
+
+            return `${head}(${outerParams}) { ` +
+                `return _es6now.async(function*(${ this.joinList(params) }) ` +
+                `${ body }.apply(this, arguments)); }`;
+        }
     }
 
     rawToString(raw) {

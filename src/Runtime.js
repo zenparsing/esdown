@@ -196,33 +196,113 @@ Global._es6now = {
     // Support for async functions
     async(iterable) {
 
-        var iter = _es6now.iter(iterable),
-            resolver,
-            promise;
+        try {
 
-        promise = new Promise((resolve, reject) => resolver = { resolve, reject });
-        resume(void 0, false);
-        return promise;
+            var iter = _es6now.iter(iterable),
+                resolver,
+                promise;
 
-        function resume(value, error) {
+            promise = new Promise((resolve, reject) => resolver = { resolve, reject });
+            resume("next", void 0);
+            return promise;
 
-            if (error && !("throw" in iter))
-                return resolver.reject(value);
+        } catch (x) { return Promise.reject(x) }
+
+        function resume(type, value) {
+
+            if (!(type in iter)) {
+
+                resolver.reject(value);
+                return;
+            }
 
             try {
 
-                // Invoke the iterator/generator
-                var result = error ? iter.throw(value) : iter.next(value),
-                    value = Promise.resolve(result.value),
-                    done = result.done;
+                var result = iter[type](value);
+
+                value = Promise.resolve(result.value);
 
                 if (result.done)
                     value.then(resolver.resolve, resolver.reject);
                 else
-                    value.then(x => resume(x, false), x => resume(x, true));
+                    value.then(x => resume("next", x), x => resume("throw", x));
 
             } catch (x) { resolver.reject(x) }
+        }
+    },
 
+    // Support for async generators
+    asyncGen(waitToken, iterable) {
+
+        var iter = _es6now.iter(iterable),
+            state = "paused",
+            queue = [];
+
+        return {
+
+            next(val) { return enqueue("next", val) },
+            throw(val) { return enqueue("throw", val) },
+            return(val) { return enqueue("return", val) }
+        };
+
+        function enqueue(type, value) {
+
+            var resolve, reject;
+            var promise = new Promise((res, rej) => (resolve = res, reject = rej));
+
+            queue.push({ type, value, resolve, reject });
+
+            if (state === "paused")
+                next();
+
+            return promise;
+        }
+
+        function next() {
+
+            if (queue.length > 0) {
+
+                state = "running";
+                var first = queue[0];
+                resume(first.type, first.value);
+
+            } else {
+
+                state = "paused";
+            }
+        }
+
+        function resume(type, value) {
+
+            if (!(type in iter)) {
+
+                queue.shift().reject(value);
+                return;
+            }
+
+            try {
+
+                var result = iter[type](value);
+
+                if (result.value === waitToken) {
+
+                    if (result.done)
+                        throw new Error("Invalid async generator return");
+
+                    result.value.value.then(
+                        x => resume("next", x),
+                        x => resume("throw", x));
+
+                    return;
+
+                } else {
+
+                    queue.shift().resolve(result);
+                }
+
+            } catch (x) { queue.shift().reject(x) }
+
+            next();
         }
     },
 
