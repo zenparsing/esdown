@@ -270,14 +270,12 @@ Global._es6now = {
 
         function resume(type, value) {
 
-            var returnError = {};
-
             if (type === "return" && !(type in iter)) {
 
                 // If the generator does not support the "return" method, then
                 // emulate it (poorly) using throw
                 type = "throw";
-                value = returnError = { value };
+                value = { value, __return: true };
             }
 
             try {
@@ -302,7 +300,7 @@ Global._es6now = {
 
             } catch (x) {
 
-                if (returnError && x === returnError)
+                if (x && x.__return === true)
                     queue.shift().resolve({ value: x.value, done: true });
                 else
                     queue.shift().reject(x);
