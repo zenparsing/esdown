@@ -544,8 +544,7 @@ export class Replacer {
         if (node.operator !== "await")
             return;
 
-        var gen = this.parentFunction(node).kind === "async-generator",
-            text = node.expression.text;
+        var text = node.expression.text;
 
         if (this.parentFunction(node).kind === "async-generator")
             text = `(__await.value = ${ text }, __await)`;
