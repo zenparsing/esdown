@@ -560,6 +560,10 @@ export class Replacer {
         // V8 circa Node 0.11.x does not support yield without expression
         if (!node.expression)
             return "yield void 0";
+
+        // V8 circa Node 0.11.x does not access Symbol.iterator correctly
+        if (node.delegate)
+            node.expression.text = "_es6now.iter(" + node.expression.text + ")";
     }
 
     FunctionDeclaration(node) {
