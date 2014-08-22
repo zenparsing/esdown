@@ -555,6 +555,13 @@ export class Replacer {
         return this.awaitYield(this.parentFunction(node), node.expression.text);
     }
 
+    YieldExpression(node) {
+
+        // V8 circa Node 0.11.x does not support yield without expression
+        if (!node.expression)
+            return "yield void 0";
+    }
+
     FunctionDeclaration(node) {
 
         if (isAsyncType(node.kind))
