@@ -157,12 +157,20 @@ export class Replacer {
 
         var iter = this.addTempVar(node, null, true),
             iterResult = this.addTempVar(node, null, true),
+            context = this.parentFunction(node),
             decl = "",
             binding,
             out;
 
         out = `for (var ${ iter } = _es6now.iter(${ node.right.text }), ${ iterResult }; `;
-        out += `${ iterResult } = ${ iter }.next(), !${ iterResult }.done;)`;
+        out += `${ iterResult } = ${ iter }.next(), `;
+
+        // Experimental:  for-of within async functions will await the result.  An actual
+        // implementation would use a nominal type check.
+        if (isAsyncType(context.kind))
+            out += `"value" in ${ iterResult } || (${ iterResult } = ${ this.awaitYield(context, iterResult) }), `;
+
+        out += `!${ iterResult }.done;)`;
 
         if (node.left.type === "VariableDeclaration") {
 
@@ -544,12 +552,7 @@ export class Replacer {
         if (node.operator !== "await")
             return;
 
-        var text = node.expression.text;
-
-        if (this.parentFunction(node).kind === "async-generator")
-            text = `(__await.value = ${ text }, __await)`;
-
-        return `(yield ${ text })`;
+        return this.awaitYield(this.parentFunction(node), node.expression.text);
     }
 
     FunctionDeclaration(node) {
@@ -1213,6 +1216,14 @@ export class Replacer {
 
         var height = this.lineNumber(end - 1) - this.lineNumber(start);
         return preserveNewlines(text, height);
+    }
+
+    awaitYield(context, text) {
+
+        if (context.kind === "async-generator")
+            text = `(__await.value = ${ text }, __await)`;
+
+        return `(yield ${ text })`;
     }
 
     wrapFunctionExpression(text, node) {

@@ -238,7 +238,8 @@ Global._es6now = {
 
             next(val) { return enqueue("next", val) },
             throw(val) { return enqueue("throw", val) },
-            return(val) { return enqueue("return", val) }
+            return(val) { return enqueue("return", val) },
+            [Symbol.iterator]() { return this }
         };
 
         function enqueue(type, value) {
