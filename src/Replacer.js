@@ -972,18 +972,9 @@ export class Replacer {
 
         var wrapper = kind === "async-generator" ? "asyncGen" : "async";
 
-        if (kind === "async-generator") {
-
-            return `${head}(${outerParams}) { var __await = {}; ` +
-                `return _es6now.asyncGen(__await, function*(${ this.joinList(params) }) ` +
-                `${ body }.apply(this, arguments)); }`;
-
-        } else {
-
-            return `${head}(${outerParams}) { ` +
-                `return _es6now.async(function*(${ this.joinList(params) }) ` +
-                `${ body }.apply(this, arguments)); }`;
-        }
+        return `${head}(${outerParams}) { ` +
+            `return _es6now.${ wrapper }(function*(${ this.joinList(params) }) ` +
+            `${ body }.apply(this, arguments)); }`;
     }
 
     rawToString(raw) {
@@ -1232,7 +1223,7 @@ export class Replacer {
     awaitYield(context, text) {
 
         if (context.kind === "async-generator")
-            text = `(__await.value = ${ text }, __await)`;
+            text = `{ _es6now_await: (${ text }) }`;
 
         return `(yield ${ text })`;
     }

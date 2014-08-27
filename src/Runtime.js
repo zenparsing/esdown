@@ -222,17 +222,15 @@ Global._es6now = {
 
                 value = Promise.resolve(result.value);
 
-                if (result.done)
-                    value.then(resolver.resolve, resolver.reject);
-                else
-                    value.then(x => resume("next", x), x => resume("throw", x));
+                if (result.done) value.then(resolver.resolve, resolver.reject);
+                else value.then(x => resume("next", x), x => resume("throw", x));
 
             } catch (x) { resolver.reject(x) }
         }
     },
 
     // Support for async generators
-    asyncGen(waitToken, iterable) {
+    asyncGen(iterable) {
 
         var iter = _es6now.iter(iterable),
             state = "paused",
@@ -285,14 +283,15 @@ Global._es6now = {
 
             try {
 
-                var result = iter[type](value);
+                var result = iter[type](value),
+                    value = result.value;
 
-                if (result.value === waitToken) {
+                if (value && value._es6now_await) {
 
                     if (result.done)
                         throw new Error("Invalid async generator return");
 
-                    result.value.value.then(
+                    Promise.resolve(value._es6now_await).then(
                         x => resume("next", x),
                         x => resume("throw", x));
 
