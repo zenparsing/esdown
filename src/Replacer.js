@@ -565,8 +565,13 @@ export class Replacer {
             return "yield void 0";
 
         // V8 circa Node 0.11.x does not access Symbol.iterator correctly
-        if (node.delegate)
-            node.expression.text = "_es6now.iter(" + node.expression.text + ")";
+        if (node.delegate) {
+
+            var fn = this.parentFunction(node),
+                method = isAsyncType(fn.kind) ? "asyncIter" : "iter";
+
+            node.expression.text = `_es6now.${ method }(${ node.expression.text })`;
+        }
     }
 
     FunctionDeclaration(node) {

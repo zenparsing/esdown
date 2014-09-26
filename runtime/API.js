@@ -298,7 +298,7 @@ Global._es6now = {
                 var result = iter[type](value),
                     value = result.value;
 
-                if (value && value._es6now_await) {
+                if (typeof value === "object" && "_es6now_await" in value) {
 
                     if (result.done)
                         throw new Error("Invalid async generator return");
