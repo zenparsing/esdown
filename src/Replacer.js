@@ -162,13 +162,16 @@ export class Replacer {
             binding,
             out;
 
-        out = `for (var ${ iter } = _es6now.iter(${ node.right.text }), ${ iterResult }; `;
-        out += `${ iterResult } = ${ iter }.next(), `;
+        if (node.async) {
 
-        // Experimental:  for-of within async functions will await the result.  An actual
-        // implementation would use a nominal type check.
-        if (isAsyncType(context.kind))
-            out += `"value" in ${ iterResult } || (${ iterResult } = ${ this.awaitYield(context, iterResult) }), `;
+            out = `for (var ${ iter } = _es6now.asyncIter(${ node.right.text }), ${ iterResult }; `;
+            out += `${ iterResult } = ${ this.awaitYield(context, iter + ".next()") }, `;
+
+        } else {
+
+            out = `for (var ${ iter } = _es6now.iter(${ node.right.text }), ${ iterResult }; `;
+            out += `${ iterResult } = ${ iter }.next(), `;
+        }
 
         out += `!${ iterResult }.done;)`;
 

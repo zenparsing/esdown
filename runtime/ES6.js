@@ -124,6 +124,7 @@ function fakeSymbol() {
 global.Symbol = fakeSymbol;
 
 Symbol.iterator = Symbol("iterator");
+Symbol.asyncIterator = Symbol("asyncIterator");
 
 
 // === Object ===

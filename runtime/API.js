@@ -153,13 +153,29 @@ Global._es6now = {
     // Support for iterator protocol
     iter(obj) {
 
-        if (typeof Symbol !== "undefined" && Symbol.iterator && obj[Symbol.iterator] !== void 0)
+        if (obj[Symbol.iterator] !== void 0)
             return obj[Symbol.iterator]();
 
         if (Array.isArray(obj))
             return obj.values();
 
         return obj;
+    },
+
+    asyncIter(obj) {
+
+        if (obj[Symbol.asyncIterator] !== void 0)
+            return obj[Symbol.asyncIterator]();
+
+        var iter = _es6now.iter(obj);
+
+        return {
+
+            next(value) { return Promise.resolve(iter.next(value)) },
+            throw(value) { return Promise.resolve(iter.throw(value)) },
+            return(value) { return Promise.resolve(iter.return(value)) },
+            [Symbol.asyncIterator]() { return this }
+        };
     },
 
     // Support for computed property names
@@ -237,7 +253,7 @@ Global._es6now = {
             next(val) { return enqueue("next", val) },
             throw(val) { return enqueue("throw", val) },
             return(val) { return enqueue("return", val) },
-            [Symbol.iterator]() { return this }
+            [Symbol.asyncIterator]() { return this }
         };
 
         function enqueue(type, value) {

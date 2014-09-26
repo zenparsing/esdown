@@ -181,8 +181,22 @@ export function startREPL() {
                 // Without displayPrompt, asynchronously calling the "eval"
                 // callback results in no text being displayed on the screen.
 
-                result
-                .then(x => cb(null, x), err => cb(err, null))
+                var token = {};
+
+                Promise.race([
+
+                    result,
+                    new Promise(a => setTimeout($=> a(token), 3000)),
+                ])
+                .then(x => {
+
+                    if (x === token)
+                        return void cb(null, result);
+
+                    this.outputStream.write(Style.gray("(async) "));
+                    cb(null, x);
+                })
+                .catch(err => cb(err, null))
                 .then($=> this.displayPrompt());
 
             } else {
