@@ -1,6 +1,6 @@
-function ag() { var __await = {}; return _es6now.asyncGen(__await, function*() {
+function ag() { return _es6now.asyncGen(function*() {
 
-    (yield (__await.value = x, __await));
+    (yield { _es6now_await: (x) });
     yield y;
-    yield (yield (__await.value = foo, __await));
+    yield (yield { _es6now_await: (foo) });
 }.apply(this, arguments)); }
