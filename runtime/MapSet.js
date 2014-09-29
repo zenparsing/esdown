@@ -192,7 +192,7 @@ class Set {
     Object.defineProperty(Set.prototype, k, d);
 });
 
-if (!global.Map || !global.Map.prototype.forEach) {
+if (!global.Map || !global.Map.prototype.entries) {
 
     global.Map = Map;
     global.Set = Set;
