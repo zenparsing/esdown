@@ -173,7 +173,9 @@ export class Replacer {
             out += `${ iterResult } = ${ iter }.next(), `;
         }
 
-        out += `!${ iterResult }.done;)`;
+        out += `!${ iterResult }.done;`;
+        out = this.syncNewlines(node.left.start, node.right.end, out);
+        out += this.input.slice(node.right.end, node.body.start);
 
         if (node.left.type === "VariableDeclaration") {
 
@@ -185,8 +187,6 @@ export class Replacer {
             binding = this.unwrapParens(node.left);
         }
 
-        out = this.syncNewlines(node.left.start, node.body.start, out);
-
         var body = node.body.text;
 
         // Remove braces from block bodies
@@ -197,7 +197,7 @@ export class Replacer {
             this.translatePattern(binding, `${ iterResult }.value`).join(", ") :
             `${ binding.text } = ${ iterResult }.value`;
 
-        return `${ out } { ${ decl }${ assign }; ${ body }}`;
+        return `${ out }{ ${ decl }${ assign }; ${ body }}`;
     }
 
     Module(node) {
