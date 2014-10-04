@@ -1,17 +1,21 @@
 ## Overview ##
 
 **es6now** is an ES6 to ES5 compiler, written in ES6.  It will allow you to
-write programs using next-generation Javascript features without having to 
+write programs using next-generation Javascript features without having to
 wait for Node or browsers to fully implement ES6.
 
 **es6now** can also be used as a runtime environment for executing ES6 programs
 on top of Node.
 
+Source maps are not required when debugging code translated with **es6now**.  One
+of the fundamental design goals is that *the output should look like the input*.
+Line numbers, whitespace and comments are all maintained.
+
 For more information:
 
 - The [Feature Guide](docs/features.md) describes the ES6 features that you can use with
 **es6now**.
-- The [Module Guide](docs/modules.md) describes the ES6 module system implemented in 
+- The [Module Guide](docs/modules.md) describes the ES6 module system implemented in
 **es6now**.
 
 ## Instructions ##
@@ -35,11 +39,11 @@ Translate a module by using a hyphen:
     --input, -i  (1)    The file to translate.
     --output, -o (2)    The file to write to. If not set, then the output
                         will be written to the console.
-    --bundle, -b        If present, module dependencies will be bundled 
+    --bundle, -b        If present, module dependencies will be bundled
                         together in the output.
-    --runtime, -r       If present, the es6now runtime code will be bundled 
+    --runtime, -r       If present, the es6now runtime code will be bundled
                         with the output.
-    --global, -g        If specified, the name of the global variable to 
+    --global, -g        If specified, the name of the global variable to
                         dump this module's exports into, if the resulting
                         script is not executed within any module system.
 
