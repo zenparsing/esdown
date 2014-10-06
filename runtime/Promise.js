@@ -80,13 +80,8 @@ function HAS_DEFINED_PRIVATE(obj, prop) { return prop in obj; }
 function IS_UNDEFINED(x) { return x === void 0; }
 function MakeTypeError(msg) { return new TypeError(msg); }
 
-var _defineProperty = Object.defineProperty;
-
-if (_defineProperty) {
-    // In IE8 Object.defineProperty only works on DOM nodes
-    try { _defineProperty({}, "-", { value: 0 }); }
-    catch (x) { _defineProperty = void 0; }
-}
+// In IE8 Object.defineProperty only works on DOM nodes, and defineProperties does not exist
+var _defineProperty = Object.defineProperties && Object.defineProperty;
 
 function AddNamedProperty(target, name, value) {
     if (!_defineProperty) {
@@ -106,6 +101,11 @@ function InstallFunctions(target, attr, list) {
     for (var i = 0; i < list.length; i += 2)
         AddNamedProperty(target, list[i], list[i + 1]);
 }
+
+var IsArray = Array.isArray || (function(obj) {
+    var str = Object.prototype.toString;
+    return function(obj) { return str.call(obj) === "[object Array]" };
+})();
 
 var UNDEFINED, DONT_ENUM, InternalArray = Array;
 
@@ -327,7 +327,7 @@ function PromiseCast(x) {
 function PromiseAll(values) {
     var deferred = PromiseDeferred.call(this);
     var resolutions = [];
-    if (!Array.isArray(values)) {
+    if (!IsArray(values)) {
         deferred.reject(MakeTypeError('invalid_argument'));
         return deferred.promise;
     }
@@ -357,7 +357,7 @@ function PromiseAll(values) {
 
 function PromiseOne(values) {
     var deferred = PromiseDeferred.call(this);
-    if (!Array.isArray(values)) {
+    if (!IsArray(values)) {
         deferred.reject(MakeTypeError('invalid_argument'));
         return deferred.promise;
     }
