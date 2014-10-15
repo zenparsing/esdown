@@ -197,7 +197,10 @@ export class Replacer {
             this.translatePattern(binding, `${ iterResult }.value`).join(", ") :
             `${ binding.text } = ${ iterResult }.value`;
 
-        return `${ out }{ ${ decl }${ assign }; ${ body }}`;
+        var cleanup = `if (${ iterResult } && !${ iterResult }.done && "return" in ${ iter }) ` +
+            `${ iter }.return();`;
+
+        return `try { ${ out }{ ${ decl }${ assign }; ${ body }} } finally { ${ cleanup } }`;
     }
 
     Module(node) {

@@ -167,15 +167,16 @@ Global._es6now = {
         if (obj[Symbol.asyncIterator] !== void 0)
             return obj[Symbol.asyncIterator]();
 
-        var iter = _es6now.iter(obj);
+        var iter = { [Symbol.asyncIterator]() { return this } },
+            inner = _es6now.iter(obj);
 
-        return {
+        ["next", "throw", "return"].forEach(name => {
 
-            next(value) { return Promise.resolve(iter.next(value)) },
-            throw(value) { return Promise.resolve(iter.throw(value)) },
-            return(value) { return Promise.resolve(iter.return(value)) },
-            [Symbol.asyncIterator]() { return this }
-        };
+            if (name in inner)
+                iter[name] = value => Promise.resolve(inner[name](value));
+        });
+
+        return iter;
     },
 
     // Support for computed property names
