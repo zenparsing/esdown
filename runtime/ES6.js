@@ -507,13 +507,10 @@ function arrayFind(obj, pred, thisArg, type) {
 
     for (var i = 0; i < len; ++i) {
 
-        if (i in obj) {
+        val = obj[i];
 
-            val = obj[i];
-
-            if (pred.call(thisArg, val, i, obj))
-                return type === "value" ? val : i;
-        }
+        if (pred.call(thisArg, val, i, obj))
+            return type === "value" ? val : i;
     }
 
     return type === "value" ? void 0 : -1;
