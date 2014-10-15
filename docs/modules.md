@@ -26,7 +26,7 @@ Those named exports can be imported by another module.
 import { foo, C, bar, bazzer as boo } from "./my-module.js";
 ```
 
-The following form can ben used to import everything from a module:
+The following form can be used to import everything from a module:
 
 ```js
 import * as MyModule from "./my-module.js";
