@@ -143,6 +143,9 @@ polyfill(Object, {
 
             source = arguments[i];
 
+            if (source == null) // null or undefined
+                continue;
+
             try { Object.keys(source).forEach(key => target[key] = source[key]) }
             catch (x) { error = error || x }
         }

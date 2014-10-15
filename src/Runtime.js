@@ -566,6 +566,9 @@ polyfill(Object, {
 
             source = arguments[i];
 
+            if (source == null) // null or undefined
+                continue;
+
             try { Object.keys(source).forEach(key => target[key] = source[key]) }
             catch (x) { error = error || x }
         }
@@ -930,13 +933,10 @@ function arrayFind(obj, pred, thisArg, type) {
 
     for (var i = 0; i < len; ++i) {
 
-        if (i in obj) {
+        val = obj[i];
 
-            val = obj[i];
-
-            if (pred.call(thisArg, val, i, obj))
-                return type === "value" ? val : i;
-        }
+        if (pred.call(thisArg, val, i, obj))
+            return type === "value" ? val : i;
     }
 
     return type === "value" ? void 0 : -1;
