@@ -10,6 +10,14 @@ var arraySlice = Array.prototype.slice,
     staticName = /^__static_/,
     Global = globalObject();
 
+function toObject(val) {
+
+    if (val == null)
+        throw new TypeError(val + " is not an object");
+
+    return Object(val);
+}
+
 // Returns true if the object has the specified property in
 // its prototype chain
 function has(obj, name) {
@@ -365,10 +373,7 @@ Global._es6now = {
     // Support for object destructuring
     objd(obj) {
 
-        if (!obj || typeof obj !== "object")
-           throw new TypeError;
-
-        return obj;
+        return toObject(obj);
     },
 
     // Support for array destructuring
@@ -383,7 +388,7 @@ Global._es6now = {
             };
         }
 
-        var iter = _es6now.iter(obj);
+        var iter = _es6now.iter(toObject(obj));
 
         return {
 
