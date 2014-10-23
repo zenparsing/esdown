@@ -1,6 +1,6 @@
 {
     "name": "es6now",
-    "version": "0.8.12",
+    "version": "0.8.13",
     "description": "ES6 to ES5 translator and ES6 runtime",
     "homepage": "https://github.com/zenparsing/es6now",
     "bin": {
