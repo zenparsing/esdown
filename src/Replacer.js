@@ -160,22 +160,22 @@ export class Replacer {
             context = this.parentFunction(node),
             decl = "",
             binding,
-            out;
+            head;
 
         if (node.async) {
 
-            out = `for (var ${ iter } = _es6now.asyncIter(${ node.right.text }), ${ iterResult }; `;
-            out += `${ iterResult } = ${ this.awaitYield(context, iter + ".next()") }, `;
+            head = `for (var ${ iter } = _es6now.asyncIter(${ node.right.text }), ${ iterResult }; `;
+            head += `${ iterResult } = ${ this.awaitYield(context, iter + ".next()") }, `;
 
         } else {
 
-            out = `for (var ${ iter } = _es6now.iter(${ node.right.text }), ${ iterResult }; `;
-            out += `${ iterResult } = ${ iter }.next(), `;
+            head = `for (var ${ iter } = _es6now.iter(${ node.right.text }), ${ iterResult }; `;
+            head += `${ iterResult } = ${ iter }.next(), `;
         }
 
-        out += `!${ iterResult }.done;`;
-        out = this.syncNewlines(node.left.start, node.right.end, out);
-        out += this.input.slice(node.right.end, node.body.start);
+        head += `!${ iterResult }.done;`;
+        head = this.syncNewlines(node.left.start, node.right.end, head);
+        head += this.input.slice(node.right.end, node.body.start);
 
         if (node.left.type === "VariableDeclaration") {
 
@@ -197,10 +197,22 @@ export class Replacer {
             this.translatePattern(binding, `${ iterResult }.value`).join(", ") :
             `${ binding.text } = ${ iterResult }.value`;
 
-        var cleanup = `if (${ iterResult } && !${ iterResult }.done && "return" in ${ iter }) ` +
-            `${ iter }.return();`;
+        var out = `${ head }{ ${ decl }${ assign }; ${ body }}`;
 
-        return `try { ${ out }{ ${ decl }${ assign }; ${ body }} } finally { ${ cleanup } }`;
+        /*
+
+        For-of loops are implicitly wrapped with try-finally, where the "return"
+        is called upon the iterator (if it has such a method) when evaulation leaves
+        the loop body.  For performance reasons, and because engines have not
+        implemented "return" yet, we avoid this wrapper.
+
+        out = `try { ${ out } } finally { ` +
+            `if (${ iterResult } && !${ iterResult }.done && "return" in ${ iter }) ` +
+                `${ iter }.return(); }`;
+
+        */
+
+        return out;
     }
 
     Module(node) {
@@ -520,15 +532,11 @@ export class Replacer {
         switch (p.type) {
 
             case "CallExpression":
-                if (p.callee === pp[1])
-                    type = "call";
-
+                if (p.callee === pp[1]) type = "call";
                 break;
 
             case "AssignmentExpression":
-                if (p.left === pp[1])
-                    type = "set";
-
+                if (p.left === pp[1]) type = "set";
                 break;
 
             case "PatternProperty":
@@ -537,9 +545,7 @@ export class Replacer {
                 return null;
 
             case "UnaryExpression":
-                if (p.operator === "delete")
-                    type = "delete";
-
+                if (p.operator === "delete") type = "delete";
                 break;
         }
 
