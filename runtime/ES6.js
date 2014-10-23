@@ -126,6 +126,36 @@ global.Symbol = fakeSymbol;
 Symbol.iterator = Symbol("iterator");
 Symbol.asyncIterator = Symbol("asyncIterator");
 
+// Experimental VirtualPropertyExpression support
+Symbol.referenceGet = Symbol("referenceGet");
+Symbol.referenceSet = Symbol("referenceSet");
+Symbol.referenceDelete = Symbol("referenceDelete");
+
+polyfill(Function.prototype, {
+
+    [Symbol.referenceGet]() { return this }
+});
+
+if (WeakMap) polyfill(WeakMap.prototype, {
+
+    [Symbol.referenceGet](base) {
+
+        while (base !== null) {
+
+            if (this.has(base))
+                return this.get(base);
+
+            base = Object.getPrototypeOf(base);
+        }
+
+        return void 0;
+    },
+
+    [Symbol.referenceSet](base, value) { this.set(base, value) },
+    [Symbol.referenceDelete](base, value) { this.delete(base, value) }
+
+});
+
 
 // === Object ===
 

@@ -417,14 +417,14 @@ export class Replacer {
         if (node.hasSpread)
             spread = this.spreadList(args, false);
 
-        if (node.isSuperCall) {
+        if (node.injectThisArg) {
+
+            argText = node.injectThisArg;
 
             if (spread)
-                argText = "this, " + spread;
+                argText = argText + ", " + spread;
             else if (args.length > 0)
-                argText = "this, " + this.joinList(args);
-            else
-                argText = "this";
+                argText = argText + ", " + this.joinList(args);
 
             return callee.text + "." + (spread ? "apply" : "call") + "(" + argText + ")";
         }
@@ -459,7 +459,7 @@ export class Replacer {
         while (elem && elem.type !== "ClassElement")
             elem = elem.parent;
 
-        if (elem.static) {
+        if (elem && elem.static) {
 
             proto = "__csuper";
             elem.parent.hasStaticSuper = true;
@@ -468,7 +468,7 @@ export class Replacer {
         if (p.type === "CallExpression") {
 
             // super(args);
-            p.isSuperCall = true;
+            p.injectThisArg = "this";
 
             var m = this.parentFunction(p),
                 name = ".constructor";
@@ -488,13 +488,11 @@ export class Replacer {
             p.isSuperLookup = true;
         }
 
-        p = p.parent;
+        var pp = this.parenParent(p);
 
-        if (p.type === "CallExpression") {
-
-            // super.foo(args);
-            p.isSuperCall = true;
-        }
+        // super.foo(args);
+        if (pp[0].type === "CallExpression" && pp[0].callee === pp[1])
+            pp[0].injectThisArg = "this";
 
         return proto;
     }
@@ -510,6 +508,66 @@ export class Replacer {
                 "." + prop;
 
             return node.object.text + prop;
+        }
+    }
+
+    VirtualPropertyExpression(node) {
+
+        var pp = this.parenParent(node),
+            p = pp[0],
+            type = "get";
+
+        switch (p.type) {
+
+            case "CallExpression":
+                if (p.callee === pp[1])
+                    type = "call";
+
+                break;
+
+            case "AssignmentExpression":
+                if (p.left === pp[1])
+                    type = "set";
+
+                break;
+
+            case "PatternProperty":
+            case "PatternElement":
+                // References within assignment patterns are not currently supported
+                return null;
+
+            case "UnaryExpression":
+                if (p.operator === "delete")
+                    type = "delete";
+
+                break;
+        }
+
+        var temp;
+
+        switch (type) {
+
+            case "call":
+                temp = this.addTempVar(p);
+                p.injectThisArg = temp;
+                return `${ node.property.text }[Symbol.referenceGet](${ temp } = ${ node.object.text })`;
+
+            case "get":
+                return `${ node.property.text }[Symbol.referenceGet](${ node.object.text })`;
+
+            case "set":
+                temp = this.addTempVar(p);
+
+                p.assignWrap = [
+                    `(${ node.property.text }[Symbol.referenceSet](${ node.object.text }, ${ temp } = `,
+                    `), ${ temp })`
+                ];
+
+                return null;
+
+            case "delete":
+                p.overrideDelete = true;
+                return `${ node.property.text }[Symbol.referenceDelete](${ node.object.text })`;
         }
     }
 
@@ -555,10 +613,12 @@ export class Replacer {
 
     UnaryExpression(node) {
 
-        if (node.operator !== "await")
-            return;
+        // VirtualPropertyExpression
+        if (node.operator === "delete" && node.overrideDelete)
+            return "!void " + node.expression.text;
 
-        return this.awaitYield(this.parentFunction(node), node.expression.text);
+        if (node.operator === "await")
+            return this.awaitYield(this.parentFunction(node), node.expression.text);
     }
 
     YieldExpression(node) {
@@ -771,6 +831,10 @@ export class Replacer {
 
     AssignmentExpression(node) {
 
+        // VirtualPropertyExpression
+        if (node.assignWrap)
+            return node.assignWrap[0] + node.right.text + node.assignWrap[1];
+
         var left = this.unwrapParens(node.left);
 
         if (!this.isPattern(left))
@@ -795,6 +859,17 @@ export class Replacer {
         }
 
         return false;
+    }
+
+    parenParent(node) {
+
+        var parent;
+
+        for (; parent = node.parent; node = parent)
+            if (parent.type !== "ParenExpression")
+                break;
+
+        return [parent, node];
     }
 
     unwrapParens(node) {
