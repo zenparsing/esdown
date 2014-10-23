@@ -115,22 +115,24 @@ function fakeSymbol() {
     return "__$" + Math.floor(Math.random() * 1e9) + "$" + (++symbolCounter) + "$__";
 }
 
-// NOTE:  As of Node 0.11.12, V8's Symbol implementation is a little wonky.
-// There is no Object.getOwnPropertySymbols, so reflection doesn't seem to
-// work like it should.  Furthermore, Node blows up when trying to inspect
-// Symbol objects.  We expect to replace this override when V8's symbols
-// catch up with the ES6 specification.
+if (!global.Symbol)
+    global.Symbol = fakeSymbol;
 
-global.Symbol = fakeSymbol;
+polyfill(Symbol, {
 
-Symbol.iterator = Symbol("iterator");
-Symbol.asyncIterator = Symbol("asyncIterator");
+    iterator: Symbol("iterator"),
+
+    // Experimental async iterator support
+    asyncIterator: Symbol("asyncIterator"),
+
+    // Experimental VirtualPropertyExpression support
+    referenceGet: Symbol("referenceGet"),
+    referenceSet: Symbol("referenceSet"),
+    referenceDelete: Symbol("referenceDelete")
+
+});
 
 // Experimental VirtualPropertyExpression support
-Symbol.referenceGet = Symbol("referenceGet");
-Symbol.referenceSet = Symbol("referenceSet");
-Symbol.referenceDelete = Symbol("referenceDelete");
-
 polyfill(Function.prototype, {
 
     [Symbol.referenceGet]() { return this }
@@ -155,7 +157,6 @@ if (WeakMap) polyfill(WeakMap.prototype, {
     [Symbol.referenceDelete](base, value) { this.delete(base, value) }
 
 });
-
 
 // === Object ===
 
