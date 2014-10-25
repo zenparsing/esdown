@@ -37,4 +37,6 @@ delete Array.prototype.keys;
 delete Array.prototype[Symbol.iterator];
 
 delete _es6now.global.Map;
+delete _es6now.global.Set;
 delete _es6now.global.Promise;
+delete _es6now.global.WeakMap;

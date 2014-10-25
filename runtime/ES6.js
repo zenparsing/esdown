@@ -138,7 +138,7 @@ polyfill(Function.prototype, {
     [Symbol.referenceGet]() { return this }
 });
 
-if (WeakMap) polyfill(WeakMap.prototype, {
+if (global.WeakMap) polyfill(WeakMap.prototype, {
 
     [Symbol.referenceGet](base) {
 
