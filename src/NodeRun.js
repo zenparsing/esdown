@@ -157,8 +157,18 @@ export function startREPL() {
             } catch (x) {
 
                 // Regenerate syntax error to eliminate parser stack
-                if (x instanceof SyntaxError)
+                if (x instanceof SyntaxError) {
+
+                    // Detect multiline input
+                    if (/^(Unexpected end of input|Unexpected token)/.test(x.message)) {
+
+                        this.bufferedCommand = input + "\n";
+                        this.displayPrompt();
+                        return;
+                    }
+
                     x = new SyntaxError(x.message);
+                }
 
                 return cb(x);
             }
