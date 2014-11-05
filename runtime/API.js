@@ -152,7 +152,7 @@ function buildClass(base, def) {
 
 Global._esdown = {
 
-    version: "0.8.14",
+    version: "0.9.1",
 
     global: Global,
 

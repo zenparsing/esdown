@@ -1,4 +1,4 @@
-/*=esdown=*/(function(fn, deps, name) { if (typeof exports !== 'undefined') fn(require, exports, module); else if (typeof define === 'function' && define.amd) define(['require', 'exports', 'module'].concat(deps), fn); else if (typeof window !== 'undefined' && name) fn(null, window[name] = {}, {}); else fn(null, {}, {}); })(function(require, exports, module) { 'use strict'; function __load(p, l) { module.__es6 = !l; var e = require(p); if (e && e.constructor !== Object) e.default = e; return e; }
+/*=esdown=*/(function(fn, deps, name) { if (typeof exports !== 'undefined') fn(require, exports, module); else if (typeof define === 'function' && define.amd) define(['require', 'exports', 'module'].concat(deps), fn); else if (typeof window !== 'undefined' && name) fn(null, window[name] = {}, {}); else fn(null, {}, {}); })(function(require, exports, module) { 'use strict'; function __load(p, l) { module.__es6 = !l; var e = require(p); if (e && e.constructor !== Object) e.default = e; return e; } 
 (function() {
 
 function globalObject() {
@@ -155,7 +155,7 @@ function buildClass(base, def) {
 
 Global._esdown = {
 
-    version: "0.8.14",
+    version: "0.9.1",
 
     global: Global,
 
@@ -663,7 +663,7 @@ polyfill(Number, {
 
 polyfill(String, {
 
-    raw: function(callsite) { for (var args = [], __$0 = 1; __$0 < arguments.length; ++__$0) args.push(arguments[__$0]);
+    raw: function(callsite) { for (var args = [], __$0 = 1; __$0 < arguments.length; ++__$0) args.push(arguments[__$0]); 
 
         var raw = callsite.raw,
             len = toLength(raw.length);
@@ -683,7 +683,7 @@ polyfill(String, {
         return s;
     },
 
-    fromCodePoint: function() { for (var points = [], __$0 = 0; __$0 < arguments.length; ++__$0) points.push(arguments[__$0]);
+    fromCodePoint: function() { for (var points = [], __$0 = 0; __$0 < arguments.length; ++__$0) points.push(arguments[__$0]); 
 
         var out = [];
 
@@ -940,7 +940,7 @@ polyfill(Array, {
         return out;
     },
 
-    of: function() { for (var items = [], __$0 = 0; __$0 < arguments.length; ++__$0) items.push(arguments[__$0]);
+    of: function() { for (var items = [], __$0 = 0; __$0 < arguments.length; ++__$0) items.push(arguments[__$0]); 
 
         var ctor = typeof this === "function" ? this : Array; // TODO: Always use "this"?
 
@@ -1827,63 +1827,63 @@ exports.ConsoleCommand = ConsoleCommand;
 var ConsoleIO = _esdown.class(function(__super) { return {
 
     constructor: function ConsoleIO() {
-
+    
         this._inStream = process.stdin;
         this._outStream = process.stdout;
-
+        
         this._outEnc = "utf8";
         this._inEnc = "utf8";
-
+        
         this.inputEncoding = "utf8";
         this.outputEncoding = "utf8";
     },
-
-    get inputEncoding() {
-
+    
+    get inputEncoding() { 
+    
         return this._inEnc;
     },
-
+    
     set inputEncoding(enc) {
-
+    
         this._inStream.setEncoding(this._inEnc = enc);
     },
-
+    
     get outputEncoding() {
-
+    
         return this._outEnc;
     },
-
+    
     set outputEncoding(enc) {
-
+    
         this._outStream.setEncoding(this._outEnc = enc);
     },
-
-    readLine: function() { var __this = this;
-
+    
+    readLine: function() { var __this = this; 
+    
         return new Promise(function(resolve) {
-
+        
             var listener = function(data) {
-
+            
                 resolve(data);
                 __this._inStream.removeListener("data", listener);
                 __this._inStream.pause();
             };
-
+            
             __this._inStream.resume();
             __this._inStream.on("data", listener);
         });
     },
-
+    
     writeLine: function(msg) {
-
+    
         console.log(msg);
     },
-
+    
     write: function(msg) {
-
+    
         process.stdout.write(msg);
     }
-
+    
 } });
 
 exports.ConsoleIO = ConsoleIO;
@@ -1934,7 +1934,7 @@ var FS = _M2;
 // generating function
 function wrap(fn) {
 
-	return function() { for (var args = [], __$0 = 0; __$0 < arguments.length; ++__$0) args.push(arguments[__$0]);
+	return function() { for (var args = [], __$0 = 0; __$0 < arguments.length; ++__$0) args.push(arguments[__$0]); 
 
 		return new Promise(function(resolve, reject) {
 
@@ -2765,7 +2765,7 @@ function isNode(x) {
 
 var NodeBase = _esdown.class(function(__super) { return {
 
-    children: function() { var __this = this;
+    children: function() { var __this = this; 
 
         var list = [];
 
@@ -4942,20 +4942,20 @@ exports.Transform = Transform;
 var IntMap = _esdown.class(function(__super) { return {
 
     constructor: function IntMap() {
-
+    
         this.obj = {};
     },
-
+    
     get: function(key) {
-
+    
         return this.obj["$" + key] | 0;
     },
-
+    
     set: function(key, val) {
-
+    
         this.obj["$" + key] = val | 0;
     }
-
+    
 } });
 
 
@@ -7625,7 +7625,7 @@ var Parser = _esdown.class(function(__super) { return {
         return new AST.DefaultExport(binding, start, this.nodeEnd());
     },
 
-    ExportsList: function() { var __this = this;
+    ExportsList: function() { var __this = this; 
 
         var start = this.nodeStart(),
             list = null,
@@ -7731,7 +7731,7 @@ Object.keys(_M21).forEach(function(k) { exports[k] = _M21[k]; });
 
 var Runtime = {};
 
-Runtime.API =
+Runtime.API = 
 
 "function globalObject() {\n\
 \n\
@@ -7887,7 +7887,7 @@ function buildClass(base, def) {\n\
 \n\
 Global._esdown = {\n\
 \n\
-    version: \"0.8.14\",\n\
+    version: \"0.9.1\",\n\
 \n\
     global: Global,\n\
 \n\
@@ -8155,7 +8155,7 @@ Global._esdown = {\n\
 };\n\
 ";
 
-Runtime.ES6 =
+Runtime.ES6 = 
 
 "// === Polyfill Utilities ===\n\
 \n\
@@ -8785,7 +8785,7 @@ polyfill(Array.prototype, {\n\
 });\n\
 ";
 
-Runtime.MapSet =
+Runtime.MapSet = 
 
 "var global = _esdown.global,\n\
     ORIGIN = {},\n\
@@ -8988,7 +8988,7 @@ if (!global.Map || !global.Map.prototype.entries) {\n\
 }\n\
 ";
 
-Runtime.Promise =
+Runtime.Promise = 
 
 "(function() { \"use strict\";\n\
 \n\
@@ -9485,7 +9485,7 @@ var RootNode = _esdown.class(AST.Node, function(__super) { return {
 
 var Replacer = _esdown.class(function(__super) { return {
 
-    replace: function(input, options) { var __this = this; if (options === void 0) options = {};
+    replace: function(input, options) { var __this = this; if (options === void 0) options = {}; 
 
         var parser = new Parser,
             root = parser.parse(input, { module: options.module });
@@ -9773,7 +9773,7 @@ var Replacer = _esdown.class(function(__super) { return {
         return "var " + node.identifier.text + " = " + moduleSpec + "['default'];";
     },
 
-    ExportDeclaration: function(node) { var __this = this;
+    ExportDeclaration: function(node) { var __this = this; 
 
         var target = node.declaration,
             exports = this.exports,
@@ -10195,7 +10195,7 @@ var Replacer = _esdown.class(function(__super) { return {
             return this.wrapComputed(node);
     },
 
-    TemplateExpression: function(node) { var __this = this;
+    TemplateExpression: function(node) { var __this = this; 
 
         var lit = node.literals,
             sub = node.substitutions,
@@ -10343,7 +10343,7 @@ var Replacer = _esdown.class(function(__super) { return {
         return out;
     },
 
-    translatePattern: function(node, base) { var __this = this;
+    translatePattern: function(node, base) { var __this = this; 
 
         function propGet(name) {
 
@@ -10415,7 +10415,7 @@ var Replacer = _esdown.class(function(__super) { return {
         return outer;
     },
 
-    createPatternTree: function(ast, parent) { var __this = this;
+    createPatternTree: function(ast, parent) { var __this = this; 
 
         if (!parent)
             parent = new PatternTreeNode("", null);
@@ -10652,7 +10652,7 @@ var Replacer = _esdown.class(function(__super) { return {
             return "_esdown.computed(" + (text || this.stringify(node)) + ", " + node.computedNames.join(", ") + ")";
     },
 
-    functionInsert: function(node) { var __this = this;
+    functionInsert: function(node) { var __this = this; 
 
         var inserted = [];
 
@@ -10844,7 +10844,7 @@ function wrapRuntimeModule(text) {
     return "(function() {\n\n" + text + "\n\n}).call(this);\n\n";
 }
 
-function translate(input, options) { if (options === void 0) options = {};
+function translate(input, options) { if (options === void 0) options = {}; 
 
     input = sanitize(input);
 
@@ -11155,7 +11155,7 @@ function startREPL() {
 
         useGlobal: true,
 
-        eval: function(input, context, filename, cb) { var __this = this;
+        eval: function(input, context, filename, cb) { var __this = this; 
 
             var text, result, script, displayErrors = false;
 
@@ -11287,7 +11287,7 @@ function startREPL() {
 
             help: "Show REPL commands",
 
-            action: function() { var __this = this;
+            action: function() { var __this = this; 
 
                 var list = Object.keys(this.commands).sort(),
                     len = list.reduce(function(n, key) { return Math.max(n, key.length); }, 0);
@@ -11410,7 +11410,7 @@ var GraphBuilder = _esdown.class(function(__super) { return {
         return node;
     },
 
-    sort: function(key) { var __this = this; if (key === void 0) key = this.root.path;
+    sort: function(key) { var __this = this; if (key === void 0) key = this.root.path; 
 
         var visited = new Set,
             list = [];
@@ -11431,7 +11431,7 @@ var GraphBuilder = _esdown.class(function(__super) { return {
         return list;
     },
 
-    process: function(key, input) { var __this = this;
+    process: function(key, input) { var __this = this; 
 
         if (!this.nodes.has(key))
             throw new Error("Node not found");
@@ -11459,7 +11459,7 @@ var GraphBuilder = _esdown.class(function(__super) { return {
 
 } });
 
-function bundle(rootPath, options) { if (options === void 0) options = {};
+function bundle(rootPath, options) { if (options === void 0) options = {}; 
 
     rootPath = Path.resolve(rootPath);
 

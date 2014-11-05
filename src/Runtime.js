@@ -1,6 +1,6 @@
 export var Runtime = {};
 
-Runtime.API =
+Runtime.API = 
 
 `function globalObject() {
 
@@ -156,7 +156,7 @@ function buildClass(base, def) {
 
 Global._esdown = {
 
-    version: "0.8.14",
+    version: "0.9.1",
 
     global: Global,
 
@@ -424,7 +424,7 @@ Global._esdown = {
 };
 `;
 
-Runtime.ES6 =
+Runtime.ES6 = 
 
 `// === Polyfill Utilities ===
 
@@ -1054,7 +1054,7 @@ polyfill(Array.prototype, {
 });
 `;
 
-Runtime.MapSet =
+Runtime.MapSet = 
 
 `var global = _esdown.global,
     ORIGIN = {},
@@ -1257,7 +1257,7 @@ if (!global.Map || !global.Map.prototype.entries) {
 }
 `;
 
-Runtime.Promise =
+Runtime.Promise = 
 
 `(function() { "use strict";
 
