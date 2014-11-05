@@ -1,8 +1,8 @@
 /*
 
-Archive the current es6now.js build file to the "_prev" folder.  Always run this before
-building, since a bad build will clobber es6now.  If you create a bad build, you can 
-restore es6now.js using "restore.js".
+Archive the current esdown.js build file to the "_prev" folder.  Always run this before
+building, since a bad build will clobber esdown.  If you create a bad build, you can 
+restore esdown.js using "restore.js".
 
 */
 
@@ -13,7 +13,7 @@ copy();
 
 function copy() {
 
-    var source = Path.resolve(__dirname, "../build/es6now.js"),
+    var source = Path.resolve(__dirname, "../build/esdown.js"),
         target = targetName();
     
     console.log("Archiving to [" + target + "]...");
@@ -25,7 +25,7 @@ function targetName() {
 
     var files = FS.readdirSync(Path.resolve(__dirname, "../_prev")),
         now = new Date,
-        name = "es6now-",
+        name = "esdown-",
         num = 0;
     
     name += [now.getFullYear(), pad2(now.getMonth() + 1), pad2(now.getDate())].join("");

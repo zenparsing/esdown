@@ -132,7 +132,7 @@ export function startREPL() {
 
     addExtension();
 
-    console.log(`es6now ${ _es6now.version } (Node ${ process.version })`);
+    console.log(`esdown ${ _esdown.version } (Node ${ process.version })`);
 
     var prompt = ">>> ", contPrompt = "... ";
 
@@ -294,7 +294,7 @@ export function startREPL() {
 
         "translate": {
 
-            help: "Translate an ES6 script to ES5 and show the result (es6now)",
+            help: "Translate an ES6 script to ES5 and show the result (esdown)",
 
             action(input) {
 
@@ -305,7 +305,7 @@ export function startREPL() {
 
         "translateModule": {
 
-            help: "Translate an ES6 module to ES5 and show the result (es6now)",
+            help: "Translate an ES6 module to ES5 and show the result (esdown)",
 
             action(input) {
 
@@ -316,7 +316,7 @@ export function startREPL() {
 
         "parse": {
 
-            help: "Parse a script and show the AST (es6now)",
+            help: "Parse a script and show the AST (esdown)",
 
             action(input) {
 
@@ -328,7 +328,7 @@ export function startREPL() {
 
         "parseModule": {
 
-            help: "Parse a module and show the AST (es6now)",
+            help: "Parse a module and show the AST (esdown)",
 
             action(input) {
 

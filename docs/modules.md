@@ -1,4 +1,4 @@
-## The es6now Module System ##
+## The esdown Module System ##
 
 ### Overview and Syntax ###
 
@@ -65,7 +65,7 @@ import { x } from "foo";
 
 This will import the export named "x" from the module at "foo".  But what does "foo" mean?
 
-In **es6now** running on Node, the following rules apply:
+In **esdown** running on Node, the following rules apply:
 
 **First**, `require` works the same way that it always does, except that non-module ES6
 features are translated to ES5.  Importantly, the `require` function can't be used to load
@@ -189,8 +189,8 @@ module.exports = module.importSync("./");
 
 ### The main function ###
 
-When a module is run directly by **es6now** from the command line, and that module
-exports a function named `main`, **es6now** will execute that function automatically.
+When a module is run directly by **esdown** from the command line, and that module
+exports a function named `main`, **esdown** will execute that function automatically.
 
 ```js
 export function main() {

@@ -1,10 +1,10 @@
 {
-    "name": "es6now",
+    "name": "esdown",
     "version": "0.8.14",
     "description": "ES6 to ES5 translator and ES6 runtime",
-    "homepage": "https://github.com/zenparsing/es6now",
+    "homepage": "https://github.com/zenparsing/esdown",
     "bin": {
-        "es6now": "./bin/es6now"
+        "esdown": "./bin/esdown"
     },
     "scripts": {
         "preinstall": "node util/make-cmd.js"

@@ -1,15 +1,15 @@
-(_es6now.computed({
+(_esdown.computed({
     __$0: function() {}
 }, "x"));
 
-(_es6now.computed({
+(_esdown.computed({
     __$0: 1,
     __$1: 2
 }, "x", "y"));
 
-var C = _es6now.class(function(__super) { return _es6now.computed({
+var C = _esdown.class(function(__super) { return _esdown.computed({
 
     __$0: function() {},
     
-    __static_0: _es6now.computed({ __$0: function() {} }, "x"), constructor: function C() {}
+    __static_0: _esdown.computed({ __$0: function() {} }, "x"), constructor: function C() {}
 }, "x") });

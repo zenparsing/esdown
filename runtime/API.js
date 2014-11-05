@@ -150,7 +150,7 @@ function buildClass(base, def) {
     return constructor;
 }
 
-Global._es6now = {
+Global._esdown = {
 
     version: "0.8.14",
 
@@ -176,7 +176,7 @@ Global._es6now = {
             return obj[Symbol.asyncIterator]();
 
         var iter = { [Symbol.asyncIterator]() { return this } },
-            inner = _es6now.iter(obj);
+            inner = _esdown.iter(obj);
 
         ["next", "throw", "return"].forEach(name => {
 
@@ -219,7 +219,7 @@ Global._es6now = {
 
         try {
 
-            var iter = _es6now.iter(iterable),
+            var iter = _esdown.iter(iterable),
                 resolver,
                 promise;
 
@@ -253,7 +253,7 @@ Global._es6now = {
     // Support for async generators
     asyncGen(iterable) {
 
-        var iter = _es6now.iter(iterable),
+        var iter = _esdown.iter(iterable),
             state = "paused",
             queue = [];
 
@@ -307,12 +307,12 @@ Global._es6now = {
                 var result = iter[type](value),
                     value = result.value;
 
-                if (typeof value === "object" && "_es6now_await" in value) {
+                if (typeof value === "object" && "_esdown_await" in value) {
 
                     if (result.done)
                         throw new Error("Invalid async generator return");
 
-                    Promise.resolve(value._es6now_await).then(
+                    Promise.resolve(value._esdown_await).then(
                         x => resume("next", x),
                         x => resume("throw", x));
 
@@ -388,7 +388,7 @@ Global._es6now = {
             };
         }
 
-        var iter = _es6now.iter(toObject(obj));
+        var iter = _esdown.iter(toObject(obj));
 
         return {
 

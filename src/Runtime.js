@@ -1,6 +1,6 @@
 export var Runtime = {};
 
-Runtime.API = 
+Runtime.API =
 
 `function globalObject() {
 
@@ -154,7 +154,7 @@ function buildClass(base, def) {
     return constructor;
 }
 
-Global._es6now = {
+Global._esdown = {
 
     version: "0.8.14",
 
@@ -180,7 +180,7 @@ Global._es6now = {
             return obj[Symbol.asyncIterator]();
 
         var iter = { [Symbol.asyncIterator]() { return this } },
-            inner = _es6now.iter(obj);
+            inner = _esdown.iter(obj);
 
         ["next", "throw", "return"].forEach(name => {
 
@@ -223,7 +223,7 @@ Global._es6now = {
 
         try {
 
-            var iter = _es6now.iter(iterable),
+            var iter = _esdown.iter(iterable),
                 resolver,
                 promise;
 
@@ -257,7 +257,7 @@ Global._es6now = {
     // Support for async generators
     asyncGen(iterable) {
 
-        var iter = _es6now.iter(iterable),
+        var iter = _esdown.iter(iterable),
             state = "paused",
             queue = [];
 
@@ -311,12 +311,12 @@ Global._es6now = {
                 var result = iter[type](value),
                     value = result.value;
 
-                if (typeof value === "object" && "_es6now_await" in value) {
+                if (typeof value === "object" && "_esdown_await" in value) {
 
                     if (result.done)
                         throw new Error("Invalid async generator return");
 
-                    Promise.resolve(value._es6now_await).then(
+                    Promise.resolve(value._esdown_await).then(
                         x => resume("next", x),
                         x => resume("throw", x));
 
@@ -392,7 +392,7 @@ Global._es6now = {
             };
         }
 
-        var iter = _es6now.iter(toObject(obj));
+        var iter = _esdown.iter(toObject(obj));
 
         return {
 
@@ -424,7 +424,7 @@ Global._es6now = {
 };
 `;
 
-Runtime.ES6 = 
+Runtime.ES6 =
 
 `// === Polyfill Utilities ===
 
@@ -536,7 +536,7 @@ function assertThis(val, name) {
 // === Symbols ===
 
 var symbolCounter = 0,
-    global = _es6now.global;
+    global = _esdown.global;
 
 function fakeSymbol() {
 
@@ -1054,9 +1054,9 @@ polyfill(Array.prototype, {
 });
 `;
 
-Runtime.MapSet = 
+Runtime.MapSet =
 
-`var global = _es6now.global,
+`var global = _esdown.global,
     ORIGIN = {},
     REMOVED = {};
 
@@ -1131,7 +1131,7 @@ function hashKey(key) {
         case "number": return String(key);
     }
 
-    throw new TypeError("Map and Set keys must be strings or numbers in es6now");
+    throw new TypeError("Map and Set keys must be strings or numbers in esdown");
 }
 
 class Map {
@@ -1139,7 +1139,7 @@ class Map {
     constructor() {
 
         if (arguments.length > 0)
-            throw new Error("Arguments to Map constructor are not supported in es6now");
+            throw new Error("Arguments to Map constructor are not supported in esdown");
 
         this._index = {};
         this._origin = new MapNode(ORIGIN);
@@ -1231,7 +1231,7 @@ class Set {
     constructor() {
 
         if (arguments.length > 0)
-            throw new Error("Arguments to Set constructor are not supported in es6now");
+            throw new Error("Arguments to Set constructor are not supported in esdown");
 
         this._index = {};
         this._origin = new MapNode(ORIGIN);
@@ -1257,7 +1257,7 @@ if (!global.Map || !global.Map.prototype.entries) {
 }
 `;
 
-Runtime.Promise = 
+Runtime.Promise =
 
 `(function() { "use strict";
 

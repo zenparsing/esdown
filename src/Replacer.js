@@ -164,12 +164,12 @@ export class Replacer {
 
         if (node.async) {
 
-            head = `for (var ${ iter } = _es6now.asyncIter(${ node.right.text }), ${ iterResult }; `;
+            head = `for (var ${ iter } = _esdown.asyncIter(${ node.right.text }), ${ iterResult }; `;
             head += `${ iterResult } = ${ this.awaitYield(context, iter + ".next()") }, `;
 
         } else {
 
-            head = `for (var ${ iter } = _es6now.iter(${ node.right.text }), ${ iterResult }; `;
+            head = `for (var ${ iter } = _esdown.iter(${ node.right.text }), ${ iterResult }; `;
             head += `${ iterResult } = ${ iter }.next(), `;
         }
 
@@ -639,7 +639,7 @@ export class Replacer {
             var fn = this.parentFunction(node),
                 method = isAsyncType(fn.kind) ? "asyncIter" : "iter";
 
-            node.expression.text = `_es6now.${ method }(${ node.expression.text })`;
+            node.expression.text = `_esdown.${ method }(${ node.expression.text })`;
         }
     }
 
@@ -662,7 +662,7 @@ export class Replacer {
         if (node.body.hasStaticSuper)
             params += ", __csuper";
 
-        return "var " + node.identifier.text + " = _es6now.class(" +
+        return "var " + node.identifier.text + " = _esdown.class(" +
             (node.base ? (node.base.text + ", ") : "") +
             "function(" + params + ") {" + this.strictDirective() + " return " +
             node.body.text + " });";
@@ -685,7 +685,7 @@ export class Replacer {
             params += ", __csuper";
 
         return "(" + before +
-            "_es6now.class(" +
+            "_esdown.class(" +
             (node.base ? (node.base.text + ", ") : "") +
             "function(" + params + ") {" + this.strictDirective() + " return " +
             node.body.text + " })" +
@@ -779,7 +779,7 @@ export class Replacer {
 
         if (node.parent.type === "TaggedTemplateExpression") {
 
-            out = "(_es6now.callSite(" +
+            out = "(_esdown.callSite(" +
                 "[" + lit.map(x => this.rawToString(x.raw)).join(", ") + "]";
 
             // Only output the raw array if it is different from the cooked array
@@ -908,7 +908,7 @@ export class Replacer {
         if (last < elems.length - 1)
             list.push({ type: "s", args: this.joinList(elems.slice(last + 1)) });
 
-        var out = "(_es6now.spread()";
+        var out = "(_esdown.spread()";
 
         for (i = 0; i < list.length; ++i)
             out += `.${ list[i].type }(${ list[i].args })`;
@@ -954,7 +954,7 @@ export class Replacer {
                 str = `${ temp } === void 0 ? ${ tree.initializer } : ${ temp }`;
 
                 if (!tree.target)
-                    str = `${ temp } = _es6now.${ dType }(${ str })`;
+                    str = `${ temp } = _esdown.${ dType }(${ str })`;
 
                 inner.push(str);
 
@@ -965,7 +965,7 @@ export class Replacer {
             } else {
 
                 temp = this.addTempVar(node);
-                inner.push(`${ temp } = _es6now.${ dType }(${ access })`);
+                inner.push(`${ temp } = _esdown.${ dType }(${ access })`);
             }
 
             if (tree.target) {
@@ -1065,7 +1065,7 @@ export class Replacer {
         var wrapper = kind === "async-generator" ? "asyncGen" : "async";
 
         return `${head}(${outerParams}) { ` +
-            `return _es6now.${ wrapper }(function*(${ this.joinList(params) }) ` +
+            `return _esdown.${ wrapper }(function*(${ this.joinList(params) }) ` +
             `${ body }.apply(this, arguments)); }`;
     }
 
@@ -1224,7 +1224,7 @@ export class Replacer {
     wrapComputed(node, text) {
 
         if (node.computedNames)
-            return "_es6now.computed(" + (text || this.stringify(node)) + ", " + node.computedNames.join(", ") + ")";
+            return "_esdown.computed(" + (text || this.stringify(node)) + ", " + node.computedNames.join(", ") + ")";
     }
 
     functionInsert(node) {
@@ -1315,7 +1315,7 @@ export class Replacer {
     awaitYield(context, text) {
 
         if (context.kind === "async-generator")
-            text = `{ _es6now_await: (${ text }) }`;
+            text = `{ _esdown_await: (${ text }) }`;
 
         return `(yield ${ text })`;
     }

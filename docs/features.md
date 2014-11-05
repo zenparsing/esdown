@@ -2,7 +2,7 @@
 
 ## Supported ES6 Features ##
 
-The following ES6 language features are supported by **es6now**:
+The following ES6 language features are supported by **esdown**:
 
 ### Modules ###
 
@@ -181,7 +181,7 @@ f({ foo: "foo", bar: "bar" });
 Computed properties allow you to use dynamic property names in an object literal.
 
 ```js
-var name = "es6now";
+var name = "esdown";
 var obj = {
     [name]: "The best ES6->ES5 compiler on the market"
 };
@@ -271,7 +271,7 @@ for (var item of c)
 **[Set](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Set)**
 are new built-in standard library collection classes.
 
-*Limitation: es6now only supports strings and numbers as keys within Map and Set.*
+*Limitation: esdown only supports strings and numbers as keys within Map and Set.*
 
 ### Promise ###
 
@@ -307,7 +307,7 @@ A **[Promise](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/
 
 ## ES6 Features Not Translated ##
 
-The following ES6 features are not translated by **es6now**.  You can still use these
+The following ES6 features are not translated by **esdown**.  You can still use these
 features if your JS engine supports them.
 
 - Block-scoped variables (let and const)

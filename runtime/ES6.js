@@ -108,7 +108,7 @@ function assertThis(val, name) {
 // === Symbols ===
 
 var symbolCounter = 0,
-    global = _es6now.global;
+    global = _esdown.global;
 
 function fakeSymbol() {
 

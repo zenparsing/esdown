@@ -1,7 +1,7 @@
 /*
 
 Builds the "src/Runtime.js" module from the scripts in the "runtime" folder.  Must be
-run before building es6now if there are changes to runtime components.
+run before building esdown if there are changes to runtime components.
 
 */
 

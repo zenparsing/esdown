@@ -1,6 +1,6 @@
 /*
 
-Restores es6now.js from the most recent copy in "_prev" created with "archive.js".
+Restores esdown.js from the most recent copy in "_prev" created with "archive.js".
 
 */
 
@@ -11,7 +11,7 @@ restore();
 
 function restore() {
 
-    var target = Path.resolve(__dirname, "../build/es6now.js"),
+    var target = Path.resolve(__dirname, "../build/esdown.js"),
         source = sourceName();
     
     console.log("Restoring from [" + source + "]...");
@@ -23,7 +23,7 @@ function sourceName() {
 
     var files = FS.readdirSync(Path.resolve(__dirname, "../_prev"));
     
-    files = files.filter(function(name) { return name.indexOf("es6now-") === 0; });
+    files = files.filter(function(name) { return name.indexOf("esdown-") === 0; });
     files = files.sort();
     
     if (files.length === 0)

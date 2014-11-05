@@ -1,7 +1,7 @@
 import { Runtime } from "./Runtime.js";
 import { Replacer } from "./Replacer.js";
 
-var SIGNATURE = "/*=es6now=*/";
+var SIGNATURE = "/*=esdown=*/";
 
 var WRAP_CALLEE = "(function(fn, deps, name) { " +
 

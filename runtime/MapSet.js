@@ -1,4 +1,4 @@
-var global = _es6now.global,
+var global = _esdown.global,
     ORIGIN = {},
     REMOVED = {};
 
@@ -73,7 +73,7 @@ function hashKey(key) {
         case "number": return String(key);
     }
 
-    throw new TypeError("Map and Set keys must be strings or numbers in es6now");
+    throw new TypeError("Map and Set keys must be strings or numbers in esdown");
 }
 
 class Map {
@@ -81,7 +81,7 @@ class Map {
     constructor() {
 
         if (arguments.length > 0)
-            throw new Error("Arguments to Map constructor are not supported in es6now");
+            throw new Error("Arguments to Map constructor are not supported in esdown");
 
         this._index = {};
         this._origin = new MapNode(ORIGIN);
@@ -173,7 +173,7 @@ class Set {
     constructor() {
 
         if (arguments.length > 0)
-            throw new Error("Arguments to Set constructor are not supported in es6now");
+            throw new Error("Arguments to Set constructor are not supported in esdown");
 
         this._index = {};
         this._origin = new MapNode(ORIGIN);

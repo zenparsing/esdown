@@ -8,7 +8,7 @@
 \n\
 efg";
 "\"\"\"";
-html(_es6now.callSite(["a", "b", "c\n"], ["a", "b", "c\\n"]), x, y);
-html(_es6now.callSite(["a", "b\n\
+html(_esdown.callSite(["a", "b", "c\n"], ["a", "b", "c\\n"]), x, y);
+html(_esdown.callSite(["a", "b\n\
 ", " c\u0060"], ["a", "b\n", " c\\u0060"]), x, y);
-html(_es6now.callSite(["foo", ""]), bar);
+html(_esdown.callSite(["foo", ""]), bar);
