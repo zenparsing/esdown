@@ -1,4 +1,4 @@
-/*=esdown=*/(function(fn, deps, name) { if (typeof exports !== 'undefined') fn(require, exports, module); else if (typeof define === 'function' && define.amd) define(['require', 'exports', 'module'].concat(deps), fn); else if (typeof window !== 'undefined' && name) fn(null, window[name] = {}, {}); else fn(null, {}, {}); })(function(require, exports, module) { 'use strict'; function __load(p, l) { module.__es6 = !l; var e = require(p); if (e && e.constructor !== Object) e.default = e; return e; } 
+/*=esdown=*/(function(fn, deps, name) { function obj() { return {} } if (typeof exports !== 'undefined') fn(require, exports, module); else if (typeof define === 'function' && define.amd) define(['require', 'exports', 'module'].concat(deps), fn); else if (typeof window !== 'undefined' && name) fn(obj, window[name] = {}, {}); else fn(obj, {}, {}); })(function(require, exports, module) { 'use strict'; function __load(p, l) { module.__es6 = !l; var e = require(p); if (e && e.constructor !== Object) e.default = e; return e; } 
 (function() {
 
 function globalObject() {
@@ -10798,6 +10798,8 @@ var SIGNATURE = "/*=esdown=*/";
 
 var WRAP_CALLEE = "(function(fn, deps, name) { " +
 
+    "function obj() { return {} } " +
+
     // CommonJS:
     "if (typeof exports !== 'undefined') " +
         "fn(require, exports, module); " +
@@ -10808,11 +10810,11 @@ var WRAP_CALLEE = "(function(fn, deps, name) { " +
 
     // DOM global module:
     "else if (typeof window !== 'undefined' && name) " +
-        "fn(null, window[name] = {}, {}); " +
+        "fn(obj, window[name] = {}, {}); " +
 
     // Hail Mary:
     "else " +
-        "fn(null, {}, {}); " +
+        "fn(obj, {}, {}); " +
 
 "})";
 
@@ -10911,7 +10913,7 @@ exports.isWrapped = isWrapped;
 var Path = _M3;
 var FS = _M2;
 
-var NODE_PATH = process.env["NODE_PATH"] || "",
+var NODE_PATH = typeof process !== "undefined" && process.env["NODE_PATH"] || "",
     NOT_PACKAGE = /^(?:\.{0,2}\/|[a-z]+:)/i,
     Module = module.constructor,
     packageRoots;
@@ -11694,4 +11696,4 @@ exports.main = main;
 }).call(this, _M1);
 
 
-}, ["fs","path","repl","vm","util"], "");
+}, ["fs","path","repl","vm","util"], "esdown");

@@ -5,6 +5,8 @@ var SIGNATURE = "/*=esdown=*/";
 
 var WRAP_CALLEE = "(function(fn, deps, name) { " +
 
+    "function obj() { return {} } " +
+
     // CommonJS:
     "if (typeof exports !== 'undefined') " +
         "fn(require, exports, module); " +
@@ -15,11 +17,11 @@ var WRAP_CALLEE = "(function(fn, deps, name) { " +
 
     // DOM global module:
     "else if (typeof window !== 'undefined' && name) " +
-        "fn(null, window[name] = {}, {}); " +
+        "fn(obj, window[name] = {}, {}); " +
 
     // Hail Mary:
     "else " +
-        "fn(null, {}, {}); " +
+        "fn(obj, {}, {}); " +
 
 "})";
 

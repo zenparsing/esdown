@@ -1,7 +1,7 @@
 import * as Path from "node:path";
 import * as FS from "node:fs";
 
-var NODE_PATH = process.env["NODE_PATH"] || "",
+var NODE_PATH = typeof process !== "undefined" && process.env["NODE_PATH"] || "",
     NOT_PACKAGE = /^(?:\.{0,2}\/|[a-z]+:)/i,
     Module = module.constructor,
     packageRoots;
