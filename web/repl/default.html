@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>esdown :: repl</title>
+<meta charset="utf-8">
+
+<style>
+
+#terminal {
+
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 40%;
+    padding: 4px;
+    overflow: auto;
+}
+
+#terminal, #terminal-input {
+
+    font: 16px "Consolas", "Monaco", monospace;
+    background-color: #000;
+    color: #fff;
+}
+
+div.input-line {
+
+    position: relative;
+    top: 0;
+    left: 0;
+    margin: 2px;
+}
+
+div.input-line span.prompt {
+
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+div.output-line {
+
+    white-space: pre-wrap;
+    margin: 2px;
+}
+
+#terminal span.prompt {
+
+    width: 2.2em;
+    display: inline-block;
+}
+
+#terminal span.prompt:first-child:before {
+
+    content: ">>>";
+}
+
+#terminal span.prompt.cont:first-child:before {
+
+    content: "...";
+}
+
+#terminal-input {
+
+    border: none;
+    outline: none;
+    width: 100%;
+    margin: 0;
+    padding: 0 0 0 2.2em;
+    box-sizing: border-box;
+    resize: none;
+}
+
+#content {
+
+    font: 16px Arial;
+    background-color: #fff;
+    color: #000;
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 60%;
+    right: 0;
+    overflow: auto;
+    padding: 20px;
+}
+
+#content :first-child {
+
+    margin-top: 0;
+}
+
+#content :last-child {
+
+    margin-bottom: 40px;
+}
+
+#content h1 {
+
+    font-size: 2.6em;
+}
+
+#content a {
+
+    text-decoration: none;
+}
+
+#content a:hover {
+
+    text-decoration: underline;
+}
+
+#content table {
+
+    width: 100%;
+    border-spacing: 0;
+    border-collapse: collapse;
+    border: solid 1px #eee;
+}
+
+#content td {
+
+    border-bottom: solid 1px #eee;
+    padding: 5px 8px;
+}
+
+#content code {
+
+    font: 14px "Consolas", "Monaco", monospace;
+}
+
+
+.js-special { color: cyan }
+.js-number { color: yellow }
+.js-boolean { color: yellow }
+.js-undefined { color: grey }
+.js-null { font-weight: bold }
+.js-string { color: green }
+.js-date { color: magenta }
+.js-regexp { color: red }
+.js-name {}
+
+</style>
+
+<script src="pretty-print.js"></script>
+
+<script src="../../build/esdown.js"></script>
+
+<script>
+
+// Adapted from underscore
+var escapeHTML = (function() { "use strict";
+
+    // List of HTML entities for escaping.
+    var escapeMap = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#x27;',
+        '`': '&#x60;'
+    };
+
+    // Functions for escaping and unescaping strings to/from HTML interpolation.
+    function createEscaper(map) {
+
+        function escaper(match) { return map[match] }
+
+        // Regexes for identifying a key that needs to be escaped
+        var source = '(?:' + Object.keys(map).join('|') + ')';
+        var testRegexp = RegExp(source);
+        var replaceRegexp = RegExp(source, 'g');
+
+        return function(string) {
+            string = string == null ? '' : '' + string;
+            return testRegexp.test(string) ? string.replace(replaceRegexp, escaper) : string;
+        };
+    }
+
+    return createEscaper(escapeMap);
+
+})();
+
+function replEval() { return window.eval(esdown.translate(arguments[0])) }
+
+window.onload = function() { "use strict";
+
+    var HELP_TEXT = [
+
+        "",
+        "[esdown v" + _esdown.version + "]",
+        "",
+        "This REPL will translate ES6+ syntax and execute the resulting " +
+        "code in your current JavaScript engine.",
+        "",
+        "The following REPL commands are supported:",
+        "",
+        ".clear                 Clear the terminal output",
+        ".translate             Translate a script to ES5",
+        ".translateModule       Translate a module to ES5",
+        "\n",
+
+    ].join("\n");
+
+    var MAX_CONSOLE_LINES = 100,
+        NO_OUTPUT = {};
+
+    function Literal(text) { this.text = text }
+
+    var replCommands = {
+
+        help: function() { return new Literal(HELP_TEXT) },
+        clear: function() { return clearLines(1), NO_OUTPUT },
+        translate: function(code) { return esdown.translate(code) },
+        translateModule: function(code) { return esdown.translate(code, { module: true }) },
+    };
+
+    var history = {
+
+        list: [""],
+        max: 50,
+        current: 0,
+
+        add: function(str) {
+
+            var len = this.list.length;
+
+            this.list[len - 1] = str;
+            this.list.push("");
+            this.current = len;
+        },
+
+        back: function(str) {
+
+            this._check(str);
+
+            if (this.current > 0)
+                this.current -= 1;
+
+            return this.list[this.current];
+        },
+
+        forward: function(str) {
+
+            this._check(str);
+
+            if (this.current < this.list.length - 1)
+                this.current += 1;
+
+            return this.list[this.current];
+        },
+
+        _check: function(str) {
+
+            if (str !== this.list[this.current]) {
+
+                this.current = this.list.length - 1;
+                this.list[this.current] = str;
+            }
+        }
+    };
+
+    function isOpaque(obj) {
+
+        return obj instanceof Node;
+    }
+
+    function elem(s) {
+
+        return document.querySelector(s);
+    }
+
+    function stylize(str, styleType) {
+
+        str = escapeHTML(str);
+        if (styleType) str = '<span class="js-' + styleType + '">' + str + '</span>';
+        return str;
+    }
+
+    function isRecoverableError(e) {
+
+        var pattern = /^(Unexpected end of input|Unexpected token )/;
+        return e && e.name === 'SyntaxError' && pattern.test(e.message);
+    }
+
+    function replRun() {
+
+        var code = input.value;
+
+        history.add(code);
+
+        if (bufferedInput)
+            code = bufferedInput + "\n" + code;
+
+        advanceInput(function() {
+
+            var executed = false,
+                output = "",
+                result,
+                error;
+
+            if (code.charAt(0) === ".") {
+
+                var cmd = code.slice(1).replace(/\s[\s\S]*/g, "");
+
+                if (typeof replCommands[cmd] === "function") {
+
+                    executed = true;
+                    try { result = replCommands[cmd](code.slice(cmd.length + 1)) }
+                    catch (x) { error = x || {} }
+                }
+            }
+
+            if (!executed) {
+
+                executed = true;
+                try { result = replEval(code) }
+                catch (x) { error = x || {} }
+            }
+
+            if (isRecoverableError(error)) {
+
+                bufferedInput = code;
+
+            } else if (result !== NO_OUTPUT) {
+
+                bufferedInput = "";
+
+                output =
+                    error ? escapeHTML(error.stack || "") :
+                    result instanceof Literal ? escapeHTML(result.text) :
+                    prettyPrint(result, { stylize: stylize, isOpaque: isOpaque });
+            }
+
+            return output;
+
+        });
+    }
+
+
+    function advanceInput(fn) {
+
+        history.add(input.value);
+
+        addLine(escapeHTML(input.value), prompt.className);
+        input.value = "";
+
+        var output = fn && fn() || "";
+
+        if (output)
+            addLine(output);
+
+        prompt.className = bufferedInput ? "prompt cont" : "prompt";
+
+        clearLines(MAX_CONSOLE_LINES);
+
+        input.focus();
+        input.scrollIntoView();
+    }
+
+    function clearLines(max) {
+
+        var list = terminal.getElementsByTagName("div");
+
+        for (var count = list.length; count-- > max;)
+            terminal.removeChild(list[0]);
+    }
+
+    function addLine(html, promptClass) {
+
+        var line = document.createElement("div");
+        line.className = "output-line";
+        line.innerHTML = html;
+
+        if (promptClass) {
+
+            var span = document.createElement("span");
+            span.className = promptClass;
+            line.insertBefore(span, line.firstChild);
+        }
+
+        terminal.insertBefore(line, input.parentNode);
+    }
+
+    function abort() {
+
+        bufferedInput = "";
+        advanceInput();
+    }
+
+    function onKeyPress(evt) {
+
+        // Enter
+        if (evt.keyCode === 13 && !evt.ctrlKey) {
+
+            replRun();
+            evt.preventDefault();
+            return;
+        }
+    }
+
+    function setInputValue(value) {
+
+        input.value = value;
+        input.selectionStart = value.length;
+        input.selectionEnd = value.length;
+    }
+
+    function onKeyDown(evt) {
+
+        // CTL-C
+        if (evt.ctrlKey && evt.keyCode === 67) {
+
+            abort();
+            evt.preventDefault();
+            return;
+        }
+
+        // Up arrow
+        if (evt.keyCode === 38) {
+
+            setInputValue(history.back(input.value));
+            evt.preventDefault();
+            return;
+        }
+
+        // Down arrow
+        if (evt.keyCode === 40) {
+
+            setInputValue(history.forward(input.value));
+            evt.preventDefault();
+            return;
+        }
+    }
+
+    var terminal = elem("#terminal"),
+        input = elem("#terminal-input"),
+        prompt = elem("#terminal div.input-line span"),
+        bufferedInput = "";
+
+    terminal.addEventListener("click", function() { input.focus() }, false);
+    input.addEventListener("keypress", onKeyPress, false);
+    input.addEventListener("keydown", onKeyDown, false);
+
+    input.focus();
+
+    window.contentElement = elem("#content");
+    window.print = function(str) { addLine(str + "") };
+};
+
+</script>
+
+</head>
+<body>
+
+<div id="terminal">
+    <div class="input-line">
+        <span class="prompt"></span>
+        <input type="text" id="terminal-input" />
+    </div>
+</div>
+
+<div id="content">
+    <h1>esdown :: repl</h1>
+    <p>
+        This is a REPL (Read-Eval-Print-Loop) which compiles ES6+ code and executes it
+        in your browser.
+    </p>
+    <p>
+        Code is compiled from ES6+ to ES5 using the <a href="https://github.com/zenparsing/esdown"><strong>esdown</strong></a>
+        javascript library.
+    </p>
+
+    <h2>Global Variables</h2>
+
+    <p>The following global variables are defined for convenience:</p>
+
+    <table>
+    <tr>
+        <td><code>contentElement</code></td>
+        <td>The <strong>div</strong> element which contains the content you're reading.
+            You can use this element to modify the DOM.
+        </td>
+    </tr>
+    <tr>
+        <td><code>print(text)</code></td>
+        <td>Prints a string to the REPL output.</td>
+    </tr>
+    </table>
+
+    <h2>REPL Commands</h2>
+
+    <p>The following REPL commands are supported:</p>
+
+    <table>
+    <tr>
+        <td><code>.help</code></td>
+        <td>Displays the REPL help.</td>
+    </tr>
+    <tr>
+        <td><code>.clear</code></td>
+        <td>Clears the terminal output.</td>
+    </tr>
+    <tr>
+        <td><code>.translate</code></td>
+        <td>Translates a script to ES5.</td>
+    </tr>
+    <tr>
+        <td><code>.translateModule</code></td>
+        <td>Translates a module to ES5.</td>
+    </tr>
+    </table>
+
+</div>
+
+</body>
+</html>
