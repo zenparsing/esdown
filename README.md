@@ -7,6 +7,8 @@ wait for Node or browsers to fully implement ES6.
 **esdown** can also be used as a runtime environment for executing ES6 programs
 on top of Node.
 
+You can demo **esdown** by using the [browser-based REPL](http://esparse.org/esdown/repl/).
+
 Source maps are not required when debugging code translated with **esdown**.  One
 of the fundamental design goals is that *the output should look like the input*.
 Line numbers, whitespace and comments are all maintained.
