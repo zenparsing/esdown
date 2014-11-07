@@ -140,6 +140,8 @@ div.output-line {
 .js-date { color: magenta }
 .js-regexp { color: red }
 .js-name {}
+.js-ok { color: green }
+.js-error { color: red }
 
 </style>
 
@@ -196,7 +198,9 @@ window.onload = function() { "use strict";
         "",
         "The following REPL commands are supported:",
         "",
+        ".help                  Display this help message",
         ".clear                 Clear the terminal output",
+        ".load                  Load a script from a URL",
         ".translate             Translate script code to ES5",
         ".translateModule       Translate module code to ES5",
         ".parse                 Parse script code",
@@ -204,6 +208,11 @@ window.onload = function() { "use strict";
         "\n",
 
     ].join("\n");
+
+    var SCRIPT_URLS = {
+
+        "jquery": "https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js",
+    };
 
     var MAX_CONSOLE_LINES = 100,
         NO_OUTPUT = {};
@@ -214,6 +223,7 @@ window.onload = function() { "use strict";
 
         help: function() { return new Literal(HELP_TEXT) },
         clear: function() { return clearLines(1), NO_OUTPUT },
+        load: function(url) { return loadScript(url), NO_OUTPUT },
         translate: function(code) { return esdown.translate(code) },
         translateModule: function(code) { return esdown.translate(code, { module: true }) },
         parse: function(code) { return esdown.parse(code) },
@@ -265,6 +275,34 @@ window.onload = function() { "use strict";
         }
     };
 
+    function hasOwn(obj, key) {
+
+        return Object.prototype.hasOwnProperty.call(obj, key);
+    }
+
+    function loadScript(url) {
+
+        if (hasOwn(SCRIPT_URLS, url))
+            url = SCRIPT_URLS[url];
+
+        var s = document.createElement("script");
+        s.async = true;
+        s.src = url;
+        elem("head").appendChild(s);
+
+        s.onload = function() {
+
+            addLine(stylize("Script loaded from " + url, "ok"));
+        };
+
+        s.onerror = function() {
+
+            addLine(stylize("Error: Unable to load script from " + url, "error"));
+        };
+
+        s = null;
+    }
+
     function isOpaque(obj) {
 
         return obj instanceof Node;
@@ -288,11 +326,17 @@ window.onload = function() { "use strict";
         return e && e.name === 'SyntaxError' && pattern.test(e.message);
     }
 
+    function formatError(error) {
+
+        return escapeHTML(error.stack || error + "").replace(/^.+/, function(m) {
+
+            return stylize(m, "error");
+        });
+    }
+
     function replRun() {
 
         var code = input.value;
-
-        history.add(code);
 
         if (bufferedInput)
             code = bufferedInput + "\n" + code;
@@ -311,7 +355,7 @@ window.onload = function() { "use strict";
                 if (typeof replCommands[cmd] === "function") {
 
                     executed = true;
-                    try { result = replCommands[cmd](code.slice(cmd.length + 1)) }
+                    try { result = replCommands[cmd](code.slice(cmd.length + 1).trim()) }
                     catch (x) { error = x || {} }
                 }
             }
@@ -332,7 +376,7 @@ window.onload = function() { "use strict";
                 bufferedInput = "";
 
                 output =
-                    error ? escapeHTML(error.stack || "") :
+                    error ? formatError(error) :
                     result instanceof Literal ? escapeHTML(result.text) :
                     prettyPrint(result, { stylize: stylize, isOpaque: isOpaque });
             }
@@ -342,12 +386,23 @@ window.onload = function() { "use strict";
         });
     }
 
+    function autoIndent(last) {
+
+        var indent = last.replace(/\S[\s\S]*/, "");
+
+        if (/[\{\[]\s*$/.test(last))
+            indent += "  ";
+
+        return indent;
+    }
 
     function advanceInput(fn) {
 
-        history.add(input.value);
+        var value = input.value;
 
-        addLine(escapeHTML(input.value), prompt.className);
+        history.add(value);
+
+        addLine(escapeHTML(value), prompt.className);
         input.value = "";
 
         var output = fn && fn() || "";
@@ -358,6 +413,9 @@ window.onload = function() { "use strict";
         prompt.className = bufferedInput ? "prompt cont" : "prompt";
 
         clearLines(MAX_CONSOLE_LINES);
+
+        if (bufferedInput)
+            input.value = autoIndent(value);
 
         input.focus();
         input.scrollIntoView();
@@ -505,6 +563,10 @@ window.onload = function() { "use strict";
     <tr>
         <td><code>.clear</code></td>
         <td>Clears the terminal output.</td>
+    </tr>
+    <tr>
+        <td><code>.load</code></td>
+        <td>Loads a script from a URL.</td>
     </tr>
     <tr>
         <td><code>.translate</code></td>
