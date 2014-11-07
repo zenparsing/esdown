@@ -1666,7 +1666,7 @@ InstallFunctions($Promise.prototype, DONT_ENUM, [
 
 
 
-var _M2 = __load("fs", 1), _M3 = __load("path", 1), _M18 = {}, _M19 = {}, _M20 = {}, _M9 = {}, _M4 = {}, _M5 = {}, _M10 = __load("repl", 1), _M11 = __load("vm", 1), _M12 = __load("util", 1), _M23 = {}, _M29 = {}, _M28 = {}, _M24 = {}, _M25 = {}, _M27 = {}, _M26 = {}, _M22 = {}, _M21 = {}, _M13 = {}, _M17 = {}, _M16 = {}, _M15 = {}, _M8 = {}, _M14 = {}, _M6 = {}, _M7 = {}, _M1 = exports;
+var _M2 = __load("fs", 1), _M3 = __load("path", 1), _M19 = {}, _M20 = {}, _M21 = {}, _M10 = {}, _M4 = {}, _M5 = {}, _M11 = __load("repl", 1), _M12 = __load("vm", 1), _M13 = __load("util", 1), _M23 = {}, _M29 = {}, _M28 = {}, _M24 = {}, _M25 = {}, _M27 = {}, _M26 = {}, _M22 = {}, _M18 = {}, _M9 = {}, _M17 = {}, _M16 = {}, _M15 = {}, _M8 = {}, _M14 = {}, _M6 = {}, _M7 = {}, _M1 = exports;
 
 (function(exports) {
 
@@ -1819,7 +1819,7 @@ var ConsoleCommand = _esdown.class(function(__super) { return {
 exports.ConsoleCommand = ConsoleCommand;
 
 
-}).call(this, _M18);
+}).call(this, _M19);
 
 (function(exports) {
 
@@ -1889,7 +1889,7 @@ var ConsoleIO = _esdown.class(function(__super) { return {
 exports.ConsoleIO = ConsoleIO;
 
 
-}).call(this, _M19);
+}).call(this, _M20);
 
 (function(exports) {
 
@@ -1908,20 +1908,20 @@ var ConsoleStyle = {
 exports.ConsoleStyle = ConsoleStyle;
 
 
-}).call(this, _M20);
+}).call(this, _M21);
 
 (function(exports) {
 
-Object.keys(_M18).forEach(function(k) { exports[k] = _M18[k]; });
 Object.keys(_M19).forEach(function(k) { exports[k] = _M19[k]; });
 Object.keys(_M20).forEach(function(k) { exports[k] = _M20[k]; });
+Object.keys(_M21).forEach(function(k) { exports[k] = _M21[k]; });
 
 
-}).call(this, _M9);
+}).call(this, _M10);
 
 (function(exports) {
 
-Object.keys(_M9).forEach(function(k) { exports[k] = _M9[k]; });
+Object.keys(_M10).forEach(function(k) { exports[k] = _M10[k]; });
 
 
 }).call(this, _M4);
@@ -7718,14 +7718,14 @@ exports.parse = parse;
 exports.default = parse;
 
 
-}).call(this, _M21);
+}).call(this, _M18);
 
 (function(exports) {
 
-Object.keys(_M21).forEach(function(k) { exports[k] = _M21[k]; });
+Object.keys(_M18).forEach(function(k) { exports[k] = _M18[k]; });
 
 
-}).call(this, _M13);
+}).call(this, _M9);
 
 (function(exports) {
 
@@ -9423,7 +9423,7 @@ exports.hasScheme = hasScheme;
 
 (function(exports) {
 
-var Parser = _M13.Parser, AST = _M13.AST;
+var Parser = _M9.Parser, AST = _M9.AST;
 var isLegacyScheme = _M16.isLegacyScheme, removeScheme = _M16.removeScheme;
 
 var NODE_SCHEME = /^node:/i,
@@ -11014,13 +11014,13 @@ exports.locatePackage = locatePackage;
 (function(exports) {
 
 var FS = _M2;
-var REPL = _M10;
-var VM = _M11;
+var REPL = _M11;
+var VM = _M12;
 var Path = _M3;
-var Util = _M12;
+var Util = _M13;
 
 var Style = _M4.ConsoleStyle;
-var parse = _M13.parse;
+var parse = _M9.parse;
 var translate = _M8.translate;
 var isPackageSpecifier = _M14.isPackageSpecifier, locateModule = _M14.locateModule;
 
@@ -11575,6 +11575,7 @@ var translate = _M8.translate;
 
 
 
+
 function getOutPath(inPath, outPath) {
 
     var stat;
@@ -11690,6 +11691,7 @@ function main() {
 
 exports.translate = translate;
 exports.bundle = bundle;
+exports.parse = _M9.parse;
 exports.main = main;
 
 

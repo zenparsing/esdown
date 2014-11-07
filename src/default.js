@@ -7,6 +7,7 @@ import { bundle } from "./Bundler.js";
 import { translate } from "./Translator.js";
 
 export { translate, bundle };
+export { parse } from "esparse";
 
 function getOutPath(inPath, outPath) {
 

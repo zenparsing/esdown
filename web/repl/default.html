@@ -197,8 +197,10 @@ window.onload = function() { "use strict";
         "The following REPL commands are supported:",
         "",
         ".clear                 Clear the terminal output",
-        ".translate             Translate a script to ES5",
-        ".translateModule       Translate a module to ES5",
+        ".translate             Translate script code to ES5",
+        ".translateModule       Translate module code to ES5",
+        ".parse                 Parse script code",
+        ".parseModule           Parse module code",
         "\n",
 
     ].join("\n");
@@ -214,6 +216,8 @@ window.onload = function() { "use strict";
         clear: function() { return clearLines(1), NO_OUTPUT },
         translate: function(code) { return esdown.translate(code) },
         translateModule: function(code) { return esdown.translate(code, { module: true }) },
+        parse: function(code) { return esdown.parse(code) },
+        parseModule: function(code) { return esdown.parse(code, { module: true }) },
     };
 
     var history = {
@@ -504,11 +508,19 @@ window.onload = function() { "use strict";
     </tr>
     <tr>
         <td><code>.translate</code></td>
-        <td>Translates a script to ES5.</td>
+        <td>Translates script code to ES5.</td>
     </tr>
     <tr>
         <td><code>.translateModule</code></td>
-        <td>Translates a module to ES5.</td>
+        <td>Translates module code to ES5.</td>
+    </tr>
+    <tr>
+        <td><code>.parse</code></td>
+        <td>Parses script code and displays an AST.</td>
+    </tr>
+    <tr>
+        <td><code>.parseModule</code></td>
+        <td>Parses module code and displays an AST.</td>
     </tr>
     </table>
 
