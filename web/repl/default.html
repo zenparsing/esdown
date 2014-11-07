@@ -151,6 +151,21 @@ div.output-line {
 
 <script>
 
+    // Load regenerator if engine does not support generator functions
+    try {
+
+        window.eval("(function*() {})");
+
+    } catch (x) {
+
+        document.write("<script src='https://facebook.github.io/regenerator/bundle.js'><\/script>");
+        document.write("<script>regenerator.runtime()<\/script>");
+    }
+
+</script>
+
+<script>
+
 // Adapted from underscore
 var escapeHTML = (function() { "use strict";
 
@@ -363,8 +378,24 @@ window.onload = function() { "use strict";
             if (!executed) {
 
                 executed = true;
-                try { result = replEval(code) }
-                catch (x) { error = x || {} }
+
+                try {
+
+                    result = replEval(code);
+
+                } catch (x) {
+
+                    error = x || {};
+
+                    if (error.message &&
+                        error.message.startsWith("Unexpected token *") &&
+                        window.regenerator) {
+
+                        error = null;
+                        try { result = replEval(regenerator.compile(code).code) }
+                        catch (x) { error = x || {} }
+                    }
+                }
             }
 
             if (isRecoverableError(error)) {
@@ -530,8 +561,12 @@ window.onload = function() { "use strict";
         in your browser.
     </p>
     <p>
-        Code is compiled from ES6+ to ES5 using the <a href="https://github.com/zenparsing/esdown"><strong>esdown</strong></a>
+        Code is compiled from ES6+ to ES5 using the <a href="https://github.com/zenparsing/esdown" target="_blank"><strong>esdown</strong></a>
         javascript library.
+    </p>
+    <p>
+        Generator functions are compiled with <a href="https://github.com/facebook/regenerator" target="_blank"><strong>regenerator</strong></a>
+        if your browser doesn't support them natively.
     </p>
 
     <h2>Global Variables</h2>
