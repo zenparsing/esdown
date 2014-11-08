@@ -372,7 +372,7 @@ export class Replacer {
                     }
                 });
 
-                return target.text + ";";
+                return target.text;
 
             case "FunctionDeclaration":
             case "ClassDeclaration":

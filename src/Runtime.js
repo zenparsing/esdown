@@ -424,7 +424,7 @@ Global._esdown = {
 };
 `;
 
-Runtime.ES6 = 
+Runtime.Polyfill = 
 
 `// === Polyfill Utilities ===
 

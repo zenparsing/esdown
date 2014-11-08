@@ -61,7 +61,7 @@ export function translate(input, options = {}) {
 
         input = "\n" +
             wrapRuntimeModule(Runtime.API) +
-            wrapRuntimeModule(Runtime.ES6) +
+            wrapRuntimeModule(Runtime.Polyfill) +
             wrapRuntimeModule(Runtime.MapSet) +
             wrapRuntimeModule(Runtime.Promise) +
             input;

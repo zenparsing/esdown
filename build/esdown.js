@@ -1987,8 +1987,8 @@ var
     futimes = wrap(FS.futimes),
     writeFile = wrap(FS.writeFile),
     appendFile = wrap(FS.appendFile),
-    realpath = wrap(FS.realpath);
-
+    realpath = wrap(FS.realpath)
+;
 
 exports.exists = exists;
 exports.readFile = readFile;
@@ -2411,6 +2411,14 @@ var AST = {
         this.end = end;
         this.pattern = pattern;
         this.initializer = initializer;
+    },
+
+    PrivateDeclaration: function(list, start, end) {
+
+        this.type = "PrivateDeclaration";
+        this.start = start;
+        this.end = end;
+        this.declarations = list;
     },
 
     ReturnStatement: function(arg, start, end) {
@@ -5547,6 +5555,12 @@ var Parser = _esdown.class(function(__super) { return {
         return token.type === "function" && !token.newlineBefore;
     },
 
+    peekPrivate: function() {
+
+        return this.peekKeyword("private") &&
+            this.peekAt("div", 1) === "IDENTIFIER";
+    },
+
     peekEnd: function() {
 
         var token = this.peekToken();
@@ -7074,6 +7088,9 @@ var Parser = _esdown.class(function(__super) { return {
                 if (this.peekFunctionModifier())
                     return this.FunctionDeclaration();
 
+                if (this.peekPrivate())
+                    return this.PrivateDeclaration();
+
                 break;
         }
 
@@ -7088,6 +7105,26 @@ var Parser = _esdown.class(function(__super) { return {
         node.end = this.nodeEnd();
 
         return node;
+    },
+
+    PrivateDeclaration: function() {
+
+        var start = this.nodeStart(),
+            list = [];
+
+        this.readKeyword("private");
+
+        while (true) {
+
+            list.push(this.BindingIdentifier());
+
+            if (this.peek() === ",") this.read();
+            else break;
+        }
+
+        this.Semicolon();
+
+        return new AST.PrivateDeclaration(list, start, this.nodeEnd());
     },
 
     // === Functions ===
@@ -7547,8 +7584,7 @@ var Parser = _esdown.class(function(__super) { return {
 
             case "var":
             case "const":
-                decl = this.VariableDeclaration(false);
-                this.Semicolon();
+                decl = this.LexicalDeclaration();
                 break;
 
             case "function":
@@ -7567,14 +7603,19 @@ var Parser = _esdown.class(function(__super) { return {
 
                 if (this.peekLet()) {
 
-                    decl = this.VariableDeclaration(false);
-                    this.Semicolon();
+                    decl = this.LexicalDeclaration();
                     break;
                 }
 
                 if (this.peekFunctionModifier()) {
 
                     decl = this.FunctionDeclaration();
+                    break;
+                }
+
+                if (this.peekPrivate()) {
+
+                    decl = this.PrivateDeclaration();
                     break;
                 }
 
@@ -8155,7 +8196,7 @@ Global._esdown = {\n\
 };\n\
 ";
 
-Runtime.ES6 = 
+Runtime.Polyfill = 
 
 "// === Polyfill Utilities ===\n\
 \n\
@@ -9797,7 +9838,7 @@ var Replacer = _esdown.class(function(__super) { return {
                     }
                 });
 
-                return target.text + ";";
+                return target.text;
 
             case "FunctionDeclaration":
             case "ClassDeclaration":
@@ -10854,7 +10895,7 @@ function translate(input, options) { if (options === void 0) options = {};
 
         input = "\n" +
             wrapRuntimeModule(Runtime.API) +
-            wrapRuntimeModule(Runtime.ES6) +
+            wrapRuntimeModule(Runtime.Polyfill) +
             wrapRuntimeModule(Runtime.MapSet) +
             wrapRuntimeModule(Runtime.Promise) +
             input;
