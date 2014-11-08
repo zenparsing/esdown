@@ -3,7 +3,7 @@
 import { runTests } from "moon-unit";
 
 import "./init.js";
-import "../../runtime/ES6.js";
+import "../../runtime/Polyfill.js";
 import "../../runtime/MapSet.js";
 import "../../runtime/Promise.js";
 

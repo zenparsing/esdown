@@ -1,7 +1,7 @@
 {
     "name": "esdown",
-    "version": "0.9.1",
-    "description": "ES6 to ES5 translator and ES6 runtime",
+    "version": "0.9.2",
+    "description": "ES6+ to ES5 compiler",
     "homepage": "https://github.com/zenparsing/esdown",
     "bin": {
         "esdown": "./bin/esdown"
