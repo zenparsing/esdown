@@ -2,16 +2,12 @@
 
 **esdown** is an ES6+ to ES5 compiler, written in ES6.  It will allow you to
 write programs using next-generation Javascript features without having to
-wait for Node or browsers to fully implement ES6+ features.
+wait for Node or browsers to fully implement them.
 
 **esdown** can also be used as a runtime environment for executing ES6+ programs
 on top of Node.
 
 You can demo **esdown** by using the [browser REPL](http://esparse.org/esdown/repl/).
-
-Source maps are not required when debugging code translated with **esdown**.  One
-of the fundamental design goals is that *the output should look like the input*.
-Line numbers, whitespace and comments are all maintained.
 
 For more information:
 
