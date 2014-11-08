@@ -566,25 +566,26 @@ polyfill(Function.prototype, {
     [Symbol.referenceGet]() { return this }
 });
 
-if (global.WeakMap) polyfill(WeakMap.prototype, {
+if (global.WeakMap) {
 
-    [Symbol.referenceGet](base) {
+    polyfill(Map.prototype, {
 
-        while (base !== null) {
+        [Symbol.referenceGet](base) { return this.get(base) },
+        [Symbol.referenceSet](base, value) { this.set(base, value) },
+        [Symbol.referenceDelete](base, value) { this.delete(base, value) }
+    });
 
-            if (this.has(base))
-                return this.get(base);
+    polyfill(WeakMap.prototype, {
 
-            base = Object.getPrototypeOf(base);
-        }
+        [Symbol.referenceGet](base) { return this.get(base) },
+        [Symbol.referenceSet](base, value) { this.set(base, value) },
+        [Symbol.referenceDelete](base, value) { this.delete(base, value) }
+    });
 
-        return void 0;
-    },
+    // Experimental
+    global.PrivateField = WeakMap;
 
-    [Symbol.referenceSet](base, value) { this.set(base, value) },
-    [Symbol.referenceDelete](base, value) { this.delete(base, value) }
-
-});
+}
 
 // === Object ===
 

@@ -348,6 +348,12 @@ export class Replacer {
         return "var " + node.identifier.text + " = " + moduleSpec + "['default'];";
     }
 
+    PrivateDeclaration(node) {
+
+        var fields = node.declarations.map(ident => ident.text + " = new PrivateField()");
+        return "const " + fields.join(", ") + ";";
+    }
+
     ExportDeclaration(node) {
 
         var target = node.declaration,
@@ -372,6 +378,11 @@ export class Replacer {
                     }
                 });
 
+                return target.text;
+
+            case "PrivateDeclaration":
+
+                target.declarations.forEach(ident => exports[ident.text] = ident.text);
                 return target.text;
 
             case "FunctionDeclaration":
