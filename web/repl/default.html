@@ -542,12 +542,18 @@ window.onload = function() { "use strict";
         }
     }
 
+    function onClick() {
+
+        if (!window.getSelection || window.getSelection().isCollapsed)
+            input.focus();
+    }
+
     var terminal = elem("#terminal"),
         input = elem("#terminal-input"),
         prompt = elem("#terminal div.input-line span"),
         bufferedInput = "";
 
-    terminal.addEventListener("click", function() { input.focus() }, false);
+    terminal.addEventListener("click", onClick, false);
     input.addEventListener("keypress", onKeyPress, false);
     input.addEventListener("keydown", onKeyDown, false);
 
