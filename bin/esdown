@@ -1,2 +1,0 @@
-#!/usr/bin/env sh
-node --harmony "/Users/thumpandhustle/Code/esdown/bin/esdown-cli.js" "$@"

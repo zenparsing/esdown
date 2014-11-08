@@ -1,6 +1,6 @@
 .DS_Store
 _*
 node_modules
-build/es6now.js
-bin/es6now
+build/esdown.js
+bin/esdown
 !test/**/node_modules
