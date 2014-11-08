@@ -1,4 +1,4 @@
-## The esdown Module System ##
+## The ES6 Module System ##
 
 ### Overview and Syntax ###
 

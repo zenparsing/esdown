@@ -1,13 +1,13 @@
 ## Overview ##
 
-**esdown** is an ES6 to ES5 compiler, written in ES6.  It will allow you to
+**esdown** is an ES6+ to ES5 compiler, written in ES6.  It will allow you to
 write programs using next-generation Javascript features without having to
-wait for Node or browsers to fully implement ES6.
+wait for Node or browsers to fully implement ES6+ features.
 
-**esdown** can also be used as a runtime environment for executing ES6 programs
+**esdown** can also be used as a runtime environment for executing ES6+ programs
 on top of Node.
 
-You can demo **esdown** by using the [browser-based REPL](http://esparse.org/esdown/repl/).
+You can demo **esdown** by using the [browser REPL](http://esparse.org/esdown/repl/).
 
 Source maps are not required when debugging code translated with **esdown**.  One
 of the fundamental design goals is that *the output should look like the input*.
@@ -15,7 +15,7 @@ Line numbers, whitespace and comments are all maintained.
 
 For more information:
 
-- The [Feature Guide](docs/features.md) describes the ES6 features that you can use with
+- The [Feature Guide](docs/features.md) describes the ES6+ features that you can use with
 **esdown**.
 - The [Module Guide](docs/modules.md) describes the ES6 module system implemented in
 **esdown**.
@@ -57,7 +57,7 @@ Translate a module by using a hyphen:
 
 ### translate(input, options = {}) ###
 
-Translates ES6 code to ES5.  The following options are defined:
+Translates ES6+ code to ES5.  The following options are defined:
 
 - **module**: (Boolean) If `true`, parse the input as a module.  Otherwise, parse the input
   as a script.  The default is `false`.
