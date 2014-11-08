@@ -351,7 +351,10 @@ window.onload = function() { "use strict";
         return str;
     }
 
-    function isRecoverableError(e) {
+    function isRecoverableError(e, code) {
+
+        if (/(\n[ \t]*){2}$/.test(code))
+            return false;
 
         var pattern = /^(Unexpected end of input|Unexpected token )/;
         return e && e.name === 'SyntaxError' && pattern.test(e.message);
@@ -410,7 +413,7 @@ window.onload = function() { "use strict";
                 }
             }
 
-            if (isRecoverableError(error)) {
+            if (isRecoverableError(error, code)) {
 
                 bufferedInput = code;
 
