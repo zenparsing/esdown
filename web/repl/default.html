@@ -517,8 +517,8 @@ window.onload = function() { "use strict";
 
     function onKeyDown(evt) {
 
-        // CTL-C
-        if (evt.ctrlKey && evt.keyCode === 67) {
+        // CTL-C, ESC
+        if (evt.ctrlKey && evt.keyCode === 67 || evt.keyCode === 27) {
 
             abort();
             evt.preventDefault();
