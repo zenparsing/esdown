@@ -362,7 +362,26 @@ window.onload = function() { "use strict";
 
     function formatError(error) {
 
-        return escapeHTML(error.stack || error + "").replace(/^.+/, function(m) {
+        var message = "" + error,
+            stack = message;
+
+        if ("stack" in error) {
+
+            stack = error.stack;
+
+            var m = /(^|\s)replEval[:@\s]/.exec(stack);
+
+            if (m) {
+
+                var start = Math.max(stack.lastIndexOf("\n", m.index + 1), 0);
+                stack = stack.slice(0, start);
+            }
+
+            if (stack.indexOf(message) < 0)
+                stack = message + "\n" + stack;
+        }
+
+        return escapeHTML(stack).replace(/^.+/, function(m) {
 
             return "<span class='js-error'>" + m + "</span>";
         });
