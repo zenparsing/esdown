@@ -142,20 +142,20 @@ if (global.WeakMap) {
 
     polyfill(Map.prototype, {
 
-        [Symbol.referenceGet](base) { return this.get(base) },
-        [Symbol.referenceSet](base, value) { this.set(base, value) },
-        [Symbol.referenceDelete](base, value) { this.delete(base, value) }
+        [Symbol.referenceGet]: Map.prototype.get,
+        [Symbol.referenceSet]: Map.prototype.set,
+        [Symbol.referenceDelete]: Map.prototype.delete,
     });
 
     polyfill(WeakMap.prototype, {
 
-        [Symbol.referenceGet](base) { return this.get(base) },
-        [Symbol.referenceSet](base, value) { this.set(base, value) },
-        [Symbol.referenceDelete](base, value) { this.delete(base, value) }
+        [Symbol.referenceGet]: WeakMap.prototype.get,
+        [Symbol.referenceSet]: WeakMap.prototype.set,
+        [Symbol.referenceDelete]: WeakMap.prototype.delete,
     });
 
     // Experimental
-    global.PrivateField = WeakMap;
+    global.PrivateMap = WeakMap;
 
 }
 

@@ -350,7 +350,7 @@ export class Replacer {
 
     PrivateDeclaration(node) {
 
-        var fields = node.declarations.map(ident => ident.text + " = new PrivateField()");
+        var fields = node.declarations.map(ident => ident.text + " = new PrivateMap");
         return "const " + fields.join(", ") + ";";
     }
 

@@ -25,7 +25,7 @@
     color: #fff;
 }
 
-div.input-line {
+div.input-line, div.output-line {
 
     position: relative;
     top: 0;
@@ -33,7 +33,12 @@ div.input-line {
     margin: 2px;
 }
 
-div.input-line span.prompt {
+div.output-line.echo {
+
+    padding-left: 2.2em;
+}
+
+#terminal span.prompt {
 
     position: absolute;
     top: 0;
@@ -43,13 +48,6 @@ div.input-line span.prompt {
 div.output-line {
 
     white-space: pre-wrap;
-    margin: 2px;
-}
-
-#terminal span.prompt {
-
-    width: 2.2em;
-    display: inline-block;
 }
 
 #terminal span.prompt:first-child:before {
@@ -65,7 +63,7 @@ div.output-line {
 #terminal-input {
 
     border: none;
-    outline: none;
+    /*outline: none;*/
     width: 100%;
     margin: 0;
     padding: 0 0 0 2.2em;
@@ -245,7 +243,8 @@ window.onload = function() { "use strict";
     };
 
     var MAX_CONSOLE_LINES = 100,
-        NO_OUTPUT = {};
+        NO_OUTPUT = {},
+        NEWLINE = /\r\n?|\n/g;
 
     function Literal(text) { this.text = text }
 
@@ -452,7 +451,7 @@ window.onload = function() { "use strict";
 
     function autoIndent(last) {
 
-        var indent = last.replace(/\S[\s\S]*/, "");
+        var indent = list.split(NEWLINE).pop().replace(/\S[\s\S]*/, "");
 
         if (/[\{\[]\s*$/.test(last))
             indent += "  ";
@@ -467,7 +466,7 @@ window.onload = function() { "use strict";
         history.add(value);
 
         addLine(escapeHTML(value), prompt.className);
-        input.value = "";
+        setInputValue("");
 
         var output = fn && fn() || "";
 
@@ -479,10 +478,10 @@ window.onload = function() { "use strict";
         clearLines(MAX_CONSOLE_LINES);
 
         if (bufferedInput)
-            input.value = autoIndent(value);
+            setInputValue(autoIndent(value));
 
         input.focus();
-        prompt.scrollIntoView();
+        input.scrollIntoView();
     }
 
     function clearLines(max) {
@@ -504,6 +503,7 @@ window.onload = function() { "use strict";
             var span = document.createElement("span");
             span.className = promptClass;
             line.insertBefore(span, line.firstChild);
+            line.className += " echo";
         }
 
         terminal.insertBefore(line, input.parentNode);
@@ -515,14 +515,27 @@ window.onload = function() { "use strict";
         advanceInput();
     }
 
+    function resizeInput() {
+
+        var height = input.scrollHeight;
+
+        if (typeof height === "number")
+            input.style.height = input.scrollHeight + "px";
+    }
+
     function onKeyPress(evt) {
 
         // Enter
-        if (evt.keyCode === 13 && !evt.ctrlKey) {
+        if (evt.keyCode === 13) {
 
-            replRun();
-            evt.preventDefault();
-            return;
+            if (!evt.shiftKey && !evt.ctrlKey) {
+
+                replRun();
+                evt.preventDefault();
+                return;
+            }
+
+            input.rows += 1;
         }
     }
 
@@ -531,6 +544,35 @@ window.onload = function() { "use strict";
         input.value = value;
         input.selectionStart = value.length;
         input.selectionEnd = value.length;
+        input.scrollIntoView();
+        setTimeout(resizeInput, 0);
+    }
+
+    function isCursorRow(row) {
+
+        var val = input.value;
+
+        if (!val)
+            return true;
+
+        var start = input.selectionStart;
+
+        if (start !== input.selectionEnd)
+            return false;
+
+        if (row === "first") {
+
+            var index = val.search(NEWLINE);
+            return index < 0 || index >= start;
+
+        } else if (row === "last") {
+
+            return start >= val.length - val.split(NEWLINE).pop().length;
+
+        } else {
+
+            return false;
+        }
     }
 
     function onKeyDown(evt) {
@@ -544,7 +586,7 @@ window.onload = function() { "use strict";
         }
 
         // Up arrow
-        if (evt.keyCode === 38) {
+        if (evt.keyCode === 38 && isCursorRow("first")) {
 
             setInputValue(history.back(input.value));
             evt.preventDefault();
@@ -552,7 +594,7 @@ window.onload = function() { "use strict";
         }
 
         // Down arrow
-        if (evt.keyCode === 40) {
+        if (evt.keyCode === 40 && isCursorRow("last")) {
 
             setInputValue(history.forward(input.value));
             evt.preventDefault();
@@ -566,6 +608,11 @@ window.onload = function() { "use strict";
             input.focus();
     }
 
+    function onPaste() {
+
+        setTimeout(resizeInput, 0);
+    }
+
     var terminal = elem("#terminal"),
         input = elem("#terminal-input"),
         prompt = elem("#terminal div.input-line span"),
@@ -574,6 +621,7 @@ window.onload = function() { "use strict";
     terminal.addEventListener("click", onClick, false);
     input.addEventListener("keypress", onKeyPress, false);
     input.addEventListener("keydown", onKeyDown, false);
+    input.addEventListener("paste", onPaste, false);
 
     input.focus();
 
@@ -589,7 +637,7 @@ window.onload = function() { "use strict";
 <div id="terminal">
     <div class="input-line">
         <span class="prompt"></span>
-        <input type="text" id="terminal-input" spellcheck="false" />
+        <textarea id="terminal-input" spellcheck="false" rows="1"></textarea>
     </div>
 </div>
 
