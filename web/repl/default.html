@@ -459,7 +459,7 @@ window.onload = function() { "use strict";
 
     function autoIndent(last) {
 
-        var indent = list.split(NEWLINE).pop().replace(/\S[\s\S]*/, "");
+        var indent = last.split(NEWLINE).pop().replace(/\S[\s\S]*/, "");
 
         if (/[\{\[]\s*$/.test(last))
             indent += "  ";
