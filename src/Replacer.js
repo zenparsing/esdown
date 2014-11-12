@@ -482,40 +482,26 @@ export class Replacer {
         while (elem && elem.type !== "ClassElement")
             elem = elem.parent;
 
-        if (elem && elem.static) {
-
+        if (elem && elem.static)
             proto = "__csuper";
-            elem.parent.hasStaticSuper = true;
-        }
 
         if (p.type === "CallExpression") {
 
             // super(args);
             p.injectThisArg = "this";
-
-            var m = this.parentFunction(p),
-                name = ".constructor";
-
-            if (m.type === "MethodDefinition") {
-
-                name = m.name.type === "Identifier" ?
-                    "." + m.name.text :
-                    "[" + JSON.stringify(m.name.text) + "]";
-            }
-
-            return proto + name;
+            proto = "__csuper";
 
         } else {
 
             // super.foo...
             p.isSuperLookup = true;
+
+            var pp = this.parenParent(p);
+
+            // super.foo(args);
+            if (pp[0].type === "CallExpression" && pp[0].callee === pp[1])
+                pp[0].injectThisArg = "this";
         }
-
-        var pp = this.parenParent(p);
-
-        // super.foo(args);
-        if (pp[0].type === "CallExpression" && pp[0].callee === pp[1])
-            pp[0].injectThisArg = "this";
 
         return proto;
     }
@@ -668,14 +654,9 @@ export class Replacer {
 
     ClassDeclaration(node) {
 
-        var params = "__super";
-
-        if (node.body.hasStaticSuper)
-            params += ", __csuper";
-
         return "var " + node.identifier.text + " = _esdown.class(" +
             (node.base ? (node.base.text + ", ") : "") +
-            "function(" + params + ") {" + this.strictDirective() + " return " +
+            "function(__super, __csuper) {" + this.strictDirective() + " return " +
             node.body.text + " });";
     }
 
@@ -690,15 +671,10 @@ export class Replacer {
             after = "; return " + node.identifier.text + "; }()";
         }
 
-        var params = "__super";
-
-        if (node.body.hasStaticSuper)
-            params += ", __csuper";
-
         return "(" + before +
             "_esdown.class(" +
             (node.base ? (node.base.text + ", ") : "") +
-            "function(" + params + ") {" + this.strictDirective() + " return " +
+            "function(__super, __csuper) {" + this.strictDirective() + " return " +
             node.body.text + " })" +
             after + ")";
     }
@@ -760,16 +736,7 @@ export class Replacer {
                 ctor += " " + classIdent.value;
 
             ctor += "() {";
-
-            if (hasBase) {
-
-                ctor += ' var c = __super.constructor; ';
-                ctor += "if (c) return c.apply(this, arguments); }";
-
-            } else {
-
-                ctor += "}";
-            }
+            ctor += hasBase ? " __csuper.apply(this, arguments); }" : "}";
 
             if (elems.length === 0)
                 return "{ " + ctor + " }";

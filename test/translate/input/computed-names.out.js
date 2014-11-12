@@ -7,7 +7,7 @@
     __$1: 2
 }, "x", "y"));
 
-var C = _esdown.class(function(__super) { return _esdown.computed({
+var C = _esdown.class(function(__super, __csuper) { return _esdown.computed({
 
     __$0: function() {},
     
