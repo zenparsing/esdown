@@ -18,7 +18,7 @@
     overflow: auto;
 }
 
-#terminal, #terminal-input {
+#terminal, #terminal textarea {
 
     font: 16px "Consolas", "Monaco", monospace;
     background-color: #000;
@@ -60,16 +60,24 @@ div.output-line {
     content: "...";
 }
 
-#terminal-input {
+#terminal textarea {
 
     border: none;
-    /*outline: none;*/
+    outline: none;
     width: 100%;
     margin: 0;
     padding: 0 0 0 2.2em;
     box-sizing: border-box;
     resize: none;
     overflow: hidden;
+}
+
+#terminal textarea.hidden {
+
+    visibility: hidden;
+    position: absolute;
+    top: 0px;
+    left: 0px;
 }
 
 #content {
@@ -496,7 +504,7 @@ window.onload = function() { "use strict";
 
         var line = document.createElement("div");
         line.className = "output-line";
-        line.innerHTML = html;
+        line.innerHTML = html || " ";
 
         if (promptClass) {
 
@@ -515,12 +523,31 @@ window.onload = function() { "use strict";
         advanceInput();
     }
 
+    var resizeTimer = 0;
+
     function resizeInput() {
 
-        var height = input.scrollHeight;
+        if (resizeTimer)
+            return;
 
-        if (typeof height === "number")
-            input.style.height = input.scrollHeight + "px";
+        resizeTimer = setTimeout(function() {
+
+            resizeTimer = 0;
+
+            var value = input.value;
+
+            if (value === "") {
+
+                input.style.height = "auto";
+
+            } else {
+
+                hidden.style.width = input.scrollWidth;
+                hidden.value = value;
+                input.style.height = (hidden.scrollHeight + hidden.clientHeight) + "px";
+            }
+
+        }, 50);
     }
 
     function onKeyPress(evt) {
@@ -534,9 +561,9 @@ window.onload = function() { "use strict";
                 evt.preventDefault();
                 return;
             }
-
-            input.rows += 1;
         }
+
+        resizeInput();
     }
 
     function setInputValue(value) {
@@ -544,8 +571,8 @@ window.onload = function() { "use strict";
         input.value = value;
         input.selectionStart = value.length;
         input.selectionEnd = value.length;
-        input.scrollIntoView();
-        setTimeout(resizeInput, 0);
+        prompt.scrollIntoView();
+        resizeInput();
     }
 
     function isCursorRow(row) {
@@ -610,11 +637,21 @@ window.onload = function() { "use strict";
 
     function onPaste() {
 
-        setTimeout(resizeInput, 0);
+        resizeInput();
+    }
+
+    function createHidden() {
+
+        var e = document.createElement(input.nodeName);
+        e.className = "hidden";
+        e.rows = 1;
+        input.parentNode.appendChild(e);
+        return e;
     }
 
     var terminal = elem("#terminal"),
         input = elem("#terminal-input"),
+        hidden = createHidden(),
         prompt = elem("#terminal div.input-line span"),
         bufferedInput = "";
 
