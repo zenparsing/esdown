@@ -219,46 +219,32 @@ Global._esdown = {
     },
 
     // Support for async functions
-    async(iterable) {
+    async(iter) {
 
-        try {
+        return new Promise((resolve, reject) => {
 
-            var iter = _esdown.iter(iterable),
-                resolver,
-                promise;
-
-            promise = new Promise((resolve, reject) => resolver = { resolve, reject });
             resume("next", void 0);
-            return promise;
 
-        } catch (x) { return Promise.reject(x) }
+            function resume(type, value) {
 
-        function resume(type, value) {
+                try {
 
-            if (!(type in iter)) {
+                    var result = iter[type](value);
 
-                resolver.reject(value);
-                return;
+                    value = Promise.resolve(result.value);
+
+                    if (result.done) value.then(resolve, reject);
+                    else value.then(x => resume("next", x), x => resume("throw", x));
+
+                } catch (x) { reject(x) }
             }
-
-            try {
-
-                var result = iter[type](value);
-
-                value = Promise.resolve(result.value);
-
-                if (result.done) value.then(resolver.resolve, resolver.reject);
-                else value.then(x => resume("next", x), x => resume("throw", x));
-
-            } catch (x) { resolver.reject(x) }
-        }
+        });
     },
 
     // Support for async generators
-    asyncGen(iterable) {
+    asyncGen(iter) {
 
-        var iter = _esdown.iter(iterable),
-            state = "paused",
+        var current = null,
             queue = [];
 
         return {
@@ -271,28 +257,25 @@ Global._esdown = {
 
         function enqueue(type, value) {
 
-            var resolve, reject;
-            var promise = new Promise((res, rej) => (resolve = res, reject = rej));
+            return new Promise((resolve, reject) => {
 
-            queue.push({ type, value, resolve, reject });
+                queue.push({ type, value, resolve, reject });
 
-            if (state === "paused")
-                next();
-
-            return promise;
+                if (!current)
+                    next();
+            });
         }
 
         function next() {
 
             if (queue.length > 0) {
 
-                state = "running";
-                var first = queue[0];
-                resume(first.type, first.value);
+                current = queue.shift();
+                resume(current.type, current.value);
 
             } else {
 
-                state = "paused";
+                current = null;
             }
         }
 
@@ -324,15 +307,15 @@ Global._esdown = {
 
                 } else {
 
-                    queue.shift().resolve(result);
+                    current.resolve(result);
                 }
 
             } catch (x) {
 
                 if (x && x.__return === true)
-                    queue.shift().resolve({ value: x.value, done: true });
+                    current.resolve({ value: x.value, done: true });
                 else
-                    queue.shift().reject(x);
+                    current.reject(x);
             }
 
             next();
