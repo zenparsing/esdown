@@ -231,10 +231,16 @@ Global._esdown = {
 
                     var result = iter[type](value);
 
-                    value = Promise.resolve(result.value);
+                    if (result.done) {
 
-                    if (result.done) value.then(resolve, reject);
-                    else value.then(x => resume("next", x), x => resume("throw", x));
+                        resolve(result.value);
+
+                    } else {
+
+                        Promise.resolve(result.value).then(
+                            x => resume("next", x),
+                            x => resume("throw", x));
+                    }
 
                 } catch (x) { reject(x) }
             }
