@@ -571,9 +571,6 @@ if (global.WeakMap) {
         [Symbol.referenceDelete]: WeakMap.prototype.delete,
     });
 
-    // Experimental
-    global.PrivateMap = WeakMap;
-
 }
 
 // === Object ===

@@ -350,7 +350,7 @@ export class Replacer {
 
     PrivateDeclaration(node) {
 
-        var fields = node.declarations.map(ident => ident.text + " = new PrivateMap");
+        var fields = node.declarations.map(ident => ident.text + " = new WeakMap");
         return "const " + fields.join(", ") + ";";
     }
 
@@ -378,11 +378,6 @@ export class Replacer {
                     }
                 });
 
-                return target.text;
-
-            case "PrivateDeclaration":
-
-                target.declarations.forEach(ident => exports[ident.text] = ident.text);
                 return target.text;
 
             case "FunctionDeclaration":
@@ -518,6 +513,15 @@ export class Replacer {
 
             return node.object.text + prop;
         }
+
+        // TODO:  What about super.@x?
+        if (node.property.type === "PrivateName")
+            return this.VirtualPropertyExpression(node);
+    }
+
+    PrivateName(node) {
+
+        return "__$$" + node.value.slice(1);
     }
 
     VirtualPropertyExpression(node) {
