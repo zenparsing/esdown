@@ -172,6 +172,8 @@ div.output-line {
 
 <script>
 
+    var REGENERATOR_URL = "https://facebook.github.io/regenerator/bundle.js";
+
     // Load regenerator if engine does not support generator functions
     try {
 
@@ -179,7 +181,7 @@ div.output-line {
 
     } catch (x) {
 
-        document.write("<script src='https://facebook.github.io/regenerator/bundle.js'><\/script>");
+        document.write("<script src='" + REGENERATOR_URL + "'><\/script>");
         document.write("<script>regenerator.runtime()<\/script>");
     }
 
@@ -248,6 +250,7 @@ window.onload = function() { "use strict";
     var SCRIPT_URLS = {
 
         "jquery": "https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js",
+        "regenerator": REGENERATOR_URL,
     };
 
     var MAX_CONSOLE_LINES = 100,
@@ -317,10 +320,9 @@ window.onload = function() { "use strict";
         return Object.prototype.hasOwnProperty.call(obj, key);
     }
 
-    function loadScript(url) {
+    function loadScript(name) {
 
-        if (hasOwn(SCRIPT_URLS, url))
-            url = SCRIPT_URLS[url];
+        var url = hasOwn(SCRIPT_URLS, name) ? SCRIPT_URLS[name] : name;
 
         var s = document.createElement("script");
         s.async = true;
@@ -330,6 +332,9 @@ window.onload = function() { "use strict";
         s.onload = function() {
 
             addLine(stylize("Script loaded from " + url, "ok"));
+
+            if (name === "regenerator")
+                regenerator.runtime();
         };
 
         s.onerror = function() {
