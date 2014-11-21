@@ -350,8 +350,16 @@ export class Replacer {
 
     PrivateDeclaration(node) {
 
-        var fields = node.declarations.map(ident => ident.text + " = new WeakMap");
-        return "const " + fields.join(", ") + ";";
+        var fields = node.declarations.map(ident => ident.text + " = new WeakMap"),
+            text = "var " + fields.join(", ") + ";";
+
+        if (node.parent.type === "ClassBody") {
+
+            this.addClassPrivate(node.parent.parent, text);
+            return "";
+        }
+
+        return text;
     }
 
     ExportDeclaration(node) {
@@ -660,8 +668,9 @@ export class Replacer {
 
         return "var " + node.identifier.text + " = _esdown.class(" +
             (node.base ? (node.base.text + ", ") : "") +
-            "function(__super, __csuper) {" + this.strictDirective() + " return " +
-            node.body.text + " });";
+            "function(__super, __csuper) {" +
+                this.strictDirective() +
+                this.classPrivateList(node) + " return " + node.body.text + " });";
     }
 
     ClassExpression(node) {
@@ -678,8 +687,9 @@ export class Replacer {
         return "(" + before +
             "_esdown.class(" +
             (node.base ? (node.base.text + ", ") : "") +
-            "function(__super, __csuper) {" + this.strictDirective() + " return " +
-            node.body.text + " })" +
+            "function(__super, __csuper) {" +
+                this.strictDirective() +
+                this.classPrivateList(node) + " return " + node.body.text + " })" +
             after + ")";
     }
 
@@ -710,12 +720,16 @@ export class Replacer {
             hasBase = !!node.parent.base,
             elems = node.elements,
             hasCtor = false,
+            lastElem = null,
             e,
             i;
 
         for (i = elems.length; i--;) {
 
             e = elems[i];
+
+            if (e.type !== "ClassElement")
+                continue;
 
             if (!e.static && e.method.name.value === "constructor") {
 
@@ -727,8 +741,8 @@ export class Replacer {
                     e.text = e.text.replace(/:\s*function/, ": function " + classIdent.value);
             }
 
-            if (i < elems.length - 1)
-                e.text += ",";
+            if (!lastElem) lastElem = e;
+            else e.text += ",";
         }
 
         // Add a default constructor if none was provided
@@ -742,10 +756,10 @@ export class Replacer {
             ctor += "() {";
             ctor += hasBase ? " __csuper.apply(this, arguments); }" : "}";
 
-            if (elems.length === 0)
+            if (!lastElem)
                 return "{ " + ctor + " }";
 
-            elems[elems.length - 1].text += ", " + ctor;
+            lastElem.text += ", " + ctor;
         }
 
         if (node.computedNames)
@@ -1178,9 +1192,7 @@ export class Replacer {
 
     addComputedName(node) {
 
-        var name, p;
-
-        for (p = node.parent; p; p = p.parent) {
+        for (var p = node.parent; p; p = p.parent) {
 
             switch (p.type) {
 
@@ -1254,6 +1266,22 @@ export class Replacer {
         p.tempVars.push({ name, value, noDeclare });
 
         return name;
+    }
+
+    addClassPrivate(node, text) {
+
+        if (!node.privateList)
+            node.privateList = [];
+
+        node.privateList.push(text);
+    }
+
+    classPrivateList(node) {
+
+        if (!node.privateList || node.privateList.length === 0)
+            return "";
+
+        return " " + node.privateList.join(" ") + " ";
     }
 
     tempVars(node) {
