@@ -348,20 +348,6 @@ export class Replacer {
         return "var " + node.identifier.text + " = " + moduleSpec + "['default'];";
     }
 
-    PrivateDeclaration(node) {
-
-        var fields = node.declarations.map(ident => ident.text + " = new WeakMap"),
-            text = "var " + fields.join(", ") + ";";
-
-        if (node.parent.type === "ClassBody") {
-
-            this.addClassPrivate(node.parent.parent, text);
-            return "";
-        }
-
-        return text;
-    }
-
     ExportDeclaration(node) {
 
         var target = node.declaration,
@@ -521,15 +507,6 @@ export class Replacer {
 
             return node.object.text + prop;
         }
-
-        // TODO:  What about super.@x?
-        if (node.property.type === "PrivateName")
-            return this.VirtualPropertyExpression(node);
-    }
-
-    PrivateName(node) {
-
-        return "__$$" + node.value.slice(1);
     }
 
     VirtualPropertyExpression(node) {
