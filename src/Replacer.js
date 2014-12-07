@@ -509,58 +509,15 @@ export class Replacer {
         }
     }
 
-    VirtualPropertyExpression(node) {
+    BindExpression(node) {
 
-        var pp = this.parenParent(node),
-            p = pp[0],
-            type = "get";
+        if (node.parent.type === "CallExpression") {
 
-        switch (p.type) {
-
-            case "CallExpression":
-                if (p.callee === pp[1]) type = "call";
-                break;
-
-            case "AssignmentExpression":
-                if (p.left === pp[1]) type = "set";
-                break;
-
-            case "PatternProperty":
-            case "PatternElement":
-                // References within assignment patterns are not currently supported
-                return null;
-
-            case "UnaryExpression":
-                if (p.operator === "delete") type = "delete";
-                break;
+            node.parent.injectThisArg = node.left.text;
+            return "(" + node.right.text + ")";
         }
 
-        var temp;
-
-        switch (type) {
-
-            case "call":
-                temp = this.addTempVar(p);
-                p.injectThisArg = temp;
-                return `${ node.property.text }[Symbol.referenceGet](${ temp } = ${ node.object.text })`;
-
-            case "get":
-                return `${ node.property.text }[Symbol.referenceGet](${ node.object.text })`;
-
-            case "set":
-                temp = this.addTempVar(p);
-
-                p.assignWrap = [
-                    `(${ node.property.text }[Symbol.referenceSet](${ node.object.text }, ${ temp } = `,
-                    `), ${ temp })`
-                ];
-
-                return null;
-
-            case "delete":
-                p.overrideDelete = true;
-                return `${ node.property.text }[Symbol.referenceDelete](${ node.object.text })`;
-        }
+        return "(" + node.right.text + ").bind(" + node.left.text + ")";
     }
 
     ArrowFunction(node) {
@@ -604,10 +561,6 @@ export class Replacer {
     }
 
     UnaryExpression(node) {
-
-        // VirtualPropertyExpression
-        if (node.operator === "delete" && node.overrideDelete)
-            return "!void " + node.expression.text;
 
         if (node.operator === "await")
             return this.awaitYield(this.parentFunction(node), node.expression.text);
@@ -809,10 +762,6 @@ export class Replacer {
     }
 
     AssignmentExpression(node) {
-
-        // VirtualPropertyExpression
-        if (node.assignWrap)
-            return node.assignWrap[0] + node.right.text + node.assignWrap[1];
 
         var left = this.unwrapParens(node.left);
 
