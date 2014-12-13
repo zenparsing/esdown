@@ -658,10 +658,9 @@ export class Replacer {
 
             e = elems[i];
 
-            if (e.type !== "ClassElement")
-                continue;
-
-            if (!e.static && e.method.name.value === "constructor") {
+            if (e.definition.type === "MethodDefinition" &&
+                e.definition.name.value === "constructor" &&
+                !e.static) {
 
                 hasCtor = true;
 

@@ -60,11 +60,31 @@ function inherit(to, from) {
         forEachDesc(from, (name, desc) => {
 
             if (!has(to, name))
-                Object.defineProperty(to, name, desc);
+                mergeProperty(to, name, desc);
         });
     }
 
     return to;
+}
+
+// Installs a property descriptor, merging accessors
+function mergeProperty(to, name, desc) {
+
+    var old;
+
+    // If descriptor is an accessor...
+    if (desc.get || desc.set) {
+
+        // And the target currently has a property with this name...
+        if (old = Object.getOwnPropertyDescriptor(to, name)) {
+
+            // Merge accessors
+            desc.get = desc.get || old.get;
+            desc.set = desc.set || old.set;
+        }
+    }
+
+    Object.defineProperty(to, name, desc);
 }
 
 // Installs methods on a prototype
@@ -73,7 +93,7 @@ function defineMethods(to, from) {
     forEachDesc(from, (name, desc) => {
 
         if (typeof name !== "string" || !staticName.test(name))
-            Object.defineProperty(to, name, desc);
+            mergeProperty(to, name, desc);
     });
 }
 
