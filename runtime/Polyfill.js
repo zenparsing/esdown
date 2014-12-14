@@ -123,9 +123,38 @@ polyfill(Symbol, {
     iterator: Symbol("iterator"),
 
     // Experimental async iterator support
-    asyncIterator: Symbol("asyncIterator")
+    asyncIterator: Symbol("asyncIterator"),
+
+    // Experimental VirtualPropertyExpression support
+    referenceGet: Symbol("referenceGet"),
+    referenceSet: Symbol("referenceSet"),
+    referenceDelete: Symbol("referenceDelete")
 
 });
+
+// Experimental VirtualPropertyExpression support
+polyfill(Function.prototype, {
+
+    [Symbol.referenceGet]() { return this }
+});
+
+if (global.WeakMap) {
+
+    polyfill(Map.prototype, {
+
+        [Symbol.referenceGet]: Map.prototype.get,
+        [Symbol.referenceSet]: Map.prototype.set,
+        [Symbol.referenceDelete]: Map.prototype.delete,
+    });
+
+    polyfill(WeakMap.prototype, {
+
+        [Symbol.referenceGet]: WeakMap.prototype.get,
+        [Symbol.referenceSet]: WeakMap.prototype.set,
+        [Symbol.referenceDelete]: WeakMap.prototype.delete,
+    });
+
+}
 
 // === Object ===
 

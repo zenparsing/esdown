@@ -60,31 +60,11 @@ function inherit(to, from) {
         forEachDesc(from, (name, desc) => {
 
             if (!has(to, name))
-                mergeProperty(to, name, desc);
+                Object.defineProperty(to, name, desc);
         });
     }
 
     return to;
-}
-
-// Installs a property descriptor, merging accessors
-function mergeProperty(to, name, desc) {
-
-    var old;
-
-    // If descriptor is an accessor...
-    if (desc.get || desc.set) {
-
-        // And the target currently has a property with this name...
-        if (old = Object.getOwnPropertyDescriptor(to, name)) {
-
-            // Merge accessors
-            desc.get = desc.get || old.get;
-            desc.set = desc.set || old.set;
-        }
-    }
-
-    Object.defineProperty(to, name, desc);
 }
 
 // Installs methods on a prototype
@@ -93,7 +73,7 @@ function defineMethods(to, from) {
     forEachDesc(from, (name, desc) => {
 
         if (typeof name !== "string" || !staticName.test(name))
-            mergeProperty(to, name, desc);
+            Object.defineProperty(to, name, desc);
     });
 }
 
@@ -560,9 +540,38 @@ polyfill(Symbol, {
     iterator: Symbol("iterator"),
 
     // Experimental async iterator support
-    asyncIterator: Symbol("asyncIterator")
+    asyncIterator: Symbol("asyncIterator"),
+
+    // Experimental VirtualPropertyExpression support
+    referenceGet: Symbol("referenceGet"),
+    referenceSet: Symbol("referenceSet"),
+    referenceDelete: Symbol("referenceDelete")
 
 });
+
+// Experimental VirtualPropertyExpression support
+polyfill(Function.prototype, {
+
+    [Symbol.referenceGet]() { return this }
+});
+
+if (global.WeakMap) {
+
+    polyfill(Map.prototype, {
+
+        [Symbol.referenceGet]: Map.prototype.get,
+        [Symbol.referenceSet]: Map.prototype.set,
+        [Symbol.referenceDelete]: Map.prototype.delete,
+    });
+
+    polyfill(WeakMap.prototype, {
+
+        [Symbol.referenceGet]: WeakMap.prototype.get,
+        [Symbol.referenceSet]: WeakMap.prototype.set,
+        [Symbol.referenceDelete]: WeakMap.prototype.delete,
+    });
+
+}
 
 // === Object ===
 
