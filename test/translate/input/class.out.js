@@ -1,47 +1,47 @@
-var A = _esdown.class(B, function(__super, __csuper) { return {
+var A = _esdown.class(B, function(__, __super, __csuper) {{
 
-    constructor: function A() {
+    __({ constructor: function A() {
     
         __csuper.call(this);
-    },
+    } });
     
-    set a(value) {},
+    __({ set a(value) {} });
     
-    get b() {},
+    __({ get b() {} });
     
-    bar: function(x, y) {
+    __({ bar: function(x, y) {
     
         __super.bar.call(this, x, y);
         __super["bar"].call(this, x, y);
         __super.foo.foo();
         
         (function(x) { __super.foo })
-    },
+    } });
     
-    __static_0: { S: function() {} },
+    __.static({ S: function() {} });
     
-    __static_1: { get T() {} },
+    __.static({ get T() {} });
     
-    __static_2: { "U": function() {} },
+    __.static({ "U": function() {} });
     
-    __static_3: { "Hello World": function() {} }
+    __.static({ "Hello World": function() {} });
 } });
 
-var A = _esdown.class(function(__super, __csuper) { return {
+var A = _esdown.class(function(__, __super, __csuper) {{
 
-    foo: function() {}, constructor: function A() {}
+    __({ foo: function() {} }); __({ constructor: function A() {} });
 } });
 
-var A = _esdown.class(B, function(__super, __csuper) { return {
+var A = _esdown.class(B, function(__, __super, __csuper) {{
 
-    constructor: function A() { __csuper.call(this) },
-    __static_0: { f: function() { __csuper.call(this) } }
+    __({ constructor: function A() { __csuper.call(this) } });
+    __.static({ f: function() { __csuper.call(this) } });
 } });
 
-var A = _esdown.class(B, function(__super, __csuper) { return { constructor: function A() { __csuper.apply(this, arguments); } }
+var A = _esdown.class(B, function(__, __super, __csuper) {{ __({ constructor: function A() { __csuper.apply(this, arguments); } }); }
 
  });
 
-((function() { var C = _esdown.class(function(__super, __csuper) { return { constructor: function C() {} } }); return C; }()));
+((function() { var C = _esdown.class(function(__, __super, __csuper) {{ __({ constructor: function C() {} }); } }); return C; }()));
 
-new (_esdown.class(function(__super, __csuper) { return { constructor: function() {} } }));
+new (_esdown.class(function(__, __super, __csuper) {{ __({ constructor: function() {} }); } }));

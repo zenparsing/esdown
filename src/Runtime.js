@@ -67,28 +67,23 @@ function inherit(to, from) {
     return to;
 }
 
-// Installs methods on a prototype
-function defineMethods(to, from) {
+// Installs methods into an object, merging "get" and "set" functions
+function mergeMethods(from, to) {
 
     forEachDesc(from, (name, desc) => {
 
-        if (typeof name !== "string" || !staticName.test(name))
-            Object.defineProperty(to, name, desc);
-    });
-}
+        if (desc.get || desc.set) {
 
-// Installs static methods on a constructor
-function defineStatic(to, from) {
+            var prev = Object.getOwnPropertyDescriptor(to, name);
 
-    forEachDesc(from, (name, desc) => {
+            if (prev) {
 
-        if (typeof name === "string" &&
-            staticName.test(name) &&
-            typeof desc.value === "object" &&
-            desc.value) {
-
-            defineMethods(to, desc.value);
+                desc.get = desc.get || prev.get;
+                desc.set = desc.set || prev.set;
+            }
         }
+
+        Object.defineProperty(to, name, desc);
     });
 }
 
@@ -122,36 +117,40 @@ function buildClass(base, def) {
     if (parent === void 0)
         throw new TypeError;
 
-    // Generate the method collection, closing over "__super"
+    // Create the prototype object
     var proto = Object.create(parent),
-        props = def(parent, base || Function.prototype),
-        constructor = props.constructor;
+        statics = {},
+        addMethods = obj => mergeMethods(obj, proto),
+        addStatics = obj => mergeMethods(obj, statics);
 
-    if (!constructor)
+    addMethods.static = addStatics;
+
+    // Generate method collections, closing over super bindings
+    def(addMethods, parent, base || Function.prototype);
+
+    if (!hasOwn.call(proto, "constructor"))
         throw new Error("No constructor specified");
 
     // Make constructor non-enumerable
-    Object.defineProperty(props, "constructor", {
+    Object.defineProperty(proto, "constructor", {
 
         enumerable: false,
         writable: true,
-        configurable: true,
-        value: constructor
+        configurable: true
     });
 
-    // Set prototype methods
-    defineMethods(proto, props);
+    var ctor = proto.constructor;
 
     // Set constructor's prototype
-    constructor.prototype = proto;
+    ctor.prototype = proto;
 
     // Set class "static" methods
-    defineStatic(constructor, props);
+    forEachDesc(statics, (name, desc) => Object.defineProperty(ctor, name, desc));
 
     // "Inherit" from base constructor
-    if (base) inherit(constructor, base);
+    if (base) inherit(ctor, base);
 
-    return constructor;
+    return ctor;
 }
 
 Global._esdown = {

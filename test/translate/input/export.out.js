@@ -13,9 +13,9 @@ function C() {}
 Object.keys(_M0).forEach(function(k) { exports[k] = _M0[k]; });
 
 function F() {}
-var G = _esdown.class(function(__super, __csuper) { return { constructor: function G() {} } });
+var G = _esdown.class(function(__, __super, __csuper) {{ __({ constructor: function G() {} }); } });
 exports["default"] = function() {};
-exports["default"] = (_esdown.class(function(__super, __csuper) { return { constructor: function() {} } }));
+exports["default"] = (_esdown.class(function(__, __super, __csuper) {{ __({ constructor: function() {} }); } }));
 exports["default"] = 1 + 1;
 
 exports.A = A;

@@ -7,9 +7,9 @@
     __$1: 2
 }, "x", "y"));
 
-var C = _esdown.class(function(__super, __csuper) { return _esdown.computed({
+var C = _esdown.class(function(__, __super, __csuper) {{
 
-    __$0: function() {},
+    __(_esdown.computed({ __$0: function() {} }, "x"));
     
-    __static_0: _esdown.computed({ __$0: function() {} }, "x"), constructor: function C() {}
-}, "x") });
+    __.static(_esdown.computed({ __$0: function() {} }, "x")); __({ constructor: function C() {} });
+} });

@@ -668,9 +668,9 @@ export class Replacer {
 
         return "var " + node.identifier.text + " = _esdown.class(" +
             (node.base ? (node.base.text + ", ") : "") +
-            "function(__super, __csuper) {" +
+            "function(__, __super, __csuper) {" +
                 this.strictDirective() +
-                this.classPrivateList(node) + " return " + node.body.text + " });";
+                node.body.text + " });";
     }
 
     ClassExpression(node) {
@@ -687,31 +687,25 @@ export class Replacer {
         return "(" + before +
             "_esdown.class(" +
             (node.base ? (node.base.text + ", ") : "") +
-            "function(__super, __csuper) {" +
+            "function(__, __super, __csuper) {" +
                 this.strictDirective() +
-                this.classPrivateList(node) + " return " + node.body.text + " })" +
+                node.body.text + " })" +
             after + ")";
     }
 
     ClassElement(node) {
 
-        if (node.static) {
+        var text = "{ " + node.definition.text + " }";
 
-            var p = node.parent,
-                id = p.staticID;
+        if (node.computedNames)
+            text = this.wrapComputed(node, text);
 
-            if (id === void 0)
-                id = p.staticID = 0;
+        var fn = "__";
 
-            p.staticID += 1;
+        if (node.static)
+            fn += ".static";
 
-            var text = "{ " + this.stringify(node).replace(/^static\s+/, "") + " }";
-
-            if (node.computedNames)
-                text = this.wrapComputed(node, text);
-
-            return "__static_" + id + ": " + text;
-        }
+        return fn + "(" + text + ");";
     }
 
     ClassBody(node) {
@@ -720,7 +714,6 @@ export class Replacer {
             hasBase = !!node.parent.base,
             elems = node.elements,
             hasCtor = false,
-            lastElem = null,
             e,
             i;
 
@@ -728,10 +721,13 @@ export class Replacer {
 
             e = elems[i];
 
-            if (e.type !== "ClassElement")
-                continue;
+            if (e.type !== "ClassElement" || e.definition.type !== "MethodDefinition") {
 
-            if (!e.static && e.method.name.value === "constructor") {
+                e.text = "";
+                continue;
+            }
+
+            if (!e.static && e.definition.name.value === "constructor") {
 
                 hasCtor = true;
 
@@ -740,9 +736,6 @@ export class Replacer {
                 if (classIdent)
                     e.text = e.text.replace(/:\s*function/, ": function " + classIdent.value);
             }
-
-            if (!lastElem) lastElem = e;
-            else e.text += ",";
         }
 
         // Add a default constructor if none was provided
@@ -755,15 +748,13 @@ export class Replacer {
 
             ctor += "() {";
             ctor += hasBase ? " __csuper.apply(this, arguments); }" : "}";
+            ctor = "__({ " + ctor + " });";
 
-            if (!lastElem)
+            if (elems.length === 0)
                 return "{ " + ctor + " }";
 
-            lastElem.text += ", " + ctor;
+            elems[elems.length - 1].text += " " + ctor;
         }
-
-        if (node.computedNames)
-            return this.wrapComputed(node);
     }
 
     TemplateExpression(node) {
@@ -1196,11 +1187,8 @@ export class Replacer {
 
             switch (p.type) {
 
-                case "ClassElement":
-                    if (!p.static) break;
-
                 case "ObjectLiteral":
-                case "ClassBody":
+                case "ClassElement":
 
                     if (!p.computedNames)
                         p.computedNames = [];
