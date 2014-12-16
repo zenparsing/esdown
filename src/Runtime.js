@@ -556,18 +556,31 @@ polyfill(Function.prototype, {
 
 if (global.WeakMap) {
 
-    polyfill(Map.prototype, {
-
-        [Symbol.referenceGet]: Map.prototype.get,
-        [Symbol.referenceSet]: Map.prototype.set,
-        [Symbol.referenceDelete]: Map.prototype.delete,
-    });
-
     polyfill(WeakMap.prototype, {
 
-        [Symbol.referenceGet]: WeakMap.prototype.get,
-        [Symbol.referenceSet]: WeakMap.prototype.set,
-        [Symbol.referenceDelete]: WeakMap.prototype.delete,
+        [Symbol.referenceGet](base) {
+
+            if (!this.has(base))
+                throw new TypeError;
+
+            return this.get(base);
+        },
+
+        [Symbol.referenceSet](base, value) {
+
+            if (!this.has(base))
+                throw new TypeError;
+
+            return this.set(base, value);
+        },
+
+        [Symbol.referenceDelete](base) {
+
+            if (!this.has(base))
+                throw new TypeError;
+
+            return this.delete(base);
+        }
     });
 
 }

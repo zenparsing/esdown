@@ -670,7 +670,7 @@ export class Replacer {
             (node.base ? (node.base.text + ", ") : "") +
             "function(__, __super, __csuper) {" +
                 this.strictDirective() +
-                node.body.text + " });";
+                this.removeBraces(node.body.text) + " });";
     }
 
     ClassExpression(node) {
@@ -689,8 +689,43 @@ export class Replacer {
             (node.base ? (node.base.text + ", ") : "") +
             "function(__, __super, __csuper) {" +
                 this.strictDirective() +
-                node.body.text + " })" +
+                this.removeBraces(node.body.text) + " })" +
             after + ")";
+    }
+
+    VariableDeclaration(node) {
+
+        if (node.kind !== "private")
+            return;
+
+        var parent = node.parent;
+
+        if (!parent.privateList)
+            parent.privateList = [];
+
+        node.declarations.forEach(decl => {
+
+            var init = decl.initializer ? decl.initializer.text : "void 0",
+                ident = decl.pattern.value;
+
+            parent.privateList.push(ident + ".set(this, " + init + ")");
+            decl.text = ident + " = new WeakMap";
+        });
+
+        return this.stringify(node).replace(/^private/, "var");
+    }
+
+    ClassElementBegin(node) {
+
+        if (!node.static && node.definition.name.value === "constructor") {
+
+            var hasPrivate = node.parent.elements.some(elem =>
+                elem.type === "VariableDeclaration" &&
+                elem.kind === "private");
+
+            if (hasPrivate)
+                node.definition.initPrivate = true;
+        }
     }
 
     ClassElement(node) {
@@ -714,20 +749,13 @@ export class Replacer {
             hasBase = !!node.parent.base,
             elems = node.elements,
             hasCtor = false,
-            e,
-            i;
+            insert = [];
 
-        for (i = elems.length; i--;) {
+        elems.forEach(e => {
 
-            e = elems[i];
-
-            if (e.type !== "ClassElement" || e.definition.type !== "MethodDefinition") {
-
-                e.text = "";
-                continue;
-            }
-
-            if (!e.static && e.definition.name.value === "constructor") {
+            if (e.type === "ClassElement" &&
+                !e.static &&
+                e.definition.name.value === "constructor") {
 
                 hasCtor = true;
 
@@ -736,7 +764,7 @@ export class Replacer {
                 if (classIdent)
                     e.text = e.text.replace(/:\s*function/, ": function " + classIdent.value);
             }
-        }
+        });
 
         // Add a default constructor if none was provided
         if (!hasCtor) {
@@ -747,13 +775,28 @@ export class Replacer {
                 ctor += " " + classIdent.value;
 
             ctor += "() {";
-            ctor += hasBase ? " __csuper.apply(this, arguments); }" : "}";
-            ctor = "__({ " + ctor + " });";
+
+            if (node.privateList)
+                ctor += " __initPrivate.call(this);";
+
+            if (hasBase)
+                ctor += " __csuper.apply(this, arguments);";
+
+            ctor += " }";
+            ctor = "__({ " + ctor + " })";
+
+            insert.push(ctor);
+        }
+
+        if (node.privateList)
+            insert.push("function __initPrivate() { " + node.privateList.join("; ") + " }");
+
+        if (insert.length > 0) {
 
             if (elems.length === 0)
-                return "{ " + ctor + " }";
+                return "{ " + insert.join("; ") + " }";
 
-            elems[elems.length - 1].text += " " + ctor;
+            elems[elems.length - 1].text += "; " + insert.join("; ");
         }
     }
 
@@ -1216,6 +1259,9 @@ export class Replacer {
         if (node.createThisBinding)
             inserted.push("var __this = this;");
 
+        if (node.initPrivate)
+            inserted.push("__initPrivate.call(this);");
+
         if (node.createRestBinding)
             inserted.push(this.restParamVar(node));
 
@@ -1254,22 +1300,6 @@ export class Replacer {
         p.tempVars.push({ name, value, noDeclare });
 
         return name;
-    }
-
-    addClassPrivate(node, text) {
-
-        if (!node.privateList)
-            node.privateList = [];
-
-        node.privateList.push(text);
-    }
-
-    classPrivateList(node) {
-
-        if (!node.privateList || node.privateList.length === 0)
-            return "";
-
-        return " " + node.privateList.join(" ") + " ";
     }
 
     tempVars(node) {
@@ -1335,6 +1365,11 @@ export class Replacer {
         }
 
         return text;
+    }
+
+    removeBraces(text) {
+
+        return text.replace(/^\s*\{|\}\s*$/g, "");
     }
 
     joinList(list) {
