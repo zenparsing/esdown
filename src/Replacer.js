@@ -698,17 +698,21 @@ export class Replacer {
         if (node.kind !== "private")
             return;
 
-        var parent = node.parent;
+        var parent = node.parent,
+            privateList = parent.privateList;
 
-        if (!parent.privateList)
-            parent.privateList = [];
+        if (!privateList)
+            privateList = parent.privateList = [];
 
         node.declarations.forEach(decl => {
 
             var init = decl.initializer ? decl.initializer.text : "void 0",
                 ident = decl.pattern.value;
 
-            parent.privateList.push(ident + ".set(this, " + init + ")");
+            if (privateList.length === 0)
+                privateList.push("if (" + ident + ".has(this)) throw new Error('Object already initialized')");
+
+            privateList.push(ident + ".set(this, " + init + ")");
             decl.text = ident + " = new WeakMap";
         });
 
