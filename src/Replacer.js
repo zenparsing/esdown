@@ -710,9 +710,9 @@ export class Replacer {
                 ident = decl.pattern.value;
 
             if (privateList.length === 0)
-                privateList.push("if (" + ident + ".has(this)) throw new Error('Object already initialized')");
+                privateList.push("if (" + ident + ".has(__$)) throw new Error('Object already initialized')");
 
-            privateList.push(ident + ".set(this, " + init + ")");
+            privateList.push(ident + ".set(__$, " + init + ")");
             decl.text = ident + " = new WeakMap";
         });
 
@@ -781,7 +781,7 @@ export class Replacer {
             ctor += "() {";
 
             if (node.privateList)
-                ctor += " __initPrivate.call(this);";
+                ctor += " __initPrivate(this);";
 
             if (hasBase)
                 ctor += " __csuper.apply(this, arguments);";
@@ -793,7 +793,7 @@ export class Replacer {
         }
 
         if (node.privateList)
-            insert.push("function __initPrivate() { " + node.privateList.join("; ") + " }");
+            insert.push("function __initPrivate(__$) { " + node.privateList.join("; ") + " }");
 
         if (insert.length > 0) {
 
@@ -1264,7 +1264,7 @@ export class Replacer {
             inserted.push("var __this = this;");
 
         if (node.initPrivate)
-            inserted.push("__initPrivate.call(this);");
+            inserted.push("__initPrivate(this);");
 
         if (node.createRestBinding)
             inserted.push(this.restParamVar(node));
