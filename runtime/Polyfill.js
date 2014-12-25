@@ -202,6 +202,12 @@ polyfill(Object, {
 
         // Least effort attempt
         object.__proto__ = proto;
+    },
+
+    getOwnPropertySymbols() {
+
+        // If getOwnPropertySymbols is not supported, then just return an
+        // empty array so that we can avoid feature testing
     }
 
 });

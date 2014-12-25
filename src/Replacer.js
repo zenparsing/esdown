@@ -478,7 +478,7 @@ export class Replacer {
 
     SuperExpression(node) {
 
-        var proto = "__super",
+        var proto = "__.super",
             p = node.parent,
             elem = p;
 
@@ -486,13 +486,13 @@ export class Replacer {
             elem = elem.parent;
 
         if (elem && elem.static)
-            proto = "__csuper";
+            proto = "__.csuper";
 
         if (p.type === "CallExpression") {
 
             // super(args);
             p.injectThisArg = "this";
-            proto = "__csuper";
+            proto = "__.csuper";
 
         } else {
 
@@ -668,7 +668,7 @@ export class Replacer {
 
         return "var " + node.identifier.text + " = _esdown.class(" +
             (node.base ? (node.base.text + ", ") : "") +
-            "function(__, __super, __csuper) {" +
+            "function(__) {" +
                 this.strictDirective() +
                 this.removeBraces(node.body.text) + " });";
     }
@@ -687,7 +687,7 @@ export class Replacer {
         return "(" + before +
             "_esdown.class(" +
             (node.base ? (node.base.text + ", ") : "") +
-            "function(__, __super, __csuper) {" +
+            "function(__) {" +
                 this.strictDirective() +
                 this.removeBraces(node.body.text) + " })" +
             after + ")";

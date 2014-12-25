@@ -41,13 +41,10 @@ function forEachDesc(obj, fn) {
     for (i = 0; i < names.length; ++i)
         fn(names[i], Object.getOwnPropertyDescriptor(obj, names[i]));
 
-    if (Object.getOwnPropertySymbols) {
+    names = Object.getOwnPropertySymbols(obj);
 
-        names = Object.getOwnPropertySymbols(obj);
-
-        for (i = 0; i < names.length; ++i)
-            fn(names[i], Object.getOwnPropertyDescriptor(obj, names[i]));
-    }
+    for (i = 0; i < names.length; ++i)
+        fn(names[i], Object.getOwnPropertyDescriptor(obj, names[i]));
 
     return obj;
 }
@@ -123,17 +120,20 @@ function buildClass(base, def) {
         addMethods = obj => mergeMethods(obj, proto),
         addStatics = obj => mergeMethods(obj, statics);
 
-    addMethods.static = addStatics;
+    Object.assign(addMethods, {
+        static: addStatics,
+        super: parent,
+        csuper: base || Function.prototype
+    });
 
     // Generate method collections, closing over super bindings
-    def(addMethods, parent, base || Function.prototype);
+    def(addMethods);
 
     if (!hasOwn.call(proto, "constructor"))
         throw new Error("No constructor specified");
 
     // Make constructor non-enumerable
     Object.defineProperty(proto, "constructor", {
-
         enumerable: false,
         writable: true,
         configurable: true
@@ -618,6 +618,12 @@ polyfill(Object, {
 
         // Least effort attempt
         object.__proto__ = proto;
+    },
+
+    getOwnPropertySymbols() {
+
+        // If getOwnPropertySymbols is not supported, then just return an
+        // empty array so that we can avoid feature testing
     }
 
 });
