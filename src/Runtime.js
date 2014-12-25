@@ -80,6 +80,7 @@ function mergeMethods(from, to) {
             }
         }
 
+        desc.enumerable = false;
         Object.defineProperty(to, name, desc);
     });
 }
