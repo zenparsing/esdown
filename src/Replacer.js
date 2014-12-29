@@ -586,6 +586,19 @@ export class Replacer {
         }
     }
 
+    BindExpression(node) {
+
+        // TODO:  When left is null?
+
+        if (node.parent.type === "CallExpression") {
+
+            node.parent.injectThisArg = node.left.text;
+            return "(" + node.right.text + ")";
+        }
+
+        return "(" + node.right.text + ").bind(" + node.left.text + ")";
+    }
+
     ArrowFunction(node) {
 
         var body = node.body.text;
