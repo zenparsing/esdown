@@ -408,6 +408,23 @@ Global._esdown = {
                 return a;
             }
         };
+    },
+
+    // Support for private fields
+    getPrivate(obj, key) {
+
+        if (!key.has(Object(obj)))
+            throw new TypeError;
+
+        return key.get(obj);
+    },
+
+    setPrivate(obj, key, value) {
+
+        if (!key.has(Object(obj)))
+            throw new TypeError;
+
+        return key.set(obj, value);
     }
 
 };
@@ -542,49 +559,7 @@ polyfill(Symbol, {
     // Experimental async iterator support
     asyncIterator: Symbol("asyncIterator"),
 
-    // Experimental VirtualPropertyExpression support
-    referenceGet: Symbol("referenceGet"),
-    referenceSet: Symbol("referenceSet"),
-    referenceDelete: Symbol("referenceDelete")
-
 });
-
-// Experimental VirtualPropertyExpression support
-polyfill(Function.prototype, {
-
-    [Symbol.referenceGet]() { return this }
-});
-
-if (global.WeakMap) {
-
-    polyfill(WeakMap.prototype, {
-
-        [Symbol.referenceGet](base) {
-
-            if (!this.has(base))
-                throw new TypeError;
-
-            return this.get(base);
-        },
-
-        [Symbol.referenceSet](base, value) {
-
-            if (!this.has(base))
-                throw new TypeError;
-
-            return this.set(base, value);
-        },
-
-        [Symbol.referenceDelete](base) {
-
-            if (!this.has(base))
-                throw new TypeError;
-
-            return this.delete(base);
-        }
-    });
-
-}
 
 // === Object ===
 

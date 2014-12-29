@@ -404,6 +404,23 @@ Global._esdown = {
                 return a;
             }
         };
+    },
+
+    // Support for private fields
+    getPrivate(obj, key) {
+
+        if (!key.has(Object(obj)))
+            throw new TypeError;
+
+        return key.get(obj);
+    },
+
+    setPrivate(obj, key, value) {
+
+        if (!key.has(Object(obj)))
+            throw new TypeError;
+
+        return key.set(obj, value);
     }
 
 };
