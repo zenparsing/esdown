@@ -523,7 +523,7 @@ export class Replacer {
         }
 
         // TODO:  What about super.@x?
-        if (node.property.type === "PrivateName")
+        if (node.property.type === "AtName")
             return this.VirtualPropertyExpression(node);
     }
 
@@ -588,15 +588,27 @@ export class Replacer {
 
     BindExpression(node) {
 
-        // TODO:  When left is null?
+        var left = node.left ? node.left.text : null,
+            right = node.right.text,
+            temp;
 
-        if (node.parent.type === "CallExpression") {
+        if (!left) {
 
-            node.parent.injectThisArg = node.left.text;
-            return "(" + node.right.text + ")";
+            if (node.right.type !== "MemberExpression")
+                throw new Error("Invalid bind expression");
+
+            left = this.addTempVar(node);
+            right = `(${ left } = ${ node.right.object.text }).${ node.right.property.text }`;
         }
 
-        return "(" + node.right.text + ").bind(" + node.left.text + ")";
+        if (node.parent.type === "CallExpression" &&
+            node.parent.callee === node) {
+
+            node.parent.injectThisArg = left;
+            return "(" + right + ")";
+        }
+
+        return `(${ right }).bind(${ left })`;
     }
 
     ArrowFunction(node) {
@@ -706,39 +718,29 @@ export class Replacer {
             after + ")";
     }
 
-    VariableDeclaration(node) {
-
-        if (node.kind !== "private")
-            return;
+    PrivateDeclaration(node) {
 
         var parent = node.parent,
-            privateList = parent.privateList;
+            privateList = parent.privateList,
+            init = node.initializer ? node.initializer.text : "void 0",
+            ident = node.name.value.slice(1);
 
         if (!privateList)
             privateList = parent.privateList = [];
 
-        node.declarations.forEach(decl => {
+        if (privateList.length === 0)
+            privateList.push("if (" + ident + ".has(__$)) throw new Error('Object already initialized')");
 
-            var init = decl.initializer ? decl.initializer.text : "void 0",
-                ident = decl.pattern.value;
+        privateList.push(ident + ".set(__$, " + init + ")");
 
-            if (privateList.length === 0)
-                privateList.push("if (" + ident + ".has(__$)) throw new Error('Object already initialized')");
-
-            privateList.push(ident + ".set(__$, " + init + ")");
-            decl.text = ident + " = new WeakMap";
-        });
-
-        return this.stringify(node).replace(/^private/, "var");
+        return "var " + ident + " = new WeakMap;";
     }
 
     ClassElementBegin(node) {
 
         if (!node.static && node.definition.name.value === "constructor") {
 
-            var hasPrivate = node.parent.elements.some(elem =>
-                elem.type === "VariableDeclaration" &&
-                elem.kind === "private");
+            var hasPrivate = node.parent.elements.some(elem => elem.type === "PrivateDeclaration");
 
             if (hasPrivate)
                 node.definition.initPrivate = true;
