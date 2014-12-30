@@ -1,8 +1,8 @@
-var A = _esdown.class(B, function(__, __super, __csuper) {{
+var A = _esdown.class(B, function(__) {
 
     __({ constructor: function A() {
     
-        __csuper.call(this);
+        __.csuper.call(this);
     } });
     
     __({ set a(value) {} });
@@ -11,11 +11,11 @@ var A = _esdown.class(B, function(__, __super, __csuper) {{
     
     __({ bar: function(x, y) {
     
-        __super.bar.call(this, x, y);
-        __super["bar"].call(this, x, y);
-        __super.foo.foo();
+        __.super.bar.call(this, x, y);
+        __.super["bar"].call(this, x, y);
+        __.super.foo.foo();
         
-        (function(x) { __super.foo })
+        (function(x) { __.super.foo })
     } });
     
     __.static({ S: function() {} });
@@ -25,23 +25,23 @@ var A = _esdown.class(B, function(__, __super, __csuper) {{
     __.static({ "U": function() {} });
     
     __.static({ "Hello World": function() {} });
-} });
-
-var A = _esdown.class(function(__, __super, __csuper) {{
-
-    __({ foo: function() {} }); __({ constructor: function A() {} });
-} });
-
-var A = _esdown.class(B, function(__, __super, __csuper) {{
-
-    __({ constructor: function A() { __csuper.call(this) } });
-    __.static({ f: function() { __csuper.call(this) } });
-} });
-
-var A = _esdown.class(B, function(__, __super, __csuper) {{ __({ constructor: function A() { __csuper.apply(this, arguments); } }); }
-
  });
 
-((function() { var C = _esdown.class(function(__, __super, __csuper) {{ __({ constructor: function C() {} }); } }); return C; }()));
+var A = _esdown.class(function(__) {
 
-new (_esdown.class(function(__, __super, __csuper) {{ __({ constructor: function() {} }); } }));
+    __({ foo: function() {} });; __({ constructor: function A() { } });
+ });
+
+var A = _esdown.class(B, function(__) {
+
+    __({ constructor: function A() { __.csuper.call(this) } });
+    __.static({ f: function() { __.csuper.call(this) } });
+ });
+
+var A = _esdown.class(B, function(__) { __({ constructor: function A() { __.csuper.apply(this, arguments); } });  });
+
+
+
+((function() { var C = _esdown.class(function(__) { __({ constructor: function C() { } });  }); return C; }()));
+
+new (_esdown.class(function(__) { __({ constructor: function() { } });  }));

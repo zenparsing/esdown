@@ -285,6 +285,19 @@ export class Replacer {
             return "(" + this.spreadList(node.elements, true) + ")";
     }
 
+    MethodDefinitionBegin(node) {
+
+        if (node.parent.type === "ClassBody" &&
+            node.name.value === "constructor" &&
+            !node.static) {
+
+            var hasPrivate = node.parent.elements.some(elem => elem.type === "PrivateDeclaration");
+
+            if (hasPrivate)
+                node.initPrivate = true;
+        }
+    }
+
     MethodDefinition(node) {
 
         switch (node.kind) {
@@ -482,7 +495,7 @@ export class Replacer {
             p = node.parent,
             elem = p;
 
-        while (elem && elem.type !== "ClassElement")
+        while (elem && elem.type !== "MethodDefinition")
             elem = elem.parent;
 
         if (elem && elem.static)
@@ -676,17 +689,6 @@ export class Replacer {
         return "var " + ident + " = new WeakMap;";
     }
 
-    ClassElementBegin(node) {
-
-        if (!node.static && node.definition.name.value === "constructor") {
-
-            var hasPrivate = node.parent.elements.some(elem => elem.type === "PrivateDeclaration");
-
-            if (hasPrivate)
-                node.definition.initPrivate = true;
-        }
-    }
-
     AtName(node) {
 
         if (node.parent === "PrivateDeclaration")
@@ -705,21 +707,6 @@ export class Replacer {
         return this.privateReference(node, "this", name);
     }
 
-    ClassElement(node) {
-
-        var text = "{ " + node.definition.text + " }";
-
-        if (node.computedNames)
-            text = this.wrapComputed(node, text);
-
-        var fn = "__";
-
-        if (node.static)
-            fn += ".static";
-
-        return fn + "(" + text + ");";
-    }
-
     ClassBody(node) {
 
         var classIdent = node.parent.identifier,
@@ -730,17 +717,34 @@ export class Replacer {
 
         elems.forEach(e => {
 
-            if (e.type === "ClassElement" &&
-                !e.static &&
-                e.definition.name.value === "constructor") {
+            if (e.type !== "MethodDefinition")
+                return;
+
+            var text = e.text,
+                fn = "__";
+
+            if (e.static)
+                text = text.replace(/^static\s*/, "");
+
+            if (e.name.value === "constructor" && !e.static) {
 
                 hasCtor = true;
 
                 // Give the constructor function a name so that the
                 // class function's name property will be correct.
                 if (classIdent)
-                    e.text = e.text.replace(/:\s*function/, ": function " + classIdent.value);
+                    text = text.replace(/:\s*function/, ": function " + classIdent.value);
             }
+
+            text = "{ " + text + " }";
+
+            if (e.computedNames)
+                text = this.wrapComputed(e, text);
+
+            if (e.static)
+                fn += ".static";
+
+            e.text = fn + "(" + text + ");";
         });
 
         // Add a default constructor if none was provided
@@ -757,7 +761,7 @@ export class Replacer {
                 ctor += " __initPrivate(this);";
 
             if (hasBase)
-                ctor += " __csuper.apply(this, arguments);";
+                ctor += " __.csuper.apply(this, arguments);";
 
             ctor += " }";
             ctor = "__({ " + ctor + " })";
@@ -771,9 +775,9 @@ export class Replacer {
         if (insert.length > 0) {
 
             if (elems.length === 0)
-                return "{ " + insert.join("; ") + " }";
+                return "{ " + insert.join("; ") + "; }";
 
-            elems[elems.length - 1].text += "; " + insert.join("; ");
+            elems[elems.length - 1].text += "; " + insert.join("; ") + ";";
         }
     }
 
@@ -1256,18 +1260,16 @@ export class Replacer {
 
         for (var p = node.parent; p; p = p.parent) {
 
-            switch (p.type) {
+            if (p.type === "ObjectLiteral" ||
+                p.type === "MethodDefinition" && p.parent.type === "ClassBody") {
 
-                case "ObjectLiteral":
-                case "ClassElement":
+                if (!p.computedNames)
+                    p.computedNames = [];
 
-                    if (!p.computedNames)
-                        p.computedNames = [];
+                var id = "__$" + p.computedNames.length;
+                p.computedNames.push(node.expression.text);
 
-                    var id = "__$" + p.computedNames.length;
-                    p.computedNames.push(node.expression.text);
-
-                    return id;
+                return id;
             }
         }
 
