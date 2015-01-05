@@ -588,21 +588,8 @@ export class Replacer {
 
     ThisExpression(node) {
 
-        var fn = this.parentFunction(node);
-
-        if (fn.type === "ArrowFunction") {
-
-            while (fn = this.parentFunction(fn)) {
-
-                if (fn.type !== "ArrowFunction") {
-
-                    fn.createThisBinding = true;
-                    break;
-                }
-            }
-
+        if (this.isLexicalThis(node))
             return "__this";
-        }
     }
 
     UnaryExpression(node) {
@@ -704,7 +691,9 @@ export class Replacer {
             return name;
         }
 
-        return this.privateReference(node, "this", name);
+        var thisRef = this.isLexicalThis(node) ? "__this" : "this";
+
+        return this.privateReference(node, thisRef, name);
     }
 
     ClassBody(node) {
@@ -1164,33 +1153,25 @@ export class Replacer {
         return null;
     }
 
-    hasThisRef(node) {
+    isLexicalThis(node) {
 
-        var hasThis = {};
+        var fn = this.parentFunction(node);
 
-        try {
+        if (fn.type === "ArrowFunction") {
 
-            visit(node);
+            while (fn = this.parentFunction(fn)) {
 
-        } catch (err) {
+                if (fn.type !== "ArrowFunction") {
 
-            if (err === hasThis) return true;
-            else throw err;
+                    fn.createThisBinding = true;
+                    break;
+                }
+            }
+
+            return true;
         }
 
         return false;
-
-        function visit(node) {
-
-            if (node.type === "FunctionExpression" ||
-                node.type === "FunctionDeclaration")
-                return;
-
-            if (node.type === "ThisExpression")
-                throw hasThis;
-
-            node.children().forEach(visit);
-        }
     }
 
     modulePath(node) {
