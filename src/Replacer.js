@@ -190,7 +190,7 @@ export class Replacer {
         var body = node.body.text;
 
         // Remove braces from block bodies
-        if (node.body.type === "Block") body = body.slice(1, -1);
+        if (node.body.type === "Block") body = this.removeBraces(body);
         else body += " ";
 
         var assign = this.isPattern(binding) ?
@@ -241,8 +241,15 @@ export class Replacer {
 
         var insert = this.functionInsert(node.parent);
 
-        if (insert)
-            return "{ " + insert + " " + this.stringify(node).slice(1);
+        if (insert) {
+
+            var text = insert + " " + this.removeBraces(this.stringify(node));
+
+            if (node.parent.initPrivate)
+                text = this.wrapPrivateInit(text) + " ";
+
+            return "{ " + text + "}";
+        }
     }
 
     FormalParameter(node) {
@@ -359,20 +366,6 @@ export class Replacer {
 
         var moduleSpec = this.modulePath(node.from);
         return "var " + node.identifier.text + " = " + moduleSpec + "['default'];";
-    }
-
-    PrivateDeclaration(node) {
-
-        var fields = node.declarations.map(ident => ident.text + " = new WeakMap"),
-            text = "var " + fields.join(", ") + ";";
-
-        if (node.parent.type === "ClassBody") {
-
-            this.addClassPrivate(node.parent.parent, text);
-            return "";
-        }
-
-        return text;
     }
 
     ExportDeclaration(node) {
@@ -668,10 +661,7 @@ export class Replacer {
         if (!privateList)
             privateList = parent.privateList = [];
 
-        if (privateList.length === 0)
-            privateList.push("if (" + ident + ".has(__$)) throw new Error('Object already initialized')");
-
-        privateList.push(ident + ".set(__$, " + init + ")");
+        privateList.push({ ident, init });
 
         return "var " + ident + " = new WeakMap;";
     }
@@ -739,34 +729,42 @@ export class Replacer {
         // Add a default constructor if none was provided
         if (!hasCtor) {
 
-            var ctor = "constructor: function";
+            var ctorBody = "";
+
+            if (hasBase)
+                ctorBody = "__.csuper.apply(this, arguments);";
+
+            if (node.privateList) {
+
+                if (ctorBody) ctorBody = " " + ctorBody;
+                ctorBody = this.wrapPrivateInit("__initPrivate(this);" + ctorBody);
+            }
+
+            if (ctorBody)
+                ctorBody = " " + ctorBody + " ";
+
+            var ctor = "function";
 
             if (classIdent)
                 ctor += " " + classIdent.value;
 
-            ctor += "() {";
+            ctor += "() {" + ctorBody + "}";
 
-            if (node.privateList)
-                ctor += " __initPrivate(this);";
-
-            if (hasBase)
-                ctor += " __.csuper.apply(this, arguments);";
-
-            ctor += " }";
-            ctor = "__({ " + ctor + " })";
-
-            insert.push(ctor);
+            insert.push("__({ constructor: " + ctor + " });");
         }
 
-        if (node.privateList)
-            insert.push("function __initPrivate(__$) { " + node.privateList.join("; ") + " }");
+        if (node.privateList) {
+
+            insert.push(this.privateInit(node.privateList));
+            insert.push(this.privateRollback(node.privateList));
+        }
 
         if (insert.length > 0) {
 
             if (elems.length === 0)
-                return "{ " + insert.join("; ") + "; }";
+                return "{ " + insert.join(" ") + " }";
 
-            elems[elems.length - 1].text += "; " + insert.join("; ") + ";";
+            elems[elems.length - 1].text += "; " + insert.join(" ");
         }
     }
 
@@ -820,9 +818,9 @@ export class Replacer {
 
         var temp = this.addTempVar(node, null, true),
             assign = this.translatePattern(node.param, temp).join(", "),
-            body = node.body.text.slice(1);
+            body = this.removeBraces(node.body.text);
 
-        return `catch (${ temp }) { let ${ assign }; ${ body }`;
+        return `catch (${ temp }) { let ${ assign }; ${ body } }`;
     }
 
     VariableDeclarator(node) {
@@ -1297,6 +1295,27 @@ export class Replacer {
             inserted.unshift(temps);
 
         return inserted.join(" ");
+    }
+
+    wrapPrivateInit(text) {
+
+        return "try { " + text + " } catch (e) { __rollbackPrivate(this); throw e; }";
+    }
+
+    privateInit(fields) {
+
+        var list = fields.map(field => field.ident + ".set(__$, " + field.init + ");");
+
+        list.unshift("if (" + fields[0].ident + ".has(__$)) " +
+            "throw new Error('Object already initialized');");
+
+        return "function __initPrivate(__$) { " + list.join(" ") + " }";
+    }
+
+    privateRollback(fields) {
+
+        var list = fields.map(field => field.ident + ".delete(__$);");
+        return "function __rollbackPrivate(__$) { " + list.join(" ") + " }";
     }
 
     addTempVar(node, value, noDeclare) {

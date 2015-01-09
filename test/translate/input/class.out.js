@@ -29,7 +29,7 @@ var A = _esdown.class(B, function(__) {
 
 var A = _esdown.class(function(__) {
 
-    __({ foo: function() {} });; __({ constructor: function A() { } });
+    __({ foo: function() {} });; __({ constructor: function A() {} });
  });
 
 var A = _esdown.class(B, function(__) {
@@ -42,6 +42,6 @@ var A = _esdown.class(B, function(__) { __({ constructor: function A() { __.csup
 
 
 
-((function() { var C = _esdown.class(function(__) { __({ constructor: function C() { } });  }); return C; }()));
+((function() { var C = _esdown.class(function(__) { __({ constructor: function C() {} });  }); return C; }()));
 
-new (_esdown.class(function(__) { __({ constructor: function() { } });  }));
+new (_esdown.class(function(__) { __({ constructor: function() {} });  }));
