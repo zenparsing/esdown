@@ -241,15 +241,8 @@ export class Replacer {
 
         var insert = this.functionInsert(node.parent);
 
-        if (insert) {
-
-            var text = insert + " " + this.removeBraces(this.stringify(node));
-
-            if (node.parent.initPrivate)
-                text = this.wrapPrivateInit(text) + " ";
-
-            return "{ " + text + "}";
-        }
+        if (insert)
+            return "{ " + insert + " " + this.removeBraces(this.stringify(node)) + "}";
     }
 
     FormalParameter(node) {
@@ -737,7 +730,7 @@ export class Replacer {
             if (node.privateList) {
 
                 if (ctorBody) ctorBody = " " + ctorBody;
-                ctorBody = this.wrapPrivateInit("__initPrivate(this);" + ctorBody);
+                ctorBody += "__initPrivate(this);";
             }
 
             if (ctorBody)
@@ -753,11 +746,8 @@ export class Replacer {
             insert.push("__({ constructor: " + ctor + " });");
         }
 
-        if (node.privateList) {
-
+        if (node.privateList)
             insert.push(this.privateInit(node.privateList));
-            insert.push(this.privateRollback(node.privateList));
-        }
 
         if (insert.length > 0) {
 
@@ -1297,11 +1287,6 @@ export class Replacer {
         return inserted.join(" ");
     }
 
-    wrapPrivateInit(text) {
-
-        return "try { " + text + " } catch (e) { __rollbackPrivate(this); throw e; }";
-    }
-
     privateInit(fields) {
 
         var list = fields.map(field => field.ident + ".set(__$, " + field.init + ");");
@@ -1310,12 +1295,6 @@ export class Replacer {
             "throw new Error('Object already initialized');");
 
         return "function __initPrivate(__$) { " + list.join(" ") + " }";
-    }
-
-    privateRollback(fields) {
-
-        var list = fields.map(field => field.ident + ".delete(__$);");
-        return "function __rollbackPrivate(__$) { " + list.join(" ") + " }";
     }
 
     addTempVar(node, value, noDeclare) {
