@@ -48,24 +48,21 @@ function sanitize(text) {
     return text;
 }
 
-function wrapRuntimeModule(text) {
+function wrapRuntimeModules() {
 
-    return "(function() {\n\n" + text + "\n\n}).call(this);\n\n";
+    return Object.keys(Runtime).map(key => {
+
+        return "(function() {\n\n" + Runtime[key] + "\n\n}).call(this);\n\n";
+
+    }).join("");
 }
 
 export function translate(input, options = {}) {
 
     input = sanitize(input);
 
-    if (options.runtime) {
-
-        input = "\n" +
-            wrapRuntimeModule(Runtime.API) +
-            wrapRuntimeModule(Runtime.Polyfill) +
-            wrapRuntimeModule(Runtime.MapSet) +
-            wrapRuntimeModule(Runtime.Promise) +
-            input;
-    }
+    if (options.runtime)
+        input = "\n" + wrapRuntimeModules() + input;
 
     // Node modules are wrapped inside of a function expression, which allows
     // return statements

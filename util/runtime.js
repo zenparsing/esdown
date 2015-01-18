@@ -11,8 +11,16 @@ var FS = require("fs"),
 var EXT = /\.[\S\s]+$/;
 
 var runtimePath = Path.resolve(__dirname, "../runtime/"),
-    outPath = Path.resolve(__dirname, "../src/Runtime.js"),
-    files = [ "API.js", "Polyfill.js", "MapSet.js", "Promise.js" ];
+    outPath = Path.resolve(__dirname, "../src/Runtime.js");
+
+var files = [
+
+    "API.js",
+    "Polyfill.js",
+    "MapSet.js",
+    "Promise.js",
+    "Observable.js"
+];
 
 function run() {
 
