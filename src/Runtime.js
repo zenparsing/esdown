@@ -1686,7 +1686,7 @@ Runtime.Observable =
             cleanup();
 
         // Return a cancelation function
-        return _=> { sink.return() };
+        return sink.return;
     }
 
     /*
@@ -1705,7 +1705,7 @@ Runtime.Observable =
         var done = false;
 
         // Marks the stream as closed and triggers stream cleanup.  Exceptions
-        // which occur during cleanup are propogated to the caller.
+        // which occur during cleanup are propagated to the caller.
         function close() {
 
             if (!done) {
