@@ -324,19 +324,28 @@ export class Replacer {
             return node.name.text + ": " + node.name.text;
     }
 
-    ModuleImport(node) {
-
-        return "var " + node.identifier.text + " = " + this.modulePath(node.from) + ";";
-    }
-
     ImportDeclaration(node) {
 
         var moduleSpec = this.modulePath(node.from),
-            list = [];
+            imports = node.imports;
 
-        if (node.specifiers) {
+        if (!imports)
+            return "";
 
-            node.specifiers.forEach(spec => {
+        switch (imports.type) {
+
+            case "NamespaceImport":
+                return "var " + imports.identifier.text + " = " + moduleSpec + ";";
+
+            case "DefaultImport":
+                return "var " + imports.identifier.text + " = " + moduleSpec + "['default'];";
+        }
+
+        var list = [];
+
+        if (imports.specifiers) {
+
+            imports.specifiers.forEach(spec => {
 
                 var imported = spec.imported,
                     local = spec.local || imported;
@@ -355,15 +364,9 @@ export class Replacer {
         return "var " + this.joinList(list) + ";";
     }
 
-    ImportDefaultDeclaration(node) {
-
-        var moduleSpec = this.modulePath(node.from);
-        return "var " + node.identifier.text + " = " + moduleSpec + "['default'];";
-    }
-
     ExportDeclaration(node) {
 
-        var target = node.declaration,
+        var target = node.exports,
             exports = this.exports,
             ident;
 
@@ -1291,10 +1294,10 @@ export class Replacer {
 
         var list = fields.map(field => field.ident + ".set(__$, " + field.init + ");");
 
-        list.unshift("if (" + fields[0].ident + ".has(__$)) " +
-            "throw new Error('Object already initialized');");
+        var check = "if (" + fields[0].ident + ".has(__$)) " +
+            "throw new Error('Object already initialized');";
 
-        return "function __initPrivate(__$) { " + list.join(" ") + " }";
+        return "function __initPrivate(__$) { " + check + " " + list.join(" ") + " }";
     }
 
     addTempVar(node, value, noDeclare) {
