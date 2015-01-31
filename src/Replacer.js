@@ -47,7 +47,7 @@ class PatternTreeNode {
     }
 }
 
-class RootNode extends AST.Node {
+class RootNode {
 
     constructor(root, end) {
 
@@ -57,6 +57,8 @@ class RootNode extends AST.Node {
         this.root = root;
     }
 }
+
+RootNode.prototype = AST.Node.prototype;
 
 export class Replacer {
 
