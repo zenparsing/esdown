@@ -35,6 +35,10 @@ var __this = this; (function(ident) { return "abc"; });
     (function() { return __this; });
 });
 
+function f() { var __arguments = arguments;  (function(ident) { return __arguments; }) }
+
+function f() { var __this = this, __arguments = arguments;  (function(ident) { return (__this, __arguments); }) }
+
 (function(ident) { return __this.method(); });
 
 var identity = function(obj) { return obj; };

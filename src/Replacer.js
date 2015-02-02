@@ -224,8 +224,8 @@ export class Replacer {
         var inserted = [],
             temps = this.tempVars(node);
 
-        if (node.createThisBinding)
-            inserted.push("var __this = this;");
+        if (node.lexicalVars)
+            inserted.push(this.lexicalVarNames(node));
 
         if (temps)
             inserted.push(temps);
@@ -579,8 +579,13 @@ export class Replacer {
 
     ThisExpression(node) {
 
-        if (this.isLexicalThis(node))
-            return "__this";
+        return this.renameLexicalVar(node, "this");
+    }
+
+    Identifier(node) {
+
+        if (node.value === "arguments" && node.context === "variable")
+            return this.renameLexicalVar(node, "arguments");
     }
 
     UnaryExpression(node) {
@@ -679,7 +684,7 @@ export class Replacer {
             return name;
         }
 
-        var thisRef = this.isLexicalThis(node) ? "__this" : "this";
+        var thisRef = this.renameLexicalVar(node, "this");
 
         return this.privateReference(node, thisRef, name);
     }
@@ -1146,9 +1151,10 @@ export class Replacer {
         return null;
     }
 
-    isLexicalThis(node) {
+    renameLexicalVar(node, name) {
 
-        var fn = this.parentFunction(node);
+        var fn = this.parentFunction(node),
+            varName = name;
 
         if (fn.type === "ArrowFunction") {
 
@@ -1156,15 +1162,30 @@ export class Replacer {
 
                 if (fn.type !== "ArrowFunction") {
 
-                    fn.createThisBinding = true;
+                    if (!fn.lexicalVars)
+                        fn.lexicalVars = {};
+
+                    fn.lexicalVars[name] = varName = "__" + name;
                     break;
                 }
             }
-
-            return true;
         }
 
-        return false;
+        return varName;
+    }
+
+    lexicalVarNames(node) {
+
+        var names = node.lexicalVars;
+
+        if (!names)
+            return "";
+
+        return "var " + Object.keys(names).map(key => {
+
+            return names[key] + " = " + key;
+
+        }).join(", ") + ";";
     }
 
     modulePath(node) {
@@ -1260,8 +1281,8 @@ export class Replacer {
 
         var inserted = [];
 
-        if (node.createThisBinding)
-            inserted.push("var __this = this;");
+        if (node.lexicalVars)
+            inserted.push(this.lexicalVarNames(node));
 
         if (node.initPrivate)
             inserted.push("__initPrivate(this);");

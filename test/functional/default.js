@@ -1,6 +1,7 @@
 // POST-BUILD
 
 import { runTests } from "moon-unit";
+import { tests as arrowTests } from "./arrow-functions.js";
 import { tests as classTests } from "./class.js";
 import { tests as destructuringTests } from "./destructuring.js";
 import { tests as templateTests } from "./templates.js";
@@ -12,6 +13,7 @@ export function main() {
 
     return runTests({
 
+        "Arrow Functions": arrowTests,
         "Classes": classTests,
         "Destructuring": destructuringTests,
         "Templates": templateTests,

@@ -35,6 +35,10 @@ ident => this;
     () => this;
 };
 
+function f() { ident => arguments }
+
+function f() { ident => (this, arguments) }
+
 ident => this.method();
 
 var identity = obj => obj;
