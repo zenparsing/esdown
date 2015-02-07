@@ -444,6 +444,9 @@ export class Replacer {
             calleeText,
             argText;
 
+        if (callee.type === "SuperExpression")
+            throw new Error("Super call not supported");
+
         if (node.hasSpread)
             spread = this.spreadList(args, false);
 
@@ -492,13 +495,7 @@ export class Replacer {
         if (elem && elem.static)
             proto = "__.csuper";
 
-        if (p.type === "CallExpression") {
-
-            // super(args);
-            p.injectThisArg = "this";
-            proto = "__.csuper";
-
-        } else {
+        if (p.type !== "CallExpression") {
 
             // super.foo...
             p.isSuperLookup = true;
@@ -627,6 +624,9 @@ export class Replacer {
 
     ClassDeclaration(node) {
 
+        if (node.base)
+            throw new Error("Subclassing not supported");
+
         return "var " + node.identifier.text + " = _esdown.class(" +
             (node.base ? (node.base.text + ", ") : "") +
             "function(__) {" +
@@ -638,6 +638,9 @@ export class Replacer {
 
         var before = "",
             after = "";
+
+        if (node.base)
+            throw new Error("Subclassing not supported");
 
         if (node.identifier) {
 
