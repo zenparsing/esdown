@@ -40,14 +40,10 @@ export var tests = {
         ._("skips null and undefined sources")
         .equals(Object.assign({ a: 1 }, null, void 0), { a: 1 })
 
-        ._("throws when any source is not an object")
-        .throws($=> Object.assign(target, true), TypeError)
+        ._("allows source objects that are not objects")
+        .equals(Object.assign({ a: 1 }, true), { a: 1 })
 
         ._("target is partially modified is error is thrown")
-        .equals(target, { a: 1 })
-
-        ._("all sources are iterated when error is thrown")
-        .throws($=> Object.assign(target = {}, true, { a: 1 }), TypeError)
         .equals(target, { a: 1 })
 
         ;
