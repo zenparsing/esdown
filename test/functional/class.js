@@ -1,5 +1,6 @@
 export var tests = {
 
+    /* Disabled: requires subclassing
     "static super" (test) {
 
         class C {
@@ -20,4 +21,5 @@ export var tests = {
         .equals(Dx.f(), "cd")
         ;
     }
+    */
 };

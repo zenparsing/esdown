@@ -1,45 +1,23 @@
-class A extends B {
-
-    constructor() {
-    
-        super();
-    }
-    
-    set a(value) {}
-    
-    get b() {}
-    
-    bar(x, y) {
-    
-        super.bar(x, y);
-        super["bar"](x, y);
-        super.foo.foo();
-        
-        x => { super.foo }
-    }
-    
-    static S() {}
-    
-    static get T() {}
-    
-    static "U"() {}
-    
-    static "Hello World"() {}
-}
-
 class A {
 
+    constructor() {
+
+        this.x = 1;
+    }
+
+    set a(value) {}
+
+    get b() {}
+
+    static S() {}
+
+    static get T() {}
+
+    static "U"() {}
+
+    static "Hello World"() {}
+
     foo() {}
-}
-
-class A extends B {
-
-    constructor() { super() }
-    static f() { super() }
-}
-
-class A extends B {
-
 }
 
 (class C {});
