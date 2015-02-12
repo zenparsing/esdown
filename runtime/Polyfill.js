@@ -125,6 +125,9 @@ polyfill(Symbol, {
     // Experimental async iterator support
     asyncIterator: Symbol("asyncIterator"),
 
+    // Experimental async observation support
+    observe: Symbol("observe")
+
 });
 
 // === Object ===
@@ -135,23 +138,15 @@ polyfill(Object, {
 
     assign(target, source) {
 
-        var error;
-
         target = toObject(target);
 
         for (var i = 1; i < arguments.length; ++i) {
 
             source = arguments[i];
 
-            if (source == null) // null or undefined
-                continue;
-
-            try { Object.keys(source).forEach(key => target[key] = source[key]) }
-            catch (x) { error = error || x }
+            if (source != null) // null or undefined
+                Object.keys(source).forEach(key => target[key] = source[key]);
         }
-
-        if (error)
-            throw error;
 
         return target;
     },
