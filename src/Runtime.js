@@ -250,7 +250,8 @@ Global._esdown = {
     // Support for async generators
     asyncGen(iter) {
 
-        var current = null,
+        var observer = null,
+            current = null,
             queue = [];
 
         return {
@@ -258,10 +259,33 @@ Global._esdown = {
             next(val) { return enqueue("next", val) },
             throw(val) { return enqueue("throw", val) },
             return(val) { return enqueue("return", val) },
-            [Symbol.asyncIterator]() { return this }
+            [Symbol.asyncIterator]() { return this },
+
+            observe(sink) {
+
+                if (observer)
+                    throw new Error("Already observing");
+
+                return new Observable(sink => {
+
+                    observer = sink;
+
+                    if (!current)
+                        next();
+
+                    // TODO:  Should this be allowed?  If so, then what happens
+                    // if next value is delivered and observer is now null?  Does
+                    // the data get dropped?  That's what currently happens.
+                    return _=> { observable = null };
+
+                }).observe(sink);
+            }
         };
 
         function enqueue(type, value) {
+
+            if (observer)
+                return Promise.reject(new Error("Cannot iterate in while observing"));
 
             return new Promise((resolve, reject) => {
 
@@ -282,6 +306,24 @@ Global._esdown = {
             } else {
 
                 current = null;
+
+                if (observer)
+                    resume("next", void 0);
+            }
+        }
+
+        function deliver(type, value) {
+
+            if (current) {
+
+                if (type === "throw")
+                    current.reject(value);
+                else
+                    current.resolve({ value, done: (type === "return") });
+
+            } else if (observer) {
+
+                observer[type](value);
             }
         }
 
@@ -313,15 +355,15 @@ Global._esdown = {
 
                 } else {
 
-                    current.resolve(result);
+                    deliver(result.done ? "return" : "next", result.value);
                 }
 
             } catch (x) {
 
                 if (x && x.__return === true)
-                    current.resolve({ value: x.value, done: true });
+                    deliver("return", x.value);
                 else
-                    current.reject(x);
+                    deliver("throw", x);
             }
 
             next();
@@ -559,6 +601,9 @@ polyfill(Symbol, {
     // Experimental async iterator support
     asyncIterator: Symbol("asyncIterator"),
 
+    // Experimental async observation support
+    observe: Symbol("observe")
+
 });
 
 // === Object ===
@@ -569,23 +614,15 @@ polyfill(Object, {
 
     assign(target, source) {
 
-        var error;
-
         target = toObject(target);
 
         for (var i = 1; i < arguments.length; ++i) {
 
             source = arguments[i];
 
-            if (source == null) // null or undefined
-                continue;
-
-            try { Object.keys(source).forEach(key => target[key] = source[key]) }
-            catch (x) { error = error || x }
+            if (source != null) // null or undefined
+                Object.keys(source).forEach(key => target[key] = source[key]);
         }
-
-        if (error)
-            throw error;
 
         return target;
     },
@@ -1652,6 +1689,9 @@ Runtime.Observable =
     }
 
     observe(sink) {
+
+        if (typeof sink === "function")
+            sink = { next: sink };
 
         // The sink must be an object
         if (Object(sink) !== sink)
