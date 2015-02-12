@@ -89,6 +89,11 @@ function collapseScopes(parseResult) {
         return "$" + count;
     }
 
+    function fail(msg, node) {
+
+        throw parseResult.syntaxError(msg, node);
+    }
+
     function visit(scope, forScope) {
 
         switch (scope.type) {
@@ -113,7 +118,7 @@ function collapseScopes(parseResult) {
                     scope.free.forEach(r => {
 
                         if (set[r.value] !== 1)
-                            this.fail("Closure capturing per-iteration bindings", r);
+                            fail("Closure capturing per-iteration bindings", r);
                     });
 
                     forScope = null;
@@ -126,6 +131,19 @@ function collapseScopes(parseResult) {
     }
 
     function rename(node) {
+
+        /*
+
+        TODO:
+
+        - For each lexical declaration that isn't a function declaration, all references
+          must occur *after* the corresponding VariableDeclarator has ended.
+        - For each function declaration (var or otherwise), all references must occur
+          *after* all corresponding lexical declarations have been initialized.  For
+          var-scoped functions, this means that we have to check function declaration
+          in the parent scope, if the parent scope is of type "var".
+
+        */
 
         Object.keys(node.names).forEach(name => {
 
