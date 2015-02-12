@@ -11,6 +11,9 @@ class Observable {
 
     observe(sink) {
 
+        if (typeof sink === "function")
+            sink = { next: sink };
+
         // The sink must be an object
         if (Object(sink) !== sink)
             throw new TypeError("Sink is not an object");
