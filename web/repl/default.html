@@ -266,8 +266,8 @@ window.onload = function() { "use strict";
         load: function(url) { return loadScript(url), NO_OUTPUT },
         translate: function(code) { return new Literal(esdown.translate(code)) },
         translateModule: function(code) { return new Literal(esdown.translate(code, { module: true })) },
-        parse: function(code) { return esdown.parse(code) },
-        parseModule: function(code) { return esdown.parse(code, { module: true }) },
+        parse: function(code) { return esdown.parse(code).ast },
+        parseModule: function(code) { return esdown.parse(code, { module: true }).ast },
     };
 
     var history = {

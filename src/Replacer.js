@@ -1,4 +1,4 @@
-import { Parser, AST } from "esparse";
+import { parse, resolveScopes, AST } from "esparse";
 import { isLegacyScheme, removeScheme } from "./Schema.js";
 
 var NODE_SCHEME = /^node:/i,
@@ -60,15 +60,103 @@ class RootNode {
 
 RootNode.prototype = AST.Node.prototype;
 
+function addParentLinks(node) {
+
+    node.children().forEach(child => {
+
+        child.parent = node;
+        addParentLinks(child);
+    });
+}
+
+function collapseScopes(parseResult) {
+
+    /*
+
+    TODO: What do we do about with statements?
+
+    */
+
+    var tree = resolveScopes(parseResult),
+        names = Object.create(null);
+
+    visit(tree, null);
+
+    function makeSuffix(name) {
+
+        var count = names[name] | 0;
+        names[name] = count + 1;
+        return "$" + count;
+    }
+
+    function visit(scope, forScope) {
+
+        switch (scope.type) {
+
+            case "block":
+                rename(scope);
+                break;
+
+            case "for":
+                rename(scope);
+                forScope = scope;
+                break;
+
+            case "function":
+
+                if (forScope) {
+
+                    var set = Object.create(null);
+
+                    forScope.free.forEach(r => set[r.value] = 1);
+
+                    scope.free.forEach(r => {
+
+                        if (set[r.value] !== 1)
+                            this.fail("Closure capturing per-iteration bindings", r);
+                    });
+
+                    forScope = null;
+                }
+
+                break;
+        }
+
+        scope.children.forEach(c => visit(c, forScope));
+    }
+
+    function rename(node) {
+
+        Object.keys(node.names).forEach(name => {
+
+            var record = node.names[name],
+                suffix = "";
+
+            if (node.parent.type !== "var")
+                suffix = makeSuffix(name);
+
+            record.references.forEach(ref => ref.suffix = suffix);
+
+            record.declarations.forEach(decl => {
+
+                decl.suffix = suffix;
+            });
+        });
+    }
+}
+
 export class Replacer {
 
     replace(input, options = {}) {
 
-        var parser = new Parser,
-            root = parser.parse(input, { module: options.module });
+        this.parseResult = parse(input, { module: options.module });
 
-        this.input = input;
-        this.parser = parser;
+        var root = this.parseResult.ast;
+
+        addParentLinks(root);
+        collapseScopes(this.parseResult);
+
+        this.input = this.parseResult.input;
         this.exports = {};
         this.imports = {};
         this.dependencies = [];
@@ -95,11 +183,7 @@ export class Replacer {
             }
 
             // Perform a depth-first traversal
-            node.children().forEach(child => {
-
-                child.parent = node;
-                visit(child);
-            });
+            node.children().forEach(visit);
 
             // Restore strictness
             this.isStrict = strict;
@@ -181,7 +265,7 @@ export class Replacer {
 
         if (node.left.type === "VariableDeclaration") {
 
-            decl = node.left.kind + " ";
+            decl = "var ";
             binding = node.left.declarations[0].pattern;
 
         } else {
@@ -324,6 +408,11 @@ export class Replacer {
 
         if (node.expression === null)
             return node.name.text + ": " + node.name.text;
+    }
+
+    VariableDeclaration(node) {
+
+        return this.stringify(node).replace(/^(let|const)/, "var");
     }
 
     ImportDeclaration(node) {
@@ -583,6 +672,37 @@ export class Replacer {
 
         if (node.value === "arguments" && node.context === "variable")
             return this.renameLexicalVar(node, "arguments");
+
+        /*
+
+        var p = node.parent;
+
+        // Enforce static dead zone for all block scoped declarations other than
+        // function declarations.
+
+        // TODO: This still leaves the possiblility of runtime TDZ errors if
+        // a function declaration is called before its dependent references
+        // are initialized.
+
+        if (node.references && p.type !== "FunctionDeclaration") {
+
+            node.references.forEach(r => {
+
+                if (r.start < p.end) {
+
+                    console.log(r);
+                    console.log("----");
+                    console.log(node);
+
+                    throw new Error("Reference before initialization");
+                }
+            });
+        }
+
+        */
+
+        if (node.suffix)
+            return this.input.slice(node.start, node.end) + node.suffix;
     }
 
     UnaryExpression(node) {
@@ -625,7 +745,7 @@ export class Replacer {
     ClassDeclaration(node) {
 
         if (node.base)
-            throw new Error("Subclassing not supported");
+            this.fail("Subclassing not supported", node.base);
 
         return "var " + node.identifier.text + " = _esdown.class(" +
             (node.base ? (node.base.text + ", ") : "") +
@@ -640,7 +760,7 @@ export class Replacer {
             after = "";
 
         if (node.base)
-            throw new Error("Subclassing not supported");
+            this.fail("Subclassing not supported", node.base);
 
         if (node.identifier) {
 
@@ -1092,7 +1212,7 @@ export class Replacer {
 
             case "UnaryExpression":
                 if (p.operator === "delete")
-                    throw new Error("Cannot delete private reference");
+                    this.fail("Cannot delete private reference", p.expression);
 
                 break;
         }
@@ -1369,7 +1489,7 @@ export class Replacer {
 
     lineNumber(offset) {
 
-        return this.parser.location(offset).line;
+        return this.parseResult.locate(offset).line;
     }
 
     syncNewlines(start, end, text) {
@@ -1426,6 +1546,11 @@ export class Replacer {
         });
 
         return text;
+    }
+
+    fail(msg, node) {
+
+        throw this.parseResult.syntaxError(msg, node);
     }
 
 }

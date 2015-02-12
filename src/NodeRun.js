@@ -237,8 +237,8 @@ export function startREPL() {
 
         try {
 
-            ast = parse(input, { module });
-            text = Util.inspect(ast, { colors: true, depth: 10 });
+            ast = parse(input, { module }).ast;
+            text = Util.inspect(ast, { colors: true, depth: 20 });
 
         } catch (x) {
 
