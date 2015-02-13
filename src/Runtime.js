@@ -339,8 +339,9 @@ Global._esdown = {
 
             try {
 
-                let result = iter[type](value),
-                    value = result.value;
+                let result = iter[type](value);
+
+                value = result.value;
 
                 if (typeof value === "object" && "_esdown_await" in value) {
 
