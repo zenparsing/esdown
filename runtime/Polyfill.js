@@ -2,10 +2,9 @@
 
 function eachKey(obj, fn) {
 
-    var keys = Object.getOwnPropertyNames(obj),
-        i;
+    let keys = Object.getOwnPropertyNames(obj);
 
-    for (i = 0; i < keys.length; ++i)
+    for (let i = 0; i < keys.length; ++i)
         fn(keys[i]);
 
     if (!Object.getOwnPropertySymbols)
@@ -13,7 +12,7 @@ function eachKey(obj, fn) {
 
     keys = Object.getOwnPropertySymbols(obj);
 
-    for (i = 0; i < keys.length; ++i)
+    for (let i = 0; i < keys.length; ++i)
         fn(keys[i]);
 }
 
@@ -40,7 +39,7 @@ function polyfill(obj, methods) {
 
 var sign = Math.sign || function(val) {
 
-    var n = +val;
+    let n = +val;
 
     if (n === 0 || Number.isNaN(n))
         return n;
@@ -50,7 +49,7 @@ var sign = Math.sign || function(val) {
 
 function toInteger(val) {
 
-    var n = +val;
+    let n = +val;
 
     return n !== n /* n is NaN */ ? 0 :
         (n === 0 || !isFinite(n)) ? n :
@@ -59,7 +58,7 @@ function toInteger(val) {
 
 function toLength(val) {
 
-    var n = toInteger(val);
+    let n = toInteger(val);
     return n < 0 ? 0 : Math.min(n, Number.MAX_SAFE_INTEGER);
 }
 
@@ -90,7 +89,7 @@ function iteratorMethod(obj) {
     if (!obj || typeof obj !== "object")
         return null;
 
-    var m = obj[Symbol.iterator];
+    let m = obj[Symbol.iterator];
 
     // Generator iterators in Node 0.11.13 do not have a [Symbol.iterator] method
     if (!m && typeof obj.next === "function" && typeof obj.throw === "function")
@@ -107,7 +106,7 @@ function assertThis(val, name) {
 
 // === Symbols ===
 
-var symbolCounter = 0,
+let symbolCounter = 0,
     global = _esdown.global;
 
 function fakeSymbol() {
@@ -140,7 +139,7 @@ polyfill(Object, {
 
         target = toObject(target);
 
-        for (var i = 1; i < arguments.length; ++i) {
+        for (let i = 1; i < arguments.length; ++i) {
 
             source = arguments[i];
 
@@ -177,9 +176,9 @@ function epsilon() {
     // Calculate the difference between 1 and the smallest value greater than 1 that
     // is representable as a Number value
 
-    var next, result;
+    let result;
 
-    for (next = 1; 1 + next !== 1; next = next / 2)
+    for (let next = 1; 1 + next !== 1; next = next / 2)
         result = next;
 
     return result;
@@ -206,13 +205,13 @@ polyfill(String, {
 
     raw(callsite, ...args) {
 
-        var raw = callsite.raw,
+        let raw = callsite.raw,
             len = toLength(raw.length);
 
         if (len === 0)
             return "";
 
-        var s = "", i = 0;
+        let s = "", i = 0;
 
         while (true) {
 
@@ -226,7 +225,7 @@ polyfill(String, {
 
     fromCodePoint(...points) {
 
-        var out = [];
+        let out = [];
 
         points.forEach(next => {
 
@@ -257,7 +256,7 @@ function repeat(s, n) {
 
     if (n < 1) return "";
     if (n % 2) return repeat(s, n - 1) + s;
-    var half = repeat(s, n / 2);
+    let half = repeat(s, n / 2);
     return half + half;
 }
 
@@ -271,7 +270,7 @@ class StringIterator {
 
     next() {
 
-        var s = this.string,
+        let s = this.string,
             i = this.current,
             len = s.length;
 
@@ -281,7 +280,7 @@ class StringIterator {
             return { value: void 0, done: true };
         }
 
-        var c = s.charCodeAt(i),
+        let c = s.charCodeAt(i),
             chars = 1;
 
         if (c >= 0xD800 && c <= 0xDBFF && i + 1 < s.length) {
@@ -305,7 +304,7 @@ polyfill(String.prototype, {
 
         assertThis(this, "String.prototype.repeat");
 
-        var string = String(this);
+        let string = String(this);
 
         count = toInteger(count);
 
@@ -322,11 +321,11 @@ polyfill(String.prototype, {
         if (isRegExp(search))
             throw new TypeError("First argument to String.prototype.startsWith must not be a regular expression");
 
-        var string = String(this);
+        let string = String(this);
 
         search = String(search);
 
-        var pos = arguments.length > 1 ? arguments[1] : undefined,
+        let pos = arguments.length > 1 ? arguments[1] : undefined,
             start = Math.max(toInteger(pos), 0);
 
         return string.slice(start, start + search.length) === search;
@@ -339,11 +338,11 @@ polyfill(String.prototype, {
         if (isRegExp(search))
             throw new TypeError("First argument to String.prototype.endsWith must not be a regular expression");
 
-        var string = String(this);
+        let string = String(this);
 
         search = String(search);
 
-        var len = string.length,
+        let len = string.length,
             arg = arguments.length > 1 ? arguments[1] : undefined,
             pos = arg === undefined ? len : toInteger(arg),
             end = Math.min(Math.max(pos, 0), len);
@@ -355,7 +354,7 @@ polyfill(String.prototype, {
 
         assertThis(this, "String.prototype.contains");
 
-        var string = String(this),
+        let string = String(this),
             pos = arguments.length > 1 ? arguments[1] : undefined;
 
         // Somehow this trick makes method 100% compat with the spec
@@ -366,7 +365,7 @@ polyfill(String.prototype, {
 
         assertThis(this, "String.prototype.codePointAt");
 
-        var string = String(this),
+        let string = String(this),
             len = string.length;
 
         pos = toInteger(pos);
@@ -374,12 +373,12 @@ polyfill(String.prototype, {
         if (pos < 0 || pos >= len)
             return undefined;
 
-        var a = string.charCodeAt(pos);
+        let a = string.charCodeAt(pos);
 
         if (a < 0xD800 || a > 0xDBFF || pos + 1 === len)
             return a;
 
-        var b = string.charCodeAt(pos + 1);
+        let b = string.charCodeAt(pos + 1);
 
         if (b < 0xDC00 || b > 0xDFFF)
             return a;
@@ -408,7 +407,7 @@ class ArrayIterator {
 
     next() {
 
-        var length = toLength(this.array.length),
+        let length = toLength(this.array.length),
             index = this.current;
 
         if (index >= length) {
@@ -442,7 +441,7 @@ polyfill(Array, {
 
         list = toObject(list);
 
-        var ctor = typeof this === "function" ? this : Array, // TODO: Always use "this"?
+        let ctor = typeof this === "function" ? this : Array, // TODO: Always use "this"?
             map = arguments[1],
             thisArg = arguments[2],
             i = 0,
@@ -455,7 +454,7 @@ polyfill(Array, {
 
         if (getIter) {
 
-            var iter = getIter.call(list),
+            let iter = getIter.call(list),
                 result;
 
             out = new ctor;
@@ -468,7 +467,7 @@ polyfill(Array, {
 
         } else {
 
-            var len = toLength(list.length);
+            let len = toLength(list.length);
 
             out = new ctor(len);
 
@@ -483,15 +482,15 @@ polyfill(Array, {
 
     of(...items) {
 
-        var ctor = typeof this === "function" ? this : Array; // TODO: Always use "this"?
+        let ctor = typeof this === "function" ? this : Array; // TODO: Always use "this"?
 
         if (ctor === Array)
             return items;
 
-        var len = items.length,
+        let len = items.length,
             out = new ctor(len);
 
-        for (var i = 0; i < len; ++i)
+        for (let i = 0; i < len; ++i)
             out[i] = items[i];
 
         out.length = len;
@@ -503,13 +502,13 @@ polyfill(Array, {
 
 function arrayFind(obj, pred, thisArg, type) {
 
-    var len = toLength(obj.length),
+    let len = toLength(obj.length),
         val;
 
     if (typeof pred !== "function")
         throw new TypeError(pred + " is not a function");
 
-    for (var i = 0; i < len; ++i) {
+    for (let i = 0; i < len; ++i) {
 
         val = obj[i];
 
@@ -524,20 +523,20 @@ polyfill(Array.prototype, {
 
     copyWithin(target, start) {
 
-        var obj = toObject(this),
+        let obj = toObject(this),
             len = toLength(obj.length),
             end = arguments[2];
 
         target = toInteger(target);
         start = toInteger(start);
 
-        var to = target < 0 ? Math.max(len + target, 0) : Math.min(target, len),
+        let to = target < 0 ? Math.max(len + target, 0) : Math.min(target, len),
             from = start < 0 ? Math.max(len + start, 0) : Math.min(start, len);
 
         end = end !== void 0 ? toInteger(end) : len;
         end = end < 0 ? Math.max(len + end, 0) : Math.min(end, len);
 
-        var count = Math.min(end - from, len - to),
+        let count = Math.min(end - from, len - to),
             dir = 1;
 
         if (from < to && to < from + count) {
@@ -561,7 +560,7 @@ polyfill(Array.prototype, {
 
     fill(value) {
 
-        var obj = toObject(this),
+        let obj = toObject(this),
             len = toLength(obj.length),
             start = toInteger(arguments[1]),
             pos = start < 0 ? Math.max(len + start, 0) : Math.min(start, len),

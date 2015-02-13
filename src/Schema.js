@@ -1,5 +1,5 @@
-var NODE_SCHEME = /^node:/i,
-    URI_SCHEME = /^[a-z]+:/i;
+const NODE_SCHEME = /^node:/i,
+      URI_SCHEME = /^[a-z]+:/i;
 
 export function isLegacyScheme(spec) {
 

@@ -1,4 +1,4 @@
-export var Runtime = {};
+export let Runtime = {};
 
 Runtime.API = 
 
@@ -9,7 +9,7 @@ Runtime.API =
     return null;
 }
 
-var arraySlice = Array.prototype.slice,
+let arraySlice = Array.prototype.slice,
     hasOwn = Object.prototype.hasOwnProperty,
     staticName = /^__static_/,
     Global = globalObject();
@@ -36,14 +36,14 @@ function has(obj, name) {
 // Iterates over the descriptors for each own property of an object
 function forEachDesc(obj, fn) {
 
-    var names = Object.getOwnPropertyNames(obj), i;
+    let names = Object.getOwnPropertyNames(obj);
 
-    for (i = 0; i < names.length; ++i)
+    for (let i = 0; i < names.length; ++i)
         fn(names[i], Object.getOwnPropertyDescriptor(obj, names[i]));
 
     names = Object.getOwnPropertySymbols(obj);
 
-    for (i = 0; i < names.length; ++i)
+    for (let i = 0; i < names.length; ++i)
         fn(names[i], Object.getOwnPropertyDescriptor(obj, names[i]));
 
     return obj;
@@ -71,7 +71,7 @@ function mergeMethods(from, to) {
 
         if (desc.get || desc.set) {
 
-            var prev = Object.getOwnPropertyDescriptor(to, name);
+            let prev = Object.getOwnPropertyDescriptor(to, name);
 
             if (prev) {
 
@@ -88,7 +88,7 @@ function mergeMethods(from, to) {
 // Builds a class
 function buildClass(base, def) {
 
-    var parent;
+    let parent;
 
     if (def === void 0) {
 
@@ -116,7 +116,7 @@ function buildClass(base, def) {
         throw new TypeError;
 
     // Create the prototype object
-    var proto = Object.create(parent),
+    let proto = Object.create(parent),
         statics = {},
         addMethods = obj => mergeMethods(obj, proto),
         addStatics = obj => mergeMethods(obj, statics);
@@ -140,7 +140,7 @@ function buildClass(base, def) {
         configurable: true
     });
 
-    var ctor = proto.constructor;
+    let ctor = proto.constructor;
 
     // Set constructor's prototype
     ctor.prototype = proto;
@@ -179,7 +179,7 @@ Global._esdown = {
         if (obj[Symbol.asyncIterator] !== void 0)
             return obj[Symbol.asyncIterator]();
 
-        var iter = { [Symbol.asyncIterator]() { return this } },
+        let iter = { [Symbol.asyncIterator]() { return this } },
             inner = _esdown.iter(obj);
 
         ["next", "throw", "return"].forEach(name => {
@@ -194,9 +194,9 @@ Global._esdown = {
     // Support for computed property names
     computed(obj) {
 
-        var name, desc, i;
+        let name, desc;
 
-        for (i = 1; i < arguments.length; ++i) {
+        for (let i = 1; i < arguments.length; ++i) {
 
             name = "__$" + (i - 1);
             desc = Object.getOwnPropertyDescriptor(obj, name);
@@ -229,7 +229,7 @@ Global._esdown = {
 
                 try {
 
-                    var result = iter[type](value);
+                    let result = iter[type](value);
 
                     if (result.done) {
 
@@ -250,7 +250,7 @@ Global._esdown = {
     // Support for async generators
     asyncGen(iter) {
 
-        var observer = null,
+        let observer = null,
             current = null,
             queue = [];
 
@@ -339,7 +339,7 @@ Global._esdown = {
 
             try {
 
-                var result = iter[type](value),
+                let result = iter[type](value),
                     value = result.value;
 
                 if (typeof value === "object" && "_esdown_await" in value) {
@@ -380,7 +380,7 @@ Global._esdown = {
             // Add items
             s() {
 
-                for (var i = 0; i < arguments.length; ++i)
+                for (let i = 0; i < arguments.length; ++i)
                     this.a.push(arguments[i]);
 
                 return this;
@@ -395,7 +395,7 @@ Global._esdown = {
 
                 } else {
 
-                    for (var item of list)
+                    for (let item of list)
                         this.a.push(item);
                 }
 
@@ -423,13 +423,13 @@ Global._esdown = {
             };
         }
 
-        var iter = _esdown.iter(toObject(obj));
+        let iter = _esdown.iter(toObject(obj));
 
         return {
 
             at(skip) {
 
-                var r;
+                let r;
 
                 while (skip--)
                     r = iter.next();
@@ -439,7 +439,7 @@ Global._esdown = {
 
             rest(skip) {
 
-                var a = [], r;
+                let a = [], r;
 
                 while (--skip)
                     r = iter.next();
@@ -478,10 +478,9 @@ Runtime.Polyfill =
 
 function eachKey(obj, fn) {
 
-    var keys = Object.getOwnPropertyNames(obj),
-        i;
+    let keys = Object.getOwnPropertyNames(obj);
 
-    for (i = 0; i < keys.length; ++i)
+    for (let i = 0; i < keys.length; ++i)
         fn(keys[i]);
 
     if (!Object.getOwnPropertySymbols)
@@ -489,7 +488,7 @@ function eachKey(obj, fn) {
 
     keys = Object.getOwnPropertySymbols(obj);
 
-    for (i = 0; i < keys.length; ++i)
+    for (let i = 0; i < keys.length; ++i)
         fn(keys[i]);
 }
 
@@ -516,7 +515,7 @@ function polyfill(obj, methods) {
 
 var sign = Math.sign || function(val) {
 
-    var n = +val;
+    let n = +val;
 
     if (n === 0 || Number.isNaN(n))
         return n;
@@ -526,7 +525,7 @@ var sign = Math.sign || function(val) {
 
 function toInteger(val) {
 
-    var n = +val;
+    let n = +val;
 
     return n !== n /* n is NaN */ ? 0 :
         (n === 0 || !isFinite(n)) ? n :
@@ -535,7 +534,7 @@ function toInteger(val) {
 
 function toLength(val) {
 
-    var n = toInteger(val);
+    let n = toInteger(val);
     return n < 0 ? 0 : Math.min(n, Number.MAX_SAFE_INTEGER);
 }
 
@@ -566,7 +565,7 @@ function iteratorMethod(obj) {
     if (!obj || typeof obj !== "object")
         return null;
 
-    var m = obj[Symbol.iterator];
+    let m = obj[Symbol.iterator];
 
     // Generator iterators in Node 0.11.13 do not have a [Symbol.iterator] method
     if (!m && typeof obj.next === "function" && typeof obj.throw === "function")
@@ -583,7 +582,7 @@ function assertThis(val, name) {
 
 // === Symbols ===
 
-var symbolCounter = 0,
+let symbolCounter = 0,
     global = _esdown.global;
 
 function fakeSymbol() {
@@ -616,7 +615,7 @@ polyfill(Object, {
 
         target = toObject(target);
 
-        for (var i = 1; i < arguments.length; ++i) {
+        for (let i = 1; i < arguments.length; ++i) {
 
             source = arguments[i];
 
@@ -653,9 +652,9 @@ function epsilon() {
     // Calculate the difference between 1 and the smallest value greater than 1 that
     // is representable as a Number value
 
-    var next, result;
+    let result;
 
-    for (next = 1; 1 + next !== 1; next = next / 2)
+    for (let next = 1; 1 + next !== 1; next = next / 2)
         result = next;
 
     return result;
@@ -682,13 +681,13 @@ polyfill(String, {
 
     raw(callsite, ...args) {
 
-        var raw = callsite.raw,
+        let raw = callsite.raw,
             len = toLength(raw.length);
 
         if (len === 0)
             return "";
 
-        var s = "", i = 0;
+        let s = "", i = 0;
 
         while (true) {
 
@@ -702,7 +701,7 @@ polyfill(String, {
 
     fromCodePoint(...points) {
 
-        var out = [];
+        let out = [];
 
         points.forEach(next => {
 
@@ -733,7 +732,7 @@ function repeat(s, n) {
 
     if (n < 1) return "";
     if (n % 2) return repeat(s, n - 1) + s;
-    var half = repeat(s, n / 2);
+    let half = repeat(s, n / 2);
     return half + half;
 }
 
@@ -747,7 +746,7 @@ class StringIterator {
 
     next() {
 
-        var s = this.string,
+        let s = this.string,
             i = this.current,
             len = s.length;
 
@@ -757,7 +756,7 @@ class StringIterator {
             return { value: void 0, done: true };
         }
 
-        var c = s.charCodeAt(i),
+        let c = s.charCodeAt(i),
             chars = 1;
 
         if (c >= 0xD800 && c <= 0xDBFF && i + 1 < s.length) {
@@ -781,7 +780,7 @@ polyfill(String.prototype, {
 
         assertThis(this, "String.prototype.repeat");
 
-        var string = String(this);
+        let string = String(this);
 
         count = toInteger(count);
 
@@ -798,11 +797,11 @@ polyfill(String.prototype, {
         if (isRegExp(search))
             throw new TypeError("First argument to String.prototype.startsWith must not be a regular expression");
 
-        var string = String(this);
+        let string = String(this);
 
         search = String(search);
 
-        var pos = arguments.length > 1 ? arguments[1] : undefined,
+        let pos = arguments.length > 1 ? arguments[1] : undefined,
             start = Math.max(toInteger(pos), 0);
 
         return string.slice(start, start + search.length) === search;
@@ -815,11 +814,11 @@ polyfill(String.prototype, {
         if (isRegExp(search))
             throw new TypeError("First argument to String.prototype.endsWith must not be a regular expression");
 
-        var string = String(this);
+        let string = String(this);
 
         search = String(search);
 
-        var len = string.length,
+        let len = string.length,
             arg = arguments.length > 1 ? arguments[1] : undefined,
             pos = arg === undefined ? len : toInteger(arg),
             end = Math.min(Math.max(pos, 0), len);
@@ -831,7 +830,7 @@ polyfill(String.prototype, {
 
         assertThis(this, "String.prototype.contains");
 
-        var string = String(this),
+        let string = String(this),
             pos = arguments.length > 1 ? arguments[1] : undefined;
 
         // Somehow this trick makes method 100% compat with the spec
@@ -842,7 +841,7 @@ polyfill(String.prototype, {
 
         assertThis(this, "String.prototype.codePointAt");
 
-        var string = String(this),
+        let string = String(this),
             len = string.length;
 
         pos = toInteger(pos);
@@ -850,12 +849,12 @@ polyfill(String.prototype, {
         if (pos < 0 || pos >= len)
             return undefined;
 
-        var a = string.charCodeAt(pos);
+        let a = string.charCodeAt(pos);
 
         if (a < 0xD800 || a > 0xDBFF || pos + 1 === len)
             return a;
 
-        var b = string.charCodeAt(pos + 1);
+        let b = string.charCodeAt(pos + 1);
 
         if (b < 0xDC00 || b > 0xDFFF)
             return a;
@@ -884,7 +883,7 @@ class ArrayIterator {
 
     next() {
 
-        var length = toLength(this.array.length),
+        let length = toLength(this.array.length),
             index = this.current;
 
         if (index >= length) {
@@ -918,7 +917,7 @@ polyfill(Array, {
 
         list = toObject(list);
 
-        var ctor = typeof this === "function" ? this : Array, // TODO: Always use "this"?
+        let ctor = typeof this === "function" ? this : Array, // TODO: Always use "this"?
             map = arguments[1],
             thisArg = arguments[2],
             i = 0,
@@ -931,7 +930,7 @@ polyfill(Array, {
 
         if (getIter) {
 
-            var iter = getIter.call(list),
+            let iter = getIter.call(list),
                 result;
 
             out = new ctor;
@@ -944,7 +943,7 @@ polyfill(Array, {
 
         } else {
 
-            var len = toLength(list.length);
+            let len = toLength(list.length);
 
             out = new ctor(len);
 
@@ -959,15 +958,15 @@ polyfill(Array, {
 
     of(...items) {
 
-        var ctor = typeof this === "function" ? this : Array; // TODO: Always use "this"?
+        let ctor = typeof this === "function" ? this : Array; // TODO: Always use "this"?
 
         if (ctor === Array)
             return items;
 
-        var len = items.length,
+        let len = items.length,
             out = new ctor(len);
 
-        for (var i = 0; i < len; ++i)
+        for (let i = 0; i < len; ++i)
             out[i] = items[i];
 
         out.length = len;
@@ -979,13 +978,13 @@ polyfill(Array, {
 
 function arrayFind(obj, pred, thisArg, type) {
 
-    var len = toLength(obj.length),
+    let len = toLength(obj.length),
         val;
 
     if (typeof pred !== "function")
         throw new TypeError(pred + " is not a function");
 
-    for (var i = 0; i < len; ++i) {
+    for (let i = 0; i < len; ++i) {
 
         val = obj[i];
 
@@ -1000,20 +999,20 @@ polyfill(Array.prototype, {
 
     copyWithin(target, start) {
 
-        var obj = toObject(this),
+        let obj = toObject(this),
             len = toLength(obj.length),
             end = arguments[2];
 
         target = toInteger(target);
         start = toInteger(start);
 
-        var to = target < 0 ? Math.max(len + target, 0) : Math.min(target, len),
+        let to = target < 0 ? Math.max(len + target, 0) : Math.min(target, len),
             from = start < 0 ? Math.max(len + start, 0) : Math.min(start, len);
 
         end = end !== void 0 ? toInteger(end) : len;
         end = end < 0 ? Math.max(len + end, 0) : Math.min(end, len);
 
-        var count = Math.min(end - from, len - to),
+        let count = Math.min(end - from, len - to),
             dir = 1;
 
         if (from < to && to < from + count) {
@@ -1037,7 +1036,7 @@ polyfill(Array.prototype, {
 
     fill(value) {
 
-        var obj = toObject(this),
+        let obj = toObject(this),
             len = toLength(obj.length),
             start = toInteger(arguments[1]),
             pos = start < 0 ? Math.max(len + start, 0) : Math.min(start, len),
@@ -1074,7 +1073,7 @@ polyfill(Array.prototype, {
 
 Runtime.MapSet = 
 
-`var global = _esdown.global,
+`let global = _esdown.global,
     ORIGIN = {},
     REMOVED = {};
 
@@ -1115,7 +1114,7 @@ class MapIterator {
 
     next() {
 
-        var node = this.current;
+        let node = this.current;
 
         while (node.key === REMOVED)
             node = this.current = this.current.next;
@@ -1165,7 +1164,7 @@ class Map {
 
     clear() {
 
-        for (var node = this._origin.next; node !== this._origin; node = node.next)
+        for (let node = this._origin.next; node !== this._origin; node = node.next)
             node.key = REMOVED;
 
         this._index = {};
@@ -1174,7 +1173,7 @@ class Map {
 
     delete(key) {
 
-        var h = hashKey(key),
+        let h = hashKey(key),
             node = this._index[h];
 
         if (node) {
@@ -1189,19 +1188,19 @@ class Map {
 
     forEach(fn) {
 
-        var thisArg = arguments[1];
+        let thisArg = arguments[1];
 
         if (typeof fn !== "function")
             throw new TypeError(fn + " is not a function");
 
-        for (var node = this._origin.next; node.key !== ORIGIN; node = node.next)
+        for (let node = this._origin.next; node.key !== ORIGIN; node = node.next)
             if (node.key !== REMOVED)
                 fn.call(thisArg, node.value, node.key, this);
     }
 
     get(key) {
 
-        var h = hashKey(key),
+        let h = hashKey(key),
             node = this._index[h];
 
         return node ? node.value : void 0;
@@ -1214,7 +1213,7 @@ class Map {
 
     set(key, val) {
 
-        var h = hashKey(key),
+        let h = hashKey(key),
             node = this._index[h];
 
         if (node) {
@@ -1264,7 +1263,7 @@ class Set {
 // Copy shared prototype members to Set
 ["clear", "delete", "forEach", "has", "size", "keys", "values", "entries"].forEach(k => {
 
-    var d = Object.getOwnPropertyDescriptor(Map.prototype, k);
+    let d = Object.getOwnPropertyDescriptor(Map.prototype, k);
     Object.defineProperty(Set.prototype, k, d);
 });
 
@@ -1697,7 +1696,7 @@ Runtime.Observable =
         if (Object(sink) !== sink)
             throw new TypeError("Sink is not an object");
 
-        var start = this._start,
+        let start = this._start,
             finished = false,
             cleanup;
 
@@ -1742,7 +1741,7 @@ Runtime.Observable =
     */
     function _wrapSink(sink, cleanup) {
 
-        var done = false;
+        let done = false;
 
         // Marks the stream as closed and triggers stream cleanup.  Exceptions
         // which occur during cleanup are propagated to the caller.
@@ -1768,7 +1767,7 @@ Runtime.Observable =
             if (done)
                 return doneResult();
 
-            var result;
+            let result;
 
             try {
 
@@ -1848,8 +1847,6 @@ Runtime.Observable =
 
             next(value) {
 
-                var value;
-
                 try { value = fn(value) }
                 catch (e) { return sink.throw(e) }
 
@@ -1864,19 +1861,19 @@ Runtime.Observable =
 
     [Symbol.asyncIterator]() {
 
-        var pending = [], ready = [];
+        let pending = [], ready = [];
 
         function current() {
 
             if (pending.length > 0)
                 return pending.shift();
 
-            var d;
+            let d;
             ready.push(new Promise((resolve, reject) => d = { resolve, reject }));
             return d;
         }
 
-        var cancel = this.observe({
+        let cancel = this.observe({
 
             next(value) { current().resolve({ value, done: false }) },
             throw(value) { current().reject(value) },

@@ -9,11 +9,11 @@ import { parse } from "esparse";
 import { translate } from "./Translator.js";
 import { isPackageSpecifier, locateModule } from "./Locator.js";
 
-var Module = module.constructor;
+let Module = module.constructor;
 
 export function formatSyntaxError(e, filename) {
 
-    var msg = e.message,
+    let msg = e.message,
         text = e.sourceText;
 
     if (filename === void 0 && e.filename !== void 0)
@@ -24,7 +24,7 @@ export function formatSyntaxError(e, filename) {
 
     if (e.lineOffset < text.length) {
 
-        var code = "\n\n" +
+        let code = "\n\n" +
             text.slice(e.lineOffset, e.startOffset) +
             Style.bold(Style.red(text.slice(e.startOffset, e.endOffset))) +
             text.slice(e.endOffset, text.indexOf("\n", e.endOffset)) +
@@ -38,7 +38,7 @@ export function formatSyntaxError(e, filename) {
 
 function addExtension() {
 
-    var moduleLoad = Module._load;
+    let moduleLoad = Module._load;
 
     Module.prototype.importSync = function(path) {
 
@@ -52,7 +52,7 @@ function addExtension() {
             this.__es6 = true;
         }
 
-        var e = this.require(path);
+        let e = this.require(path);
         if (e && e.constructor !== Object) e.default = e;
         return e;
     };
@@ -61,7 +61,7 @@ function addExtension() {
 
         if (parent.__es6) {
 
-            var loc = locateModule(request, Path.dirname(parent.filename));
+            let loc = locateModule(request, Path.dirname(parent.filename));
 
             request = loc.path;
 
@@ -69,7 +69,7 @@ function addExtension() {
                 parent.__es6 = false;
         }
 
-        var m = moduleLoad(request, parent, isMain);
+        let m = moduleLoad(request, parent, isMain);
         parent.__es6 = false;
         return m;
     };
@@ -77,7 +77,7 @@ function addExtension() {
     // Compile ES6 js files
     require.extensions[".js"] = (module, filename) => {
 
-        var text, source;
+        let text, source;
 
         try {
 
@@ -85,7 +85,7 @@ function addExtension() {
 
             // Only translate as a module if the source module is requesting
             // via import syntax
-            var m = !!module.parent.__es6;
+            let m = !!module.parent.__es6;
 
             text = translate(text, { wrap: m, module: m, functionContext: !m });
 
@@ -108,16 +108,16 @@ export function runModule(path) {
     if (isPackageSpecifier(path))
         path = "./" + path;
 
-    var loc = locateModule(path, process.cwd());
+    let loc = locateModule(path, process.cwd());
 
     // "__load" is defined in the module wrapper and ensures that the
     // target is loaded as a module
 
-    var m = __load(loc.path);
+    let m = __load(loc.path);
 
     if (m && typeof m.main === "function") {
 
-        var result = m.main(process.argv);
+        let result = m.main(process.argv);
         Promise.resolve(result).then(null, x => setTimeout($=> { throw x }, 0));
     }
 }
@@ -128,15 +128,15 @@ export function startREPL() {
     // re-evaluates function expressions as function declarations.  Since
     // Node is unaware of class declarations, this causes classes to
     // always be interpreted as expressions in the REPL.
-    var removeParens = process.version.startsWith("v0.10.");
+    let removeParens = process.version.startsWith("v0.10.");
 
     addExtension();
 
     console.log(`esdown ${ _esdown.version } (Node ${ process.version })`);
 
-    var prompt = ">>> ", contPrompt = "... ";
+    let prompt = ">>> ", contPrompt = "... ";
 
-    var repl = REPL.start({
+    let repl = REPL.start({
 
         prompt,
 
@@ -144,7 +144,7 @@ export function startREPL() {
 
         eval(input, context, filename, cb) {
 
-            var text, result, script, displayErrors = false;
+            let text, result, script, displayErrors = false;
 
             // Remove wrapping parens for function and class declaration forms
             if (removeParens && /^\((class|function\*?)\s[\s\S]*?\n\)$/.test(input))
@@ -191,7 +191,7 @@ export function startREPL() {
                 // Without displayPrompt, asynchronously calling the "eval"
                 // callback results in no text being displayed on the screen.
 
-                var token = {};
+                let token = {};
 
                 Promise.race([
 
@@ -222,7 +222,7 @@ export function startREPL() {
     if (typeof repl.displayPrompt === "function" &&
         typeof repl._prompt === "string") {
 
-        var displayPrompt = repl.displayPrompt;
+        let displayPrompt = repl.displayPrompt;
 
         repl.displayPrompt = function(preserveCursor) {
 
@@ -233,7 +233,7 @@ export function startREPL() {
 
     function parseAction(input, module) {
 
-        var text, ast;
+        let text, ast;
 
         try {
 
@@ -252,7 +252,7 @@ export function startREPL() {
 
     function translateAction(input, module) {
 
-        var text;
+        let text;
 
         try {
 
@@ -268,7 +268,7 @@ export function startREPL() {
         console.log(text);
     }
 
-    var commands = {
+    let commands = {
 
         "help": {
 
@@ -276,12 +276,12 @@ export function startREPL() {
 
             action() {
 
-                var list = Object.keys(this.commands).sort(),
+                let list = Object.keys(this.commands).sort(),
                     len = list.reduce((n, key) => Math.max(n, key.length), 0);
 
                 list.forEach(key => {
 
-                    var help = this.commands[key].help || "",
+                    let help = this.commands[key].help || "",
                         pad = " ".repeat(4 + len - key.length);
 
                     this.outputStream.write(key + pad + help + "\n");

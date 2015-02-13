@@ -1,9 +1,9 @@
 import { Runtime } from "./Runtime.js";
 import { Replacer } from "./Replacer.js";
 
-var SIGNATURE = "/*=esdown=*/";
+const SIGNATURE = "/*=esdown=*/";
 
-var WRAP_CALLEE = "(function(fn, deps, name) { " +
+const WRAP_CALLEE = "(function(fn, deps, name) { " +
 
     "function obj() { return {} } " +
 
@@ -25,7 +25,7 @@ var WRAP_CALLEE = "(function(fn, deps, name) { " +
 
 "})";
 
-var WRAP_HEADER = "function(require, exports, module) { " +
+const WRAP_HEADER = "function(require, exports, module) { " +
     "'use strict'; " +
     "function __load(p, l) { " +
         "module.__es6 = !l; " +
@@ -34,7 +34,7 @@ var WRAP_HEADER = "function(require, exports, module) { " +
         "return e; " +
     "} ";
 
-var WRAP_FOOTER = "\n\n}";
+const WRAP_FOOTER = "\n\n}";
 
 function sanitize(text) {
 
@@ -69,7 +69,7 @@ export function translate(input, options = {}) {
     if (options.functionContext)
         input = "(function(){" + input + "})";
 
-    var replacer = options.replacer || new Replacer,
+    let replacer = options.replacer || new Replacer,
         output = replacer.replace(input, { module: options.module });
 
     // Remove function expression wrapper for node-modules

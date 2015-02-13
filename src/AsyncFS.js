@@ -27,7 +27,7 @@ export function exists(path) {
     });
 }
 
-export var
+export let
     readFile = wrap(FS.readFile),
     close = wrap(FS.close),
     open = wrap(FS.open),

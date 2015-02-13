@@ -1,14 +1,15 @@
 import * as Path from "node:path";
 import * as FS from "node:fs";
 
-var NODE_PATH = typeof process !== "undefined" && process.env["NODE_PATH"] || "",
-    NOT_PACKAGE = /^(?:\.{0,2}\/|[a-z]+:)/i,
-    Module = module.constructor,
+const NODE_PATH = typeof process !== "undefined" && process.env["NODE_PATH"] || "",
+      NOT_PACKAGE = /^(?:\.{0,2}\/|[a-z]+:)/i;
+
+let Module = module.constructor,
     packageRoots;
 
 function isFile(path) {
 
-    var stat;
+    let stat;
 
     try { stat = FS.statSync(path) }
     catch (x) {}
@@ -18,7 +19,7 @@ function isFile(path) {
 
 function isDirectory(path) {
 
-    var stat;
+    let stat;
 
     try { stat = FS.statSync(path) }
     catch (x) {}
@@ -28,7 +29,7 @@ function isDirectory(path) {
 
 function getFolderEntry(dir) {
 
-    var path;
+    let path;
 
     // Look for an ES entry point (default.js)
     path = Path.join(dir, "default.js");
@@ -71,12 +72,12 @@ export function locatePackage(name, base) {
     if (NOT_PACKAGE.test(name))
         throw new Error("Not a package specifier");
 
-    var pathInfo;
+    let pathInfo;
 
     if (!packageRoots)
         packageRoots = NODE_PATH.split(Path.delimiter).map(v => v.trim());
 
-    var list = Module._nodeModulePaths(base).concat(packageRoots);
+    let list = Module._nodeModulePaths(base).concat(packageRoots);
 
     list.some(root => {
 

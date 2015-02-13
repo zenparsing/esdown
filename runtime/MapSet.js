@@ -1,4 +1,4 @@
-var global = _esdown.global,
+let global = _esdown.global,
     ORIGIN = {},
     REMOVED = {};
 
@@ -39,7 +39,7 @@ class MapIterator {
 
     next() {
 
-        var node = this.current;
+        let node = this.current;
 
         while (node.key === REMOVED)
             node = this.current = this.current.next;
@@ -89,7 +89,7 @@ class Map {
 
     clear() {
 
-        for (var node = this._origin.next; node !== this._origin; node = node.next)
+        for (let node = this._origin.next; node !== this._origin; node = node.next)
             node.key = REMOVED;
 
         this._index = {};
@@ -98,7 +98,7 @@ class Map {
 
     delete(key) {
 
-        var h = hashKey(key),
+        let h = hashKey(key),
             node = this._index[h];
 
         if (node) {
@@ -113,19 +113,19 @@ class Map {
 
     forEach(fn) {
 
-        var thisArg = arguments[1];
+        let thisArg = arguments[1];
 
         if (typeof fn !== "function")
             throw new TypeError(fn + " is not a function");
 
-        for (var node = this._origin.next; node.key !== ORIGIN; node = node.next)
+        for (let node = this._origin.next; node.key !== ORIGIN; node = node.next)
             if (node.key !== REMOVED)
                 fn.call(thisArg, node.value, node.key, this);
     }
 
     get(key) {
 
-        var h = hashKey(key),
+        let h = hashKey(key),
             node = this._index[h];
 
         return node ? node.value : void 0;
@@ -138,7 +138,7 @@ class Map {
 
     set(key, val) {
 
-        var h = hashKey(key),
+        let h = hashKey(key),
             node = this._index[h];
 
         if (node) {
@@ -188,7 +188,7 @@ class Set {
 // Copy shared prototype members to Set
 ["clear", "delete", "forEach", "has", "size", "keys", "values", "entries"].forEach(k => {
 
-    var d = Object.getOwnPropertyDescriptor(Map.prototype, k);
+    let d = Object.getOwnPropertyDescriptor(Map.prototype, k);
     Object.defineProperty(Set.prototype, k, d);
 });
 

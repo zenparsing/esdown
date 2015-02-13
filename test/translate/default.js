@@ -3,10 +3,10 @@
 import { runTests } from "moon-unit";
 import { translate } from "../../src/Translator.js";
 
-var FS = require("fs"),
+let FS = require("fs"),
     Path = require("path");
 
-var failFile = __dirname + "/_test-fail.js";
+let failFile = __dirname + "/_test-fail.js";
 
 function statPath(path) {
 
@@ -27,7 +27,7 @@ function getFilePaths(dir) {
 
 export function main(args) {
 
-    var inputFiles = [],
+    let inputFiles = [],
         outputFiles = [],
         stop = {};
 
@@ -51,7 +51,7 @@ export function main(args) {
 
                 inputFiles.forEach(path => {
 
-                    var input = FS.readFileSync(path, "utf8"),
+                    let input = FS.readFileSync(path, "utf8"),
                         output = translate(input, { wrap: false, module: true }),
                         expected = FS.readFileSync(path.replace(/\.js$/, ".out.js"), "utf8"),
                         ok = output === expected;

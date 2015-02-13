@@ -5,7 +5,7 @@ function globalObject() {
     return null;
 }
 
-var arraySlice = Array.prototype.slice,
+let arraySlice = Array.prototype.slice,
     hasOwn = Object.prototype.hasOwnProperty,
     staticName = /^__static_/,
     Global = globalObject();
@@ -32,14 +32,14 @@ function has(obj, name) {
 // Iterates over the descriptors for each own property of an object
 function forEachDesc(obj, fn) {
 
-    var names = Object.getOwnPropertyNames(obj), i;
+    let names = Object.getOwnPropertyNames(obj);
 
-    for (i = 0; i < names.length; ++i)
+    for (let i = 0; i < names.length; ++i)
         fn(names[i], Object.getOwnPropertyDescriptor(obj, names[i]));
 
     names = Object.getOwnPropertySymbols(obj);
 
-    for (i = 0; i < names.length; ++i)
+    for (let i = 0; i < names.length; ++i)
         fn(names[i], Object.getOwnPropertyDescriptor(obj, names[i]));
 
     return obj;
@@ -67,7 +67,7 @@ function mergeMethods(from, to) {
 
         if (desc.get || desc.set) {
 
-            var prev = Object.getOwnPropertyDescriptor(to, name);
+            let prev = Object.getOwnPropertyDescriptor(to, name);
 
             if (prev) {
 
@@ -84,7 +84,7 @@ function mergeMethods(from, to) {
 // Builds a class
 function buildClass(base, def) {
 
-    var parent;
+    let parent;
 
     if (def === void 0) {
 
@@ -112,7 +112,7 @@ function buildClass(base, def) {
         throw new TypeError;
 
     // Create the prototype object
-    var proto = Object.create(parent),
+    let proto = Object.create(parent),
         statics = {},
         addMethods = obj => mergeMethods(obj, proto),
         addStatics = obj => mergeMethods(obj, statics);
@@ -136,7 +136,7 @@ function buildClass(base, def) {
         configurable: true
     });
 
-    var ctor = proto.constructor;
+    let ctor = proto.constructor;
 
     // Set constructor's prototype
     ctor.prototype = proto;
@@ -175,7 +175,7 @@ Global._esdown = {
         if (obj[Symbol.asyncIterator] !== void 0)
             return obj[Symbol.asyncIterator]();
 
-        var iter = { [Symbol.asyncIterator]() { return this } },
+        let iter = { [Symbol.asyncIterator]() { return this } },
             inner = _esdown.iter(obj);
 
         ["next", "throw", "return"].forEach(name => {
@@ -190,9 +190,9 @@ Global._esdown = {
     // Support for computed property names
     computed(obj) {
 
-        var name, desc, i;
+        let name, desc;
 
-        for (i = 1; i < arguments.length; ++i) {
+        for (let i = 1; i < arguments.length; ++i) {
 
             name = "__$" + (i - 1);
             desc = Object.getOwnPropertyDescriptor(obj, name);
@@ -225,7 +225,7 @@ Global._esdown = {
 
                 try {
 
-                    var result = iter[type](value);
+                    let result = iter[type](value);
 
                     if (result.done) {
 
@@ -246,7 +246,7 @@ Global._esdown = {
     // Support for async generators
     asyncGen(iter) {
 
-        var observer = null,
+        let observer = null,
             current = null,
             queue = [];
 
@@ -335,7 +335,7 @@ Global._esdown = {
 
             try {
 
-                var result = iter[type](value),
+                let result = iter[type](value),
                     value = result.value;
 
                 if (typeof value === "object" && "_esdown_await" in value) {
@@ -376,7 +376,7 @@ Global._esdown = {
             // Add items
             s() {
 
-                for (var i = 0; i < arguments.length; ++i)
+                for (let i = 0; i < arguments.length; ++i)
                     this.a.push(arguments[i]);
 
                 return this;
@@ -391,7 +391,7 @@ Global._esdown = {
 
                 } else {
 
-                    for (var item of list)
+                    for (let item of list)
                         this.a.push(item);
                 }
 
@@ -419,13 +419,13 @@ Global._esdown = {
             };
         }
 
-        var iter = _esdown.iter(toObject(obj));
+        let iter = _esdown.iter(toObject(obj));
 
         return {
 
             at(skip) {
 
-                var r;
+                let r;
 
                 while (skip--)
                     r = iter.next();
@@ -435,7 +435,7 @@ Global._esdown = {
 
             rest(skip) {
 
-                var a = [], r;
+                let a = [], r;
 
                 while (--skip)
                     r = iter.next();

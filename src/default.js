@@ -11,7 +11,7 @@ export { parse } from "esparse";
 
 function getOutPath(inPath, outPath) {
 
-    var stat;
+    let stat;
 
     outPath = Path.resolve(process.cwd(), outPath);
 
@@ -62,7 +62,7 @@ export function main() {
 
         execute(params) {
 
-            var promise = null;
+            let promise = null;
 
             if (params.bundle) {
 
@@ -94,7 +94,7 @@ export function main() {
 
                 if (params.output) {
 
-                    var outPath = getOutPath(params.input, params.output);
+                    let outPath = getOutPath(params.input, params.output);
                     return writeFile(outPath, text, "utf8");
 
                 } else {
@@ -106,7 +106,7 @@ export function main() {
 
                 if (x instanceof SyntaxError) {
 
-                    var filename;
+                    let filename;
 
                     if (!params.bundle)
                         filename = Path.resolve(params.input);

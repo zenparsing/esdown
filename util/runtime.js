@@ -24,7 +24,7 @@ var files = [
 
 function run() {
 
-    var output = "export var Runtime = {};\n\n";
+    var output = "export let Runtime = {};\n\n";
 
     files.forEach(function(file) {
 

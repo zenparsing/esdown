@@ -18,7 +18,7 @@ class Observable {
         if (Object(sink) !== sink)
             throw new TypeError("Sink is not an object");
 
-        var start = this._start,
+        let start = this._start,
             finished = false,
             cleanup;
 
@@ -63,7 +63,7 @@ class Observable {
     */
     function _wrapSink(sink, cleanup) {
 
-        var done = false;
+        let done = false;
 
         // Marks the stream as closed and triggers stream cleanup.  Exceptions
         // which occur during cleanup are propagated to the caller.
@@ -89,7 +89,7 @@ class Observable {
             if (done)
                 return doneResult();
 
-            var result;
+            let result;
 
             try {
 
@@ -169,8 +169,6 @@ class Observable {
 
             next(value) {
 
-                var value;
-
                 try { value = fn(value) }
                 catch (e) { return sink.throw(e) }
 
@@ -185,19 +183,19 @@ class Observable {
 
     [Symbol.asyncIterator]() {
 
-        var pending = [], ready = [];
+        let pending = [], ready = [];
 
         function current() {
 
             if (pending.length > 0)
                 return pending.shift();
 
-            var d;
+            let d;
             ready.push(new Promise((resolve, reject) => d = { resolve, reject }));
             return d;
         }
 
-        var cancel = this.observe({
+        let cancel = this.observe({
 
             next(value) { current().resolve({ value, done: false }) },
             throw(value) { current().reject(value) },

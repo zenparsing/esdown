@@ -36,7 +36,7 @@ class GraphBuilder {
         if (this.nodes.has(key))
             return this.nodes.get(key);
 
-        var name = "_M" + (this.nextID++),
+        let name = "_M" + (this.nextID++),
             node = new Node(key, name);
 
         this.nodes.set(key, node);
@@ -45,16 +45,16 @@ class GraphBuilder {
 
     sort(key = this.root.path) {
 
-        var visited = new Set,
+        let visited = new Set,
             list = [];
 
-        var visit = key => {
+        let visit = key => {
 
             if (visited.has(key))
                 return;
 
             visited.add(key);
-            var node = this.nodes.get(key);
+            let node = this.nodes.get(key);
             node.edges.forEach(visit);
             list.push(node);
         };
@@ -69,12 +69,12 @@ class GraphBuilder {
         if (!this.nodes.has(key))
             throw new Error("Node not found");
 
-        var node = this.nodes.get(key);
+        let node = this.nodes.get(key);
 
         if (node.output !== null)
             throw new Error("Node already processed");
 
-        var replacer = new Replacer,
+        let replacer = new Replacer,
             dir = Path.dirname(node.path);
 
         replacer.identifyModule = path => {
@@ -96,7 +96,7 @@ export function bundle(rootPath, options = {}) {
 
     rootPath = Path.resolve(rootPath);
 
-    var builder = new GraphBuilder(rootPath),
+    let builder = new GraphBuilder(rootPath),
         visited = new Set,
         pending = 0,
         resolver,
@@ -115,7 +115,7 @@ export function bundle(rootPath, options = {}) {
 
         readFile(path, { encoding: "utf8" }).then(code => {
 
-            var node = builder.process(path, code);
+            let node = builder.process(path, code);
 
             node.edges.forEach(path => {
 
@@ -145,15 +145,15 @@ export function bundle(rootPath, options = {}) {
 
     return allFetched.then($=> {
 
-        var nodes = builder.sort(),
+        let nodes = builder.sort(),
             dependencies = [],
             output = "";
 
-        var varList = nodes.map(node => {
+        let varList = nodes.map(node => {
 
             if (node.output === null) {
 
-                var path = node.path,
+                let path = node.path,
                     legacy = "";
 
                 if (isLegacyScheme(path)) {

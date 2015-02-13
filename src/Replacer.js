@@ -1,10 +1,10 @@
 import { parse, resolveScopes, AST } from "esparse";
 import { isLegacyScheme, removeScheme } from "./Schema.js";
 
-var NODE_SCHEME = /^node:/i,
-    URI_SCHEME = /^[a-z]+:/i;
+const NODE_SCHEME = /^node:/i,
+      URI_SCHEME = /^[a-z]+:/i;
 
-var RESERVED_WORD = new RegExp("^(?:" +
+const RESERVED_WORD = new RegExp("^(?:" +
     "break|case|catch|class|const|continue|debugger|default|delete|do|" +
     "else|enum|export|extends|false|finally|for|function|if|import|in|" +
     "instanceof|new|null|return|super|switch|this|throw|true|try|typeof|" +
@@ -14,13 +14,13 @@ var RESERVED_WORD = new RegExp("^(?:" +
 
 function countNewlines(text) {
 
-    var m = text.match(/\r\n?|\n/g);
+    let m = text.match(/\r\n?|\n/g);
     return m ? m.length : 0;
 }
 
 function preserveNewlines(text, height) {
 
-    var n = countNewlines(text);
+    let n = countNewlines(text);
 
     if (height > 0 && n < height)
         text += "\n".repeat(height - n);
@@ -155,7 +155,7 @@ export class Replacer {
             resolveScopes: true
         });
 
-        var root = this.parseResult.ast;
+        let root = this.parseResult.ast;
 
         collapseScopes(this.parseResult);
 
@@ -166,7 +166,7 @@ export class Replacer {
         this.isStrict = false;
         this.uid = 0;
 
-        var visit = node => {
+        let visit = node => {
 
             node.text = null;
 
@@ -174,7 +174,7 @@ export class Replacer {
             if (this[node.type + "Begin"])
                 this[node.type + "Begin"](node);
 
-            var strict = this.isStrict;
+            let strict = this.isStrict;
 
             // Set the strictness for implicitly strict nodes
             switch (node.type) {
@@ -191,7 +191,7 @@ export class Replacer {
             // Restore strictness
             this.isStrict = strict;
 
-            var text = null;
+            let text = null;
 
             // Call replacer
             if (this[node.type])
@@ -203,7 +203,7 @@ export class Replacer {
             return node.text = this.syncNewlines(node.start, node.end, text);
         };
 
-        var output = visit(new RootNode(root, input.length)),
+        let output = visit(new RootNode(root, input.length)),
             head = "";
 
         this.dependencies.forEach(dep => {
@@ -211,7 +211,7 @@ export class Replacer {
             if (head) head += ", ";
             else head = "var ";
 
-            var url = dep.url,
+            let url = dep.url,
                 legacyFlag = dep.legacy ? ", 1" : "";
 
             head += `${ this.imports[url] } = __load(${ JSON.stringify(dep.url) }${ legacyFlag })`;
@@ -222,7 +222,7 @@ export class Replacer {
 
         output = head + output;
 
-        var exports = Object.keys(this.exports);
+        let exports = Object.keys(this.exports);
 
         if (exports.length > 0) {
 
@@ -236,7 +236,7 @@ export class Replacer {
 
     DoWhileStatement(node) {
 
-        var text = this.stringify(node);
+        let text = this.stringify(node);
 
         if (text.slice(-1) !== ";")
             return text + ";";
@@ -244,7 +244,7 @@ export class Replacer {
 
     ForOfStatement(node) {
 
-        var iter = this.addTempVar(node, null, true),
+        let iter = this.addTempVar(node, null, true),
             iterResult = this.addTempVar(node, null, true),
             context = this.parentFunction(node),
             decl = "",
@@ -276,17 +276,17 @@ export class Replacer {
             binding = this.unwrapParens(node.left);
         }
 
-        var body = node.body.text;
+        let body = node.body.text;
 
         // Remove braces from block bodies
         if (node.body.type === "Block") body = this.removeBraces(body);
         else body += " ";
 
-        var assign = this.isPattern(binding) ?
+        let assign = this.isPattern(binding) ?
             this.translatePattern(binding, `${ iterResult }.value`).join(", ") :
             `${ binding.text } = ${ iterResult }.value`;
 
-        var out = `${ head }{ ${ decl }${ assign }; ${ body }}`;
+        let out = `${ head }{ ${ decl }${ assign }; ${ body }}`;
 
         /*
 
@@ -308,7 +308,7 @@ export class Replacer {
 
         // NOTE: Strict directive is included with module wrapper
 
-        var inserted = [],
+        let inserted = [],
             temps = this.tempVars(node);
 
         if (node.lexicalVars)
@@ -328,7 +328,7 @@ export class Replacer {
 
     FunctionBody(node) {
 
-        var insert = this.functionInsert(node.parent);
+        let insert = this.functionInsert(node.parent);
 
         if (insert)
             return "{ " + insert + " " + this.removeBraces(this.stringify(node)) + "}";
@@ -346,11 +346,11 @@ export class Replacer {
 
         node.parent.createRestBinding = true;
 
-        var p = node.parent.params;
+        let p = node.parent.params;
 
         if (p.length > 1) {
 
-            var prev = p[p.length - 2];
+            let prev = p[p.length - 2];
             node.start = prev.end;
         }
 
@@ -380,7 +380,7 @@ export class Replacer {
             node.name.value === "constructor" &&
             !node.static) {
 
-            var hasPrivate = node.parent.elements.some(elem => elem.type === "PrivateDeclaration");
+            let hasPrivate = node.parent.elements.some(elem => elem.type === "PrivateDeclaration");
 
             if (hasPrivate)
                 node.initPrivate = true;
@@ -420,7 +420,7 @@ export class Replacer {
 
     ImportDeclaration(node) {
 
-        var moduleSpec = this.modulePath(node.from),
+        let moduleSpec = this.modulePath(node.from),
             imports = node.imports;
 
         if (!imports)
@@ -435,13 +435,13 @@ export class Replacer {
                 return "var " + imports.identifier.text + " = " + moduleSpec + "['default'];";
         }
 
-        var list = [];
+        let list = [];
 
         if (imports.specifiers) {
 
             imports.specifiers.forEach(spec => {
 
-                var imported = spec.imported,
+                let imported = spec.imported,
                     local = spec.local || imported;
 
                 list.push({
@@ -460,7 +460,7 @@ export class Replacer {
 
     ExportDeclaration(node) {
 
-        var target = node.exports,
+        let target = node.exports,
             exports = this.exports,
             ident;
 
@@ -504,7 +504,7 @@ export class Replacer {
                 return `exports["default"] = ${ target.binding.text };`;
         }
 
-        var from = target.from,
+        let from = target.from,
             fromPath = from ? this.modulePath(from) : "",
             out = "";
 
@@ -516,7 +516,7 @@ export class Replacer {
 
             target.specifiers.forEach(spec => {
 
-                var local = spec.local.text,
+                let local = spec.local.text,
                     exported = spec.exported ? spec.exported.text : local;
 
                 exports[exported] = from ?
@@ -530,7 +530,7 @@ export class Replacer {
 
     CallExpression(node) {
 
-        var callee = node.callee,
+        let callee = node.callee,
             args = node.arguments,
             spread = null,
             calleeText,
@@ -577,7 +577,7 @@ export class Replacer {
 
     SuperExpression(node) {
 
-        var proto = "__.super",
+        let proto = "__.super",
             p = node.parent,
             elem = p;
 
@@ -592,7 +592,7 @@ export class Replacer {
             // super.foo...
             p.isSuperLookup = true;
 
-            var pp = this.parenParent(p);
+            let pp = this.parenParent(p);
 
             // super.foo(args);
             if (pp[0].type === "CallExpression" && pp[0].callee === pp[1])
@@ -606,7 +606,7 @@ export class Replacer {
 
         if (node.isSuperLookup) {
 
-            var prop = node.property.text;
+            let prop = node.property.text;
 
             prop = node.computed ?
                 "[" + prop + "]" :
@@ -622,9 +622,8 @@ export class Replacer {
 
     BindExpression(node) {
 
-        var left = node.left ? node.left.text : null,
-            right = node.right.text,
-            temp;
+        let left = node.left ? node.left.text : null,
+            right = node.right.text;
 
         if (!left) {
 
@@ -647,11 +646,11 @@ export class Replacer {
 
     ArrowFunction(node) {
 
-        var body = node.body.text;
+        let body = node.body.text;
 
         if (node.body.type !== "FunctionBody") {
 
-            var insert = this.functionInsert(node);
+            let insert = this.functionInsert(node);
 
             if (insert)
                 insert += " ";
@@ -659,7 +658,7 @@ export class Replacer {
             body = "{ " + insert + "return " + body + "; }";
         }
 
-        var text = node.kind === "async" ?
+        let text = node.kind === "async" ?
             this.asyncFunction(null, node.params, body, "async") :
             "function(" + this.joinList(node.params) + ") " + body;
 
@@ -675,34 +674,6 @@ export class Replacer {
 
         if (node.value === "arguments" && node.context === "variable")
             return this.renameLexicalVar(node, "arguments");
-
-        /*
-
-        var p = node.parent;
-
-        // Enforce static dead zone for all block scoped declarations other than
-        // function declarations.
-
-        // TODO: This still leaves the possiblility of runtime TDZ errors if
-        // a function declaration is called before its dependent references
-        // are initialized.
-
-        if (node.references && p.type !== "FunctionDeclaration") {
-
-            node.references.forEach(r => {
-
-                if (r.start < p.end) {
-
-                    console.log(r);
-                    console.log("----");
-                    console.log(node);
-
-                    throw new Error("Reference before initialization");
-                }
-            });
-        }
-
-        */
 
         if (node.suffix)
             return this.input.slice(node.start, node.end) + node.suffix;
@@ -726,7 +697,7 @@ export class Replacer {
         // V8 circa Node 0.11.x does not access Symbol.iterator correctly
         if (node.delegate) {
 
-            var fn = this.parentFunction(node),
+            let fn = this.parentFunction(node),
                 method = isAsyncType(fn.kind) ? "asyncIter" : "iter";
 
             node.expression.text = `_esdown.${ method }(${ node.expression.text })`;
@@ -759,7 +730,7 @@ export class Replacer {
 
     ClassExpression(node) {
 
-        var before = "",
+        let before = "",
             after = "";
 
         if (node.base)
@@ -782,7 +753,7 @@ export class Replacer {
 
     PrivateDeclaration(node) {
 
-        var parent = node.parent,
+        let parent = node.parent,
             privateList = parent.privateList,
             init = node.initializer ? node.initializer.text : "void 0",
             ident = node.name.text;
@@ -800,7 +771,7 @@ export class Replacer {
         if (node.parent === "PrivateDeclaration")
             return;
 
-        var name = "_$" + node.value.slice(1),
+        let name = "_$" + node.value.slice(1),
             parent = node.parent;
 
         if (parent.type === "PrivateDeclaration" ||
@@ -810,14 +781,14 @@ export class Replacer {
             return name;
         }
 
-        var thisRef = this.renameLexicalVar(node, "this");
+        let thisRef = this.renameLexicalVar(node, "this");
 
         return this.privateReference(node, thisRef, name);
     }
 
     ClassBody(node) {
 
-        var classIdent = node.parent.identifier,
+        let classIdent = node.parent.identifier,
             hasBase = !!node.parent.base,
             elems = node.elements,
             hasCtor = false,
@@ -828,7 +799,7 @@ export class Replacer {
             if (e.type !== "MethodDefinition")
                 return;
 
-            var text = e.text,
+            let text = e.text,
                 fn = "__";
 
             if (e.static)
@@ -858,7 +829,7 @@ export class Replacer {
         // Add a default constructor if none was provided
         if (!hasCtor) {
 
-            var ctorBody = "";
+            let ctorBody = "";
 
             if (hasBase)
                 ctorBody = "__.csuper.apply(this, arguments);";
@@ -872,7 +843,7 @@ export class Replacer {
             if (ctorBody)
                 ctorBody = " " + ctorBody + " ";
 
-            var ctor = "function";
+            let ctor = "function";
 
             if (classIdent)
                 ctor += " " + classIdent.value;
@@ -896,10 +867,9 @@ export class Replacer {
 
     TemplateExpression(node) {
 
-        var lit = node.literals,
+        let lit = node.literals,
             sub = node.substitutions,
-            out = "",
-            i;
+            out = "";
 
         if (node.parent.type === "TaggedTemplateExpression") {
 
@@ -907,7 +877,7 @@ export class Replacer {
                 "[" + lit.map(x => this.rawToString(x.raw)).join(", ") + "]";
 
             // Only output the raw array if it is different from the cooked array
-            for (i = 0; i < lit.length; ++i) {
+            for (let i = 0; i < lit.length; ++i) {
 
                 if (lit[i].raw !== lit[i].value) {
 
@@ -925,7 +895,7 @@ export class Replacer {
 
         } else {
 
-            for (i = 0; i < lit.length; ++i) {
+            for (let i = 0; i < lit.length; ++i) {
 
                 if (i > 0)
                     out += " + (" + sub[i - 1].text + ") + ";
@@ -942,7 +912,7 @@ export class Replacer {
         if (!this.isPattern(node.param))
             return null;
 
-        var temp = this.addTempVar(node, null, true),
+        let temp = this.addTempVar(node, null, true),
             assign = this.translatePattern(node.param, temp).join(", "),
             body = this.removeBraces(node.body.text);
 
@@ -954,7 +924,7 @@ export class Replacer {
         if (!node.initializer || !this.isPattern(node.pattern))
             return null;
 
-        var list = this.translatePattern(node.pattern, node.initializer.text);
+        let list = this.translatePattern(node.pattern, node.initializer.text);
 
         return list.join(", ");
     }
@@ -964,12 +934,12 @@ export class Replacer {
         if (node.assignWrap)
             return node.assignWrap[0] + node.right.text + node.assignWrap[1];
 
-        var left = this.unwrapParens(node.left);
+        let left = this.unwrapParens(node.left);
 
         if (!this.isPattern(left))
             return null;
 
-        var temp = this.addTempVar(node),
+        let temp = this.addTempVar(node),
             list = this.translatePattern(left, temp);
 
         list.unshift(temp + " = " + node.right.text);
@@ -992,7 +962,7 @@ export class Replacer {
 
     parenParent(node) {
 
-        var parent;
+        let parent;
 
         for (; parent = node.parent; node = parent)
             if (parent.type !== "ParenExpression")
@@ -1011,11 +981,10 @@ export class Replacer {
 
     spreadList(elems, newArray) {
 
-        var list = [],
-            last = -1,
-            i;
+        let list = [],
+            last = -1;
 
-        for (i = 0; i < elems.length; ++i) {
+        for (let i = 0; i < elems.length; ++i) {
 
             if (elems[i].type === "SpreadExpression") {
 
@@ -1031,9 +1000,9 @@ export class Replacer {
         if (last < elems.length - 1)
             list.push({ type: "s", args: this.joinList(elems.slice(last + 1)) });
 
-        var out = "(_esdown.spread()";
+        let out = "(_esdown.spread()";
 
-        for (i = 0; i < list.length; ++i)
+        for (let i = 0; i < list.length; ++i)
             out += `.${ list[i].type }(${ list[i].args })`;
 
         out += ".a)";
@@ -1050,20 +1019,20 @@ export class Replacer {
                 "." + name;
         }
 
-        var outer = [],
+        let outer = [],
             inner = [],
             targets = [];
 
         node.patternTargets = targets;
 
-        var visit = (tree, base) => {
+        let visit = (tree, base) => {
 
-            var target = tree.target,
+            let target = tree.target,
                 dType = tree.array ? "arrayd" : "objd",
                 str = "",
                 temp;
 
-            var access =
+            let access =
                 tree.rest ? `${ base }.rest(${ tree.skip }, ${ tree.name })` :
                 tree.skip ? `${ base }.at(${ tree.skip }, ${ tree.name })` :
                 tree.name ? base + propGet(tree.name) :
@@ -1118,7 +1087,7 @@ export class Replacer {
         if (!parent)
             parent = new PatternTreeNode("", null);
 
-        var child, init, skip = 1;
+        let child, init, skip = 1;
 
         switch (ast.type) {
 
@@ -1173,19 +1142,19 @@ export class Replacer {
 
     asyncFunction(ident, params, body, kind) {
 
-        var head = "function";
+        let head = "function";
 
         if (ident)
             head += " " + ident.text;
 
-        var outerParams = params.map((x, i) => {
+        let outerParams = params.map((x, i) => {
 
-            var p = x.pattern || x.identifier;
+            let p = x.pattern || x.identifier;
             return p.type === "Identifier" ? p.value : "__$" + i;
 
         }).join(", ");
 
-        var wrapper = kind === "async-generator" ? "asyncGen" : "async";
+        let wrapper = kind === "async-generator" ? "asyncGen" : "async";
 
         return `${head}(${outerParams}) { ` +
             `return _esdown.${ wrapper }(function*(${ this.joinList(params) }) ` +
@@ -1194,7 +1163,7 @@ export class Replacer {
 
     privateReference(node, obj, prop) {
 
-        var pp = this.parenParent(node),
+        let pp = this.parenParent(node),
             p = pp[0],
             type = "get";
 
@@ -1220,7 +1189,7 @@ export class Replacer {
                 break;
         }
 
-        var temp;
+        let temp;
 
         switch (type) {
 
@@ -1270,7 +1239,7 @@ export class Replacer {
 
     parentFunction(node) {
 
-        for (var p = node.parent; p; p = p.parent)
+        for (let p = node.parent; p; p = p.parent)
             if (this.isVarScope(p))
                 return p;
 
@@ -1279,7 +1248,7 @@ export class Replacer {
 
     renameLexicalVar(node, name) {
 
-        var fn = this.parentFunction(node),
+        let fn = this.parentFunction(node),
             varName = name;
 
         if (fn.type === "ArrowFunction") {
@@ -1302,7 +1271,7 @@ export class Replacer {
 
     lexicalVarNames(node) {
 
-        var names = node.lexicalVars;
+        let names = node.lexicalVars;
 
         if (!names)
             return "";
@@ -1323,7 +1292,7 @@ export class Replacer {
 
     identifyModule(url) {
 
-        var legacy = false;
+        let legacy = false;
 
         url = url.trim();
 
@@ -1344,7 +1313,7 @@ export class Replacer {
 
     stringify(node) {
 
-        var offset = node.start,
+        let offset = node.start,
             input = this.input,
             text = "";
 
@@ -1366,7 +1335,7 @@ export class Replacer {
 
     restParamVar(node) {
 
-        var name = node.params[node.params.length - 1].identifier.value,
+        let name = node.params[node.params.length - 1].identifier.value,
             pos = node.params.length - 1,
             temp = this.addTempVar(node, null, true);
 
@@ -1379,7 +1348,7 @@ export class Replacer {
 
     addComputedName(node) {
 
-        for (var p = node.parent; p; p = p.parent) {
+        for (let p = node.parent; p; p = p.parent) {
 
             if (p.type === "ObjectLiteral" ||
                 p.type === "MethodDefinition" && p.parent.type === "ClassBody") {
@@ -1387,7 +1356,7 @@ export class Replacer {
                 if (!p.computedNames)
                     p.computedNames = [];
 
-                var id = "__$" + p.computedNames.length;
+                let id = "__$" + p.computedNames.length;
                 p.computedNames.push(node.expression.text);
 
                 return id;
@@ -1405,7 +1374,7 @@ export class Replacer {
 
     functionInsert(node) {
 
-        var inserted = [];
+        let inserted = [];
 
         if (node.lexicalVars)
             inserted.push(this.lexicalVarNames(node));
@@ -1421,7 +1390,7 @@ export class Replacer {
             if (!param.pattern)
                 return;
 
-            var name = param.text;
+            let name = param.text;
 
             if (param.initializer)
                 inserted.push(`if (${ name } === void 0) ${ name } = ${ param.initializer.text };`);
@@ -1430,7 +1399,7 @@ export class Replacer {
                 inserted.push("var " +  this.translatePattern(param.pattern, name).join(", ") + ";");
         });
 
-        var temps = this.tempVars(node);
+        let temps = this.tempVars(node);
 
         // Add temp var declarations to the top of the insert
         if (temps)
@@ -1441,9 +1410,9 @@ export class Replacer {
 
     privateInit(fields) {
 
-        var list = fields.map(field => field.ident + ".set(__$, " + field.init + ");");
+        let list = fields.map(field => field.ident + ".set(__$, " + field.init + ");");
 
-        var check = "if (" + fields[0].ident + ".has(__$)) " +
+        let check = "if (" + fields[0].ident + ".has(__$)) " +
             "throw new Error('Object already initialized');";
 
         return "function __initPrivate(__$) { " + check + " " + list.join(" ") + " }";
@@ -1451,12 +1420,12 @@ export class Replacer {
 
     addTempVar(node, value, noDeclare) {
 
-        var p = this.isVarScope(node) ? node : this.parentFunction(node);
+        let p = this.isVarScope(node) ? node : this.parentFunction(node);
 
         if (!p.tempVars)
             p.tempVars = [];
 
-        var name = "__$" + p.tempVars.length;
+        let name = "__$" + p.tempVars.length;
 
         p.tempVars.push({ name, value, noDeclare });
 
@@ -1468,14 +1437,14 @@ export class Replacer {
         if (!node.tempVars)
             return "";
 
-        var list = node.tempVars.filter(item => !item.noDeclare);
+        let list = node.tempVars.filter(item => !item.noDeclare);
 
         if (list.length === 0)
             return "";
 
         return "var " + list.map(item => {
 
-            var out = item.name;
+            let out = item.name;
 
             if (typeof item.value === "string")
                 out += " = " + item.value;
@@ -1497,7 +1466,7 @@ export class Replacer {
 
     syncNewlines(start, end, text) {
 
-        var height = this.lineNumber(end - 1) - this.lineNumber(start);
+        let height = this.lineNumber(end - 1) - this.lineNumber(start);
         return preserveNewlines(text, height);
     }
 
@@ -1511,7 +1480,7 @@ export class Replacer {
 
     wrapFunctionExpression(text, node) {
 
-        for (var p = node.parent; p; p = p.parent) {
+        for (let p = node.parent; p; p = p.parent) {
 
             if (this.isVarScope(p))
                 break;
@@ -1535,7 +1504,7 @@ export class Replacer {
 
     joinList(list) {
 
-        var input = this.input,
+        let input = this.input,
             offset = -1,
             text = "";
 
