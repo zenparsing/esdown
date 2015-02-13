@@ -130,25 +130,6 @@ function collapseScopes(parseResult) {
         scope.children.forEach(c => visit(c, forScope));
     }
 
-    function declParent(node) {
-
-        for (let p = node.parent; p; p = p.parent) {
-
-            switch (p.type) {
-
-                case "FunctionDeclaration":
-                case "FunctionExpression":
-                case "ClassDeclaration":
-                case "ClassExpression":
-                case "VariableDeclarator":
-                    return p;
-            }
-        }
-
-        // TODO:  This should really be an assertion failure
-        return null;
-    }
-
     function rename(node) {
 
         /*
@@ -162,76 +143,19 @@ function collapseScopes(parseResult) {
 
         */
 
-        let varParent = node.parent.type === "var",
-            firstFunctionRef = null,
-            lastDecl = 0;
-
-        if (varParent) {
-
-            let parent = node.parent;
-
-            Object.keys(parent.names).forEach(name => {
-
-                let record = parent.names[name];
-
-                for (let i = 0; i < record.declarations.length; ++i) {
-
-                    if (record.declarations[i].parent.type === "FunctionDeclaration") {
-
-                        record.references.forEach(ref => {
-
-                            if (!firstFunctionRef || ref.end < firstFunctionRef.end)
-                                firstFunctionRef = ref;
-                        });
-
-                        break;
-                    }
-                }
-            });
-        }
+        let varParent = node.parent.type === "var";
 
         Object.keys(node.names).forEach(name => {
 
             let record = node.names[name],
-                isFunctionDecl = false,
-                suffix = "",
-                end = 0;
+                suffix = "";
 
             if (!varParent)
                 suffix = makeSuffix(name);
 
-            record.declarations.forEach(decl => {
-
-                let p = declParent(decl);
-
-                if (p.type === "FunctionDeclaration")
-                    isFunctionDecl = true;
-                else
-                    end = Math.max(end, p.end);
-
-                decl.suffix = suffix;
-            });
-
-            lastDecl = Math.max(lastDecl, end);
-
-            record.references.forEach(ref => {
-
-                if (isFunctionDecl) {
-
-                    if (!firstFunctionRef || ref.end < firstFunctionRef.end)
-                        firstFunctionRef = ref;
-
-                } else if (ref.start < end) {
-
-                    fail("Variable referenced before initialization", ref);
-                }
-
-                ref.suffix = suffix;
-            });
+            record.declarations.forEach(decl => decl.suffix = suffix);
+            record.references.forEach(ref => ref.suffix = suffix);
         });
-
-        if (firstFunctionRef && firstFunctionRef.start < lastDecl)
-            fail("Function referenced before lexical variable initialization", firstFunctionRef);
     }
 }
 
