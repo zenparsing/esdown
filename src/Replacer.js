@@ -60,27 +60,12 @@ class RootNode {
 
 RootNode.prototype = AST.Node.prototype;
 
-function addParentLinks(node) {
-
-    node.children().forEach(child => {
-
-        child.parent = node;
-        addParentLinks(child);
-    });
-}
 
 function collapseScopes(parseResult) {
 
-    /*
+    let names = Object.create(null);
 
-    TODO: What do we do about with statements?
-
-    */
-
-    let tree = resolveScopes(parseResult),
-        names = Object.create(null);
-
-    visit(tree, null);
+    visit(parseResult.scopeTree, null);
 
     function makeSuffix(name) {
 
@@ -91,7 +76,7 @@ function collapseScopes(parseResult) {
 
     function fail(msg, node) {
 
-        throw parseResult.syntaxError(msg, node);
+        throw parseResult.createSyntaxError(msg, node);
     }
 
     function visit(scope, forScope) {
@@ -163,14 +148,18 @@ export class Replacer {
 
     replace(input, options = {}) {
 
-        this.parseResult = parse(input, { module: options.module });
+        this.parseResult = parse(input, {
+
+            module: options.module,
+            addParentLinks: true,
+            resolveScopes: true
+        });
 
         var root = this.parseResult.ast;
 
-        addParentLinks(root);
         collapseScopes(this.parseResult);
 
-        this.input = this.parseResult.input;
+        this.input = input;
         this.exports = {};
         this.imports = {};
         this.dependencies = [];
