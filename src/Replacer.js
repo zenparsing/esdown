@@ -77,14 +77,14 @@ function collapseScopes(parseResult) {
 
     */
 
-    var tree = resolveScopes(parseResult),
+    let tree = resolveScopes(parseResult),
         names = Object.create(null);
 
     visit(tree, null);
 
     function makeSuffix(name) {
 
-        var count = names[name] | 0;
+        let count = names[name] | 0;
         names[name] = count + 1;
         return "$" + count;
     }
@@ -111,7 +111,7 @@ function collapseScopes(parseResult) {
 
                 if (forScope) {
 
-                    var set = Object.create(null);
+                    let set = Object.create(null);
 
                     forScope.free.forEach(r => set[r.value] = 1);
 
@@ -130,11 +130,28 @@ function collapseScopes(parseResult) {
         scope.children.forEach(c => visit(c, forScope));
     }
 
+    function declParent(node) {
+
+        for (let p = node.parent; p; p = p.parent) {
+
+            switch (p.type) {
+
+                case "FunctionDeclaration":
+                case "FunctionExpression":
+                case "ClassDeclaration":
+                case "ClassExpression":
+                case "VariableDeclarator":
+                    return p;
+            }
+        }
+
+        // TODO:  This should really be an assertion failure
+        return null;
+    }
+
     function rename(node) {
 
         /*
-
-        TODO:
 
         - For each lexical declaration that isn't a function declaration, all references
           must occur *after* the corresponding VariableDeclarator has ended.
@@ -145,21 +162,76 @@ function collapseScopes(parseResult) {
 
         */
 
+        let varParent = node.parent.type === "var",
+            firstFunctionRef = null,
+            lastDecl = 0;
+
+        if (varParent) {
+
+            let parent = node.parent;
+
+            Object.keys(parent.names).forEach(name => {
+
+                let record = parent.names[name];
+
+                for (let i = 0; i < record.declarations.length; ++i) {
+
+                    if (record.declarations[i].parent.type === "FunctionDeclaration") {
+
+                        record.references.forEach(ref => {
+
+                            if (!firstFunctionRef || ref.end < firstFunctionRef.end)
+                                firstFunctionRef = ref;
+                        });
+
+                        break;
+                    }
+                }
+            });
+        }
+
         Object.keys(node.names).forEach(name => {
 
-            var record = node.names[name],
-                suffix = "";
+            let record = node.names[name],
+                isFunctionDecl = false,
+                suffix = "",
+                end = 0;
 
-            if (node.parent.type !== "var")
+            if (!varParent)
                 suffix = makeSuffix(name);
-
-            record.references.forEach(ref => ref.suffix = suffix);
 
             record.declarations.forEach(decl => {
 
+                let p = declParent(decl);
+
+                if (p.type === "FunctionDeclaration")
+                    isFunctionDecl = true;
+                else
+                    end = Math.max(end, p.end);
+
                 decl.suffix = suffix;
             });
+
+            lastDecl = Math.max(lastDecl, end);
+
+            record.references.forEach(ref => {
+
+                if (isFunctionDecl) {
+
+                    if (!firstFunctionRef || ref.end < firstFunctionRef.end)
+                        firstFunctionRef = ref;
+
+                } else if (ref.start < end) {
+
+                    fail("Variable referenced before initialization", ref);
+                }
+
+                ref.suffix = suffix;
+            });
         });
+
+        if (firstFunctionRef && firstFunctionRef.start < lastDecl)
+            fail("Function referenced before lexical variable initialization", firstFunctionRef);
     }
 }
 
