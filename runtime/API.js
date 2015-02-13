@@ -272,7 +272,7 @@ Global._esdown = {
                     // TODO:  Should this be allowed?  If so, then what happens
                     // if next value is delivered and observer is now null?  Does
                     // the data get dropped?  That's what currently happens.
-                    return _=> { observable = null };
+                    return _=> { observer = null };
 
                 }).observe(sink);
             }
