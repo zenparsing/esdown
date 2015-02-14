@@ -319,7 +319,14 @@ Global._esdown = {
 
             } else if (observer) {
 
-                observer[type](value);
+                // TODO:  Do we clear the observer if sequence is "ended"?  I think so.
+                let obs = observer;
+
+                if (type === "return" || type === "throw")
+                    observer = null;
+
+                // TODO:  What if observer throws?
+                obs[type](value);
             }
         }
 
@@ -327,8 +334,9 @@ Global._esdown = {
 
             if (type === "return" && !(type in iter)) {
 
-                // If the generator does not support the "return" method, then
-                // emulate it (poorly) using throw
+                // HACK: If the generator does not support the "return" method, then
+                // emulate it (poorly) using throw.  (V8 circa 2015-02-13 does not support
+                // generator.return.)
                 type = "throw";
                 value = { value, __return: true };
             }
@@ -352,17 +360,25 @@ Global._esdown = {
 
                 } else {
 
-                    deliver(result.done ? "return" : "next", result.value);
+                    type = result.done ? "return" : "next";
                 }
 
             } catch (x) {
 
-                if (x && x.__return === true)
-                    deliver("return", x.value);
-                else
-                    deliver("throw", x);
+                if (x && x.__return === true) {
+
+                    // HACK: Return-as-throw
+                    type = "return";
+                    value = x.value;
+
+                } else {
+
+                    type = "throw";
+                    value = x;
+                }
             }
 
+            deliver(type, value);
             next();
         }
     },
