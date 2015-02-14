@@ -1522,7 +1522,7 @@ export class Replacer {
 
     fail(msg, node) {
 
-        throw this.parseResult.syntaxError(msg, node);
+        throw this.parseResult.createSyntaxError(msg, node);
     }
 
 }
