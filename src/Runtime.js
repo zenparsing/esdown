@@ -2,7 +2,9 @@ export let Runtime = {};
 
 Runtime.API = 
 
-`function globalObject() {
+`const VERSION = "0.9.5";
+
+function globalObject() {
 
     try { return global.global } catch (x) {}
     try { return window.window } catch (x) {}
@@ -156,7 +158,7 @@ function buildClass(base, def) {
 
 Global._esdown = {
 
-    version: "0.9.4",
+    version: VERSION,
 
     global: Global,
 
@@ -323,7 +325,6 @@ Global._esdown = {
 
             } else if (observer) {
 
-                // TODO:  Do we clear the observer if sequence is "ended"?  I think so.
                 let obs = observer;
 
                 if (type === "return" || type === "throw")
