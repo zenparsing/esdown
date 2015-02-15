@@ -1,4 +1,4 @@
-import { parse, resolveScopes, AST } from "esparse";
+import { parse, AST } from "esparse";
 import { isLegacyScheme, removeScheme } from "./Schema.js";
 
 const NODE_SCHEME = /^node:/i,
@@ -119,12 +119,9 @@ function collapseScopes(parseResult) {
 
         /*
 
-        - For each lexical declaration that isn't a function declaration, all references
-          must occur *after* the corresponding VariableDeclarator has ended.
-        - For each function declaration (var or otherwise), all references must occur
-          *after* all corresponding lexical declarations have been initialized.  For
-          var-scoped functions, this means that we have to check function declaration
-          in the parent scope, if the parent scope is of type "var".
+        TODO:  Throw a compile-time error if a lexical name is referenced in the same
+        function (not a nested closure) before the binding is initialized.  This won't
+        catch all potential TDZ issues but will help stop some obvious bugs.
 
         */
 
