@@ -373,9 +373,7 @@ export class Replacer {
 
     MethodDefinitionBegin(node) {
 
-        if (node.parent.type === "ClassBody" &&
-            node.name.value === "constructor" &&
-            !node.static) {
+        if (node.parent.type === "ClassBody" && node.kind === "constructor") {
 
             let hasPrivate = node.parent.elements.some(elem => elem.type === "PrivateDeclaration");
 
@@ -389,6 +387,7 @@ export class Replacer {
         switch (node.kind) {
 
             case "":
+            case "constructor":
                 return node.name.text + ": function(" +
                     this.joinList(node.params) + ") " +
                     node.body.text;
@@ -533,7 +532,7 @@ export class Replacer {
             calleeText,
             argText;
 
-        if (callee.type === "SuperExpression")
+        if (callee.type === "SuperKeyword")
             throw new Error("Super call not supported");
 
         if (node.hasSpread)
@@ -572,7 +571,7 @@ export class Replacer {
         node.parent.hasSpread = true;
     }
 
-    SuperExpression(node) {
+    SuperKeyword(node) {
 
         let proto = "__.super",
             p = node.parent,
@@ -802,7 +801,7 @@ export class Replacer {
             if (e.static)
                 text = text.replace(/^static\s*/, "");
 
-            if (e.name.value === "constructor" && !e.static) {
+            if (e.kind === "constructor") {
 
                 hasCtor = true;
 
