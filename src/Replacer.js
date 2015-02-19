@@ -418,9 +418,6 @@ export class Replacer {
 
         }
 
-        if (isGeneratorType(node.kind))
-            text = this.wrapGeneratorForInput(node, text);
-
         if (text !== void 0)
             return node.name.text + ": " + text;
     }
@@ -706,20 +703,11 @@ export class Replacer {
             return this.awaitYield(this.parentFunction(node), node.expression.text);
     }
 
-    MetaProperty(node) {
-
-        if (node.left === "yield" && node.right === "input") {
-
-            this.parentFunction(node).hasYieldInput = true;
-            return "__yieldin";
-        }
-    }
-
     YieldExpression(node) {
 
         // V8 circa Node 0.11.x does not support yield without expression
         if (!node.expression)
-            return "__yieldin = yield void 0";
+            return "yield void 0";
 
         // V8 circa Node 0.11.x does not access Symbol.iterator correctly
         if (node.delegate) {
@@ -730,25 +718,13 @@ export class Replacer {
             node.expression.text = `_esdown.${ method }(${ node.expression.text })`;
         }
 
-        return "__yieldin = yield " + node.expression.text;
+        return "yield " + node.expression.text;
     }
 
     FunctionDeclaration(node) {
 
-        let text = void 0;
-
         if (isAsyncType(node.kind))
-            text = this.asyncFunction(node);
-
-        if (isGeneratorType(node.kind)) {
-
-            if (text === void 0)
-                text = this.stringify(node);
-
-            text = this.wrapGeneratorForInput(node, text);
-        }
-
-        return text;
+            return this.asyncFunction(node);
     }
 
     FunctionExpression(node) {
@@ -1202,27 +1178,6 @@ export class Replacer {
         return `${ head }(${ outerParams }) { ` +
             `return _esdown.${ wrapper }(function*(${ this.joinList(node.params) }) ` +
             `${ body }.apply(this, arguments)); }`;
-    }
-
-    wrapGeneratorForInput(node, text) {
-
-        if (!node.hasYieldInput)
-            return text.replace(/__yieldin = /g, "");
-
-        let head = "function";
-
-        if (node.identifier)
-            head += " " + node.identifier.text;
-
-        let outerParams = node.params.map((x, i) => {
-
-            let p = x.pattern || x.identifier;
-            return p.type === "Identifier" ? p.value : "__$" + i;
-
-        }).join(", ");
-
-        return `${ head }(${ outerParams }) { ` +
-            `return _esdown.skipOne(${ text }.apply(this, arguments)); }`;
     }
 
     privateReference(node, obj, prop) {

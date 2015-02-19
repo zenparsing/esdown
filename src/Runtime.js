@@ -176,12 +176,6 @@ Global._esdown = {
         return obj;
     },
 
-    skipOne(iter) {
-
-        iter.next();
-        return iter;
-    },
-
     asyncIter(obj) {
 
         if (obj[Symbol.asyncIterator] !== void 0)
