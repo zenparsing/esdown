@@ -33,6 +33,11 @@ function isAsyncType(type) {
     return type === "async" || type === "async-generator";
 }
 
+function isGeneratorType(type) {
+
+    return type === "generator" || type === "async-generator";
+}
+
 class PatternTreeNode {
 
     constructor(name, init, skip) {
@@ -384,23 +389,40 @@ export class Replacer {
 
     MethodDefinition(node) {
 
+        let text;
+
         switch (node.kind) {
 
             case "":
             case "constructor":
-                return node.name.text + ": function(" +
+
+                text = "function(" +
                     this.joinList(node.params) + ") " +
                     node.body.text;
+
+                break;
 
             case "async":
             case "async-generator":
-                return node.name.text + ": " + this.asyncFunction(null, node.params, node.body.text, node.kind);
+
+                text = this.asyncFunction(node);
+                break;
 
             case "generator":
-                return node.name.text + ": function*(" +
+
+                text = "function*(" +
                     this.joinList(node.params) + ") " +
                     node.body.text;
+
+                break;
+
         }
+
+        if (isGeneratorType(node.kind))
+            text = this.wrapGeneratorForInput(node, text);
+
+        if (text !== void 0)
+            return node.name.text + ": " + text;
     }
 
     PropertyDefinition(node) {
@@ -655,7 +677,7 @@ export class Replacer {
         }
 
         let text = node.kind === "async" ?
-            this.asyncFunction(null, node.params, body, "async") :
+            this.asyncFunction(node, body) :
             "function(" + this.joinList(node.params) + ") " + body;
 
         return this.wrapFunctionExpression(text, node);
@@ -684,11 +706,20 @@ export class Replacer {
             return this.awaitYield(this.parentFunction(node), node.expression.text);
     }
 
+    MetaProperty(node) {
+
+        if (node.left === "yield" && node.right === "input") {
+
+            this.parentFunction(node).hasYieldInput = true;
+            return "__yieldin";
+        }
+    }
+
     YieldExpression(node) {
 
         // V8 circa Node 0.11.x does not support yield without expression
         if (!node.expression)
-            return "yield void 0";
+            return "__yieldin = yield void 0";
 
         // V8 circa Node 0.11.x does not access Symbol.iterator correctly
         if (node.delegate) {
@@ -698,18 +729,31 @@ export class Replacer {
 
             node.expression.text = `_esdown.${ method }(${ node.expression.text })`;
         }
+
+        return "__yieldin = yield " + node.expression.text;
     }
 
     FunctionDeclaration(node) {
 
+        let text = void 0;
+
         if (isAsyncType(node.kind))
-            return this.asyncFunction(node.identifier, node.params, node.body.text, node.kind);
+            text = this.asyncFunction(node);
+
+        if (isGeneratorType(node.kind)) {
+
+            if (text === void 0)
+                text = this.stringify(node);
+
+            text = this.wrapGeneratorForInput(node, text);
+        }
+
+        return text;
     }
 
     FunctionExpression(node) {
 
-        if (isAsyncType(node.kind))
-            return this.asyncFunction(node.identifier, node.params, node.body.text, node.kind);
+        return this.FunctionDeclaration(node);
     }
 
     ClassDeclaration(node) {
@@ -1136,25 +1180,49 @@ export class Replacer {
         return parent;
     }
 
-    asyncFunction(ident, params, body, kind) {
+    asyncFunction(node, body) {
 
         let head = "function";
 
-        if (ident)
-            head += " " + ident.text;
+        if (node.identifier)
+            head += " " + node.identifier.text;
 
-        let outerParams = params.map((x, i) => {
+        let outerParams = node.params.map((x, i) => {
 
             let p = x.pattern || x.identifier;
             return p.type === "Identifier" ? p.value : "__$" + i;
 
         }).join(", ");
 
-        let wrapper = kind === "async-generator" ? "asyncGen" : "async";
+        let wrapper = node.kind === "async-generator" ? "asyncGen" : "async";
 
-        return `${head}(${outerParams}) { ` +
-            `return _esdown.${ wrapper }(function*(${ this.joinList(params) }) ` +
+        if (body === void 0)
+            body = node.body.text;
+
+        return `${ head }(${ outerParams }) { ` +
+            `return _esdown.${ wrapper }(function*(${ this.joinList(node.params) }) ` +
             `${ body }.apply(this, arguments)); }`;
+    }
+
+    wrapGeneratorForInput(node, text) {
+
+        if (!node.hasYieldInput)
+            return text.replace(/__yieldin = /g, "");
+
+        let head = "function";
+
+        if (node.identifier)
+            head += " " + node.identifier.text;
+
+        let outerParams = node.params.map((x, i) => {
+
+            let p = x.pattern || x.identifier;
+            return p.type === "Identifier" ? p.value : "__$" + i;
+
+        }).join(", ");
+
+        return `${ head }(${ outerParams }) { ` +
+            `return _esdown.skipOne(${ text }.apply(this, arguments)); }`;
     }
 
     privateReference(node, obj, prop) {
@@ -1371,6 +1439,9 @@ export class Replacer {
     functionInsert(node) {
 
         let inserted = [];
+
+        if (node.hasYieldInput)
+            inserted.push("var __yieldin = yield;");
 
         if (node.lexicalVars)
             inserted.push(this.lexicalVarNames(node));
