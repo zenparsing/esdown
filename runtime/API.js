@@ -248,8 +248,7 @@ Global._esdown = {
     // Support for async generators
     asyncGen(iter) {
 
-        let observer = null,
-            current = null,
+        let current = null,
             queue = [];
 
         return {
@@ -257,33 +256,10 @@ Global._esdown = {
             next(val) { return enqueue("next", val) },
             throw(val) { return enqueue("throw", val) },
             return(val) { return enqueue("return", val) },
-            [Symbol.asyncIterator]() { return this },
-
-            observe(sink) {
-
-                if (observer)
-                    throw new Error("Already observing");
-
-                return new Observable(sink => {
-
-                    observer = sink;
-
-                    if (!current)
-                        next();
-
-                    // TODO:  Should this be allowed?  If so, then what happens
-                    // if next value is delivered and observer is now null?  Does
-                    // the data get dropped?  That's what currently happens.
-                    return _=> { observer = null };
-
-                }).observe(sink);
-            }
+            [Symbol.asyncIterator]() { return this }
         };
 
         function enqueue(type, value) {
-
-            if (observer)
-                return Promise.reject(new Error("Cannot iterate in while observing"));
 
             return new Promise((resolve, reject) => {
 
@@ -304,30 +280,6 @@ Global._esdown = {
             } else {
 
                 current = null;
-
-                if (observer)
-                    resume("next", void 0);
-            }
-        }
-
-        function deliver(type, value) {
-
-            if (current) {
-
-                if (type === "throw")
-                    current.reject(value);
-                else
-                    current.resolve({ value, done: (type === "return") });
-
-            } else if (observer) {
-
-                let obs = observer;
-
-                if (type === "return" || type === "throw")
-                    observer = null;
-
-                // TODO:  What if observer throws?
-                obs[type](value);
             }
         }
 
@@ -379,7 +331,11 @@ Global._esdown = {
                 }
             }
 
-            deliver(type, value);
+            if (type === "throw")
+                current.reject(value);
+            else
+                current.resolve({ value, done: (type === "return") });
+
             next();
         }
     },
