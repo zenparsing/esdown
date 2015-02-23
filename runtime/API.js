@@ -248,7 +248,8 @@ Global._esdown = {
     // Support for async generators
     asyncGen(iter) {
 
-        let current = null;
+        let front = null,
+            back = null;
 
         return {
 
@@ -262,11 +263,17 @@ Global._esdown = {
 
             return new Promise((resolve, reject) => {
 
-                if (current)
-                    throw new Error("Generator already running");
+                let x = { type, value, resolve, reject, next: null };
 
-                current = { resolve, reject };
-                resume(type, value);
+                if (back) {
+
+                    back = back.next = x;
+
+                } else {
+
+                    front = back = x;
+                    resume(type, value);
+                }
             });
         }
 
@@ -297,25 +304,27 @@ Global._esdown = {
                         x => resume("throw", x));
 
                     return;
-
                 }
 
-                current.resolve(result);
+                front.resolve(result);
 
             } catch (x) {
 
                 if (x && x.__return === true) {
 
                     // HACK: Return-as-throw
-                    current.resolve({ value: x.value, done: true });
+                    front.resolve({ value: x.value, done: true });
 
                 } else {
 
-                    current.reject(x);
+                    front.reject(x);
                 }
             }
 
-            current = null;
+            front = front.next;
+
+            if (front) resume(front.type, front.value);
+            else back = null;
         }
     },
 
