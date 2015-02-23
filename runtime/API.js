@@ -248,39 +248,26 @@ Global._esdown = {
     // Support for async generators
     asyncGen(iter) {
 
-        let current = null,
-            queue = [];
+        let current = null;
 
         return {
 
-            next(val) { return enqueue("next", val) },
-            throw(val) { return enqueue("throw", val) },
-            return(val) { return enqueue("return", val) },
+            next(val) { return send("next", val) },
+            throw(val) { return send("throw", val) },
+            return(val) { return send("return", val) },
             [Symbol.asyncIterator]() { return this }
         };
 
-        function enqueue(type, value) {
+        function send(type, value) {
 
             return new Promise((resolve, reject) => {
 
-                queue.push({ type, value, resolve, reject });
+                if (current)
+                    throw new Error("Generator already running");
 
-                if (!current)
-                    next();
+                current = { resolve, reject };
+                resume(type, value);
             });
-        }
-
-        function next() {
-
-            if (queue.length > 0) {
-
-                current = queue.shift();
-                resume(current.type, current.value);
-
-            } else {
-
-                current = null;
-            }
         }
 
         function resume(type, value) {
@@ -311,32 +298,24 @@ Global._esdown = {
 
                     return;
 
-                } else {
-
-                    type = result.done ? "return" : "next";
                 }
+
+                current.resolve(result);
 
             } catch (x) {
 
                 if (x && x.__return === true) {
 
                     // HACK: Return-as-throw
-                    type = "return";
-                    value = x.value;
+                    current.resolve({ value: x.value, done: true });
 
                 } else {
 
-                    type = "throw";
-                    value = x;
+                    current.reject(x);
                 }
             }
 
-            if (type === "throw")
-                current.reject(value);
-            else
-                current.resolve({ value, done: (type === "return") });
-
-            next();
+            current = null;
         }
     },
 
