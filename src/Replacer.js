@@ -424,8 +424,11 @@ export class Replacer {
 
     PropertyDefinition(node) {
 
-        if (node.expression === null)
-            return node.name.text + ": " + node.name.text;
+        if (node.expression === null) {
+
+            let rawName = this.input.slice(node.name.start, node.name.end);
+            return rawName + ": " + node.name.text;
+        }
     }
 
     VariableDeclaration(node) {
