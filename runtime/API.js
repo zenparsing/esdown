@@ -248,9 +248,7 @@ Global._esdown = {
     // Support for async generators
     asyncGen(iter) {
 
-        let front = null,
-            back = null,
-            observer = null;
+        let front = null, back = null;
 
         return {
 
@@ -258,43 +256,11 @@ Global._esdown = {
             throw(val) { return send("throw", val) },
             return(val) { return send("return", val) },
             [Symbol.asyncIterator]() { return this },
-
-            observe(sink) {
-
-                if (observer)
-                    throw new Error("Already observing");
-
-                if (typeof sink === "function")
-                    sink = { next: sink };
-
-                observer = sink;
-
-                if (!front)
-                    resume("next", void 0);
-
-                // TODO:  Should this be "unobserve" instead?
-                return _=> {
-
-                    if ("return" in observer)
-                        observer.return();
-
-                    observer = null;
-
-                    // TODO:  Observables want cancellation to close the source,
-                    // but other use cases will want to simply leave the source
-                    // paused.
-
-                    // send("return", void 0);
-                };
-            }
         };
 
         function send(type, value) {
 
             return new Promise((resolve, reject) => {
-
-                if (observer)
-                    throw new Error("Cannot iterate while observing");
 
                 let x = { type, value, resolve, reject, next: null };
 
@@ -308,72 +274,6 @@ Global._esdown = {
                     resume(type, value);
                 }
             });
-        }
-
-        function deliver(type, value) {
-
-            if (front) {
-
-                if (type === "throw") front.reject(value);
-                else front.resolve({ value, done: type === "return" });
-
-                front = front.next;
-
-                if (front) {
-
-                    resume(front.type, front.value);
-
-                } else {
-
-                    back = null;
-
-                    if (observer)
-                        resume("next", void 0);
-                }
-
-            } else if (observer) {
-
-                switch (type) {
-
-                    case "next":
-
-                        try {
-
-                            let result = observer.next(value);
-
-                            type = result && result.done ? "return" : "next";
-                            value = result && result.value;
-
-                        } catch (x) {
-
-                            type = "throw";
-                            value = x;
-                        }
-
-                        resume(type, value);
-                        break;
-
-                    case "throw":
-
-                        if (!("throw" in observer))
-                            throw value;
-
-                        observer.throw(value);
-                        break;
-
-                    case "return":
-
-                        if ("return" in observer)
-                            observer.return(value);
-
-                        break;
-                }
-
-            } else {
-
-                if (type === "throw")
-                    throw value;
-            }
         }
 
         function resume(type, value) {
@@ -392,7 +292,6 @@ Global._esdown = {
                 let result = iter[type](value);
 
                 value = result.value;
-                type = result.done ? "return" : "next";
 
                 if (typeof value === "object" && "_esdown_await" in value) {
 
@@ -406,22 +305,25 @@ Global._esdown = {
                     return;
                 }
 
+                front.resolve(result);
+
             } catch (x) {
 
                 if (x && x.__return === true) {
 
                     // HACK: Return-as-throw
-                    type = "return";
-                    value = x.value;
+                    front.resolve({ value: x.value, done: true });
 
                 } else {
 
-                    type = "throw";
-                    value = x;
+                    front.reject(x);
                 }
             }
 
-            deliver(type, value);
+            front = front.next;
+
+            if (front) resume(front.type, front.value);
+            else back = null;
         }
     },
 
