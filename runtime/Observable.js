@@ -147,6 +147,47 @@ class Observable {
         };
     }
 
+    async *[Symbol.asyncIterator]() {
+
+        let ready = [], pending = [];
+
+        function send(x) {
+
+            if (pending.length > 0) pending.shift()(x);
+            else ready.push(x);
+        }
+
+        function next() {
+
+            return ready.length > 0 ?
+                ready.shift() :
+                new Promise(resolve => pending.push(resolve));
+        }
+
+        let cancel = this.observe({
+
+            next(value) { send({ type: "next", value }) },
+            throw(value) { send({ type: "throw", value }) },
+            return(value) { send({ type: "return", value }) },
+        });
+
+        try {
+
+            while (true) {
+
+                let result = await next();
+
+                if (result.type == "return") return result.value;
+                else if (result.type === "throw") throw result.value;
+                else yield result.value;
+            }
+
+        } finally {
+
+            cancel();
+        }
+    }
+
     forEach(fn) {
 
         return new Promise((resolve, reject) => {
@@ -179,57 +220,6 @@ class Observable {
             return: sink.return,
 
         }));
-    }
-
-    [Symbol.asyncIterator]() {
-
-        let pending = [], ready = [];
-
-        function current() {
-
-            if (pending.length > 0)
-                return pending.shift();
-
-            let d;
-            ready.push(new Promise((resolve, reject) => d = { resolve, reject }));
-            return d;
-        }
-
-        let cancel = this.observe({
-
-            next(value) { current().resolve({ value, done: false }) },
-            throw(value) { current().reject(value) },
-            return(value) { current().resolve({ value, done: true }) },
-        });
-
-        return {
-
-            next() {
-
-                if (ready.length > 0)
-                    return ready.shift();
-
-                return new Promise((resolve, reject) => pending.push({ resolve, reject }));
-            },
-
-            throw(value) {
-
-                return new Promise((resolve, reject) => {
-
-                    cancel();
-                    reject(value);
-                });
-            },
-
-            return() {
-
-                return new Promise(resolve => {
-
-                    cancel();
-                    resolve({ value: void 0, done: true });
-                });
-            },
-        };
     }
 
 }

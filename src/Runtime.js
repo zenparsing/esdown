@@ -253,19 +253,48 @@ Global._esdown = {
     asyncGen(iter) {
 
         let front = null,
-            back = null;
+            back = null,
+            observer = null;
 
         return {
 
             next(val) { return send("next", val) },
             throw(val) { return send("throw", val) },
             return(val) { return send("return", val) },
-            [Symbol.asyncIterator]() { return this }
+            [Symbol.asyncIterator]() { return this },
+
+            observe(sink) {
+
+                if (observer)
+                    throw new Error("Already observing");
+
+                if (typeof sink === "function")
+                    sink = { next: sink };
+
+                observer = sink;
+
+                if (!front)
+                    resume("next", void 0);
+
+                return _=> {
+
+                    if ("return" in observer)
+                        observer.return();
+
+                    observer = null;
+
+                    // TODO:  Unsure of this
+                    // send("return", void 0);
+                };
+            }
         };
 
         function send(type, value) {
 
             return new Promise((resolve, reject) => {
+
+                if (observer)
+                    throw new Error("Cannot iterate while observing");
 
                 let x = { type, value, resolve, reject, next: null };
 
@@ -279,6 +308,72 @@ Global._esdown = {
                     resume(type, value);
                 }
             });
+        }
+
+        function deliver(type, value) {
+
+            if (front) {
+
+                if (type === "throw") front.reject(value);
+                else front.resolve({ value, done: type === "return" });
+
+                front = front.next;
+
+                if (front) {
+
+                    resume(front.type, front.value);
+
+                } else {
+
+                    back = null;
+
+                    if (observer)
+                        resume("next", void 0);
+                }
+
+            } else if (observer) {
+
+                switch (type) {
+
+                    case "next":
+
+                        try {
+
+                            let result = observer.next(value);
+
+                            type = result && result.done ? "return" : "next";
+                            value = result && result.value;
+
+                        } catch (x) {
+
+                            type = "throw";
+                            value = x;
+                        }
+
+                        resume(type, value);
+                        break;
+
+                    case "throw":
+
+                        if (!("throw" in observer))
+                            throw value;
+
+                        observer.throw(value);
+                        break;
+
+                    case "return":
+
+                        if ("return" in observer)
+                            observer.return(value);
+
+                        break;
+                }
+
+            } else {
+
+                if (type === "throw")
+                    throw value;
+            }
         }
 
         function resume(type, value) {
@@ -297,6 +392,7 @@ Global._esdown = {
                 let result = iter[type](value);
 
                 value = result.value;
+                type = result.done ? "return" : "next";
 
                 if (typeof value === "object" && "_esdown_await" in value) {
 
@@ -310,25 +406,22 @@ Global._esdown = {
                     return;
                 }
 
-                front.resolve(result);
-
             } catch (x) {
 
                 if (x && x.__return === true) {
 
                     // HACK: Return-as-throw
-                    front.resolve({ value: x.value, done: true });
+                    type = "return";
+                    value = x.value;
 
                 } else {
 
-                    front.reject(x);
+                    type = "throw";
+                    value = x;
                 }
             }
 
-            front = front.next;
-
-            if (front) resume(front.type, front.value);
-            else back = null;
+            deliver(type, value);
         }
     },
 
@@ -1821,55 +1914,46 @@ Runtime.Observable =
         }));
     }
 
-    [Symbol.asyncIterator]() {
+    async *[Symbol.asyncIterator]() {
 
-        let pending = [], ready = [];
+        let ready = [], pending = [];
 
-        function current() {
+        function send(x) {
 
-            if (pending.length > 0)
-                return pending.shift();
+            if (pending.length > 0) pending.shift()(x);
+            else ready.push(x);
+        }
 
-            let d;
-            ready.push(new Promise((resolve, reject) => d = { resolve, reject }));
-            return d;
+        function next() {
+
+            if (ready.length > 0)
+                return ready.shift();
+
+            return new Promise(resolve => pending.push(resolve));
         }
 
         let cancel = this.observe({
 
-            next(value) { current().resolve({ value, done: false }) },
-            throw(value) { current().reject(value) },
-            return(value) { current().resolve({ value, done: true }) },
+            next(value) { send({ type: "next", value }) },
+            throw(value) { send({ type: "throw", value }) },
+            return(value) { send({ type: "return", value }) },
         });
 
-        return {
+        try {
 
-            next() {
+            while (true) {
 
-                if (ready.length > 0)
-                    return ready.shift();
+                let result = await next();
 
-                return new Promise((resolve, reject) => pending.push({ resolve, reject }));
-            },
+                if (result.type == "return") return result.value;
+                else if (result.type === "throw") throw result.value;
+                else yield result.value;
+            }
 
-            throw(value) {
+        } finally {
 
-                return new Promise((resolve, reject) => {
-
-                    cancel();
-                    reject(value);
-                });
-            },
-
-            return() {
-
-                return new Promise(resolve => {
-
-                    cancel();
-                    resolve({ value: void 0, done: true });
-                });
-            },
-        };
+            cancel();
+        }
     }
 
 }
