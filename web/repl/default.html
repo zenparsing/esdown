@@ -268,6 +268,7 @@ window.onload = function() { "use strict";
         translateModule: function(code) { return new Literal(esdown.translate(code, { module: true })) },
         parse: function(code) { return esdown.parse(code).ast },
         parseModule: function(code) { return esdown.parse(code, { module: true }).ast },
+        link: function() { return new Literal(generateLink()) }
     };
 
     var history = {
@@ -353,6 +354,11 @@ window.onload = function() { "use strict";
     function elem(s) {
 
         return document.querySelector(s);
+    }
+
+    function elems(s) {
+
+        return document.querySelectorAll(s);
     }
 
     function stylize(str, styleType) {
@@ -654,6 +660,36 @@ window.onload = function() { "use strict";
         return e;
     }
 
+    function loadFromHash() {
+
+        var m = /____(.+)/.exec(window.location.hash);
+
+        if (m) {
+
+            input.value = decodeURIComponent(m[1]);
+            resizeInput();
+        }
+    }
+
+    function generateLink() {
+
+        var out = [].map.call(elems("div.echo"), function(e) {
+
+            return e.innerText.trim();
+
+        }).filter(function(text) {
+
+            return text.charAt(0) !== ".";
+
+        }).join("\n");
+
+        out = "____" + encodeURIComponent(out);
+
+        window.location.hash = out;
+
+        return window.location.toString().replace(/#[\s\S]*/, "") + "#" + out;
+    }
+
     var terminal = elem("#terminal"),
         input = elem("#terminal-input"),
         hidden = createHidden(),
@@ -669,6 +705,20 @@ window.onload = function() { "use strict";
 
     window.contentElement = elem("#content");
     window.print = function(str) { addLine(str + "") };
+
+    if (window.console) {
+
+        var consoleLog = window.console.log;
+
+        window.console.log = function(arg) {
+
+            window.print(arg);
+            consoleLog.apply(this, arguments);
+        };
+    }
+
+    loadFromHash();
+
 };
 
 </script>
