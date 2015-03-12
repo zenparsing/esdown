@@ -884,6 +884,11 @@ export class Replacer {
         }
     }
 
+    TaggedTemplateExpression(node) {
+
+        return "(" + this.stringify(node) + ")";
+    }
+
     TemplateExpression(node) {
 
         let lit = node.literals,
