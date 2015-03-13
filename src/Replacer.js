@@ -81,7 +81,7 @@ function collapseScopes(parseResult) {
 
     function fail(msg, node) {
 
-        throw parseResult.createSyntaxError(msg, node);
+        throw parseResult.createSyntaxError("[esdown] " + msg, node);
     }
 
     function visit(scope, forScope) {
@@ -1552,7 +1552,7 @@ export class Replacer {
 
     fail(msg, node) {
 
-        throw this.parseResult.createSyntaxError(msg, node);
+        throw this.parseResult.createSyntaxError("[esdown] " + msg, node);
     }
 
 }
