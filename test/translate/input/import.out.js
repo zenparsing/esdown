@@ -12,3 +12,5 @@ var A = _M2.A;
 
 var x = _M2['default'];
 
+var y = _M2['default']; var all = _M2;
+var y = _M2['default']; var z = _M2.z;

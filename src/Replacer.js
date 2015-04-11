@@ -439,7 +439,16 @@ export class Replacer {
     ImportDeclaration(node) {
 
         let moduleSpec = this.modulePath(node.from),
-            imports = node.imports;
+            imports = node.imports,
+            out = this.importVars(imports, moduleSpec);
+
+        if (imports && imports.type === "DefaultImport" && imports.imports)
+            out += " " + this.importVars(imports.imports, moduleSpec);
+
+        return out;
+    }
+
+    importVars(imports, moduleSpec) {
 
         if (!imports)
             return "";
@@ -478,72 +487,87 @@ export class Replacer {
 
     ExportDeclaration(node) {
 
-        let target = node.exports,
+        let target = node.declaration,
             exports = this.exports,
             ident;
 
-        // Exported declarations
-        switch (target.type) {
+        if (target.type === "VariableDeclaration") {
 
-            case "VariableDeclaration":
+            target.declarations.forEach(decl => {
 
-                target.declarations.forEach(decl => {
+                if (this.isPattern(decl.pattern)) {
 
-                    if (this.isPattern(decl.pattern)) {
+                    decl.pattern.patternTargets.forEach(x => exports[x] = x);
 
-                        decl.pattern.patternTargets.forEach(x => exports[x] = x);
+                } else {
 
-                    } else {
-
-                        ident = decl.pattern.text;
-                        exports[ident] = ident;
-                    }
-                });
-
-                return target.text;
-
-            case "FunctionDeclaration":
-            case "ClassDeclaration":
-
-                ident = target.identifier.text;
-                exports[ident] = ident;
-                return target.text;
-
-            case "DefaultExport":
-
-                switch (target.binding.type) {
-
-                    case "ClassDeclaration":
-                    case "FunctionDeclaration":
-                        exports["default"] = target.binding.identifier.text;
-                        return target.binding.text;
+                    ident = decl.pattern.text;
+                    exports[ident] = ident;
                 }
-
-                return `exports["default"] = ${ target.binding.text };`;
-        }
-
-        let from = target.from,
-            fromPath = from ? this.modulePath(from) : "",
-            out = "";
-
-        if (!target.specifiers) {
-
-            out += "Object.keys(" + fromPath + ").forEach(function(k) { exports[k] = " + fromPath + "[k]; });";
+            });
 
         } else {
 
-            target.specifiers.forEach(spec => {
-
-                let local = spec.local.text,
-                    exported = spec.exported ? spec.exported.text : local;
-
-                exports[exported] = from ?
-                    fromPath + "." + local :
-                    local;
-            });
+            ident = target.identifier.text;
+            exports[ident] = ident;
         }
 
-        return out;
+        return target.text;
+    }
+
+    ExportNameList(node) {
+
+        let from = node.from,
+            fromPath = from ? this.modulePath(from) : "";
+
+        node.specifiers.forEach(spec => {
+
+            let local = spec.local.text,
+                exported = spec.exported ? spec.exported.text : local;
+
+            this.exports[exported] = from ?
+                fromPath + "." + local :
+                local;
+        });
+
+        return "";
+    }
+
+    ExportDefaultFrom(node) {
+
+        let from = node.from,
+            fromPath = from ? this.modulePath(from) : "";
+
+        this.exports[node.identifier.text] = fromPath + "['default']";
+
+        return "";
+    }
+
+    ExportNamespace(node) {
+
+        let from = node.from,
+            fromPath = from ? this.modulePath(from) : "";
+
+        if (from && node.identifier) {
+
+            this.exports[node.identifier.text] = fromPath;
+            return "";
+        }
+
+        return "Object.keys(" + fromPath + ").forEach(function(k) { exports[k] = " + fromPath + "[k]; });";
+    }
+
+    ExportDefault(node) {
+
+        switch (node.binding.type) {
+
+            case "ClassDeclaration":
+            case "FunctionDeclaration":
+                this.exports["default"] = node.binding.identifier.text;
+                return node.binding.text;
+        }
+
+        return `exports["default"] = ${ node.binding.text };`;
     }
 
     CallExpression(node) {
@@ -786,9 +810,6 @@ export class Replacer {
     }
 
     AtName(node) {
-
-        if (node.parent === "PrivateDeclaration")
-            return;
 
         let name = "_$" + node.value.slice(1),
             parent = node.parent;

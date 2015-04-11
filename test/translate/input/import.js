@@ -12,3 +12,5 @@ import { A }
 import {} from "A.js";
 import x from "A.js";
 import "C.js";
+import y, * as all from "A.js";
+import y, { z } from "A.js";
