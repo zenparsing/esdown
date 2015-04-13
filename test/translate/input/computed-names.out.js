@@ -1,15 +1,15 @@
 (_esdown.computed({
-    __$0: function() {}
-}, "x"));
+    }, "x", { _: function() {} 
+}));
 
 (_esdown.computed({
-    __$0: 1,
-    __$1: 2
-}, "x", "y"));
+    }, "x", { _: 1 ,
+    }, "y", { }, { _: 2 
+}));
 
 var C = _esdown.class(function(__) {
 
-    __(_esdown.computed({ __$0: function() {} }, "x"));
+    __(_esdown.computed({}, "x", { _: function() {} }));
     
-    __.static(_esdown.computed({ __$0: function() {} }, "x"));; __({ constructor: function C() {} });
+    __.static(_esdown.computed({}, "x", { _: function() {} }));; __({ constructor: function C() {} });
  });

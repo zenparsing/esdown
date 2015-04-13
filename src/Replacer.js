@@ -361,13 +361,40 @@ export class Replacer {
 
     ComputedPropertyName(node) {
 
-        return this.addComputedName(node);
+        search:
+        for (let p = node.parent; p; p = p.parent) {
+
+            switch (p.type) {
+
+                case "ClassBody":
+                case "ObjectLiteral":
+                    p.hasComputed = true;
+                    break search;
+            }
+        }
+
+        return "_";
     }
 
     ObjectLiteral(node) {
 
-        if (node.computedNames)
-            return this.wrapComputed(node);
+        if (node.hasComputed) {
+
+            let computed = false;
+
+            node.properties.forEach((c, index) => {
+
+                if (computed)
+                    c.text = "}, { " + c.text;
+
+                computed = c.name.type === "ComputedPropertyName";
+
+                if (computed)
+                    c.text = `}, ${ c.name.expression.text }, { ${ c.text } `;
+            });
+
+            return "_esdown.computed(" + this.stringify(node) + ")";
+        }
     }
 
     ArrayLiteral(node) {
@@ -857,8 +884,8 @@ export class Replacer {
 
             text = "{ " + text + " }";
 
-            if (e.computedNames)
-                text = this.wrapComputed(e, text);
+            if (e.name.type === "ComputedPropertyName")
+                text = "_esdown.computed({}, " + e.name.expression.text + ", " + text + ")";
 
             if (e.static)
                 fn += ".static";
@@ -1392,32 +1419,6 @@ export class Replacer {
             `++${ temp }) ${ name }.push(arguments[${ temp }]);`;
 
         return "var " + name + " = " + slice + ";";
-    }
-
-    addComputedName(node) {
-
-        for (let p = node.parent; p; p = p.parent) {
-
-            if (p.type === "ObjectLiteral" ||
-                p.type === "MethodDefinition" && p.parent.type === "ClassBody") {
-
-                if (!p.computedNames)
-                    p.computedNames = [];
-
-                let id = "__$" + p.computedNames.length;
-                p.computedNames.push(node.expression.text);
-
-                return id;
-            }
-        }
-
-        return null;
-    }
-
-    wrapComputed(node, text) {
-
-        if (node.computedNames)
-            return "_esdown.computed(" + (text || this.stringify(node)) + ", " + node.computedNames.join(", ") + ")";
     }
 
     functionInsert(node) {

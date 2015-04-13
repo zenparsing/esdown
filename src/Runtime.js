@@ -51,40 +51,29 @@ function forEachDesc(obj, fn) {
     return obj;
 }
 
-// Performs copy-based inheritance
-function inherit(to, from) {
+// Installs a property into an object, merging "get" and "set" functions
+function mergeProperty(target, name, desc, enumerable) {
 
-    for (; from; from = Object.getPrototypeOf(from)) {
+    if (desc.get || desc.set) {
 
-        forEachDesc(from, (name, desc) => {
+        let prev = Object.getOwnPropertyDescriptor(target, name);
 
-            if (!has(to, name))
-                Object.defineProperty(to, name, desc);
-        });
+        if (prev) {
+
+            desc.get = desc.get || prev.get;
+            desc.set = desc.set || prev.set;
+        }
     }
 
-    return to;
+    desc.enumerable = enumerable;
+    Object.defineProperty(target, name, desc);
 }
 
-// Installs methods into an object, merging "get" and "set" functions
-function mergeMethods(from, to) {
+// Installs properties on an object, merging "get" and "set" functions
+function mergeProperties(target, source, enumerable) {
 
-    forEachDesc(from, (name, desc) => {
-
-        if (desc.get || desc.set) {
-
-            let prev = Object.getOwnPropertyDescriptor(to, name);
-
-            if (prev) {
-
-                desc.get = desc.get || prev.get;
-                desc.set = desc.set || prev.set;
-            }
-        }
-
-        desc.enumerable = false;
-        Object.defineProperty(to, name, desc);
-    });
+    forEachDesc(source, (name, desc) =>
+        mergeProperty(target, name, desc, enumerable));
 }
 
 // Builds a class
@@ -120,8 +109,8 @@ function buildClass(base, def) {
     // Create the prototype object
     let proto = Object.create(parent),
         statics = {},
-        addMethods = obj => mergeMethods(obj, proto),
-        addStatics = obj => mergeMethods(obj, statics);
+        addMethods = obj => mergeProperties(proto, obj, false),
+        addStatics = obj => mergeProperties(statics, obj, false);
 
     Object.assign(addMethods, {
         static: addStatics,
@@ -135,13 +124,6 @@ function buildClass(base, def) {
     if (!hasOwn.call(proto, "constructor"))
         throw new Error("No constructor specified");
 
-    // Make constructor non-enumerable
-    Object.defineProperty(proto, "constructor", {
-        enumerable: false,
-        writable: true,
-        configurable: true
-    });
-
     let ctor = proto.constructor;
 
     // Set constructor's prototype
@@ -150,8 +132,9 @@ function buildClass(base, def) {
     // Set class "static" methods
     forEachDesc(statics, (name, desc) => Object.defineProperty(ctor, name, desc));
 
-    // "Inherit" from base constructor
-    if (base) inherit(ctor, base);
+    // Inherit from base constructor
+    if (base)
+        Object.setPrototypeOf(ctor, base);
 
     return ctor;
 }
@@ -194,23 +177,18 @@ Global._esdown = {
     },
 
     // Support for computed property names
-    computed(obj) {
+    computed(target) {
 
-        let name, desc;
+        for (let i = 1; i < arguments.length; i += 3) {
 
-        for (let i = 1; i < arguments.length; ++i) {
+            let desc = Object.getOwnPropertyDescriptor(arguments[i + 1], "_");
+            mergeProperty(target, arguments[i], desc, true);
 
-            name = "__$" + (i - 1);
-            desc = Object.getOwnPropertyDescriptor(obj, name);
-
-            if (!desc)
-                continue;
-
-            Object.defineProperty(obj, arguments[i], desc);
-            delete obj[name];
+            if (i + 2 < arguments.length)
+                mergeProperties(target, arguments[i + 2], true);
         }
 
-        return obj;
+        return target;
     },
 
     // Support for tagged templates
