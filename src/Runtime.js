@@ -1637,7 +1637,104 @@ InstallFunctions($Promise.prototype, DONT_ENUM, [
 
 Runtime.Observable = 
 
-`class Observable {
+`/*
+
+    Observer sinks are wrapped for the following reasons:
+
+    - Ensures that the sink is not called after the stream is closed.
+    - Ensures that the returned object has all three sink methods ("next", "throw", and "return").
+    - Ensures that values are properly handled when the sink does not have "throw" or "return".
+    - Ensures that returned methods can be called without a provided "this" value.
+    - Ensures that cleanup is triggered when the stream is closed.
+
+*/
+function wrapSink(sink, cleanup) {
+
+    let done = false;
+
+    // Marks the stream as closed and triggers stream cleanup.  Exceptions
+    // which occur during cleanup are propagated to the caller.
+    function close() {
+
+        if (!done) {
+
+            done = true;
+            cleanup();
+        }
+    }
+
+    // Returns a "done" result
+    function doneResult() {
+
+        return { value: void 0, done: true };
+    }
+
+    // Sends a completion value to the sink
+    function send(op, value) {
+
+        // If the stream if closed, then return a "done" result
+        if (done)
+            return doneResult();
+
+        let result;
+
+        try {
+
+            switch (op) {
+
+                case "next":
+
+                    // Send the next value to the sink
+                    result = sink.next(value);
+                    break;
+
+                case "throw":
+
+                    // If the sink does not support "throw", then throw value back to caller
+                    if (!("throw" in sink))
+                        throw value;
+
+                    result = sink.throw(value);
+                    break;
+
+                case "return":
+
+                    // If the sink does not support "return", then close and return a done result
+                    if (!("return" in sink))
+                        return close(), doneResult();
+
+                    result = sink.return(value);
+
+                    // If the sink does not return a result, then assume that it is finished
+                    if (!result)
+                        result = doneResult();
+
+                    break;
+
+            }
+
+        } catch (e) {
+
+            // If the sink throws, then close the stream and throw error to caller
+            close();
+            throw e;
+        }
+
+        // If the sink is finished receiving data, then close the stream
+        if (result && result.done)
+            close();
+
+        return result;
+    }
+
+    return {
+        next(value) { return send("next", value) },
+        throw(value) { return send("throw", value) },
+        return(value) { return send("return", value) },
+    };
+}
+
+class Observable {
 
     constructor(start) {
 
@@ -1662,7 +1759,7 @@ Runtime.Observable =
             cleanup;
 
         // Wrap the provided sink
-        sink = _wrapSink(sink, _=> {
+        sink = wrapSink(sink, _=> {
 
             finished = true;
 
@@ -1687,103 +1784,6 @@ Runtime.Observable =
 
         // Return a cancelation function
         return sink.return;
-    }
-
-    /*
-
-        Observer sinks are wrapped for the following reasons:
-
-        - Ensures that the sink is not called after the stream is closed.
-        - Ensures that the returned object has all three sink methods ("next", "throw", and "return").
-        - Ensures that values are properly handled when the sink does not have "throw" or "return".
-        - Ensures that returned methods can be called without a provided "this" value.
-        - Ensures that cleanup is triggered when the stream is closed.
-
-    */
-    function _wrapSink(sink, cleanup) {
-
-        let done = false;
-
-        // Marks the stream as closed and triggers stream cleanup.  Exceptions
-        // which occur during cleanup are propagated to the caller.
-        function close() {
-
-            if (!done) {
-
-                done = true;
-                cleanup();
-            }
-        }
-
-        // Returns a "done" result
-        function doneResult() {
-
-            return { value: void 0, done: true };
-        }
-
-        // Sends a completion value to the sink
-        function send(op, value) {
-
-            // If the stream if closed, then return a "done" result
-            if (done)
-                return doneResult();
-
-            let result;
-
-            try {
-
-                switch (op) {
-
-                    case "next":
-
-                        // Send the next value to the sink
-                        result = sink.next(value);
-                        break;
-
-                    case "throw":
-
-                        // If the sink does not support "throw", then throw value back to caller
-                        if (!("throw" in sink))
-                            throw value;
-
-                        result = sink.throw(value);
-                        break;
-
-                    case "return":
-
-                        // If the sink does not support "return", then close and return a done result
-                        if (!("return" in sink))
-                            return close(), doneResult();
-
-                        result = sink.return(value);
-
-                        // If the sink does not return a result, then assume that it is finished
-                        if (!result)
-                            result = doneResult();
-
-                        break;
-
-                }
-
-            } catch (e) {
-
-                // If the sink throws, then close the stream and throw error to caller
-                close();
-                throw e;
-            }
-
-            // If the sink is finished receiving data, then close the stream
-            if (result && result.done)
-                close();
-
-            return result;
-        }
-
-        return {
-            next(value) { return send("next", value) },
-            throw(value) { return send("throw", value) },
-            return(value) { return send("return", value) },
-        };
     }
 
     async *[Symbol.asyncIterator]() {
