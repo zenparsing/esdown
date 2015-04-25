@@ -57,7 +57,9 @@ export function main() {
 
             "bundle": { short: "b", flag: true },
 
-            "runtime": { short: "r", flag: true }
+            "runtime": { short: "r", flag: true },
+
+            "nowrap": { flag: true },
         },
 
         execute(params) {
@@ -84,7 +86,7 @@ export function main() {
 
                         global: params.global,
                         runtime: params.runtime,
-                        wrap: true,
+                        wrap: !params.nowrap,
                         module: true
                     });
                 });

@@ -403,17 +403,6 @@ export class Replacer {
             return "(" + this.spreadList(node.elements, true) + ")";
     }
 
-    MethodDefinitionBegin(node) {
-
-        if (node.parent.type === "ClassBody" && node.kind === "constructor") {
-
-            let hasPrivate = node.parent.elements.some(elem => elem.type === "PrivateDeclaration");
-
-            if (hasPrivate)
-                node.initPrivate = true;
-        }
-    }
-
     MethodDefinition(node) {
 
         let text;
@@ -823,34 +812,73 @@ export class Replacer {
 
     PrivateDeclaration(node) {
 
-        let parent = node.parent,
-            privateList = parent.privateList,
-            init = node.initializer ? node.initializer.text : "void 0",
-            ident = node.name.text;
+        let init = node.initializer;
 
-        if (!privateList)
-            privateList = parent.privateList = [];
+        if (node.static)
+            return "__private_ctor." + node.name.text + " = " + (init ? init.text : "void 0") + ";";
 
-        privateList.push({ ident, init });
+        if (init) {
 
-        return "var " + ident + " = new WeakMap;";
+            node.parent.privateNames[node.name.text].init = true;
+            return "function __init_" + node.name.text + "() { return " + init.text + "; }";
+        }
+
+        return "";
     }
 
     AtName(node) {
 
-        let name = "_$" + node.value.slice(1),
+        let name = node.value.slice(1),
             parent = node.parent;
 
-        if (parent.type === "PrivateDeclaration" ||
-            parent.type === "MemberExpression" &&
-            parent.property === node) {
+        switch (parent.type) {
 
-            return name;
+            case "MemberExpression":
+                if (parent.property === node)
+                    return name;
+
+                break;
+
+            case "PrivateDeclaration":
+            case "MethodDefinition":
+            case "PropertyDefinition":
+                return name;
         }
 
+        // Primary expression @name
         let thisRef = this.renameLexicalVar(node, "this");
-
         return this.privateReference(node, thisRef, name);
+    }
+
+    ClassBodyBegin(node) {
+
+        let ctor = null;
+
+        node.elements.forEach(e => {
+
+            switch (e.type) {
+
+                case "MethodDefinition":
+
+                    if (e.name.type === "AtName")
+                        this.addPrivateName(node, e.name.value.slice(1), true, e.static);
+
+                    if (e.kind === "constructor")
+                        ctor = e;
+
+                    break;
+
+                case "PrivateDeclaration":
+
+                    if (e.name.type === "AtName")
+                        this.addPrivateName(node, e.name.value.slice(1), false, e.static);
+
+                    break;
+            }
+        });
+
+        if (ctor && node.privateNames)
+            ctor.initPrivate = true;
     }
 
     ClassBody(node) {
@@ -859,7 +887,9 @@ export class Replacer {
             hasBase = !!node.parent.base,
             elems = node.elements,
             hasCtor = false,
-            insert = [];
+            ctorName = classIdent ? classIdent.value : "__ctor",
+            header = [],
+            footer = [];
 
         elems.forEach(e => {
 
@@ -867,7 +897,13 @@ export class Replacer {
                 return;
 
             let text = e.text,
-                fn = "__";
+                fn = "__",
+                target = "";
+
+            if (e.name.type === "AtName")
+                target = e.static ? "__private_ctor" : "__private_proto";
+            else if (e.static)
+                fn += ".static";
 
             if (e.static)
                 text = text.replace(/^static\s*/, "");
@@ -876,10 +912,9 @@ export class Replacer {
 
                 hasCtor = true;
 
-                // Give the constructor function a name so that the
-                // class function's name property will be correct.
-                if (classIdent)
-                    text = text.replace(/:\s*function/, ": function " + classIdent.value);
+                // Give the constructor function a name so that the class function's
+                // name property will be correct and capture the constructor.
+                text = text.replace(/:\s*function/, ": " + ctorName + " = function");
             }
 
             text = "{ " + text + " }";
@@ -887,11 +922,16 @@ export class Replacer {
             if (e.name.type === "ComputedPropertyName")
                 text = "_esdown.computed({}, " + e.name.expression.text + ", " + text + ")";
 
-            if (e.static)
-                fn += ".static";
-
-            e.text = fn + "(" + text + ");";
+            e.text = fn + "(" + text + (target ? ", " + target : "") + ");";
         });
+
+        header.push("var " + ctorName + ";");
+
+        if (node.privateNames) {
+
+            header.push(this.privateInit(node));
+            footer.push("__private_static" + node.privateID + ".set(" + ctorName + ", __private_ctor);");
+        }
 
         // Add a default constructor if none was provided
         if (!hasCtor) {
@@ -901,7 +941,7 @@ export class Replacer {
             if (hasBase)
                 ctorBody = "__.csuper.apply(this, arguments);";
 
-            if (node.privateList) {
+            if (node.privateNames) {
 
                 if (ctorBody) ctorBody = " " + ctorBody;
                 ctorBody += "__initPrivate(this);";
@@ -910,26 +950,20 @@ export class Replacer {
             if (ctorBody)
                 ctorBody = " " + ctorBody + " ";
 
-            let ctor = "function";
+            let ctor = ctorName + " = function() {" + ctorBody + "}";
 
-            if (classIdent)
-                ctor += " " + classIdent.value;
-
-            ctor += "() {" + ctorBody + "}";
-
-            insert.push("__({ constructor: " + ctor + " });");
+            header.push("__({ constructor: " + ctor + " });");
         }
 
-        if (node.privateList)
-            insert.push(this.privateInit(node.privateList));
+        let text = this.stringify(node);
 
-        if (insert.length > 0) {
+        if (header.length > 0)
+            text = "{ " + header.join(" ") + text.slice(1);
 
-            if (elems.length === 0)
-                return "{ " + insert.join(" ") + " }";
+        if (footer.length > 0)
+            text = text.slice(1, -1) + " " + footer.join(" ") + " }";
 
-            elems[elems.length - 1].text += "; " + insert.join(" ");
-        }
+        return text;
     }
 
     TaggedTemplateExpression(node) {
@@ -1236,10 +1270,43 @@ export class Replacer {
             `${ body }.apply(this, arguments)); }`;
     }
 
+    findPrivateName(node, name) {
+
+        for (let n = node; n; n = n.parent) {
+
+            let names = n.privateNames;
+
+            if (names && names[name])
+                return names[name];
+        }
+
+        this.fail("Unable to find private name @" + name, node);
+    }
+
+    addPrivateName(scope, ident, isMethod, isStatic) {
+
+        let privateID = scope.privateID;
+
+        if (privateID === void 0) {
+
+            privateID = scope.privateID = this.uid++;
+            scope.privateNames = Object.create(null);
+        }
+
+        scope.privateNames[ident] = {
+            ident,
+            init: null,
+            method: isMethod,
+            static: isStatic,
+            map: "__private" + (isStatic ? "_static" : "") + privateID
+        };
+    }
+
     privateReference(node, obj, prop) {
 
         let pp = this.parenParent(node),
             p = pp[0],
+            mapName = this.findPrivateName(p, prop).map,
             type = "get";
 
         switch (p.type) {
@@ -1271,21 +1338,49 @@ export class Replacer {
             case "call":
                 temp = this.addTempVar(p);
                 p.injectThisArg = temp;
-                return `_esdown.getPrivate(${ temp } = ${ obj }, ${ prop })`;
+                return `_esdown.getPrivate(${ temp } = ${ obj }, ${ mapName }, "${ prop }")`;
 
             case "get":
-                return `_esdown.getPrivate(${ obj }, ${ prop })`;
+                return `_esdown.getPrivate(${ obj }, ${ mapName }, "${ prop }")`;
 
             case "set":
                 temp = this.addTempVar(p);
 
                 p.assignWrap = [
-                    `(_esdown.setPrivate(${ obj }, ${ prop }, ${ temp } = `,
+                    `(_esdown.setPrivate(${ obj }, ${ mapName }, "${ prop }", ${ temp } = `,
                     `), ${ temp })`
                 ];
 
                 return null;
         }
+    }
+
+    privateInit(scope) {
+
+        let id = scope.privateID;
+
+        let instance = Object
+            .keys(scope.privateNames)
+            .filter(name => {
+                let entry = scope.privateNames[name];
+                return !entry.method && !entry.static;
+            });
+
+        return "var __private" + id + " = new WeakMap, " +
+            "__private_static" + id + " = new WeakMap, " +
+            "__private_ctor = {}, " +
+            "__private_proto = {}; " +
+        "function __initPrivate(__$) { " +
+            "if (__private" + id + ".has(__$)) " +
+                "throw new TypeError('Object already initialized'); " +
+            "var __p; " +
+            "__private" + id + ".set(__$, __p = Object.create(__private_proto, { " +
+                instance.map(name => name + ": { writable: true }").join(", ") +
+            " })); " +
+            instance
+                .filter(name => scope.privateNames[name].init)
+                .map(name => "__p." + name + " = __init_" + name + "(); ").join("") +
+        "}";
     }
 
     rawToString(raw) {
@@ -1458,16 +1553,6 @@ export class Replacer {
             inserted.unshift(temps);
 
         return inserted.join(" ");
-    }
-
-    privateInit(fields) {
-
-        let list = fields.map(field => field.ident + ".set(__$, " + field.init + ");");
-
-        let check = "if (" + fields[0].ident + ".has(__$)) " +
-            "throw new Error('Object already initialized');";
-
-        return "function __initPrivate(__$) { " + check + " " + list.join(" ") + " }";
     }
 
     addTempVar(node, value, noDeclare) {

@@ -1,16 +1,11 @@
 const VERSION = "0.9.7";
 
-function globalObject() {
+let Global = (function() {
 
     try { return global.global } catch (x) {}
     try { return window.window } catch (x) {}
     return null;
-}
-
-let arraySlice = Array.prototype.slice,
-    hasOwn = Object.prototype.hasOwnProperty,
-    staticName = /^__static_/,
-    Global = globalObject();
+})();
 
 function toObject(val) {
 
@@ -18,17 +13,6 @@ function toObject(val) {
         throw new TypeError(val + " is not an object");
 
     return Object(val);
-}
-
-// Returns true if the object has the specified property in
-// its prototype chain
-function has(obj, name) {
-
-    for (; obj; obj = Object.getPrototypeOf(obj))
-        if (hasOwn.call(obj, name))
-            return true;
-
-    return false;
 }
 
 // Iterates over the descriptors for each own property of an object
@@ -52,13 +36,10 @@ function mergeProperty(target, name, desc, enumerable) {
 
     if (desc.get || desc.set) {
 
-        let prev = Object.getOwnPropertyDescriptor(target, name);
-
-        if (prev) {
-
-            desc.get = desc.get || prev.get;
-            desc.set = desc.set || prev.set;
-        }
+        let d = { configurable: true };
+        if (desc.get) d.get = desc.get;
+        if (desc.set) d.set = desc.set;
+        desc = d;
     }
 
     desc.enumerable = enumerable;
@@ -68,8 +49,7 @@ function mergeProperty(target, name, desc, enumerable) {
 // Installs properties on an object, merging "get" and "set" functions
 function mergeProperties(target, source, enumerable) {
 
-    forEachDesc(source, (name, desc) =>
-        mergeProperty(target, name, desc, enumerable));
+    forEachDesc(source, (name, desc) => mergeProperty(target, name, desc, enumerable));
 }
 
 // Builds a class
@@ -104,21 +84,16 @@ function buildClass(base, def) {
 
     // Create the prototype object
     let proto = Object.create(parent),
-        statics = {},
-        addMethods = obj => mergeProperties(proto, obj, false),
-        addStatics = obj => mergeProperties(statics, obj, false);
+        statics = {};
 
-    Object.assign(addMethods, {
-        static: addStatics,
-        super: parent,
-        csuper: base || Function.prototype
-    });
+    function __(obj, target) { mergeProperties(target || proto, obj, false) }
+
+    __.static = obj => mergeProperties(statics, obj, false);
+    __.super = parent;
+    __.csuper = base || Function.prototype;
 
     // Generate method collections, closing over super bindings
-    def(addMethods);
-
-    if (!hasOwn.call(proto, "constructor"))
-        throw new Error("No constructor specified");
+    def(__);
 
     let ctor = proto.constructor;
 
@@ -129,7 +104,7 @@ function buildClass(base, def) {
     forEachDesc(statics, (name, desc) => Object.defineProperty(ctor, name, desc));
 
     // Inherit from base constructor
-    if (base)
+    if (base && ctor.__proto__)
         Object.setPrototypeOf(ctor, base);
 
     return ctor;
@@ -388,20 +363,24 @@ Global._esdown = {
     },
 
     // Support for private fields
-    getPrivate(obj, key) {
+    getPrivate(obj, map, name) {
 
-        if (!key.has(Object(obj)))
+        let entry = map.get(Object(obj));
+
+        if (!entry)
             throw new TypeError;
 
-        return key.get(obj);
+        return entry[name];
     },
 
-    setPrivate(obj, key, value) {
+    setPrivate(obj, map, name, value) {
 
-        if (!key.has(Object(obj)))
+        let entry = map.get(Object(obj));
+
+        if (!entry)
             throw new TypeError;
 
-        return key.set(obj, value);
+        return entry[name] = value;
     }
 
 };
