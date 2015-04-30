@@ -7,7 +7,7 @@ wait for Node or browsers to fully implement them.
 **esdown** can also be used as a runtime environment for executing ES6+ programs
 on top of Node.
 
-You can demo **esdown** by using the [browser REPL](http://esparse.org/esdown/repl/).
+You can demo **esdown** by using the [browser REPL](http://zenparsing.github.io/esdown/repl/).
 
 For more information:
 
