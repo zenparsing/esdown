@@ -3,7 +3,7 @@ const VERSION = "0.9.7";
 let Global = (function() {
 
     try { return global.global } catch (x) {}
-    try { return window.window } catch (x) {}
+    try { return self.self } catch (x) {}
     return null;
 })();
 
@@ -86,7 +86,11 @@ function buildClass(base, def) {
     let proto = Object.create(parent),
         statics = {};
 
-    function __(obj, target) { mergeProperties(target || proto, obj, false) }
+    function __(target, obj) {
+
+        if (!obj) mergeProperties(proto, target, false);
+        else mergeProperties(target, obj, false);
+    }
 
     __.static = obj => mergeProperties(statics, obj, false);
     __.super = parent;

@@ -7,7 +7,7 @@ Runtime.API =
 let Global = (function() {
 
     try { return global.global } catch (x) {}
-    try { return window.window } catch (x) {}
+    try { return self.self } catch (x) {}
     return null;
 })();
 
@@ -90,7 +90,11 @@ function buildClass(base, def) {
     let proto = Object.create(parent),
         statics = {};
 
-    function __(obj, target) { mergeProperties(target || proto, obj, false) }
+    function __(target, obj) {
+
+        if (!obj) mergeProperties(proto, target, false);
+        else mergeProperties(target, obj, false);
+    }
 
     __.static = obj => mergeProperties(statics, obj, false);
     __.super = parent;
@@ -1159,7 +1163,7 @@ class Map {
 
 }
 
-var mapSet = Map.prototype.set;
+let mapSet = Map.prototype.set;
 
 class Set {
 
@@ -1594,7 +1598,14 @@ InstallFunctions($Promise.prototype, DONT_ENUM, [
 
 Runtime.Observable = 
 
-`/*
+`
+// Returns a done result
+function doneResult() {
+
+    return { value: void 0, done: true };
+}
+
+/*
 
     Observer sinks are wrapped for the following reasons:
 
@@ -1605,35 +1616,42 @@ Runtime.Observable =
     - Ensures that cleanup is triggered when the stream is closed.
 
 */
-function wrapSink(sink, cleanup) {
 
-    let done = false;
+class NormalizedSink {
 
-    // Marks the stream as closed and triggers stream cleanup.  Exceptions
-    // which occur during cleanup are propagated to the caller.
-    function close() {
+    constructor(sink) {
 
-        if (!done) {
+        this._sink = sink;
+        this._cleanup = void 0;
+        this._done = false;
+    }
 
-            done = true;
-            cleanup();
+    next(value) { return this._send("next", value) }
+
+    throw(value) { return this._send("throw", value) }
+
+    return(value) { return this._send("return", value) }
+
+    _close() {
+
+        if (!this._done) {
+
+            this._done = true;
+
+            if (this._cleanup)
+                this._cleanup();
         }
     }
 
-    // Returns a "done" result
-    function doneResult() {
-
-        return { value: void 0, done: true };
-    }
-
     // Sends a completion value to the sink
-    function send(op, value) {
+    _send(op, value) {
 
         // If the stream if closed, then return a "done" result
-        if (done)
+        if (this._done)
             return doneResult();
 
-        let result;
+        let sink = this._sink,
+            result;
 
         try {
 
@@ -1658,11 +1676,12 @@ function wrapSink(sink, cleanup) {
 
                     // If the sink does not support "return", then close and return a done result
                     if (!("return" in sink))
-                        return close(), doneResult();
+                        return this._close(), doneResult();
 
                     result = sink.return(value);
 
                     // If the sink does not return a result, then assume that it is finished
+                    // TODO: Is this OK, or a protocol violation?
                     if (!result)
                         result = doneResult();
 
@@ -1673,23 +1692,20 @@ function wrapSink(sink, cleanup) {
         } catch (e) {
 
             // If the sink throws, then close the stream and throw error to caller
-            close();
+            this._close();
             throw e;
         }
 
         // If the sink is finished receiving data, then close the stream
+        // TODO: If there is no result object, is that a protocol violation?
         if (result && result.done)
-            close();
+            this._close();
 
         return result;
     }
 
-    return {
-        next(value) { return send("next", value) },
-        throw(value) { return send("throw", value) },
-        return(value) { return send("return", value) },
-    };
 }
+
 
 class Observable {
 
@@ -1702,33 +1718,26 @@ class Observable {
         this._start = start;
     }
 
-    observe(sink) {
-
-        if (typeof sink === "function")
-            sink = { next: sink };
+    subscribe(sink) {
 
         // The sink must be an object
         if (Object(sink) !== sink)
             throw new TypeError("Sink is not an object");
 
-        let start = this._start,
-            finished = false,
-            cleanup;
+        // TODO: Test for a next method here?
+        // TODO: Should the start function have to return { start, stop } instead
+        // of returning a cleanup?
+
+        let start = this._start;
 
         // Wrap the provided sink
-        sink = wrapSink(sink, _=> {
-
-            finished = true;
-
-            if (cleanup !== void 0)
-                cleanup();
-        });
+        sink = new NormalizedSink(sink);
 
         try {
 
             // Call the stream initializer.  The initializer will return a cleanup
             // function or undefined.
-            cleanup = start.call(void 0, sink);
+            sink._cleanup = start.call(void 0, sink);
 
         } catch (e) {
 
@@ -1736,11 +1745,12 @@ class Observable {
         }
 
         // If the stream is already finished, then perform cleanup
-        if (finished && cleanup !== void 0)
-            cleanup();
+        if (sink._done && sink._cleanup !== void 0)
+            sink._cleanup();
 
         // Return a cancelation function
-        return sink.return;
+        // TODO: Should this just be return directly?
+        return _=> { sink.return() };
     }
 
     async *[Symbol.asyncIterator]() {
@@ -1813,6 +1823,7 @@ class Observable {
             },
 
             throw: sink.throw,
+
             return: sink.return,
 
         }));

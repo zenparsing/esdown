@@ -385,12 +385,12 @@ export class Replacer {
             node.properties.forEach((c, index) => {
 
                 if (computed)
-                    c.text = "}, { " + c.text;
+                    c.text = " }, { " + c.text;
 
                 computed = c.name.type === "ComputedPropertyName";
 
                 if (computed)
-                    c.text = `}, ${ c.name.expression.text }, { ${ c.text } `;
+                    c.text = `}, ${ c.name.expression.text }, { ${ c.text }`;
             });
 
             return "_esdown.computed(" + this.stringify(node) + ")";
@@ -891,10 +891,10 @@ export class Replacer {
             header = [],
             footer = [];
 
-        elems.forEach(e => {
+        elems.reduce((prev, e, index) => {
 
             if (e.type !== "MethodDefinition")
-                return;
+                return "";
 
             let text = e.text,
                 fn = "__",
@@ -917,13 +917,27 @@ export class Replacer {
                 text = text.replace(/:\s*function/, ": " + ctorName + " = function");
             }
 
-            text = "{ " + text + " }";
+            let prefix = fn + "(" + (target ? target + ", " : "");
 
-            if (e.name.type === "ComputedPropertyName")
-                text = "_esdown.computed({}, " + e.name.expression.text + ", " + text + ")";
+            if (e.name.type === "ComputedPropertyName") {
 
-            e.text = fn + "(" + text + (target ? ", " + target : "") + ");";
-        });
+                e.text = prefix + "_esdown.computed({}, " + e.name.expression.text + ", { " + text + " }));";
+                prefix = "";
+
+            } else if (prefix === prev) {
+
+                let p = elems[index - 1];
+                p.text = p.text.replace(/\}\);$/, ",");
+                e.text = text + "});"
+
+            } else {
+
+                e.text = prefix + "{ " + text + "});";
+            }
+
+            return prefix;
+
+        }, "");
 
         header.push("var " + ctorName + ";");
 

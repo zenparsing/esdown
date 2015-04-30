@@ -1,25 +1,25 @@
-var A = _esdown.class(function(__) {
+var A = _esdown.class(function(__) { var A;
 
-    __({ constructor: function A() {
+    __({ constructor: A = function() {
 
         this.x = 1;
-    } });
+    },
 
-    __({ set a(value) {} });
+    set a(value) {},
 
-    __({ get b() {} });
+    get b() {}});
 
-    __.static({ S: function() {} });
+    __.static({ S: function() {},
 
-    __.static({ get T() {} });
+    get T() {},
 
-    __.static({ "U": function() {} });
+    "U": function() {},
 
-    __.static({ "Hello World": function() {} });
+    "Hello World": function() {}});
 
-    __({ foo: function() {} });
+    __({ foo: function() {}});
  });
 
-((function() { var C = _esdown.class(function(__) { __({ constructor: function C() {} });  }); return C; }()));
+((function() { var C = _esdown.class(function(__) { var C; __({ constructor: C = function() {} }); }); return C; }()));
 
-new (_esdown.class(function(__) { __({ constructor: function() {} });  }));
+new (_esdown.class(function(__) { var __ctor; __({ constructor: __ctor = function() {} }); }));
