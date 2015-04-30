@@ -844,10 +844,6 @@ export class Replacer {
             case "PropertyDefinition":
                 return name;
         }
-
-        // Primary expression @name
-        let thisRef = this.renameLexicalVar(node, "this");
-        return this.privateReference(node, thisRef, name);
     }
 
     ClassBodyBegin(node) {
