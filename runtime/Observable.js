@@ -1,111 +1,96 @@
-
-// Returns a done result
 function doneResult() {
 
     return { value: void 0, done: true };
 }
 
-/*
-
-    Observer sinks are wrapped for the following reasons:
-
-    - Ensures that the sink is not called after the stream is closed.
-    - Ensures that the returned object has all three sink methods ("next", "throw", and "return").
-    - Ensures that values are properly handled when the sink does not have "throw" or "return".
-    - Ensures that returned methods can be called without a provided "this" value.
-    - Ensures that cleanup is triggered when the stream is closed.
-
-*/
-
-class NormalizedSink {
+class Subscription {
 
     constructor(sink) {
 
-        this._sink = sink;
-        this._cleanup = void 0;
-        this._done = false;
+        this.done = false;
+        this.cleanup = void 0;
+        this.sink = sink;
     }
 
-    next(value) { return this._send("next", value) }
+    close() {
 
-    throw(value) { return this._send("throw", value) }
+        this.done = true;
 
-    return(value) { return this._send("return", value) }
-
-    _close() {
-
-        if (!this._done) {
-
-            this._done = true;
-
-            if (this._cleanup)
-                this._cleanup();
-        }
+        if (this.cleanup)
+            this.cleanup.call(void 0);
     }
 
-    // Sends a completion value to the sink
-    _send(op, value) {
+    resume(value) {
 
         // If the stream if closed, then return a "done" result
-        if (this._done)
+        if (this.done)
             return doneResult();
 
-        let sink = this._sink,
-            result;
+        let result;
 
         try {
 
-            switch (op) {
+            // Send the next value to the sink
+            result = this.sink.next(value);
 
-                case "next":
+        } catch (x) {
 
-                    // Send the next value to the sink
-                    result = sink.next(value);
-                    break;
+            this.close();
+            throw x;
+        }
 
-                case "throw":
+        // Cleanup if sink is closed
+        if (result && result.done)
+            this.close();
+    }
 
-                    // If the sink does not support "throw", then throw value back to caller
-                    if (!("throw" in sink))
-                        throw value;
+    resumeAbrupt(value, type) {
 
-                    result = sink.throw(value);
-                    break;
+        // If the stream if closed, then return a "done" result
+        if (this.done)
+            return doneResult();
 
-                case "return":
+        let result;
 
-                    // If the sink does not support "return", then close and return a done result
-                    if (!("return" in sink))
-                        return this._close(), doneResult();
+        try {
 
-                    result = sink.return(value);
+            if (type === "throw") {
 
-                    // If the sink does not return a result, then assume that it is finished
-                    // TODO: Is this OK, or a protocol violation?
-                    if (!result)
-                        result = doneResult();
+                this.done = true;
 
-                    break;
+                // If the sink does not support "throw", then throw value back to caller
+                if (!("throw" in this.sink))
+                    throw value;
 
+                result = this.sink.throw(value);
+
+            } else { // Assert: type === "return"
+
+                this.done = true;
+
+                // If the sink does not support "return", then ignore the value
+                if ("return" in this.sink)
+                    result = this.sink.return(value);
+
+                // If the sink does not return a result, then assume that it is finished
+                if (!result)
+                    result = doneResult();
             }
 
-        } catch (e) {
+        } catch (x) {
 
             // If the sink throws, then close the stream and throw error to caller
-            this._close();
-            throw e;
+            this.cleanup();
+            throw x;
         }
 
         // If the sink is finished receiving data, then close the stream
-        // TODO: If there is no result object, is that a protocol violation?
         if (result && result.done)
-            this._close();
+            this.close();
 
         return result;
     }
-
 }
-
 
 class Observable {
 
@@ -124,33 +109,21 @@ class Observable {
         if (Object(sink) !== sink)
             throw new TypeError("Sink is not an object");
 
-        // TODO: Test for a next method here?
-        // TODO: Should the start function have to return { start, stop } instead
-        // of returning a cleanup?
+        let subscription = new Subscription(sink);
 
-        let start = this._start;
-
-        // Wrap the provided sink
-        sink = new NormalizedSink(sink);
-
-        try {
-
-            // Call the stream initializer.  The initializer will return a cleanup
-            // function or undefined.
-            sink._cleanup = start.call(void 0, sink);
-
-        } catch (e) {
-
-            sink.throw(e);
-        }
+        // Call the stream initializer.  The initializer will return a cleanup
+        // function or undefined.
+        subscription.cleanup = this._start.call(void 0,
+            x => subscription.resume(x),
+            x => subscription.resumeAbrupt(x, "throw"),
+            x => subscription.resumeAbrupt(x, "return"));
 
         // If the stream is already finished, then perform cleanup
-        if (sink._done && sink._cleanup !== void 0)
-            sink._cleanup();
+        if (subscription.done && subscription.cleanup !== void 0)
+            subscription.cleanup.call(void 0);
 
         // Return a cancelation function
-        // TODO: Should this just be return directly?
-        return _=> { sink.return() };
+        return _=> { subscription.resumeAbrupt(void 0, "return") };
     }
 
     async *[Symbol.asyncIterator]() {
@@ -230,7 +203,6 @@ class Observable {
     }
 
 }
-
 
 if (!_esdown.global.Observable)
     _esdown.global.Observable = Observable;
