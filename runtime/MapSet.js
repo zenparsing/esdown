@@ -166,7 +166,7 @@ class Map {
 
 }
 
-var mapSet = Map.prototype.set;
+let mapSet = Map.prototype.set;
 
 class Set {
 
