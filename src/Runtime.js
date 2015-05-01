@@ -1598,18 +1598,13 @@ InstallFunctions($Promise.prototype, DONT_ENUM, [
 
 Runtime.Observable = 
 
-`function doneResult() {
+`class Sink {
 
-    return { value: void 0, done: true };
-}
-
-class Subscription {
-
-    constructor(sink) {
+    constructor(observer) {
 
         this.done = false;
-        this.cleanup = void 0;
-        this.sink = sink;
+        this.cleanup = undefined;
+        this.observer = observer;
     }
 
     close() {
@@ -1617,78 +1612,78 @@ class Subscription {
         this.done = true;
 
         if (this.cleanup)
-            this.cleanup.call(void 0);
+            this.cleanup.call(undefined);
     }
 
-    resume(value) {
+    next(value) {
 
         // If the stream if closed, then return a "done" result
         if (this.done)
-            return doneResult();
+            return { done: true };
 
         let result;
 
         try {
 
             // Send the next value to the sink
-            result = this.sink.next(value);
+            result = this.observer.next(value);
 
-        } catch (x) {
+        } catch (e) {
 
+            // If the observer throws, then close the stream and rethrow the error
             this.close();
-            throw x;
+            throw e;
         }
 
         // Cleanup if sink is closed
         if (result && result.done)
             this.close();
+
+        return result;
     }
 
-    resumeAbrupt(value, type) {
+    throw(value) {
 
-        // If the stream if closed, then return a "done" result
+        // If the stream is closed, throw the error to the caller
         if (this.done)
-            return doneResult();
+            throw value;
 
-        let result;
+        this.done = true;
 
         try {
 
-            if (type === "throw") {
+            // If the sink does not support "throw", then throw the error to the caller
+            if (!("throw" in this.observer))
+                throw value;
 
-                this.done = true;
+            return this.observer.throw(value);
 
-                // If the sink does not support "throw", then throw value back to caller
-                if (!("throw" in this.sink))
-                    throw value;
+        } finally {
 
-                result = this.sink.throw(value);
-
-            } else { // Assert: type === "return"
-
-                this.done = true;
-
-                // If the sink does not support "return", then ignore the value
-                if ("return" in this.sink)
-                    result = this.sink.return(value);
-
-                // If the sink does not return a result, then assume that it is finished
-                if (!result)
-                    result = doneResult();
-            }
-
-        } catch (x) {
-
-            // If the sink throws, then close the stream and throw error to caller
-            this.cleanup();
-            throw x;
-        }
-
-        // If the sink is finished receiving data, then close the stream
-        if (result && result.done)
             this.close();
+        }
+    }
 
-        return result;
+    return(value) {
+
+        // If the stream is closed, then return a done result
+        if (this.done)
+            return { done: true };
+
+        this.done = true;
+
+        try {
+
+            // If the sink does not support "return", then return a done result
+            if (!("return" in this.observer))
+                return { done: true };
+
+            return this.observer.return(value);
+
+        } finally {
+
+            this.close();
+        }
     }
 }
 
@@ -1703,27 +1698,36 @@ class Observable {
         this._start = start;
     }
 
-    subscribe(sink) {
+    subscribe(observer) {
 
         // The sink must be an object
-        if (Object(sink) !== sink)
-            throw new TypeError("Sink is not an object");
+        if (Object(observer) !== observer)
+            throw new TypeError("Observer is not an object");
 
-        let subscription = new Subscription(sink);
+        let sink = new Sink(observer);
 
-        // Call the stream initializer.  The initializer will return a cleanup
-        // function or undefined.
-        subscription.cleanup = this._start.call(void 0,
-            x => subscription.resume(x),
-            x => subscription.resumeAbrupt(x, "throw"),
-            x => subscription.resumeAbrupt(x, "return"));
+        try {
+
+            // Call the stream initializer.  The initializer will return a cleanup
+            // function or undefined.
+            sink.cleanup = this._start.call(undefined,
+                x => sink.next(x),
+                x => sink.throw(x),
+                x => sink.return(x));
+
+        } catch (e) {
+
+            // If an error occurs during the initializer, then send an error
+            // to the sink
+            sink.throw(e);
+        }
 
         // If the stream is already finished, then perform cleanup
-        if (subscription.done && subscription.cleanup !== void 0)
-            subscription.cleanup.call(void 0);
+        if (sink.done && sink.cleanup !== undefined)
+            sink.cleanup.call(undefined);
 
         // Return a cancelation function
-        return _=> { subscription.resumeAbrupt(void 0, "return") };
+        return _=> { sink.return() };
     }
 
     async *[Symbol.asyncIterator]() {
@@ -1743,7 +1747,7 @@ class Observable {
                 new Promise(resolve => pending.push(resolve));
         }
 
-        let cancel = this.observe({
+        let cancel = this.subscribe({
 
             next(value) { send({ type: "next", value }) },
             throw(value) { send({ type: "throw", value }) },
@@ -1771,7 +1775,7 @@ class Observable {
 
         return new Promise((resolve, reject) => {
 
-            this.observe({
+            this.subscribe({
 
                 next: fn,
                 throw: reject,
@@ -1785,19 +1789,18 @@ class Observable {
         if (typeof fn !== "function")
             throw new TypeError("Callback is not a function");
 
-        return new this.constructor(sink => this.observe({
+        return new this.constructor((push, error, close) => this.subscribe({
 
             next(value) {
 
                 try { value = fn(value) }
-                catch (e) { return sink.throw(e) }
+                catch (e) { return error(e) }
 
-                return sink.next(value);
+                return push(value);
             },
 
-            throw: sink.throw,
-
-            return: sink.return,
+            throw: error,
+            return: close,
 
         }));
     }
