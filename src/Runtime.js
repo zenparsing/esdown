@@ -1598,12 +1598,12 @@ InstallFunctions($Promise.prototype, DONT_ENUM, [
 
 Runtime.Observable = 
 
-`class Sink {
+`class ObserverSink {
 
     constructor(observer) {
 
         this.done = false;
-        this.cleanup = undefined;
+        this.controller = undefined;
         this.observer = observer;
     }
 
@@ -1611,8 +1611,8 @@ Runtime.Observable =
 
         this.done = true;
 
-        if (this.cleanup)
-            this.cleanup.call(undefined);
+        if (this.controller && "stop" in this.controller)
+            this.controller.stop();
     }
 
     next(value) {
@@ -1689,45 +1689,122 @@ Runtime.Observable =
 
 class Observable {
 
-    constructor(start) {
+    constructor(init) {
 
         // The stream initializer must be a function
-        if (typeof start !== "function")
-            throw new TypeError("Observer definition is not a function");
+        if (typeof init !== "function")
+            throw new TypeError("Observable initializer must be a function");
 
-        this._start = start;
+        this._init = init;
     }
 
     subscribe(observer) {
 
         // The sink must be an object
         if (Object(observer) !== observer)
-            throw new TypeError("Observer is not an object");
+            throw new TypeError("Observer must be an object");
 
-        let sink = new Sink(observer);
+        let sink = new ObserverSink(observer),
+            controller;
 
         try {
 
-            // Call the stream initializer.  The initializer will return a cleanup
-            // function or undefined.
-            sink.cleanup = this._start.call(undefined,
-                x => sink.next(x),
-                x => sink.throw(x),
-                x => sink.return(x));
+            // Call the stream initializer.  The initializer will return a
+            // stream controller or undefined.
+            controller = this._init.call(undefined, sink);
+
+            // The returned controller may be null or undefined
+            if (controller == null)
+                controller = {};
+
+            // The controller must be an object
+            if (Object(controller) !== controller)
+                throw new TypeError("Stream controller must be an object");
+
+            if ("start" in controller)
+                controller.start();
 
         } catch (e) {
 
-            // If an error occurs during the initializer, then send an error
-            // to the sink
+            // If an error occurs during startup, then send an error
+            // to the sink and rethrow error to caller.
             sink.throw(e);
+            throw e;
         }
 
         // If the stream is already finished, then perform cleanup
-        if (sink.done && sink.cleanup !== undefined)
-            sink.cleanup.call(undefined);
+        if (sink.done && "stop" in controller)
+            controller.stop();
 
-        // Return a cancelation function
-        return _=> { sink.return() };
+        sink.controller = controller;
+
+        // Return a cancellation function
+        return _=> {
+
+            if ("cancel" in controller) controller.cancel();
+            else sink.return();
+        };
+    }
+
+    forEach(fn) {
+
+        return new Promise((resolve, reject) => {
+
+            this.subscribe({
+
+                next: fn,
+                throw: reject,
+                return: resolve,
+            });
+        });
+    }
+
+    map(fn) {
+
+        if (typeof fn !== "function")
+            throw new TypeError(fn + " is not a function");
+
+        return new this.constructor(sink => ({
+
+            stop: this.subscribe({
+
+                next(value) {
+
+                    try { value = fn(value) }
+                    catch (e) { return sink.throw(e) }
+
+                    return sink.next(value);
+                },
+
+                throw(value) { return sink.throw(value) },
+                return(value) { return sink.return(value) },
+            })
+
+        }));
+    }
+
+    filter(fn) {
+
+        if (typeof fn !== "function")
+            throw new TypeError(fn + " is not a function");
+
+        return new this.constructor(sink => ({
+
+            stop: this.subscribe({
+
+                next(value) {
+
+                    try { if (!fn(value)) return { done: false } }
+                    catch (e) { return sink.throw(e) }
+
+                    return sink.next(value);
+                },
+
+                throw(value) { return sink.throw(value) },
+                return(value) { return sink.return(value) },
+            })
+
+        }));
     }
 
     async *[Symbol.asyncIterator]() {
@@ -1769,40 +1846,6 @@ class Observable {
 
             cancel();
         }
-    }
-
-    forEach(fn) {
-
-        return new Promise((resolve, reject) => {
-
-            this.subscribe({
-
-                next: fn,
-                throw: reject,
-                return: resolve,
-            });
-        });
-    }
-
-    map(fn) {
-
-        if (typeof fn !== "function")
-            throw new TypeError("Callback is not a function");
-
-        return new this.constructor((push, error, close) => this.subscribe({
-
-            next(value) {
-
-                try { value = fn(value) }
-                catch (e) { return error(e) }
-
-                return push(value);
-            },
-
-            throw: error,
-            return: close,
-
-        }));
     }
 
 }
