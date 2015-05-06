@@ -121,11 +121,13 @@ polyfill(Symbol, {
 
     iterator: Symbol("iterator"),
 
+    species: Symbol("species"),
+
     // Experimental async iterator support
     asyncIterator: Symbol("asyncIterator"),
 
-    // Experimental async observation support
-    observe: Symbol("observe")
+    // Experimental observable support
+    observable: Symbol("observable"),
 
 });
 
