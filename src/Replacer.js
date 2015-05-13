@@ -150,11 +150,21 @@ export class Replacer {
 
     replace(input, options = {}) {
 
+        this.asi = {};
+
         this.parseResult = parse(input, {
 
             module: options.module,
             addParentLinks: true,
-            resolveScopes: true
+            resolveScopes: true,
+
+            onASI: token => {
+
+                if (token.type !== "}" && token.type !== "EOF")
+                    this.asi[token.start] = true;
+
+                return true;
+            }
         });
 
         let root = this.parseResult.ast;
@@ -306,6 +316,24 @@ export class Replacer {
         return out;
     }
 
+    ExpressionStatement(node) {
+
+        if (this.asi[node.start]) {
+
+            let text = this.stringify(node);
+
+            switch (text.charAt(0)) {
+
+                case "(":
+                case "[":
+                    text = ";" + text;
+                    break;
+            }
+
+            return text;
+        }
+    }
+
     Module(node) {
 
         // NOTE: Strict directive is included with module wrapper
@@ -358,6 +386,7 @@ export class Replacer {
 
         return "";
     }
+
 
     ComputedPropertyName(node) {
 

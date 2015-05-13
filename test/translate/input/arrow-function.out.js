@@ -42,3 +42,7 @@ function f() { var __this = this, __arguments = arguments;  (function(ident) { r
 (function(ident) { return __this.method(); });
 
 var identity = function(obj) { return obj; };
+
+// asi
+1
+;(function(ident) { return 1; });

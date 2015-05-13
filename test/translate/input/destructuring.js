@@ -15,8 +15,8 @@ var [a, b] = foo,
 function f([a, b] = c) {}
 function f({a, b: c} = d) {}
 
-([a, b]) => {}
-([a, b], ...args) => foo
+([a, b]) => {};
+([a, b], ...args) => foo;
 
 try { x() }
 catch ([m]) {}

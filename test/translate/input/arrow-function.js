@@ -42,3 +42,7 @@ function f() { ident => (this, arguments) }
 ident => this.method();
 
 var identity = obj => obj;
+
+// asi
+1
+ident => 1;

@@ -12,3 +12,7 @@ efg";
 (html(_esdown.callSite(["a", "b\n\
 ", " c\u0060"], ["a", "b\n", " c\\u0060"]), x, y));
 (html(_esdown.callSite(["foo", ""]), bar));
+
+// asi
+1
+;(abc(_esdown.callSite([""])))

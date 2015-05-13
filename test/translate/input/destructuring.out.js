@@ -15,8 +15,8 @@ var a = (__$19 = _esdown.arrayd(foo), __$19.at(1, 0)), b = __$19.at(1, 1),
 function f(__$0) { var __$1; if (__$0 === void 0) __$0 = c; var a = (__$1 = _esdown.arrayd(__$0), __$1.at(1, 0)), b = __$1.at(1, 1); }
 function f(__$0) { var __$1; if (__$0 === void 0) __$0 = d; var a = (__$1 = _esdown.objd(__$0), __$1.a), c = __$1.b; }
 
-(function(__$0) { var __$1; var a = (__$1 = _esdown.arrayd(__$0), __$1.at(1, 0)), b = __$1.at(1, 1); })
-(function(__$0) { var __$2; for (var args = [], __$1 = 1; __$1 < arguments.length; ++__$1) args.push(arguments[__$1]); var a = (__$2 = _esdown.arrayd(__$0), __$2.at(1, 0)), b = __$2.at(1, 1); return foo; })
+(function(__$0) { var __$1; var a = (__$1 = _esdown.arrayd(__$0), __$1.at(1, 0)), b = __$1.at(1, 1); });
+(function(__$0) { var __$2; for (var args = [], __$1 = 1; __$1 < arguments.length; ++__$1) args.push(arguments[__$1]); var a = (__$2 = _esdown.arrayd(__$0), __$2.at(1, 0)), b = __$2.at(1, 1); return foo; });
 
 try { x() }
 catch (__$21) { let m = (__$22 = _esdown.arrayd(__$21), __$22.at(1, 0));  }
