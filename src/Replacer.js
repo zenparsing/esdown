@@ -710,25 +710,30 @@ export class Replacer {
     BindExpression(node) {
 
         let left = node.left ? node.left.text : null,
-            right = node.right.text;
+            right = node.right.text,
+            temp = this.addTempVar(node),
+            bindee;
 
         if (!left) {
 
             if (node.right.type !== "MemberExpression")
                 throw new Error("Invalid bind expression");
 
-            left = this.addTempVar(node);
-            right = `(${ left } = ${ node.right.object.text }).${ node.right.property.text }`;
+            bindee = `((${ temp } = ${ node.right.object.text }).${ node.right.property.text })`;
+
+        } else {
+
+            bindee = `(${ temp } = ${ left }, ${ right })`;
         }
 
         if (node.parent.type === "CallExpression" &&
             node.parent.callee === node) {
 
-            node.parent.injectThisArg = left;
-            return "(" + right + ")";
+            node.parent.injectThisArg = temp;
+            return bindee;
         }
 
-        return `(${ right }).bind(${ left })`;
+        return `${ bindee }.bind(${ temp })`;
     }
 
     ArrowFunction(node) {
