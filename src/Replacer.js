@@ -794,8 +794,6 @@ export class Replacer {
 
             node.expression.text = `_esdown.${ method }(${ node.expression.text })`;
         }
-
-        return "yield " + node.expression.text;
     }
 
     FunctionDeclaration(node) {
