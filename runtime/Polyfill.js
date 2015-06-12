@@ -126,9 +126,6 @@ polyfill(Symbol, {
     // Experimental async iterator support
     asyncIterator: Symbol("asyncIterator"),
 
-    // Experimental observable support
-    observable: Symbol("observable"),
-
 });
 
 // === Object ===
@@ -484,7 +481,7 @@ polyfill(Array, {
 
     of(...items) {
 
-        let ctor = typeof this === "function" ? this : Array; // TODO: Always use "this"?
+        let ctor = typeof this === "function" ? this : Array;
 
         if (ctor === Array)
             return items;
