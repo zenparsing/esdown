@@ -1551,8 +1551,6 @@ export class Replacer {
         return `for (var ${ name } = [], ${ temp } = ${ pos }; ` +
             `${ temp } < arguments.length; ` +
             `++${ temp }) ${ name }.push(arguments[${ temp }]);`;
-
-        return "var " + name + " = " + slice + ";";
     }
 
     functionInsert(node) {
