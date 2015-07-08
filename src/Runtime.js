@@ -1202,14 +1202,12 @@ Runtime.Promise =
 // Find global variable and exit if Promise is defined on it
 
 var Global = (function() {
-    if (typeof window !== "undefined" && window && window.window === window)
-        return window;
-    if (typeof global !== "undefined" && global && global.global === global)
-        return global;
-    throw new Error("Unable to determine global object");
+    try { return self.self } catch (x) {}
+    try { return global.global } catch (x) {}
+    return null;
 })();
 
-if (typeof Global.Promise === "function")
+if (!Global || typeof Global.Promise === "function")
     return;
 
 // Create an efficient microtask queueing mechanism
