@@ -56,124 +56,136 @@ polyfillSymbol("observable");
 
 // === Abstract Operations ===
 
-function cancelSubscription(observer) {
+function getMethod(obj, key) {
 
-    let subscription = observer._subscription;
+    let value = obj[key];
 
-    if (!subscription)
-        return;
+    if (value == null)
+        return undefined;
 
-    // Drop the reference to the subscription so that we don't unsubscribe
-    // more than once
-    observer._subscription = undefined;
+    if (typeof value !== "function")
+        throw new TypeError(value + " is not a function");
 
-    try {
-
-        // Call the unsubscribe function
-        subscription.unsubscribe();
-
-    } finally {
-
-        // Drop the reference to the inner observer so that no more notifications
-        // will be sent
-        observer._observer = undefined;
-    }
+    return value;
 }
 
-function closeSubscription(observer) {
+function extractMethod(obj, key) {
 
-    observer._observer = undefined;
-    cancelSubscription(observer);
+    let method = getMethod(obj, key);
+
+    if (!method)
+        throw new TypeError(value + " is not a function");
+
+    return (...args) => method.call(obj, ...args);
 }
 
-function hasUnsubscribe(x) {
+function disposeSubscription(subscription) {
 
-    return Object(x) === x && typeof x.unsubscribe === "function";
+    subscription._state = "completed";
+
+    let dispose = subscription._dispose;
+
+    subscription._dispose = undefined;
+    subscription._onNext = undefined;
+    subscription._onError = undefined;
+    subscription._onComplete = undefined;
+
+    if (dispose)
+        dispose();
 }
 
-class SubscriptionObserver {
+function subscriptionNext(subscription) {
 
-    constructor(observer) {
+    return function onNext(value) {
 
-        this._observer = observer;
-        this._subscription = undefined;
-    }
-
-    next(value) {
-
-        let observer = this._observer;
-
-        // If the stream if closed, then return a "done" result
-        if (!observer)
-            return { value: undefined, done: true };
-
-        let result;
-
-        try {
-
-            // Send the next value to the sink
-            result = observer.next(value);
-
-        } catch (e) {
-
-            // If the observer throws, then close the stream and rethrow the error
-            closeSubscription(this);
-            throw e;
+        switch (subscription._state) {
+            case "initializing":
+                throw new Error("Subscription initializing");
+            case "completed":
+                return;
         }
 
-        // Cleanup if sink is closed
-        if (result && result.done)
-            closeSubscription(this);
+        subscription._onNext.call(undefined, value);
+    };
+}
 
-        return result;
-    }
+function subscriptionError(subscription) {
 
-    throw(value) {
+    return function onError(value) {
 
-        let observer = this._observer;
+        switch (subscription._state) {
+            case "initializing":
+                throw new Error("Subscription initializing");
+            case "completed":
+                throw value;
+        }
 
-        // If the stream is closed, throw the error to the caller
-        if (!observer)
-            throw value;
-
-        this._observer = undefined;
+        subscription._state = "completed";
 
         try {
 
-            // If the sink does not support "throw", then throw the error to the caller
-            if (!("throw" in observer))
+            if (!subscription._onError)
                 throw value;
 
-            return observer.throw(value);
+            subscription._onError.call(undefined, value);
 
         } finally {
 
-            cancelSubscription(this);
+            disposeSubscription(subscription);
         }
-    }
+    };
+}
 
-    return(value) {
+function subscriptionComplete(subscription) {
 
-        let observer = this._observer;
+    return function onComplete(value) {
 
-        // If the stream is closed, then return a done result
-        if (!observer)
-            return { value, done: true };
+        switch (subscription._state) {
+            case "initializing":
+                throw new Error("Subscription initializing");
+            case "completed":
+                return;
+        }
 
-        this._observer = undefined;
+        subscription._state = "completed";
 
         try {
 
-            // If the sink does not support "return", then return a done result
-            if (!("return" in observer))
-                return { value, done: true };
+            if (!subscription._onComplete)
+                return;
 
-            return observer.return(value);
+            subscription._onComplete.call(undefined, value);
 
         } finally {
 
-            cancelSubscription(this);
+            disposeSubscription(subscription);
         }
+    };
+}
+
+class Subscription {
+
+    constructor(onNext, onError, onComplete) {
+
+        if (typeof onNext !== "function")
+            throw new TypeError(onNext + " is not a function");
+
+        if (onError != null && typeof onError !== "function")
+            throw new TypeError(onError + " is not a function");
+
+        if (onComplete != null && typeof onComplete !== "function")
+            throw new TypeError(onComplete + " is not a function");
+
+        this._state = "initializing";
+        this._dispose = undefined;
+        this._onNext = onNext;
+        this._onError = onError;
+        this._onComplete = onComplete;
+    }
+
+    unsubscribe() {
+
+        disposeSubscription(this);
     }
 }
 
@@ -188,123 +200,43 @@ class Observable {
         this._subscriber = subscriber;
     }
 
-    subscribe(observer) {
+    subscribe(onNext, onError = undefined, onComplete = undefined) {
 
-        // The sink must be an object
-        if (Object(observer) !== observer)
-            throw new TypeError("Observer must be an object");
+        let subscription = new Subscription(onNext, onError, onComplete),
+            abrupt = false,
+            error;
 
-        // Wrap the observer in order to maintain observation invariants
-        observer = new SubscriptionObserver(observer);
+        onNext = subscriptionNext(subscription);
+        onError = subscriptionError(subscription);
+        onComplete = subscriptionComplete(subscription);
 
-        let unsubscribed = false,
-            subscription;
+        try {
 
-        enqueueJob(_=> {
+            // Call the subscriber function
+            let dispose = this._subscriber.call(undefined, onNext, onError, onComplete);
 
-            if (unsubscribed)
-                return;
+            if (dispose != null && typeof dispose !== "function")
+                dispose = extractMethod(dispose, "unsubscribe");
 
-            try {
+            subscription._dispose = dispose;
 
-                // Call the subscriber function
-                subscription = this._subscriber.call(undefined, observer);
+        } catch (e) {
 
-                if (!hasUnsubscribe(subscription)) {
+            abrupt = true;
+            error = e;
+        }
 
-                    let unsubscribe = typeof subscription === "function" ?
-                        subscription :
-                        (_=> { observer.return() });
+        subscription._state = "ready";
 
-                    subscription = { unsubscribe };
-                }
+        // If an error occurs during startup, then attempt to send the error
+        // to the observer
+        if (abrupt)
+            onError(error);
 
-            } catch (e) {
-
-                // If an error occurs during startup, then attempt to send the error
-                // to the observer
-                observer.throw(e);
-            }
-
-            observer._subscription = subscription;
-
-            // If the stream is already finished, then perform cleanup
-            if (!observer._observer)
-                cancelSubscription(observer);
-        });
-
-        return {
-
-            unsubscribe() {
-
-                if (unsubscribed)
-                    return;
-
-                unsubscribed = true;
-
-                if (subscription)
-                    subscription.unsubscribe();
-            }
-        };
+        return subscription;
     }
 
     [Symbol.observable]() { return this }
-
-    forEach(fn, thisArg = undefined) {
-
-        return new Promise((resolve, reject) => {
-
-            if (typeof fn !== "function")
-                throw new TypeError(fn + " is not a function");
-
-            this.subscribe({
-
-                next(value) { fn.call(thisArg, value) },
-                throw(value) { reject(value) },
-                return(value) { resolve(undefined) },
-            });
-        });
-    }
-
-    map(fn, thisArg = undefined) {
-
-        if (typeof fn !== "function")
-            throw new TypeError(fn + " is not a function");
-
-        return new this.constructor[Symbol.species](sink => this.subscribe({
-
-            next(value) {
-
-                try { value = fn.call(thisArg, value) }
-                catch (e) { return sink.throw(e) }
-
-                return sink.next(value);
-            },
-
-            throw(value) { return sink.throw(value) },
-            return(value) { return sink.return(value) },
-        }));
-    }
-
-    filter(fn, thisArg = undefined) {
-
-        if (typeof fn !== "function")
-            throw new TypeError(fn + " is not a function");
-
-        return new this.constructor[Symbol.species](sink => this.subscribe({
-
-            next(value) {
-
-                try { if (!fn.call(thisArg, value)) return { done: false } }
-                catch (e) { return sink.throw(e) }
-
-                return sink.next(value);
-            },
-
-            throw(value) { return sink.throw(value) },
-            return(value) { return sink.return(value) },
-        }));
-    }
 
     static from(x) {
 
@@ -313,12 +245,9 @@ class Observable {
         if (x == null)
             throw new TypeError(x + " is not an object");
 
-        let method = x[Symbol.observable];
+        let method = getMethod(x, Symbol.observable);
 
-        if (method != null) {
-
-            if (typeof method !== "function")
-                throw new TypeError(method + " is not a function");
+        if (method) {
 
             let observable = method.call(x);
 
@@ -328,48 +257,87 @@ class Observable {
             if (observable.constructor === C)
                 return observable;
 
-            return new C(sink => observable.subscribe(sink));
+            return new C((...args) => observable.subscribe(...args));
         }
 
-        method = x[Symbol.iterator];
+        method = getMethod(x, Symbol.iterator);
 
-        if (typeof method !== "function")
-            throw new TypeError(method + " is not a function");
+        if (!method)
+            throw new TypeError(x + " is not observable");
 
-        return new C(sink => {
+        return new C((next, error, complete) => {
 
-            for (let item of method.call(x)) {
+            enqueueJob(_=> {
 
-                let result = sink.next(item);
+                try {
 
-                if (result && result.done)
+                    for (let item of method.call(x))
+                        next(item);
+
+                } catch (e) {
+
+                    error(e);
                     return;
-            }
+                }
 
-            sink.return();
+                complete();
+            });
         });
     }
 
-    static of(...items) {
+    static of(...items) { return this.from(items) }
 
-        let C = typeof this === "function" ? this : Observable;
-
-        return new C(sink => {
-
-            for (let item of items) {
-
-                let result = sink.next(item);
-
-                if (result && result.done)
-                    return;
-            }
-
-            sink.return();
-        });
-    }
+    // Possible API Extensions
 
     static get [Symbol.species]() { return this }
+
+    forEach(fn, thisArg = undefined) {
+
+        return new Promise((resolve, reject) => {
+
+            if (typeof fn !== "function")
+                throw new TypeError(fn + " is not a function");
+
+            this.subscribe(value => { fn.call(thisArg, value) }, reject, resolve);
+        });
+    }
+
+    map(fn, thisArg = undefined) {
+
+        if (typeof fn !== "function")
+            throw new TypeError(fn + " is not a function");
+
+        let C = this.constructor[Symbol.species];
+
+        return new C((next, error, complete) => this.subscribe(value => {
+
+            try { value = fn.call(thisArg, value) }
+            catch (e) { error(e); return; }
+
+            next(value);
+
+        }, error, complete));
+    }
+
+    filter(fn, thisArg = undefined) {
+
+        if (typeof fn !== "function")
+            throw new TypeError(fn + " is not a function");
+
+        let C = this.constructor[Symbol.species];
+
+        return new C((next, error, complete) => this.subscribe(value => {
+
+            try { if (!fn.call(thisArg, value)) return; }
+            catch (e) { error(e); return; }
+
+            next(value);
+
+        }, error, complete));
+    }
+
 }
+
 
 if (!_esdown.global.Observable)
     _esdown.global.Observable = Observable;

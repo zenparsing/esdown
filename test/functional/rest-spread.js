@@ -1,4 +1,4 @@
-export var tests = {
+export let tests = {
 
     "rest arguments" (test) {
 
@@ -25,7 +25,7 @@ export var tests = {
 
         })(1, ...[2, 3, 4], 5);
 
-        var set = new Set;
+        let set = new Set;
         set.add(2);
         set.add(3);
         set.add(4);
@@ -42,7 +42,7 @@ export var tests = {
 
     "spread in array literals" (test) {
 
-        var set = new Set;
+        let set = new Set;
         set.add(2);
         set.add(3);
         set.add(4);
@@ -52,6 +52,16 @@ export var tests = {
         .equals([1, ...[2, 3, 4], 5], [1, 2, 3, 4, 5])
         ._("with an iterable")
         .equals([1, ...set.values(), 5], [1, 2, 3, 4, 5])
+        ;
+    },
+
+    "spread in new expressions" (test) {
+
+        let X = { Y: Array };
+
+        test
+        ._("arrays can be spread into new expressions")
+        .equals(new X.Y(1, 2, ...[3, 4], 5, 6), [1, 2, 3, 4, 5, 6])
         ;
     },
 

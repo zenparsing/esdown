@@ -285,11 +285,11 @@ Global._esdown = {
     },
 
     // Support for spread operations
-    spread() {
+    spread(initial) {
 
         return {
 
-            a: [],
+            a: initial || [],
 
             // Add items
             s() {

@@ -429,7 +429,7 @@ export class Replacer {
     ArrayLiteral(node) {
 
         if (node.hasSpread)
-            return "(" + this.spreadList(node.elements, true) + ")";
+            return this.spreadList(node.elements);
     }
 
     MethodDefinition(node) {
@@ -627,7 +627,7 @@ export class Replacer {
             throw new Error("Super call not supported");
 
         if (node.hasSpread)
-            spread = this.spreadList(args, false);
+            spread = this.spreadList(args);
 
         if (node.injectThisArg) {
 
@@ -654,6 +654,17 @@ export class Replacer {
             }
 
             return callee.text + ".apply(" + argText + ", " + spread + ")";
+        }
+    }
+
+    NewExpression(node) {
+
+        if (node.hasSpread) {
+
+            let temp = this.addTempVar(node),
+                spread = this.spreadList(node.arguments, "[null]");
+
+            return `new (${ temp } = ${ node.callee.text }, ${ temp }.bind.apply(${ temp }, ${ spread }))`;
         }
     }
 
@@ -1124,7 +1135,7 @@ export class Replacer {
         return node;
     }
 
-    spreadList(elems, newArray) {
+    spreadList(elems, initial) {
 
         let list = [],
             last = -1;
@@ -1145,7 +1156,7 @@ export class Replacer {
         if (last < elems.length - 1)
             list.push({ type: "s", args: this.joinList(elems.slice(last + 1)) });
 
-        let out = "(_esdown.spread()";
+        let out = `(_esdown.spread(${ initial || "" })`;
 
         for (let i = 0; i < list.length; ++i)
             out += `.${ list[i].type }(${ list[i].args })`;
