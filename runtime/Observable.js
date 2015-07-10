@@ -202,36 +202,24 @@ class Observable {
 
     subscribe(onNext, onError = undefined, onComplete = undefined) {
 
-        let subscription = new Subscription(onNext, onError, onComplete),
-            abrupt = false,
-            error;
+        // Create a subscription object
+        let subscription = new Subscription(onNext, onError, onComplete);
 
+        // Generate normalized observer callbacks
         onNext = subscriptionNext(subscription);
         onError = subscriptionError(subscription);
         onComplete = subscriptionComplete(subscription);
 
-        try {
+        // Call the subscriber function
+        let dispose = this._subscriber.call(undefined, onNext, onError, onComplete);
 
-            // Call the subscriber function
-            let dispose = this._subscriber.call(undefined, onNext, onError, onComplete);
+        // If a subscription was returned, extract the "unsubscribe" method from it
+        if (dispose != null && typeof dispose !== "function")
+            dispose = extractMethod(dispose, "unsubscribe");
 
-            if (dispose != null && typeof dispose !== "function")
-                dispose = extractMethod(dispose, "unsubscribe");
-
-            subscription._dispose = dispose;
-
-        } catch (e) {
-
-            abrupt = true;
-            error = e;
-        }
-
+        // Set the subscription's cancelation function and make it active
+        subscription._dispose = dispose;
         subscription._state = "ready";
-
-        // If an error occurs during startup, then attempt to send the error
-        // to the observer
-        if (abrupt)
-            onError(error);
 
         return subscription;
     }
@@ -247,26 +235,35 @@ class Observable {
 
         let method = getMethod(x, Symbol.observable);
 
+        // If the object has a Symbol.observable method...
         if (method) {
 
+            // Get an object with the method
             let observable = method.call(x);
 
             if (Object(observable) !== observable)
                 throw new TypeError(observable + " is not an object");
 
+            // If the object is an "instance" of the constructor, then return the object
             if (observable.constructor === C)
                 return observable;
 
+            // Create a new Observable of the constructor's type which wraps the object
             return new C((...args) => observable.subscribe(...args));
         }
 
         method = getMethod(x, Symbol.iterator);
 
+        // Throw if object does not have a Symbol.iterator method.  This allows us
+        // to make other types observable in the future (like async iterators).
         if (!method)
             throw new TypeError(x + " is not observable");
 
         return new C((next, error, complete) => {
 
+            // Enqueue a job to iterate over the iterable object.  We enqueue a job
+            // in order to avoid sending values to the observer before subscription
+            // is complete.
             enqueueJob(_=> {
 
                 try {
@@ -285,7 +282,29 @@ class Observable {
         });
     }
 
-    static of(...items) { return this.from(items) }
+    static of(...items) {
+
+        let C = typeof this === "function" ? this : Observable;
+
+        return new C((next, error, complete) => {
+
+            enqueueJob(_=> {
+
+                try {
+
+                    for (let i = 0; i < items.length; ++i)
+                        next(items[i]);
+
+                } catch (e) {
+
+                    error(e);
+                    return;
+                }
+
+                complete();
+            });
+        });
+    }
 
     // Possible API Extensions
 
