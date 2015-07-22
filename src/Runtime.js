@@ -227,64 +227,93 @@ Global._esdown = {
 
                 if (back) {
 
+                    // If list is not empty, then push onto the end
                     back = back.next = x;
 
                 } else {
 
+                    // Create new list and resume generator
                     front = back = x;
                     resume(type, value);
                 }
             });
         }
 
-        function resume(type, value) {
+        function fulfill(type, value) {
 
-            if (type === "return" && !(type in iter)) {
+            switch (type) {
 
-                // HACK: If the generator does not support the "return" method, then
-                // emulate it (poorly) using throw.  (V8 circa 2015-02-13 does not support
-                // generator.return.)
-                type = "throw";
-                value = { value, __return: true };
-            }
+                case "return":
+                    front.resolve({ value, done: true });
+                    break;
 
-            try {
+                case "throw":
+                    front.reject(value);
+                    break;
 
-                let result = iter[type](value);
-
-                value = result.value;
-
-                if (typeof value === "object" && "_esdown_await" in value) {
-
-                    if (result.done)
-                        throw new Error("Invalid async generator return");
-
-                    Promise.resolve(value._esdown_await).then(
-                        x => resume("next", x),
-                        x => resume("throw", x));
-
-                    return;
-                }
-
-                front.resolve(result);
-
-            } catch (x) {
-
-                if (x && x.__return === true) {
-
-                    // HACK: Return-as-throw
-                    front.resolve({ value: x.value, done: true });
-
-                } else {
-
-                    front.reject(x);
-                }
+                default:
+                    front.resolve({ value, done: false });
+                    break;
             }
 
             front = front.next;
 
             if (front) resume(front.type, front.value);
             else back = null;
+        }
+
+        function awaitValue(result) {
+
+            let value = result.value;
+
+            if (typeof value === "object" && "_esdown_await" in value) {
+
+                if (result.done)
+                    throw new Error("Invalid async generator return");
+
+                return value._esdown_await;
+            }
+
+            return null;
+        }
+
+        function resume(type, value) {
+
+            // HACK: If the generator does not support the "return" method, then
+            // emulate it (poorly) using throw.  (V8 circa 2015-02-13 does not support
+            // generator.return.)
+            if (type === "return" && !(type in iter)) {
+
+                type = "throw";
+                value = { value, __return: true };
+            }
+
+            try {
+
+                let result = iter[type](value),
+                    awaited = awaitValue(result);
+
+                if (awaited) {
+
+                    Promise.resolve(awaited).then(
+                        x => resume("next", x),
+                        x => resume("throw", x));
+
+                } else {
+
+                    Promise.resolve(result.value).then(
+                        x => fulfill(result.done ? "return" : "normal", x),
+                        x => fulfill("throw", x));
+                }
+
+            } catch (x) {
+
+                // HACK: Return-as-throw
+                if (x && x.__return === true)
+                    return fulfill("return", x.value);
+
+                fulfill("throw", x);
+            }
         }
     },
 
