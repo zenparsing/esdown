@@ -1595,7 +1595,7 @@ InstallFunctions($Promise.prototype, DONT_ENUM, [
 
 Runtime.Observable = 
 
-`// === Job Queueing ===
+`// === Non-Promise Job Queueing ===
 
 const enqueueJob = (function() {
 
@@ -1666,127 +1666,126 @@ function getMethod(obj, key) {
     return value;
 }
 
-function extractMethod(obj, key) {
+function cleanupSubscription(observer) {
 
-    let method = getMethod(obj, key);
+    // Assert:  observer._observer is undefined
 
-    if (!method)
-        throw new TypeError(value + " is not a function");
+    let cleanup = observer._cleanup;
 
-    return (...args) => method.call(obj, ...args);
+    if (!cleanup)
+        return;
+
+    // Drop the reference to the cleanup function so that we won't call it
+    // more than once
+    observer._cleanup = undefined;
+
+    // Call the cleanup function
+    cleanup();
 }
 
-function disposeSubscription(subscription) {
+function cancelSubscription(observer) {
 
-    subscription._state = "completed";
-
-    let dispose = subscription._dispose;
-
-    subscription._dispose = undefined;
-    subscription._onNext = undefined;
-    subscription._onError = undefined;
-    subscription._onComplete = undefined;
-
-    if (dispose)
-        dispose();
+    observer._observer = undefined;
+    cleanupSubscription(observer);
 }
 
-function subscriptionNext(subscription) {
+function subscriptionClosed(observer) {
 
-    return function onNext(value) {
-
-        switch (subscription._state) {
-            case "initializing":
-                throw new Error("Subscription initializing");
-            case "completed":
-                return;
-        }
-
-        subscription._onNext.call(undefined, value);
-    };
+    return observer._observer === undefined;
 }
 
-function subscriptionError(subscription) {
+class SubscriptionObserver {
 
-    return function onError(value) {
+    constructor(observer) {
 
-        switch (subscription._state) {
-            case "initializing":
-                throw new Error("Subscription initializing");
-            case "completed":
-                throw value;
-        }
+        this._observer = observer;
+        this._cleanup = undefined;
+    }
 
-        subscription._state = "completed";
+    get closed() { return subscriptionClosed(this) }
+
+    next(value) {
+
+        // If the stream if closed, then return undefined
+        if (subscriptionClosed(this))
+            return undefined;
+
+        let observer = this._observer;
 
         try {
 
-            if (!subscription._onError)
-                throw value;
+            let m = getMethod(observer, "next");
 
-            subscription._onError.call(undefined, value);
+            // If the observer doesn't support "next", then return undefined
+            if (!m)
+                return undefined;
 
-        } finally {
+            // Send the next value to the sink
+            return m.call(observer, value);
 
-            disposeSubscription(subscription);
+        } catch (e) {
+
+            // If the observer throws, then close the stream and rethrow the error
+            cancelSubscription(this);
+            throw e;
         }
-    };
-}
+    }
 
-function subscriptionComplete(subscription) {
+    error(value) {
 
-    return function onComplete(value) {
+        // If the stream is closed, throw the error to the caller
+        if (subscriptionClosed(this))
+            throw value;
 
-        switch (subscription._state) {
-            case "initializing":
-                throw new Error("Subscription initializing");
-            case "completed":
-                return;
-        }
-
-        subscription._state = "completed";
+        let observer = this._observer;
+        this._observer = undefined;
 
         try {
 
-            if (!subscription._onComplete)
-                return;
+            let m = getMethod(observer, "error");
 
-            subscription._onComplete.call(undefined, value);
+            // If the sink does not support "error", then throw the error to the caller
+            if (!m)
+                throw value;
+
+            return m.call(observer, value);
 
         } finally {
 
-            disposeSubscription(subscription);
+            cleanupSubscription(this);
         }
-    };
-}
-
-class Subscription {
-
-    constructor(onNext, onError, onComplete) {
-
-        if (typeof onNext !== "function")
-            throw new TypeError(onNext + " is not a function");
-
-        if (onError != null && typeof onError !== "function")
-            throw new TypeError(onError + " is not a function");
-
-        if (onComplete != null && typeof onComplete !== "function")
-            throw new TypeError(onComplete + " is not a function");
-
-        this._state = "initializing";
-        this._dispose = undefined;
-        this._onNext = onNext;
-        this._onError = onError;
-        this._onComplete = onComplete;
     }
 
-    unsubscribe() {
+    complete(value) {
 
-        disposeSubscription(this);
+        // If the stream is closed, then return undefined
+        if (subscriptionClosed(this))
+            return undefined;
+
+        let observer = this._observer;
+        this._observer = undefined;
+
+        try {
+
+            let m = getMethod(observer, "complete");
+
+            // If the sink does not support "complete", then return undefined
+            if (!m)
+                return undefined;
+
+            return m.call(observer, value);
+
+        } finally {
+
+            cleanupSubscription(this);
+        }
     }
+
 }
 
 class Observable {
+
+    // == Fundamental ==
 
     constructor(subscriber) {
 
@@ -1797,31 +1796,46 @@ class Observable {
         this._subscriber = subscriber;
     }
 
-    subscribe(onNext, onError = undefined, onComplete = undefined) {
+    subscribe(observer) {
 
-        // Create a subscription object
-        let subscription = new Subscription(onNext, onError, onComplete);
+        // The observer must be an object
+        if (Object(observer) !== observer)
+            throw new TypeError("Observer must be an object");
 
-        // Generate normalized observer callbacks
-        onNext = subscriptionNext(subscription);
-        onError = subscriptionError(subscription);
-        onComplete = subscriptionComplete(subscription);
+        // Wrap the observer in order to maintain observation invariants
+        observer = new SubscriptionObserver(observer);
 
-        // Call the subscriber function
-        let dispose = this._subscriber.call(undefined, onNext, onError, onComplete);
+        try {
 
-        // If a subscription was returned, extract the "unsubscribe" method from it
-        if (dispose != null && typeof dispose !== "function")
-            dispose = extractMethod(dispose, "unsubscribe");
+            // Call the subscriber function
+            let cleanup = this._subscriber.call(undefined, observer);
 
-        // Set the subscription's cancelation function and make it active
-        subscription._dispose = dispose;
-        subscription._state = "ready";
+            // The return value must be undefined, null, or a function
+            if (cleanup != null && typeof cleanup !== "function")
+                throw new TypeError(cleanup + " is not a function");
 
-        return subscription;
+            observer._cleanup = cleanup;
+
+        } catch (e) {
+
+            // If an error occurs during startup, then attempt to send the error
+            // to the observer
+            observer.error(e);
+            return;
+        }
+
+        // If the stream is already finished, then perform cleanup
+        if (subscriptionClosed(observer))
+            cleanupSubscription(observer);
+
+        return _=> { cancelSubscription(observer) };
     }
 
     [Symbol.observable]() { return this }
+
+    static get [Symbol.species]() { return this }
+
+    // == Derived ==
 
     static from(x) {
 
@@ -1832,49 +1846,45 @@ class Observable {
 
         let method = getMethod(x, Symbol.observable);
 
-        // If the object has a Symbol.observable method...
         if (method) {
 
-            // Get an object with the method
             let observable = method.call(x);
 
             if (Object(observable) !== observable)
                 throw new TypeError(observable + " is not an object");
 
-            // If the object is an "instance" of the constructor, then return the object
             if (observable.constructor === C)
                 return observable;
 
-            // Create a new Observable of the constructor's type which wraps the object
-            return new C((...args) => observable.subscribe(...args));
+            return new C(observer => observable.subscribe(observer));
         }
 
-        method = getMethod(x, Symbol.iterator);
+        return new C(observer => {
 
-        // Throw if object does not have a Symbol.iterator method.  This allows us
-        // to make other types observable in the future (like async iterators).
-        if (!method)
-            throw new TypeError(x + " is not observable");
-
-        return new C((next, error, complete) => {
-
-            // Enqueue a job to iterate over the iterable object.  We enqueue a job
-            // in order to avoid sending values to the observer before subscription
-            // is complete.
             enqueueJob(_=> {
 
+                if (observer.closed)
+                    return;
+
+                // Assume that the object is iterable.  If not, then the observer
+                // will receive an error.
                 try {
 
-                    for (let item of method.call(x))
-                        next(item);
+                    for (let item of x) {
 
-                } catch (e) {
+                        observer.next(item);
 
-                    error(e);
+                        if (observer.closed)
+                            return;
+                    }
+
+                } catch (x) {
+
+                    observer.error(x);
                     return;
                 }
 
-                complete();
+                observer.complete();
             });
         });
     }
@@ -1883,73 +1893,128 @@ class Observable {
 
         let C = typeof this === "function" ? this : Observable;
 
-        return new C((next, error, complete) => {
+        return new C(observer => {
 
             enqueueJob(_=> {
 
                 try {
 
-                    for (let i = 0; i < items.length; ++i)
-                        next(items[i]);
+                    if (observer.closed)
+                        return;
 
-                } catch (e) {
+                    for (let i = 0; i < items.length; ++i) {
 
-                    error(e);
+                        observer.next(items[i]);
+
+                        if (observer.closed)
+                            return;
+                    }
+
+                } catch (x) {
+
+                    observer.error(x);
                     return;
                 }
 
-                complete();
+                observer.complete();
             });
         });
     }
 
-    // Possible API Extensions
+    map(fn) {
 
-    static get [Symbol.species]() { return this }
+        if (typeof fn !== "function")
+            throw new TypeError(fn + " is not a function");
 
-    forEach(fn, thisArg = undefined) {
+        let C = this.constructor[Symbol.species];
 
-        return new Promise((resolve, reject) => {
+        return new C(observer => this.subscribe({
 
-            if (typeof fn !== "function")
-                throw new TypeError(fn + " is not a function");
+            next(value) {
 
-            this.subscribe(value => { fn.call(thisArg, value) }, reject, resolve);
+                try { value = fn(value) }
+                catch (e) { return observer.error(e) }
+
+                return observer.next(value);
+            },
+
+            error(value) { return observer.error(value) },
+            complete(value) { return observer.complete(value) },
+        }));
+    }
+
+    filter(fn) {
+
+        if (typeof fn !== "function")
+            throw new TypeError(fn + " is not a function");
+
+        let C = this.constructor[Symbol.species];
+
+        return new C(observer => this.subscribe({
+
+            next(value) {
+
+                try { if (!fn(value)) return undefined; }
+                catch (e) { return observer.error(e) }
+
+                return observer.next(value);
+            },
+
+            error(value) { return observer.error(value) },
+            complete(value) { return observer.complete(value) },
+        }));
+    }
+
+    async *[Symbol.asyncIterator]() {
+
+        let queue = [], resolve = null;
+
+        function send(c) {
+
+            if (resolve) {
+
+                resolve(c);
+                resolve = null;
+
+            } else {
+
+                queue.push(c);
+            }
+        }
+
+        function next() {
+
+            if (queue.length > 0)
+                return queue.shift();
+
+            if (resolve)
+                throw new Error("Already waiting");
+
+            return new Promise(r => resolve = r);
+        }
+
+        let cancel = this.subscribe({
+
+            next(value) { send(["normal", value]) },
+            error(value) { send(["throw", value]) },
+            complete(value) { send(["return", value]) },
         });
-    }
 
-    map(fn, thisArg = undefined) {
+        try {
 
-        if (typeof fn !== "function")
-            throw new TypeError(fn + " is not a function");
+            while (true) {
 
-        let C = this.constructor[Symbol.species];
+                let [type, value] = await next();
 
-        return new C((next, error, complete) => this.subscribe(value => {
+                if (type === "return") return value;
+                else if (type === "throw") throw value;
+                else yield value;
+            }
 
-            try { value = fn.call(thisArg, value) }
-            catch (e) { error(e); return; }
+        } finally {
 
-            next(value);
-
-        }, error, complete));
-    }
-
-    filter(fn, thisArg = undefined) {
-
-        if (typeof fn !== "function")
-            throw new TypeError(fn + " is not a function");
-
-        let C = this.constructor[Symbol.species];
-
-        return new C((next, error, complete) => this.subscribe(value => {
-
-            try { if (!fn.call(thisArg, value)) return; }
-            catch (e) { error(e); return; }
-
-            next(value);
-
-        }, error, complete));
+            cancel();
+        }
     }
 
 }
