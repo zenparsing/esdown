@@ -265,12 +265,12 @@ export class Replacer {
 
         if (node.async) {
 
-            head = `for (var ${ iter } = _esdown.asyncIter(${ node.right.text }), ${ iterResult }; `;
+            head = `for (var ${ iter } = (${ node.right.text })[Symbol.asyncIterator](), ${ iterResult }; `;
             head += `${ iterResult } = ${ this.awaitYield(context, iter + ".next()") }, `;
 
         } else {
 
-            head = `for (var ${ iter } = _esdown.iter(${ node.right.text }), ${ iterResult }; `;
+            head = `for (var ${ iter } = (${ node.right.text })[Symbol.iterator](), ${ iterResult }; `;
             head += `${ iterResult } = ${ iter }.next(), `;
         }
 

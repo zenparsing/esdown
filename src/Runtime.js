@@ -126,35 +126,6 @@ Global._esdown = {
 
     class: buildClass,
 
-    // Support for iterator protocol
-    iter(obj) {
-
-        if (obj[Symbol.iterator] !== void 0)
-            return obj[Symbol.iterator]();
-
-        if (Array.isArray(obj))
-            return obj.values();
-
-        return obj;
-    },
-
-    asyncIter(obj) {
-
-        if (obj[Symbol.asyncIterator] !== void 0)
-            return obj[Symbol.asyncIterator]();
-
-        let iter = { [Symbol.asyncIterator]() { return this } },
-            inner = _esdown.iter(obj);
-
-        ["next", "throw", "return"].forEach(name => {
-
-            if (name in inner)
-                iter[name] = value => Promise.resolve(inner[name](value));
-        });
-
-        return iter;
-    },
-
     // Support for computed property names
     computed(target) {
 
@@ -370,7 +341,7 @@ Global._esdown = {
             };
         }
 
-        let iter = _esdown.iter(toObject(obj));
+        let iter = toObject(obj)[Symbol.iterator]();
 
         return {
 
@@ -508,21 +479,6 @@ function toObject(val) {
         throw new TypeError(val + " is not an object");
 
     return Object(val);
-}
-
-function iteratorMethod(obj) {
-
-    // TODO:  What about typeof === "string"?
-    if (!obj || typeof obj !== "object")
-        return null;
-
-    let m = obj[Symbol.iterator];
-
-    // Generator iterators in Node 0.11.13 do not have a [Symbol.iterator] method
-    if (!m && typeof obj.next === "function" && typeof obj.throw === "function")
-        return function() { return this };
-
-    return m;
 }
 
 function assertThis(val, name) {
@@ -876,7 +832,7 @@ polyfill(Array, {
         if (map !== void 0 && typeof map !== "function")
             throw new TypeError(map + " is not a function");
 
-        var getIter = iteratorMethod(list);
+        var getIter = list[Symbol.iterator];
 
         if (getIter) {
 

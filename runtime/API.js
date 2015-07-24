@@ -122,35 +122,6 @@ Global._esdown = {
 
     class: buildClass,
 
-    // Support for iterator protocol
-    iter(obj) {
-
-        if (obj[Symbol.iterator] !== void 0)
-            return obj[Symbol.iterator]();
-
-        if (Array.isArray(obj))
-            return obj.values();
-
-        return obj;
-    },
-
-    asyncIter(obj) {
-
-        if (obj[Symbol.asyncIterator] !== void 0)
-            return obj[Symbol.asyncIterator]();
-
-        let iter = { [Symbol.asyncIterator]() { return this } },
-            inner = _esdown.iter(obj);
-
-        ["next", "throw", "return"].forEach(name => {
-
-            if (name in inner)
-                iter[name] = value => Promise.resolve(inner[name](value));
-        });
-
-        return iter;
-    },
-
     // Support for computed property names
     computed(target) {
 
@@ -366,7 +337,7 @@ Global._esdown = {
             };
         }
 
-        let iter = _esdown.iter(toObject(obj));
+        let iter = toObject(obj)[Symbol.iterator]();
 
         return {
 

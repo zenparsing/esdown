@@ -83,21 +83,6 @@ function toObject(val) {
     return Object(val);
 }
 
-function iteratorMethod(obj) {
-
-    // TODO:  What about typeof === "string"?
-    if (!obj || typeof obj !== "object")
-        return null;
-
-    let m = obj[Symbol.iterator];
-
-    // Generator iterators in Node 0.11.13 do not have a [Symbol.iterator] method
-    if (!m && typeof obj.next === "function" && typeof obj.throw === "function")
-        return function() { return this };
-
-    return m;
-}
-
 function assertThis(val, name) {
 
     if (val == null)
@@ -449,7 +434,7 @@ polyfill(Array, {
         if (map !== void 0 && typeof map !== "function")
             throw new TypeError(map + " is not a function");
 
-        var getIter = iteratorMethod(list);
+        var getIter = list[Symbol.iterator];
 
         if (getIter) {
 
