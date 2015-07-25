@@ -798,9 +798,9 @@ export class Replacer {
         if (node.delegate) {
 
             let fn = this.parentFunction(node),
-                method = isAsyncType(fn.kind) ? "asyncIter" : "iter";
+                symbol = isAsyncType(fn.kind) ? "asyncIterator" : "iterator";
 
-            node.expression.text = `_esdown.${ method }(${ node.expression.text })`;
+            node.expression.text = `(${ node.expression.text })[Symbol.${ symbol }]()`;
         }
     }
 
