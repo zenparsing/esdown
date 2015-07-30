@@ -645,7 +645,7 @@ export class Replacer {
 
             argText = "void 0";
 
-            if (node.callee.type === "MemberExpression") {
+            if (callee.type === "MemberExpression") {
 
                 argText = this.addTempVar(node);
 
@@ -718,30 +718,32 @@ export class Replacer {
             return this.privateReference(node, node.object.text, node.property.text);
     }
 
+    PipeExpression(node) {
+
+        let left = node.left.text,
+            temp = this.addTempVar(node),
+            callee = `(${ temp } = ${ left }, ${ node.right.text })`,
+            args = temp;
+
+        if (node.hasSpread) {
+
+            args = this.spreadList(node.arguments, "[" + args + "]");
+            return `${ callee }.apply(void 0, ${ args })`;
+        }
+
+        if (node.arguments.length > 0)
+            args += ", " + this.joinList(node.arguments);
+
+        return `${ callee }(${ args })`;
+    }
+
     BindExpression(node) {
 
-        let left = node.left ? node.left.text : null,
-            temp = this.addTempVar(node),
-            bindee;
+        let temp = this.addTempVar(node),
+            obj = node.object.text,
+            prop = node.property.text;
 
-        if (!left) {
-
-            let right = this.unwrapParens(node.right);
-            bindee = `((${ temp } = ${ right.object.text }).${ right.property.text })`;
-
-        } else {
-
-            bindee = `(${ temp } = ${ left }, ${ node.right.text })`;
-        }
-
-        if (node.parent.type === "CallExpression" &&
-            node.parent.callee === node) {
-
-            node.parent.injectThisArg = temp;
-            return bindee;
-        }
-
-        return `${ bindee }.bind(${ temp })`;
+        return `(${ temp } = ${ obj }).${ prop }.bind(${ temp })`;
     }
 
     ArrowFunction(node) {
