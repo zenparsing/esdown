@@ -298,6 +298,8 @@ class Observable {
 
         return new C(observer => {
 
+            let stop = false;
+
             enqueueJob(_=> {
 
                 try {
@@ -366,6 +368,27 @@ class Observable {
             error(value) { return observer.error(value) },
             complete(value) { return observer.complete(value) },
         }));
+    }
+
+    forEach(fn) {
+
+        return new Promise((resolve, reject) => {
+
+            if (typeof fn !== "function")
+                throw new TypeError(fn + " is not a function");
+
+            this.subscribe({
+
+                next(value) {
+
+                    try { return fn(value) }
+                    catch (x) { reject(x) }
+                },
+
+                error: reject,
+                complete: resolve,
+            });
+        });
     }
 
     async *[Symbol.asyncIterator]() {

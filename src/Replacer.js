@@ -1018,11 +1018,6 @@ export class Replacer {
         return text;
     }
 
-    ClassStaticBlock(node) {
-
-        return "(function() " + this.stringify(node).replace(/^static\s/, "") + ")()";
-    }
-
     TaggedTemplateExpression(node) {
 
         return "(" + this.stringify(node) + ")";
