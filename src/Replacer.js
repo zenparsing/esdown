@@ -1172,9 +1172,7 @@ export class Replacer {
 
         function propGet(name) {
 
-            return /^[\.\d'"]/.test(name) ?
-                "[" + name + "]" :
-                "." + name;
+            return /^[\.\d'"]/.test(name) ? "[" + name + "]" : "." + name;
         }
 
         let outer = [],
@@ -1280,8 +1278,11 @@ export class Replacer {
 
                 ast.properties.forEach(p => {
 
+                    let node = p.name,
+                        name = node.type === 'Identifier' ? node.value : node.text;
+
                     init = p.initializer ? p.initializer.text : "";
-                    child = new PatternTreeNode(p.name.text, init);
+                    child = new PatternTreeNode(name, init);
 
                     parent.children.push(child);
                     this.createPatternTree(p.pattern || p.name, child);

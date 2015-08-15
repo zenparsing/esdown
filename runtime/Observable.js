@@ -86,12 +86,6 @@ function cleanupSubscription(observer) {
     cleanup();
 }
 
-function cancelSubscription(observer) {
-
-    observer._observer = undefined;
-    cleanupSubscription(observer);
-}
-
 function subscriptionClosed(observer) {
 
     return observer._observer === undefined;
@@ -103,6 +97,15 @@ class SubscriptionObserver {
 
         this._observer = observer;
         this._cleanup = undefined;
+    }
+
+    cancel() {
+
+        if (subscriptionClosed(this))
+            return;
+
+        this._observer = undefined;
+        cleanupSubscription(this);
     }
 
     get closed() { return subscriptionClosed(this) }
@@ -129,8 +132,8 @@ class SubscriptionObserver {
         } catch (e) {
 
             // If the observer throws, then close the stream and rethrow the error
-            cancelSubscription(this);
-            throw e;
+            try { this.cancel() }
+            finally { throw e }
         }
     }
 
@@ -151,12 +154,17 @@ class SubscriptionObserver {
             if (!m)
                 throw value;
 
-            return m.call(observer, value);
+            value = m.call(observer, value);
 
-        } finally {
+        } catch (e) {
 
-            cleanupSubscription(this);
+            try { cleanupSubscription(this) }
+            finally { throw e }
         }
+
+        cleanupSubscription(this);
+
+        return value;
     }
 
     complete(value) {
@@ -173,15 +181,17 @@ class SubscriptionObserver {
             let m = getMethod(observer, "complete");
 
             // If the sink does not support "complete", then return undefined
-            if (!m)
-                return undefined;
+            value = m ? m.call(observer, value) : undefined;
 
-            return m.call(observer, value);
+        } catch (e) {
 
-        } finally {
-
-            cleanupSubscription(this);
+            try { cleanupSubscription(this) }
+            finally { throw e }
         }
+
+        cleanupSubscription(this);
+
+        return value;
     }
 
 }
@@ -208,6 +218,11 @@ class Observable {
         // Wrap the observer in order to maintain observation invariants
         observer = new SubscriptionObserver(observer);
 
+        // NOTE: This logic can be moved into the SubscriptionObserver
+        // constructor to avoid cross-class private state access.  Should
+        // it be moved?  To what extent is the SubscriptionObserver constructor
+        // observable?
+
         try {
 
             // Call the subscriber function
@@ -231,7 +246,28 @@ class Observable {
         if (subscriptionClosed(observer))
             cleanupSubscription(observer);
 
-        return _=> { cancelSubscription(observer) };
+        return _=> { observer.cancel() };
+    }
+
+    forEach(fn) {
+
+        return new Promise((resolve, reject) => {
+
+            if (typeof fn !== "function")
+                throw new TypeError(fn + " is not a function");
+
+            this.subscribe({
+
+                next(value) {
+
+                    try { return fn(value) }
+                    catch (x) { reject(x) }
+                },
+
+                error: reject,
+                complete: resolve,
+            });
+        });
     }
 
     [Symbol.observable]() { return this }
@@ -283,6 +319,8 @@ class Observable {
 
                 } catch (x) {
 
+                    // If observer.next throws an error, then the subscription will
+                    // be closed and the error method will simply rethrow
                     observer.error(x);
                     return;
                 }
@@ -298,27 +336,17 @@ class Observable {
 
         return new C(observer => {
 
-            let stop = false;
-
             enqueueJob(_=> {
 
-                try {
+                if (observer.closed)
+                    return;
+
+                for (let i = 0; i < items.length; ++i) {
+
+                    observer.next(items[i]);
 
                     if (observer.closed)
                         return;
-
-                    for (let i = 0; i < items.length; ++i) {
-
-                        observer.next(items[i]);
-
-                        if (observer.closed)
-                            return;
-                    }
-
-                } catch (x) {
-
-                    observer.error(x);
-                    return;
                 }
 
                 observer.complete();
@@ -368,27 +396,6 @@ class Observable {
             error(value) { return observer.error(value) },
             complete(value) { return observer.complete(value) },
         }));
-    }
-
-    forEach(fn) {
-
-        return new Promise((resolve, reject) => {
-
-            if (typeof fn !== "function")
-                throw new TypeError(fn + " is not a function");
-
-            this.subscribe({
-
-                next(value) {
-
-                    try { return fn(value) }
-                    catch (x) { reject(x) }
-                },
-
-                error: reject,
-                complete: resolve,
-            });
-        });
     }
 
     async *[Symbol.asyncIterator]() {
