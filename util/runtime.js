@@ -19,7 +19,6 @@ var files = [
     "Polyfill.js",
     "MapSet.js",
     "Promise.js",
-    "Observable.js"
 ];
 
 function run() {

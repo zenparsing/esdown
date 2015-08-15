@@ -114,7 +114,8 @@ function buildClass(base, def) {
     return ctor;
 }
 
-Global._esdown = {
+// The "_esdown" must be defined in the outer scope
+_esdown = {
 
     version: VERSION,
 

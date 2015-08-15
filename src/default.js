@@ -59,6 +59,8 @@ export function main() {
 
             "runtime": { short: "r", flag: true },
 
+            "polyfill": { short: "p", flag: true },
+
             "nowrap": { flag: true },
         },
 
@@ -71,7 +73,8 @@ export function main() {
                 promise = bundle(params.input, {
 
                     global: params.global,
-                    runtime: params.runtime
+                    runtime: params.runtime,
+                    polyfill: params.polyfill,
                 });
 
             } else {
@@ -86,8 +89,9 @@ export function main() {
 
                         global: params.global,
                         runtime: params.runtime,
+                        polyfill: params.polyfill,
                         wrap: !params.nowrap,
-                        module: true
+                        module: true,
                     });
                 });
             }
@@ -113,7 +117,7 @@ export function main() {
                     if (!params.bundle)
                         filename = Path.resolve(params.input);
 
-                    process.stdout.write(`\nSyntax Error: ${formatSyntaxError(x, filename)}\n`);
+                    process.stdout.write(`\nSyntax Error: ${ formatSyntaxError(x, filename) }\n`);
                     return;
                 }
 

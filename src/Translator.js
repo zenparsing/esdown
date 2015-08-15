@@ -57,12 +57,36 @@ function wrapRuntimeModules() {
     }).join("");
 }
 
+function wrapRuntimeAPI() {
+
+    return "var _esdown; (function() {\n\n" + Runtime.API + "\n\n}).call(this);\n\n";
+}
+
+function wrapPolyfillModules() {
+
+    return Object.keys(Runtime).map(key => {
+
+        if (key === "API")
+            return "_esdown.global._esdown = _esdown;\n\n";
+
+        return "(function() {\n\n" + Runtime[key] + "\n\n}).call(this);\n\n";
+
+    }).join("");
+}
+
 export function translate(input, options = {}) {
 
     input = sanitize(input);
 
+    let prefix = "";
+
     if (options.runtime)
-        input = "\n" + wrapRuntimeModules() + input;
+        prefix = "\n" + wrapRuntimeAPI();
+
+    if (options.polyfill)
+        prefix += "\n" + wrapPolyfillModules();
+
+    input = prefix + input;
 
     // Node modules are wrapped inside of a function expression, which allows
     // return statements

@@ -182,8 +182,14 @@ export function bundle(rootPath, options = {}) {
                 "\n\n}).call(this, " + node.name + ");\n";
         });
 
-        if (options.runtime)
-            output = translate("", { runtime: true, module: true }) + "\n\n" + output;
+        if (options.runtime || options.polyfill) {
+
+            output = translate("", {
+                runtime: options.runtime,
+                polyfill: options.polyfill,
+                module: true,
+            }) + "\n\n" + output;
+        }
 
         return wrapModule(output, dependencies, options.global);
     });
