@@ -80,11 +80,13 @@ export function translate(input, options = {}) {
 
     let prefix = "";
 
-    if (options.runtime)
+    if (options.runtime) {
+
         prefix = "\n" + wrapRuntimeAPI();
 
-    if (options.polyfill)
-        prefix += "\n" + wrapPolyfillModules();
+        if (options.polyfill)
+            prefix += "\n" + wrapPolyfillModules();
+    }
 
     input = prefix + input;
 
