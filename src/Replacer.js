@@ -737,15 +737,6 @@ export class Replacer {
         return `${ callee }(${ args })`;
     }
 
-    BindExpression(node) {
-
-        let temp = this.addTempVar(node),
-            obj = node.object.text,
-            prop = node.property.text;
-
-        return `(${ temp } = ${ obj }).${ prop }.bind(${ temp })`;
-    }
-
     ArrowFunction(node) {
 
         let body = node.body.text;
