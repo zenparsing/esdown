@@ -1,5 +1,5 @@
 import * as Path from "node:path";
-import { readFile } from "./AsyncFS.js";
+import { readFile, writeFile } from "./AsyncFS.js";
 import { isPackageSpecifier, locateModule } from "./Locator.js";
 import { translate, wrapModule } from "./Translator.js";
 import { Replacer } from "./Replacer.js";
@@ -185,12 +185,19 @@ export function bundle(rootPath, options = {}) {
         if (options.runtime || options.polyfill) {
 
             output = translate("", {
+
                 runtime: options.runtime,
                 polyfill: options.polyfill,
                 module: true,
+
             }) + "\n\n" + output;
         }
 
-        return wrapModule(output, dependencies, options.global);
+        output = wrapModule(output, dependencies, options.global);
+
+        if (options.output)
+            return writeFile(Path.resolve(options.output), output, "utf8").then(_=> "");
+
+        return output;
     });
 }
