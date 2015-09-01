@@ -16,8 +16,8 @@ const WRAP_CALLEE = "(function(fn, deps, name) { " +
         "define(['require', 'exports', 'module'].concat(deps), fn); " +
 
     // DOM global module:
-    "else if (typeof window !== 'undefined' && name) " +
-        "fn(obj, window[name] = {}, {}); " +
+    "else if (typeof self !== 'undefined' && name) " +
+        "fn(obj, name === '*' ? self : (self[name] = {}), {}); " +
 
     // Hail Mary:
     "else " +
