@@ -23,10 +23,15 @@ function forEachDesc(obj, fn) {
     for (let i = 0; i < names.length; ++i)
         fn(names[i], Object.getOwnPropertyDescriptor(obj, names[i]));
 
-    names = Object.getOwnPropertySymbols(obj);
+    let getSymbols = Object.getOwnPropertySymbols;
 
-    for (let i = 0; i < names.length; ++i)
-        fn(names[i], Object.getOwnPropertyDescriptor(obj, names[i]));
+    if (getSymbols) {
+
+        names = getSymbols.call(null, obj);
+
+        for (let i = 0; i < names.length; ++i)
+            fn(names[i], Object.getOwnPropertyDescriptor(obj, names[i]));
+    }
 
     return obj;
 }
