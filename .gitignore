@@ -2,5 +2,6 @@
 _*
 node_modules
 build/esdown.js
+build/esdown-runtime.js
 bin/esdown
 !test/**/node_modules

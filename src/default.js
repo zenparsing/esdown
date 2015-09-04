@@ -59,6 +59,8 @@ export function main() {
 
             "runtime": { short: "r", flag: true },
 
+            "fullRuntime": { short: "R", flag: true },
+
             "polyfill": { short: "p", flag: true },
 
             "nowrap": { flag: true },
@@ -73,8 +75,8 @@ export function main() {
                 promise = bundle(params.input, {
 
                     global: params.global,
-                    runtime: params.runtime,
-                    polyfill: params.polyfill,
+                    runtime: params.fullRuntime || params.runtime,
+                    polyfill: params.fullRuntime || params.polyfill,
                 });
 
             } else {
@@ -88,8 +90,8 @@ export function main() {
                     return translate(text, {
 
                         global: params.global,
-                        runtime: params.runtime,
-                        polyfill: params.polyfill,
+                        runtime: params.fullRuntime || params.runtime,
+                        polyfill: params.fullRuntime || params.polyfill,
                         wrap: !params.nowrap,
                         module: true,
                     });
