@@ -9,6 +9,36 @@ import { translate } from "./Translator.js";
 export { translate, bundle };
 export { parse } from "esparse";
 
+const HELP = `
+Start a REPL by running it without any arguments:
+
+    esdown
+
+Execute a module by adding a path:
+
+    esdown main.js
+
+Translate a module by using a hyphen:
+
+    esdown - [input] [output] [options]
+
+    --input, -i  (1)    The file to translate.
+    --output, -o (2)    The file to write to. If not set, then the output
+                        will be written to the console.
+    --bundle, -b        If present, module dependencies will be bundled
+                        together in the output.
+    --runtime, -r       If present, the esdown runtime code will be bundled
+                        with the output.
+    --polyfill, -p      If present, ES6 polyfills will be bundled with the
+                        output.
+    -R                  If present, the esdown runtime and ES6 polyfills will
+                        be bundled with the output.  Equivalent to including
+                        both the -p and -r options.
+    --global, -g        If specified, the name of the global variable to
+                        dump this module's exports into, if the resulting
+                        script is not executed within any module system.
+`;
+
 function getOutPath(inPath, outPath) {
 
     let stat;
@@ -33,6 +63,13 @@ export function main() {
 
             if (input) runModule(input);
             else startREPL();
+        }
+
+    }).add("?", {
+
+        execute() {
+
+            console.log(HELP);
         }
 
     }).add("-", {
