@@ -2,7 +2,6 @@ import * as Path from "node:path";
 import { readFile, writeFile } from "./AsyncFS.js";
 import { isPackageSpecifier, locateModule } from "./Locator.js";
 import { translate, wrapModule } from "./Translator.js";
-import { Replacer } from "./Replacer.js";
 import { isLegacyScheme, removeScheme, hasScheme } from "./Schema.js";
 
 
@@ -74,18 +73,16 @@ class GraphBuilder {
         if (node.output !== null)
             throw new Error("Node already processed");
 
-        let replacer = new Replacer,
-            dir = Path.dirname(node.path);
+        let dir = Path.dirname(node.path);
 
-        replacer.identifyModule = path => {
+        let identifyModule = path => {
 
-            // REVISIT:  Does not currently allow bundling of legacy modules
             path = locateModule(path, dir).path;
             node.edges.add(path);
             return this.add(path).name;
         };
 
-        node.output = translate(input, { replacer, module: true });
+        node.output = translate(input, { identifyModule, module: true });
 
         return node;
     }
@@ -164,7 +161,7 @@ export function bundle(rootPath, options = {}) {
 
                 dependencies.push(path);
 
-                return `${ node.name } = __load(${ JSON.stringify(path) }${ legacy })`;
+                return `${ node.name } = __import(require(${ JSON.stringify(path) }${ legacy }))`;
             }
 
             return `${ node.name } = ${ node.path === rootPath ? "exports" : "{}" }`;
@@ -193,7 +190,7 @@ export function bundle(rootPath, options = {}) {
             }) + "\n\n" + output;
         }
 
-        output = wrapModule(output, dependencies, options.global);
+        output = wrapModule(output, [], { global: options.global });
 
         if (options.output)
             return writeFile(Path.resolve(options.output), output, "utf8").then(_=> "");

@@ -1,8 +1,4 @@
 import { parse, AST } from "esparse";
-import { isLegacyScheme, removeScheme } from "./Schema.js";
-
-const NODE_SCHEME = /^node:/i,
-      URI_SCHEME = /^[a-z]+:/i;
 
 const RESERVED_WORD = new RegExp("^(?:" +
     "break|case|catch|class|const|continue|debugger|default|delete|do|" +
@@ -146,15 +142,29 @@ function collapseScopes(parseResult) {
     }
 }
 
-export class Replacer {
+export function replaceText(input, options) {
 
-    replace(input, options = {}) {
+    return new Replacer(options).replace(input);
+}
+
+class Replacer {
+
+    constructor(options = {}) {
+
+        this.options = {
+            identifyModule: _=> "_M" + (this.uid++)
+        };
+
+        Object.assign(this.options, options);
+    }
+
+    replace(input) {
 
         this.asi = {};
 
         this.parseResult = parse(input, {
 
-            module: options.module,
+            module: this.options.module,
             addParentLinks: true,
             resolveScopes: true,
 
@@ -173,8 +183,9 @@ export class Replacer {
 
         this.input = input;
         this.exports = {};
-        this.imports = {};
+        this.moduleNames = {};
         this.dependencies = [];
+        this.runtime = new Set;
         this.isStrict = false;
         this.uid = 0;
 
@@ -216,25 +227,7 @@ export class Replacer {
         };
 
         let output = visit(new RootNode(root, input.length)),
-            head = "";
-
-        this.dependencies.forEach(dep => {
-
-            if (head) head += ", ";
-            else head = "var ";
-
-            let url = dep.url,
-                legacyFlag = dep.legacy ? ", 1" : "";
-
-            head += `${ this.imports[url] } = __load(${ JSON.stringify(dep.url) }${ legacyFlag })`;
-        });
-
-        if (head)
-            head += "; ";
-
-        output = head + output;
-
-        let exports = Object.keys(this.exports);
+            exports = Object.keys(this.exports);
 
         if (exports.length > 0) {
 
@@ -243,7 +236,14 @@ export class Replacer {
             output += "\n";
         }
 
-        return output;
+        let runtimeList = [];
+        this.runtime.forEach(x => runtimeList.push(x));
+
+        return {
+            output,
+            imports: this.dependencies,
+            runtime: runtimeList,
+        };
     }
 
     DoWhileStatement(node) {
@@ -422,6 +422,8 @@ export class Replacer {
                     c.text = `}, ${ c.name.expression.text }, { ${ c.text }`;
             });
 
+            this.runtime.add("computed");
+
             return "_esdown.computed(" + this.stringify(node) + ")";
         }
     }
@@ -547,6 +549,7 @@ export class Replacer {
                 } else {
 
                     ident = decl.pattern.text;
+
                     exports[ident] = ident;
                 }
             });
@@ -675,6 +678,9 @@ export class Replacer {
 
     SuperKeyword(node) {
 
+        if (this.skip("classes"))
+            return;
+
         let proto = "__.super",
             p = node.parent,
             elem = p;
@@ -739,6 +745,8 @@ export class Replacer {
 
     ArrowFunction(node) {
 
+        // TODO: If we are translating async arrows, we don't want to skip this
+
         let body = node.body.text;
 
         if (node.body.type !== "FunctionBody") {
@@ -799,6 +807,8 @@ export class Replacer {
 
     FunctionDeclaration(node) {
 
+        // TODO:  Skip based on async or async generators
+
         if (isAsyncType(node.kind))
             return this.asyncFunction(node);
     }
@@ -812,6 +822,8 @@ export class Replacer {
 
         if (node.base)
             this.fail("Subclassing not supported", node.base);
+
+        this.runtime.add("classes");
 
         return "var " + node.identifier.text + " = _esdown.class(" +
             (node.base ? (node.base.text + ", ") : "") +
@@ -833,6 +845,8 @@ export class Replacer {
             before = "function() { var " + node.identifier.text + " = ";
             after = "; return " + node.identifier.text + "; }()";
         }
+
+        this.runtime.add("classes");
 
         return "(" + before +
             "_esdown.class(" +
@@ -950,6 +964,8 @@ export class Replacer {
 
             if (e.name.type === "ComputedPropertyName") {
 
+                this.runtime.add("computed");
+
                 e.text = prefix + "_esdown.computed({}, " + e.name.expression.text + ", { " + text + " }));";
                 prefix = "";
 
@@ -1022,6 +1038,8 @@ export class Replacer {
 
         if (node.parent.type === "TaggedTemplateExpression") {
 
+            this.runtime.add("templates");
+
             out = "(_esdown.callSite(" +
                 "[" + lit.map(x => this.rawToString(x.raw)).join(", ") + "]";
 
@@ -1059,7 +1077,7 @@ export class Replacer {
     CatchClause(node) {
 
         if (!this.isPattern(node.param))
-            return null;
+            return;
 
         let temp = this.addTempVar(node, null, true),
             assign = this.translatePattern(node.param, temp).join(", "),
@@ -1071,7 +1089,7 @@ export class Replacer {
     VariableDeclarator(node) {
 
         if (!node.initializer || !this.isPattern(node.pattern))
-            return null;
+            return;
 
         let list = this.translatePattern(node.pattern, node.initializer.text);
 
@@ -1086,7 +1104,7 @@ export class Replacer {
         let left = this.unwrapParens(node.left);
 
         if (!this.isPattern(left))
-            return null;
+            return;
 
         let temp = this.addTempVar(node),
             list = this.translatePattern(left, temp);
@@ -1149,6 +1167,8 @@ export class Replacer {
         if (last < elems.length - 1)
             list.push({ type: "s", args: this.joinList(elems.slice(last + 1)) });
 
+        this.runtime.add("spread");
+
         let out = `(_esdown.spread(${ initial || "" })`;
 
         for (let i = 0; i < list.length; ++i)
@@ -1171,6 +1191,8 @@ export class Replacer {
             targets = [];
 
         node.patternTargets = targets;
+
+        this.runtime.add("destructuring");
 
         let visit = (tree, base) => {
 
@@ -1309,6 +1331,8 @@ export class Replacer {
         if (body === void 0)
             body = node.body.text;
 
+        this.runtime.add(wrapper === "asyncGen" ? "async-generators" : "async-functions");
+
         return `${ head }(${ outerParams }) { ` +
             `return _esdown.${ wrapper }(function*(${ this.joinList(node.params) }) ` +
             `${ body }.apply(this, arguments)); }`;
@@ -1374,6 +1398,8 @@ export class Replacer {
 
                 break;
         }
+
+        this.runtime.add("private");
 
         let temp;
 
@@ -1499,30 +1525,22 @@ export class Replacer {
 
     modulePath(node) {
 
-        return node.type === "StringLiteral" ?
-            this.identifyModule(node.value) :
-            this.stringify(node);
-    }
+        if (node.type !== "StringLiteral")
+            return this.stringify(node);
 
-    identifyModule(url) {
-
-        let legacy = false;
+        let url = node.value,
+            legacy = false;
 
         url = url.trim();
 
-        if (isLegacyScheme(url)) {
+        if (typeof this.moduleNames[url] !== "string") {
 
-            url = removeScheme(url).trim();
-            legacy = true;
+            let identifier = this.options.identifyModule(url);
+            this.moduleNames[url] = identifier;
+            this.dependencies.push({ url, identifier });
         }
 
-        if (typeof this.imports[url] !== "string") {
-
-            this.imports[url] = "_M" + (this.uid++);
-            this.dependencies.push({ url, legacy });
-        }
-
-        return this.imports[url];
+        return this.moduleNames[url];
     }
 
     stringify(node) {

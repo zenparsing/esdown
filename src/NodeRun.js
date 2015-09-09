@@ -87,7 +87,12 @@ function addExtension() {
             // via import syntax
             let m = !!module.parent.__es6;
 
-            text = translate(text, { wrap: m, module: m, functionContext: !m });
+            text = translate(text, {
+                wrap: m,
+                module: m,
+                functionContext: !m,
+                runtimeImports: true,
+            });
 
         } catch (e) {
 
@@ -110,14 +115,15 @@ export function runModule(path) {
 
     let loc = locateModule(path, process.cwd());
 
-    // "__load" is defined in the module wrapper and ensures that the
-    // target is loaded as a module
+    module.__es6 = true;
+    let m = require(loc.path);
 
-    let m = __load(loc.path);
+    if (m && m.constructor !== Object)
+        m = Object.create(m, { "default": { value: m } });
 
     if (m && typeof m.main === "function") {
 
-        let result = m.main(process.argv);
+        let result = m.main();
         Promise.resolve(result).then(null, x => setTimeout($=> { throw x }, 0));
     }
 }

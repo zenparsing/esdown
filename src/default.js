@@ -53,7 +53,7 @@ function getOutPath(inPath, outPath) {
     return outPath;
 }
 
-export function main() {
+export function main(args) {
 
     new ConsoleCommand({
 
@@ -164,5 +164,5 @@ export function main() {
             });
         }
 
-    }).run();
+    }).run(args || process.argv.slice(2));
 }

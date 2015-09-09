@@ -1,40 +1,35 @@
 import { Runtime } from "./Runtime.js";
-import { Replacer } from "./Replacer.js";
+import { replaceText } from "./Replacer.js";
+import { isLegacyScheme, removeScheme } from "./Schema.js";
 
 const SIGNATURE = "/*=esdown=*/";
 
-const WRAP_CALLEE = "(function(fn, deps, name) { " +
-
-    "function obj() { return {} } " +
+const WRAP_CALLEE = "(function(fn, name) { " +
 
     // CommonJS:
     "if (typeof exports !== 'undefined') " +
         "fn(require, exports, module); " +
 
-    // AMD:
-    "else if (typeof define === 'function' && define.amd) " +
-        "define(['require', 'exports', 'module'].concat(deps), fn); " +
-
     // DOM global module:
-    "else if (typeof self !== 'undefined' && name) " +
-        "fn(obj, name === '*' ? self : (self[name] = {}), {}); " +
-
-    // Hail Mary:
-    "else " +
-        "fn(obj, {}, {}); " +
+    "else if (typeof self !== 'undefined') " +
+        "fn(function() { return {} }, name === '*' ? self : (self[name] = {}), {}); " +
 
 "})";
 
-const WRAP_HEADER = "function(require, exports, module) { " +
-    "'use strict'; " +
-    "function __load(p, l) { " +
-        "module.__es6 = !l; " +
-        "var e = require(p); " +
-        "if (e && e.constructor !== Object) e.default = e; " +
-        "return e; " +
-    "} ";
+const MODULE_HEADER_RUNTIME = "'use strict'; " +
+"function __load(p, l) { " +
+    "module.__es6 = !l; " +
+    "var e = require(p); " +
+    "if (e && e.constructor !== Object) " +
+        "e = Object.create(e, { 'default': { value: e } }); " +
+    "return e; " +
+"} ";
 
-const WRAP_FOOTER = "\n\n}";
+const MODULE_HEADER = "'use strict'; " +
+"function __import(e) { " +
+    "return !e || e.constructor === Object ? e : " +
+        "Object.create(e, { 'default': { value: e } }); " +
+"} ";
 
 function sanitize(text) {
 
@@ -95,8 +90,8 @@ export function translate(input, options = {}) {
     if (options.functionContext)
         input = "(function(){" + input + "})";
 
-    let replacer = options.replacer || new Replacer,
-        output = replacer.replace(input, { module: options.module });
+    let result = replaceText(input, options),
+        output = result.output;
 
     // Remove function expression wrapper for node-modules
     if (options.functionContext)
@@ -108,21 +103,43 @@ export function translate(input, options = {}) {
         if (!options.module)
             throw new Error("Cannot wrap a non-module");
 
-        output = wrapModule(
-            output,
-            replacer.dependencies.map(d => d.url),
-            options.global);
+        output = wrapModule(output, result.imports, options);
     }
 
     return output;
 }
 
-export function wrapModule(text, dep, global) {
+export function wrapModule(text, imports, options = {}) {
+
+    let header = options.runtimeImports ? MODULE_HEADER_RUNTIME : MODULE_HEADER;
+
+    let requires = imports.map(dep => {
+
+        let url = dep.url,
+            legacy = isLegacyScheme(url),
+            ident = dep.identifier;
+
+        if (legacy)
+            url = removeScheme(url);
+
+        if (options.runtimeImports) {
+
+            let flag = legacy ? "1" : "0";
+            return `${ ident } = __load(${ JSON.stringify(url) }, ${ flag })`;
+        }
+
+        return `${ ident } = __import(require(${ JSON.stringify(url) }))`;
+    });
+
+    if (requires.length > 0)
+        header += "var " + requires.join(", ") + "; ";
+
+    if (!options.global)
+        return SIGNATURE + header + text;
 
     return SIGNATURE + WRAP_CALLEE + "(" +
-        WRAP_HEADER + text + WRAP_FOOTER + ", " +
-        JSON.stringify(dep) + ", " +
-        JSON.stringify(global || "") +
+        "function(require, exports, module) { " + header + text + "\n\n}, " +
+        JSON.stringify(options.global) +
     ");";
 }
 

@@ -1,4 +1,4 @@
-var _M0 = __load("z"); var __$0; function A() {}
+var __$0; function A() {}
 var X, Y;
 var J = (__$0 = _esdown.objd(obj), __$0.J), K = __$0.K;
 
