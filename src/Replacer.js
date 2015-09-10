@@ -179,8 +179,6 @@ class Replacer {
 
         let root = this.parseResult.ast;
 
-        collapseScopes(this.parseResult);
-
         this.input = input;
         this.exports = {};
         this.moduleNames = {};
@@ -188,6 +186,8 @@ class Replacer {
         this.runtime = new Set;
         this.isStrict = false;
         this.uid = 0;
+
+        collapseScopes(this.parseResult);
 
         let visit = node => {
 
@@ -718,10 +718,6 @@ class Replacer {
 
             return node.object.text + prop;
         }
-
-        // TODO:  What about super.@x?
-        if (node.property.type === "AtName")
-            return this.privateReference(node, node.object.text, node.property.text);
     }
 
     PipeExpression(node) {
@@ -744,8 +740,6 @@ class Replacer {
     }
 
     ArrowFunction(node) {
-
-        // TODO: If we are translating async arrows, we don't want to skip this
 
         let body = node.body.text;
 
@@ -791,6 +785,8 @@ class Replacer {
 
     YieldExpression(node) {
 
+        // TODO:  Can we drop these?
+
         // V8 circa Node 0.11.x does not support yield without expression
         if (!node.expression)
             return "yield void 0";
@@ -806,8 +802,6 @@ class Replacer {
     }
 
     FunctionDeclaration(node) {
-
-        // TODO:  Skip based on async or async generators
 
         if (isAsyncType(node.kind))
             return this.asyncFunction(node);
@@ -857,73 +851,6 @@ class Replacer {
             after + ")";
     }
 
-    PrivateDeclaration(node) {
-
-        let init = node.initializer;
-
-        if (node.static)
-            return "__private_ctor." + node.name.text + " = " + (init ? init.text : "void 0") + ";";
-
-        if (init) {
-
-            node.parent.privateNames[node.name.text].init = true;
-            return "function __init_" + node.name.text + "() { return " + init.text + "; }";
-        }
-
-        return "";
-    }
-
-    AtName(node) {
-
-        let name = node.value.slice(1),
-            parent = node.parent;
-
-        switch (parent.type) {
-
-            case "MemberExpression":
-                if (parent.property === node)
-                    return name;
-
-                break;
-
-            case "PrivateDeclaration":
-            case "MethodDefinition":
-            case "PropertyDefinition":
-                return name;
-        }
-    }
-
-    ClassBodyBegin(node) {
-
-        let ctor = null;
-
-        node.elements.forEach(e => {
-
-            switch (e.type) {
-
-                case "MethodDefinition":
-
-                    if (e.name.type === "AtName")
-                        this.addPrivateName(node, e.name.value.slice(1), true, e.static);
-
-                    if (e.kind === "constructor")
-                        ctor = e;
-
-                    break;
-
-                case "PrivateDeclaration":
-
-                    if (e.name.type === "AtName")
-                        this.addPrivateName(node, e.name.value.slice(1), false, e.static);
-
-                    break;
-            }
-        });
-
-        if (ctor && node.privateNames)
-            ctor.initPrivate = true;
-    }
-
     ClassBody(node) {
 
         let classIdent = node.parent.identifier,
@@ -943,9 +870,7 @@ class Replacer {
                 fn = "__",
                 target = "";
 
-            if (e.name.type === "AtName")
-                target = e.static ? "__private_ctor" : "__private_proto";
-            else if (e.static)
+            if (e.static)
                 fn += ".static";
 
             if (e.static)
@@ -986,12 +911,6 @@ class Replacer {
 
         header.push("var " + ctorName + ";");
 
-        if (node.privateNames) {
-
-            header.push(this.privateInit(node));
-            footer.push("__private_static" + node.privateID + ".set(" + ctorName + ", __private_ctor);");
-        }
-
         // Add a default constructor if none was provided
         if (!hasCtor) {
 
@@ -999,12 +918,6 @@ class Replacer {
 
             if (hasBase)
                 ctorBody = "__.csuper.apply(this, arguments);";
-
-            if (node.privateNames) {
-
-                if (ctorBody) ctorBody = " " + ctorBody;
-                ctorBody += "__initPrivate(this);";
-            }
 
             if (ctorBody)
                 ctorBody = " " + ctorBody + " ";
@@ -1338,121 +1251,6 @@ class Replacer {
             `${ body }.apply(this, arguments)); }`;
     }
 
-    findPrivateName(node, name) {
-
-        for (let n = node; n; n = n.parent) {
-
-            let names = n.privateNames;
-
-            if (names && names[name])
-                return names[name];
-        }
-
-        this.fail("Unable to find private name @" + name, node);
-    }
-
-    addPrivateName(scope, ident, isMethod, isStatic) {
-
-        let privateID = scope.privateID;
-
-        if (privateID === void 0) {
-
-            privateID = scope.privateID = this.uid++;
-            scope.privateNames = Object.create(null);
-        }
-
-        scope.privateNames[ident] = {
-            ident,
-            init: null,
-            method: isMethod,
-            static: isStatic,
-            map: "__private" + (isStatic ? "_static" : "") + privateID
-        };
-    }
-
-    privateReference(node, obj, prop) {
-
-        let pp = this.parenParent(node),
-            p = pp[0],
-            mapName = this.findPrivateName(p, prop).map,
-            type = "get";
-
-        switch (p.type) {
-
-            case "CallExpression":
-                if (p.callee === pp[1]) type = "call";
-                break;
-
-            case "AssignmentExpression":
-                if (p.left === pp[1]) type = "set";
-                break;
-
-            case "PatternProperty":
-            case "PatternElement":
-                // References within assignment patterns are not currently supported
-                return null;
-
-            case "UnaryExpression":
-                if (p.operator === "delete")
-                    this.fail("Cannot delete private reference", p.expression);
-
-                break;
-        }
-
-        this.runtime.add("private");
-
-        let temp;
-
-        switch (type) {
-
-            case "call":
-                temp = this.addTempVar(p);
-                p.injectThisArg = temp;
-                return `_esdown.getPrivate(${ temp } = ${ obj }, ${ mapName }, "${ prop }")`;
-
-            case "get":
-                return `_esdown.getPrivate(${ obj }, ${ mapName }, "${ prop }")`;
-
-            case "set":
-                temp = this.addTempVar(p);
-
-                p.assignWrap = [
-                    `(_esdown.setPrivate(${ obj }, ${ mapName }, "${ prop }", ${ temp } = `,
-                    `), ${ temp })`
-                ];
-
-                return null;
-        }
-    }
-
-    privateInit(scope) {
-
-        let id = scope.privateID;
-
-        let instance = Object
-            .keys(scope.privateNames)
-            .filter(name => {
-                let entry = scope.privateNames[name];
-                return !entry.method && !entry.static;
-            });
-
-        return "var __private" + id + " = new WeakMap, " +
-            "__private_static" + id + " = new WeakMap, " +
-            "__private_ctor = {}, " +
-            "__private_proto = {}; " +
-        "function __initPrivate(__$) { " +
-            "if (__private" + id + ".has(__$)) " +
-                "throw new TypeError('Object already initialized'); " +
-            "var __p; " +
-            "__private" + id + ".set(__$, __p = Object.create(__private_proto, { " +
-                instance.map(name => name + ": { writable: true }").join(", ") +
-            " })); " +
-            instance
-                .filter(name => scope.privateNames[name].init)
-                .map(name => "__p." + name + " = __init_" + name + "(); ").join("") +
-        "}";
-    }
-
     rawToString(raw) {
 
         raw = raw.replace(/([^\n])?\n/g, (m, m1) => m1 === "\\" ? m : (m1 || "") + "\\n\\\n");
@@ -1585,9 +1383,6 @@ class Replacer {
 
         if (node.lexicalVars)
             inserted.push(this.lexicalVarNames(node));
-
-        if (node.initPrivate)
-            inserted.push("__initPrivate(this);");
 
         if (node.createRestBinding)
             inserted.push(this.restParamVar(node));

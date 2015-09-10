@@ -56,8 +56,13 @@ export function locateModule(path, base) {
 
     path = Path.resolve(base, path);
 
-    if (isDirectory(path))
-        return getFolderEntry(path);
+    if (isDirectory(path)) {
+
+        let pathInfo = getFolderEntry(path);
+        
+        if (pathInfo)
+            return pathInfo;
+    }
 
     return { path };
 }

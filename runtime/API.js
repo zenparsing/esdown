@@ -27,7 +27,7 @@ function forEachDesc(obj, fn) {
 
     if (getSymbols) {
 
-        names = getSymbols.call(null, obj);
+        names = getSymbols(obj);
 
         for (let i = 0; i < names.length; ++i)
             fn(names[i], Object.getOwnPropertyDescriptor(obj, names[i]));
@@ -119,7 +119,7 @@ function buildClass(base, def) {
     return ctor;
 }
 
-// The "_esdown" must be defined in the outer scope
+// The "_esdown" variable must be defined in the outer scope
 _esdown = {
 
     version: VERSION,
@@ -371,26 +371,5 @@ _esdown = {
             }
         };
     },
-
-    // Support for private fields
-    getPrivate(obj, map, name) {
-
-        let entry = map.get(Object(obj));
-
-        if (!entry)
-            throw new TypeError;
-
-        return entry[name];
-    },
-
-    setPrivate(obj, map, name, value) {
-
-        let entry = map.get(Object(obj));
-
-        if (!entry)
-            throw new TypeError;
-
-        return entry[name] = value;
-    }
 
 };
