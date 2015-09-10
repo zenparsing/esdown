@@ -152,10 +152,11 @@ class Replacer {
     constructor(options = {}) {
 
         this.options = {
-            identifyModule: _=> "_M" + (this.uid++)
+            identifyModule: _=> "_M" + (this.uid++),
+            module: false,
         };
 
-        Object.assign(this.options, options);
+        Object.keys(options).forEach(k => this.options[k] = options[k]);
     }
 
     replace(input) {
@@ -183,7 +184,7 @@ class Replacer {
         this.exports = {};
         this.moduleNames = {};
         this.dependencies = [];
-        this.runtime = new Set;
+        this.runtime = {};
         this.isStrict = false;
         this.uid = 0;
 
@@ -236,13 +237,10 @@ class Replacer {
             output += "\n";
         }
 
-        let runtimeList = [];
-        this.runtime.forEach(x => runtimeList.push(x));
-
         return {
             output,
             imports: this.dependencies,
-            runtime: runtimeList,
+            runtime: Object.keys(this.runtime),
         };
     }
 
@@ -336,7 +334,7 @@ class Replacer {
 
     Module(node) {
 
-        // NOTE: Strict directive is included with module wrapper
+        // Strict directive is included with module wrapper
 
         let inserted = [],
             temps = this.tempVars(node);
@@ -422,7 +420,7 @@ class Replacer {
                     c.text = `}, ${ c.name.expression.text }, { ${ c.text }`;
             });
 
-            this.runtime.add("computed");
+            this.markRuntime("computed");
 
             return "_esdown.computed(" + this.stringify(node) + ")";
         }
@@ -817,7 +815,7 @@ class Replacer {
         if (node.base)
             this.fail("Subclassing not supported", node.base);
 
-        this.runtime.add("classes");
+        this.markRuntime("classes");
 
         return "var " + node.identifier.text + " = _esdown.class(" +
             (node.base ? (node.base.text + ", ") : "") +
@@ -840,7 +838,7 @@ class Replacer {
             after = "; return " + node.identifier.text + "; }()";
         }
 
-        this.runtime.add("classes");
+        this.markRuntime("classes");
 
         return "(" + before +
             "_esdown.class(" +
@@ -889,7 +887,7 @@ class Replacer {
 
             if (e.name.type === "ComputedPropertyName") {
 
-                this.runtime.add("computed");
+                this.markRuntime("computed");
 
                 e.text = prefix + "_esdown.computed({}, " + e.name.expression.text + ", { " + text + " }));";
                 prefix = "";
@@ -951,7 +949,7 @@ class Replacer {
 
         if (node.parent.type === "TaggedTemplateExpression") {
 
-            this.runtime.add("templates");
+            this.markRuntime("templates");
 
             out = "(_esdown.callSite(" +
                 "[" + lit.map(x => this.rawToString(x.raw)).join(", ") + "]";
@@ -1080,7 +1078,7 @@ class Replacer {
         if (last < elems.length - 1)
             list.push({ type: "s", args: this.joinList(elems.slice(last + 1)) });
 
-        this.runtime.add("spread");
+        this.markRuntime("spread");
 
         let out = `(_esdown.spread(${ initial || "" })`;
 
@@ -1105,7 +1103,7 @@ class Replacer {
 
         node.patternTargets = targets;
 
-        this.runtime.add("destructuring");
+        this.markRuntime("destructuring");
 
         let visit = (tree, base) => {
 
@@ -1244,11 +1242,16 @@ class Replacer {
         if (body === void 0)
             body = node.body.text;
 
-        this.runtime.add(wrapper === "asyncGen" ? "async-generators" : "async-functions");
+        this.markRuntime(wrapper === "asyncGen" ? "async-generators" : "async-functions");
 
         return `${ head }(${ outerParams }) { ` +
             `return _esdown.${ wrapper }(function*(${ this.joinList(node.params) }) ` +
             `${ body }.apply(this, arguments)); }`;
+    }
+
+    markRuntime(name) {
+
+        this.runtime[name] = true;
     }
 
     rawToString(raw) {
