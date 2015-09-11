@@ -43,28 +43,22 @@ function sanitize(text) {
     return text;
 }
 
-function wrapRuntimeModules() {
-
-    return Object.keys(Runtime).map(key => {
-
-        return "(function() {\n\n" + Runtime[key] + "\n\n}).call(this);\n\n";
-
-    }).join("");
-}
-
 function wrapRuntimeAPI() {
 
-    return "var _esdown; (function() {\n\n" + Runtime.API + "\n\n}).call(this);\n\n";
+    let text = replaceText(Runtime.API, { module: true });
+
+    // Wrap runtime library in an IIFE, exporting into the _esdown variable
+    return "var _esdown = {}; (function(exports) {\n\n" + text + "\n\n})(_esdown);\n\n";
 }
 
 function wrapPolyfillModules() {
 
-    return Object.keys(Runtime).map(key => {
+    return Object.keys(Runtime).filter(key => key !== "API").map(key => {
 
-        if (key === "API")
-            return "_esdown.global._esdown = _esdown;\n\n";
+        let text = replaceText(Runtime[key]);
 
-        return "(function() {\n\n" + Runtime[key] + "\n\n}).call(this);\n\n";
+        // Wrap each polyfill module in an IIFE
+        return "(function() {\n\n" + text + "\n\n})();\n\n";
 
     }).join("");
 }
@@ -72,18 +66,6 @@ function wrapPolyfillModules() {
 export function translate(input, options = {}) {
 
     input = sanitize(input);
-
-    let prefix = "";
-
-    if (options.runtime) {
-
-        prefix = "\n" + wrapRuntimeAPI();
-
-        if (options.polyfill)
-            prefix += "\n" + wrapPolyfillModules();
-    }
-
-    input = prefix + input;
 
     // Node modules are wrapped inside of a function expression, which allows
     // return statements
@@ -96,6 +78,14 @@ export function translate(input, options = {}) {
     // Remove function expression wrapper for node-modules
     if (options.functionContext)
         output = output.slice(12, -2);
+
+    if (options.runtime) {
+
+        if (options.polyfill)
+            output = "\n" + wrapPolyfillModules() + "\n" + output;
+
+        output = wrapRuntimeAPI() + "\n" + output;
+    }
 
     if (options.wrap) {
 

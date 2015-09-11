@@ -8,30 +8,27 @@ run before building esdown if there are changes to runtime components.
 var FS = require("fs"),
     Path = require("path");
 
-var EXT = /\.[\S\s]+$/;
+var outPath = Path.resolve(__dirname, "../src/Runtime.js");
 
-var runtimePath = Path.resolve(__dirname, "../runtime/"),
-    outPath = Path.resolve(__dirname, "../src/Runtime.js");
+var files = {
 
-var files = [
-
-    "API.js",
-    "Polyfill.js",
-    "MapSet.js",
-    "Promise.js",
-];
+    "API": "../esdown-runtime/default.js",
+    "Polyfill": "../polyfill/Polyfill.js",
+    "MapSet": "../polyfill/MapSet.js",
+    "Promise": "../polyfill/Promise.js",
+};
 
 function run() {
 
     var output = "export let Runtime = {};\n\n";
 
-    files.forEach(function(file) {
+    Object.keys(files).forEach(function(key) {
 
         var source = FS.readFileSync(
-            Path.join(runtimePath, file),
+            Path.resolve(__dirname, files[key]),
             { encoding: "utf8" });
 
-        output += "Runtime." + file.replace(EXT, "") + " = \n\n`" + source + "`;\n\n";
+        output += "Runtime." + key + " = \n\n`" + source + "`;\n\n";
     });
 
     FS.writeFileSync(outPath, output);

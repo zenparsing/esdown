@@ -1,4 +1,4 @@
-"abcdefg";
+var __$0, __$1, __$2, __$3; "abcdefg";
 "abc$efg";
 "abc'efg";
 "abc\"efg";
@@ -8,11 +8,11 @@
 \n\
 efg";
 "\"\"\"";
-(html(_esdown.callSite(["a", "b", "c\n"], ["a", "b", "c\\n"]), x, y));
-(html(_esdown.callSite(["a", "b\n\
-", " c\u0060"], ["a", "b\n", " c\\u0060"]), x, y));
-(html(_esdown.callSite(["foo", ""]), bar));
+(html((__$0 = ["a", "b", "c\n"], __$0.raw = ["a", "b", "c\\n"], __$0), x, y));
+(html((__$1 = ["a", "b\n\
+", " c\u0060"], __$1.raw = ["a", "b\n", " c\\u0060"], __$1), x, y));
+(html((__$2 = ["foo", ""], __$2.raw = __$2, __$2), bar));
 
 // asi
 1
-;(abc(_esdown.callSite([""])))
+;(abc((__$3 = [""], __$3.raw = __$3, __$3)))

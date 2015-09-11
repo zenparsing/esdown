@@ -4,7 +4,7 @@ Runtime.API =
 
 `const VERSION = "0.9.12";
 
-let Global = (function() {
+const GLOBAL = (function() {
 
     try { return global.global } catch (x) {}
     try { return self.self } catch (x) {}
@@ -62,7 +62,7 @@ function mergeProperties(target, source, enumerable) {
 }
 
 // Builds a class
-function buildClass(base, def) {
+export function makeClass(base, def) {
 
     let parent;
 
@@ -123,252 +123,251 @@ function buildClass(base, def) {
     return ctor;
 }
 
-// The "_esdown" variable must be defined in the outer scope
-_esdown = {
+// Support for computed property names
+export function computed(target) {
 
-    version: VERSION,
+    for (let i = 1; i < arguments.length; i += 3) {
 
-    global: Global,
+        let desc = Object.getOwnPropertyDescriptor(arguments[i + 1], "_");
+        mergeProperty(target, arguments[i], desc, true);
 
-    class: buildClass,
+        if (i + 2 < arguments.length)
+            mergeProperties(target, arguments[i + 2], true);
+    }
 
-    // Support for computed property names
-    computed(target) {
+    return target;
+}
 
-        for (let i = 1; i < arguments.length; i += 3) {
+// Support for async functions
+export function asyncFunction(iter) {
 
-            let desc = Object.getOwnPropertyDescriptor(arguments[i + 1], "_");
-            mergeProperty(target, arguments[i], desc, true);
+    return new Promise((resolve, reject) => {
 
-            if (i + 2 < arguments.length)
-                mergeProperties(target, arguments[i + 2], true);
-        }
-
-        return target;
-    },
-
-    // Support for async functions
-    async(iter) {
-
-        return new Promise((resolve, reject) => {
-
-            resume("next", void 0);
-
-            function resume(type, value) {
-
-                try {
-
-                    let result = iter[type](value);
-
-                    if (result.done) {
-
-                        resolve(result.value);
-
-                    } else {
-
-                        Promise.resolve(result.value).then(
-                            x => resume("next", x),
-                            x => resume("throw", x));
-                    }
-
-                } catch (x) { reject(x) }
-            }
-        });
-    },
-
-    // Support for async generators
-    asyncGen(iter) {
-
-        let front = null, back = null;
-
-        return {
-
-            next(val) { return send("next", val) },
-            throw(val) { return send("throw", val) },
-            return(val) { return send("return", val) },
-            [Symbol.asyncIterator]() { return this },
-        };
-
-        function send(type, value) {
-
-            return new Promise((resolve, reject) => {
-
-                let x = { type, value, resolve, reject, next: null };
-
-                if (back) {
-
-                    // If list is not empty, then push onto the end
-                    back = back.next = x;
-
-                } else {
-
-                    // Create new list and resume generator
-                    front = back = x;
-                    resume(type, value);
-                }
-            });
-        }
-
-        function fulfill(type, value) {
-
-            switch (type) {
-
-                case "return":
-                    front.resolve({ value, done: true });
-                    break;
-
-                case "throw":
-                    front.reject(value);
-                    break;
-
-                default:
-                    front.resolve({ value, done: false });
-                    break;
-            }
-
-            front = front.next;
-
-            if (front) resume(front.type, front.value);
-            else back = null;
-        }
-
-        function awaitValue(result) {
-
-            let value = result.value;
-
-            if (typeof value === "object" && "_esdown_await" in value) {
-
-                if (result.done)
-                    throw new Error("Invalid async generator return");
-
-                return value._esdown_await;
-            }
-
-            return null;
-        }
+        resume("next", void 0);
 
         function resume(type, value) {
 
-            // HACK: If the generator does not support the "return" method, then
-            // emulate it (poorly) using throw.  (V8 circa 2015-02-13 does not support
-            // generator.return.)
-            if (type === "return" && !(type in iter)) {
-
-                type = "throw";
-                value = { value, __return: true };
-            }
-
             try {
 
-                let result = iter[type](value),
-                    awaited = awaitValue(result);
+                let result = iter[type](value);
 
-                if (awaited) {
+                if (result.done) {
 
-                    Promise.resolve(awaited).then(
-                        x => resume("next", x),
-                        x => resume("throw", x));
+                    resolve(result.value);
 
                 } else {
 
                     Promise.resolve(result.value).then(
-                        x => fulfill(result.done ? "return" : "normal", x),
-                        x => fulfill("throw", x));
+                        x => resume("next", x),
+                        x => resume("throw", x));
                 }
 
-            } catch (x) {
-
-                // HACK: Return-as-throw
-                if (x && x.__return === true)
-                    return fulfill("return", x.value);
-
-                fulfill("throw", x);
-            }
+            } catch (x) { reject(x) }
         }
-    },
+    });
+}
 
-    // Support for spread operations
-    spread(initial) {
+// Support for async generators
+export function asyncGenerator(iter) {
+
+    let front = null, back = null;
+
+    let aIter = {
+
+        next(val) { return send("next", val) },
+        throw(val) { return send("throw", val) },
+        return(val) { return send("return", val) },
+    };
+
+    aIter[Symbol.asyncIterator] = function() { return this };
+    return aIter;
+
+    function send(type, value) {
+
+        return new Promise((resolve, reject) => {
+
+            let x = { type, value, resolve, reject, next: null };
+
+            if (back) {
+
+                // If list is not empty, then push onto the end
+                back = back.next = x;
+
+            } else {
+
+                // Create new list and resume generator
+                front = back = x;
+                resume(type, value);
+            }
+        });
+    }
+
+    function fulfill(type, value) {
+
+        switch (type) {
+
+            case "return":
+                front.resolve({ value, done: true });
+                break;
+
+            case "throw":
+                front.reject(value);
+                break;
+
+            default:
+                front.resolve({ value, done: false });
+                break;
+        }
+
+        front = front.next;
+
+        if (front) resume(front.type, front.value);
+        else back = null;
+    }
+
+    function awaitValue(result) {
+
+        let value = result.value;
+
+        if (typeof value === "object" && "_esdown_await" in value) {
+
+            if (result.done)
+                throw new Error("Invalid async generator return");
+
+            return value._esdown_await;
+        }
+
+        return null;
+    }
+
+    function resume(type, value) {
+
+        // HACK: If the generator does not support the "return" method, then
+        // emulate it (poorly) using throw.  (V8 circa 2015-02-13 does not support
+        // generator.return.)
+        if (type === "return" && !(type in iter)) {
+
+            type = "throw";
+            value = { value, __return: true };
+        }
+
+        try {
+
+            let result = iter[type](value),
+                awaited = awaitValue(result);
+
+            if (awaited) {
+
+                Promise.resolve(awaited).then(
+                    x => resume("next", x),
+                    x => resume("throw", x));
+
+            } else {
+
+                Promise.resolve(result.value).then(
+                    x => fulfill(result.done ? "return" : "normal", x),
+                    x => fulfill("throw", x));
+            }
+
+        } catch (x) {
+
+            // HACK: Return-as-throw
+            if (x && x.__return === true)
+                return fulfill("return", x.value);
+
+            fulfill("throw", x);
+        }
+    }
+}
+
+// Support for spread operations
+export function spread(initial) {
+
+    return {
+
+        a: initial || [],
+
+        // Add items
+        s() {
+
+            for (let i = 0; i < arguments.length; ++i)
+                this.a.push(arguments[i]);
+
+            return this;
+        },
+
+        // Add the contents of iterables
+        i(list) {
+
+            if (Array.isArray(list)) {
+
+                this.a.push.apply(this.a, list);
+
+            } else {
+
+                for (let item of list)
+                    this.a.push(item);
+            }
+
+            return this;
+        }
+
+    };
+}
+
+// Support for object destructuring
+export function objd(obj) {
+
+    return toObject(obj);
+}
+
+// Support for array destructuring
+export function arrayd(obj) {
+
+    if (Array.isArray(obj)) {
 
         return {
 
-            a: initial || [],
-
-            // Add items
-            s() {
-
-                for (let i = 0; i < arguments.length; ++i)
-                    this.a.push(arguments[i]);
-
-                return this;
-            },
-
-            // Add the contents of iterables
-            i(list) {
-
-                if (Array.isArray(list)) {
-
-                    this.a.push.apply(this.a, list);
-
-                } else {
-
-                    for (let item of list)
-                        this.a.push(item);
-                }
-
-                return this;
-            }
-
+            at(skip, pos) { return obj[pos] },
+            rest(skip, pos) { return obj.slice(pos) }
         };
-    },
+    }
 
-    // Support for object destructuring
-    objd(obj) {
+    let iter = toObject(obj)[Symbol.iterator]();
 
-        return toObject(obj);
-    },
+    return {
 
-    // Support for array destructuring
-    arrayd(obj) {
+        at(skip) {
 
-        if (Array.isArray(obj)) {
+            let r;
 
-            return {
+            while (skip--)
+                r = iter.next();
 
-                at(skip, pos) { return obj[pos] },
-                rest(skip, pos) { return obj.slice(pos) }
-            };
+            return r.value;
+        },
+
+        rest(skip) {
+
+            let a = [], r;
+
+            while (--skip)
+                r = iter.next();
+
+            while (r = iter.next(), !r.done)
+                a.push(r.value);
+
+            return a;
         }
+    };
+}
 
-        let iter = toObject(obj)[Symbol.iterator]();
-
-        return {
-
-            at(skip) {
-
-                let r;
-
-                while (skip--)
-                    r = iter.next();
-
-                return r.value;
-            },
-
-            rest(skip) {
-
-                let a = [], r;
-
-                while (--skip)
-                    r = iter.next();
-
-                while (r = iter.next(), !r.done)
-                    a.push(r.value);
-
-                return a;
-            }
-        };
-    },
-
+export {
+    makeClass as class,
+    VERSION as version,
+    GLOBAL as global,
+    asyncFunction as async,
+    asyncGenerator as asyncGen,
 };
 `;
 
