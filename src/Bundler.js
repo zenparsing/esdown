@@ -13,6 +13,7 @@ class Node {
         this.name = name;
         this.edges = new Set;
         this.output = null;
+        this.runtime = false;
     }
 }
 
@@ -73,7 +74,8 @@ class GraphBuilder {
         if (node.output !== null)
             throw new Error("Node already processed");
 
-        let dir = Path.dirname(node.path);
+        let dir = Path.dirname(node.path),
+            result = {};
 
         let identifyModule = path => {
 
@@ -82,7 +84,13 @@ class GraphBuilder {
             return this.add(path).name;
         };
 
-        node.output = translate(input, { identifyModule, module: true });
+        node.output = translate(input, {
+            identifyModule,
+            module: true,
+            result
+        });
+
+        node.runtime = result.runtime.length > 0;
 
         return node;
     }
@@ -143,6 +151,7 @@ export function bundle(rootPath, options = {}) {
     return allFetched.then($=> {
 
         let nodes = builder.sort(),
+            needsRuntime = options.polyfill,
             imports = [],
             varList = [],
             output = "";
@@ -153,6 +162,9 @@ export function bundle(rootPath, options = {}) {
                 imports.push({ url: node.path, identifier: node.name });
             else
                 varList.push(`${ node.name } = ${ node.path === rootPath ? "exports" : "{}" }`);
+
+            if (node.runtime)
+                needsRuntime = true;
         });
 
         if (varList.length > 0)
@@ -160,29 +172,16 @@ export function bundle(rootPath, options = {}) {
 
         nodes.filter(n => n.output !== null).forEach(node => {
 
-            output +=
-                "\n(function(exports) {\n\n" +
-                node.output +
+            output += "\n(function(exports) {\n\n" + node.output +
                 "\n\n})(" + node.name + ");\n";
         });
 
-        // TODO:  If options.runtime is not specified, then "_esdown" won't be defined.
-        // We need to be able to add the "esdown-runtime" import if needed.  Does
-        // translate need to return an object?  How can we get translate to tell us
-        // whether the runtime was required or not?  A callback, perhaps?
-
-        if (options.runtime || options.polyfill) {
-
-            output = translate("", {
-
-                runtime: options.runtime,
-                polyfill: options.polyfill,
-                module: true,
-
-            }) + "\n\n" + output;
-        }
-
-        output = wrapModule(output, imports, { global: options.global });
+        output = wrapModule(output, imports, {
+            
+            global: options.global,
+            runtime: needsRuntime,
+            polyfill: options.polyfill,
+        });
 
         if (options.output)
             return writeFile(Path.resolve(options.output), output, "utf8").then(_=> "");

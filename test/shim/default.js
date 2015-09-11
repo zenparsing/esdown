@@ -3,9 +3,9 @@
 import { runTests } from "moon-unit";
 
 import "./init.js";
-import "../../runtime/Polyfill.js";
-import "../../runtime/MapSet.js";
-import "../../runtime/Promise.js";
+import "../../polyfill/Polyfill.js";
+import "../../polyfill/MapSet.js";
+import "../../polyfill/Promise.js";
 
 import { tests as stringTests } from "./string.js";
 import { tests as objectTests } from "./object.js";
@@ -31,4 +31,3 @@ export function main(args) {
     });
 
 }
-

@@ -238,6 +238,7 @@ class Replacer {
         }
 
         return {
+            input,
             output,
             imports: this.dependencies,
             runtime: Object.keys(this.runtime),

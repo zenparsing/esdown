@@ -43,15 +43,15 @@ function sanitize(text) {
     return text;
 }
 
-function wrapRuntimeAPI() {
+function wrapRuntime() {
 
     let text = replaceText(Runtime.API, { module: true }).output;
 
     // Wrap runtime library in an IIFE, exporting into the _esdown variable
-    return "var _esdown = {}; (function(exports) {\n\n" + text + "\n\n})(_esdown);\n\n";
+    return "var _esdown = {}; (function(exports) {\n\n" + text + "\n\n})(_esdown);";
 }
 
-function wrapPolyfillModules() {
+function wrapPolyfills() {
 
     return Object.keys(Runtime).filter(key => key !== "API").map(key => {
 
@@ -73,21 +73,16 @@ export function translate(input, options = {}) {
         input = "(function(){" + input + "})";
 
     let result = replaceText(input, options),
-        output = result.output;
+        output = result.output,
+        imports = result.imports;
 
     // Remove function expression wrapper for node-modules
     if (options.functionContext)
         output = output.slice(12, -2);
 
-    if (options.polyfill)
-        output = "\n" + wrapPolyfillModules() + "\n" + output;
-
-    let needsRuntime = !options.runtimeImports && (options.polyfill || result.runtime.length > 0);
-
-    if (options.runtime)
-        output = wrapRuntimeAPI() + "\n" + output;
-    else if (needsRuntime)
-        result.imports.push({ url: "esdown-runtime", identifier: "_esdown" });
+    // Add esdown-runtime dependency if runtime features are used
+    if (!options.runtimeImports && result.runtime.length > 0)
+        imports.push({ url: "esdown-runtime", identifier: "_esdown" });
 
     if (options.wrap) {
 
@@ -95,13 +90,22 @@ export function translate(input, options = {}) {
         if (!options.module)
             throw new Error("Cannot wrap a non-module");
 
-        output = wrapModule(output, result.imports, options);
+        output = wrapModule(output, imports, options);
+    }
+
+    if (options.result) {
+
+        let r = options.result;
+        r.input = input;
+        r.output = output;
+        r.imports = imports;
+        r.runtime = result.runtime;
     }
 
     return output;
 }
 
-export function wrapModule(text, imports, options = {}) {
+export function wrapModule(text, imports = [], options = {}) {
 
     let header = "'use strict'; ";
 
@@ -128,6 +132,12 @@ export function wrapModule(text, imports, options = {}) {
 
     if (requires.length > 0)
         header += "var " + requires.join(", ") + "; ";
+
+    if (options.runtime)
+        header += wrapRuntime() + "\n\n";
+
+    if (options.polyfill)
+        header += wrapPolyfills() + "\n\n";
 
     if (!options.global)
         return SIGNATURE + header + text;

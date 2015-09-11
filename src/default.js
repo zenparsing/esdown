@@ -112,7 +112,6 @@ export function main(args) {
                 promise = bundle(params.input, {
 
                     global: params.global,
-                    runtime: params.fullRuntime || params.runtime,
                     polyfill: params.fullRuntime || params.polyfill,
                 });
 
