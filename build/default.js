@@ -4,7 +4,7 @@ let ts = +new Date,
     args = "- ../src/default.js ../build/esdown.js -b -R -g esdown";
 
 if (process.argv.slice(-1)[0] === "runtime")
-    args = "- ../src/empty.js ../build/esdown-runtime.js -R --nowrap";
+    args = "- ../esdown-runtime/default.js ../esdown-runtime/index.js";
 
 process.stdout.write("Building esdown...");
 

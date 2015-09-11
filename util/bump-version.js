@@ -1,13 +1,10 @@
 var FS = require("fs"),
     Path = require("path");
 
-var apiPath = Path.resolve(__dirname, "../runtime/API.js"),
-    manifestPath = Path.resolve(__dirname, "../package.json");
-
 var replacers = [
 
     {
-        path: "../runtime/API.js",
+        path: "../esdown-runtime/default.js",
 
         findVersion: function(text) {
 
@@ -26,7 +23,7 @@ var replacers = [
                 '$1"' + version + '"');
         }
     },
-
+    
     {
         path: "../package.json",
 
@@ -36,7 +33,18 @@ var replacers = [
                 /(\n\s*"version"\s*:\s*)"(\d+(?:\.\d+)*)"/,
                 '$1"' + version + '"');
         }
-    }
+    },
+
+    {
+        path: "../esdown-runtime/package.json",
+
+        replace: function(text, version) {
+
+            return text.replace(
+                /(\n\s*"version"\s*:\s*)"(\d+(?:\.\d+)*)"/,
+                '$1"' + version + '"');
+        }
+    },
 
 ];
 

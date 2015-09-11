@@ -16,7 +16,7 @@ const WRAP_CALLEE = "(function(fn, name) { " +
 
 "})";
 
-const MODULE_HEADER_RUNTIME = "'use strict'; " +
+const MODULE_IMPORT_RUNTIME =
 "function __load(p, l) { " +
     "module.__es6 = !l; " +
     "var e = require(p); " +
@@ -25,7 +25,7 @@ const MODULE_HEADER_RUNTIME = "'use strict'; " +
     "return e; " +
 "} ";
 
-const MODULE_HEADER = "'use strict'; " +
+const MODULE_IMPORT =
 "function __import(e) { " +
     "return !e || e.constructor === Object ? e : " +
         "Object.create(e, { 'default': { value: e } }); " +
@@ -45,7 +45,7 @@ function sanitize(text) {
 
 function wrapRuntimeAPI() {
 
-    let text = replaceText(Runtime.API, { module: true });
+    let text = replaceText(Runtime.API, { module: true }).output;
 
     // Wrap runtime library in an IIFE, exporting into the _esdown variable
     return "var _esdown = {}; (function(exports) {\n\n" + text + "\n\n})(_esdown);\n\n";
@@ -55,7 +55,7 @@ function wrapPolyfillModules() {
 
     return Object.keys(Runtime).filter(key => key !== "API").map(key => {
 
-        let text = replaceText(Runtime[key]);
+        let text = replaceText(Runtime[key]).output;
 
         // Wrap each polyfill module in an IIFE
         return "(function() {\n\n" + text + "\n\n})();\n\n";
@@ -101,7 +101,9 @@ export function translate(input, options = {}) {
 
 export function wrapModule(text, imports, options = {}) {
 
-    let header = options.runtimeImports ? MODULE_HEADER_RUNTIME : MODULE_HEADER;
+    let header = "'use strict'; ";
+
+    header += options.runtimeImports ? MODULE_IMPORT_RUNTIME : MODULE_IMPORT;
 
     let requires = imports.map(dep => {
 
