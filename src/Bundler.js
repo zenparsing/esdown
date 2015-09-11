@@ -143,40 +143,27 @@ export function bundle(rootPath, options = {}) {
     return allFetched.then($=> {
 
         let nodes = builder.sort(),
-            dependencies = [],
+            imports = [],
+            varList = [],
             output = "";
 
-        let varList = nodes.map(node => {
+        nodes.forEach(node => {
 
-            if (node.output === null) {
+            if (node.output === null)
+                imports.push({ url: node.path, identifier: node.name });
+            else
+                varList.push(`${ node.name } = ${ node.path === rootPath ? "exports" : "{}" }`);
+        });
 
-                let path = node.path,
-                    legacy = "";
-
-                if (isLegacyScheme(path)) {
-
-                    path = removeScheme(node.path);
-                    legacy = ", 1";
-                }
-
-                dependencies.push(path);
-
-                return `${ node.name } = __import(require(${ JSON.stringify(path) }${ legacy }))`;
-            }
-
-            return `${ node.name } = ${ node.path === rootPath ? "exports" : "{}" }`;
-
-        }).join(", ");
-
-        if (varList)
-            output += "var " + varList + ";\n";
+        if (varList.length > 0)
+            output += "var " + varList.join(",") + ";\n";
 
         nodes.filter(n => n.output !== null).forEach(node => {
 
             output +=
                 "\n(function(exports) {\n\n" +
                 node.output +
-                "\n\n}).call(this, " + node.name + ");\n";
+                "\n\n})(" + node.name + ");\n";
         });
 
         if (options.runtime || options.polyfill) {
@@ -190,7 +177,7 @@ export function bundle(rootPath, options = {}) {
             }) + "\n\n" + output;
         }
 
-        output = wrapModule(output, [], { global: options.global });
+        output = wrapModule(output, imports, { global: options.global });
 
         if (options.output)
             return writeFile(Path.resolve(options.output), output, "utf8").then(_=> "");

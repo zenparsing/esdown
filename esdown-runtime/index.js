@@ -1,4 +1,4 @@
-/*=esdown=*/'use strict'; function __import(e) { return !e || e.constructor === Object ? e : Object.create(e, { 'default': { value: e } }); } var VERSION = "0.9.12";
+/*=esdown=*/'use strict'; var VERSION = "0.9.12";
 
 var GLOBAL = (function() {
 

@@ -103,7 +103,8 @@ export function wrapModule(text, imports, options = {}) {
 
     let header = "'use strict'; ";
 
-    header += options.runtimeImports ? MODULE_IMPORT_RUNTIME : MODULE_IMPORT;
+    if (imports.length > 0)
+        header += options.runtimeImports ? MODULE_IMPORT_RUNTIME : MODULE_IMPORT;
 
     let requires = imports.map(dep => {
 
