@@ -166,6 +166,11 @@ export function bundle(rootPath, options = {}) {
                 "\n\n})(" + node.name + ");\n";
         });
 
+        // TODO:  If options.runtime is not specified, then "_esdown" won't be defined.
+        // We need to be able to add the "esdown-runtime" import if needed.  Does
+        // translate need to return an object?  How can we get translate to tell us
+        // whether the runtime was required or not?  A callback, perhaps?
+
         if (options.runtime || options.polyfill) {
 
             output = translate("", {

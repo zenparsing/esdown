@@ -40,6 +40,10 @@ function addExtension() {
 
     let moduleLoad = Module._load;
 
+    // Create _esdown global variable so that it doesn't need to be bundled into
+    // each module
+    global._esdown = _esdown;
+
     Module.prototype.importSync = function(path) {
 
         if (/^node:/.test(path)) {
