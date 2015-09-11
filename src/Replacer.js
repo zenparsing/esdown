@@ -951,20 +951,21 @@ class Replacer {
 
             this.markRuntime("templates");
 
-            out = "(_esdown.callSite(" +
-                "[" + lit.map(x => this.rawToString(x.raw)).join(", ") + "]";
+            let temp = this.addTempVar(node),
+                raw = temp;
 
             // Only output the raw array if it is different from the cooked array
             for (let i = 0; i < lit.length; ++i) {
 
                 if (lit[i].raw !== lit[i].value) {
 
-                    out += ", [" + lit.map(x => JSON.stringify(x.raw)).join(", ") + "]";
+                    raw = `[${ lit.map(x => JSON.stringify(x.raw)).join(", ") }]`;
                     break;
                 }
             }
 
-            out += ")";
+            out = `((${ temp } = [${ lit.map(x => this.rawToString(x.raw)).join(", ") }]`;
+            out += `, ${ temp }.raw = ${ raw }, ${ temp })`;
 
             if (sub.length > 0)
                 out += ", " + sub.map(x => x.text).join(", ");

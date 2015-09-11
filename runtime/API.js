@@ -143,13 +143,6 @@ _esdown = {
         return target;
     },
 
-    // Support for tagged templates
-    callSite(values, raw) {
-
-        values.raw = raw || values;
-        return values;
-    },
-
     // Support for async functions
     async(iter) {
 
