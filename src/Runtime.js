@@ -2,7 +2,7 @@ export let Runtime = {};
 
 Runtime.API = 
 
-`/*=esdown=*/'use strict'; var VERSION = "0.9.13";
+`var VERSION = "0.9.13";
 
 var GLOBAL = (function() {
 
@@ -386,7 +386,7 @@ exports.asyncGen = asyncGenerator;
 
 Runtime.Polyfill = 
 
-`/*=esdown=*/'use strict'; var _M2 = {},_M3 = {},_M4 = {},_M5 = {},_M6 = {},_M7 = {},_M8 = {},_M9 = {},_M1 = exports;
+`var _M2 = {},_M3 = {},_M4 = {},_M5 = {},_M6 = {},_M7 = {},_M8 = {},_M9 = {},_M1 = exports;
 
 (function(exports) {
 

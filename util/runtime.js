@@ -26,6 +26,9 @@ function run() {
             Path.resolve(__dirname, files[key]),
             { encoding: "utf8" });
 
+        // Remove signature and strict directive
+        source = source.replace(/^\/\*=esdown=\*\/'use strict'; /, "");
+
         output += "Runtime." + key + " = \n\n`" + source + "`;\n\n";
     });
 
