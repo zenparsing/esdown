@@ -41,11 +41,6 @@ var replacers = [
         replace: packageVersionReplace
     },
 
-    {
-        path: "../esdown-polyfill/package.json",
-        replace: packageVersionReplace
-    },
-
 ];
 
 var newVersion = "";
@@ -81,6 +76,3 @@ replacers.forEach(function(replacer) {
     console.log("Updating '" + replacer.path + "' to version '" + newVersion + "'");
     FS.writeFileSync(path, replaced);
 });
-
-console.log("Rebuilding runtime module")
-require("./runtime.js");

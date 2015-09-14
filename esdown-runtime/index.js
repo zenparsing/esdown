@@ -1,4 +1,4 @@
-/*=esdown=*/'use strict'; var VERSION = "0.9.13";
+/*=esdown=*/'use strict'; var VERSION = "0.9.14";
 
 var GLOBAL = (function() {
 
