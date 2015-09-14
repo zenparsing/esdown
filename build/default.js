@@ -1,10 +1,21 @@
 import { spawn } from "node:child_process";
 
-let ts = +new Date,
-    args = "- ../src/default.js ../build/esdown.js -b -R -g esdown";
+let ts = +new Date, args;
 
-if (process.argv.slice(-1)[0] === "runtime")
-    args = "- ../esdown-runtime/default.js ../esdown-runtime/index.js";
+switch (process.argv.slice(-1)[0]) {
+
+    case "runtime":
+        args = "- ../esdown-runtime/default.js ../esdown-runtime/index.js";
+        break;
+
+    case "polyfill":
+        args = "- ../esdown-polyfill/default.js ../esdown-polyfill/index.js -b";
+        break;
+
+    default:
+        args = "- ../src/default.js ../build/esdown.js -b -R -g esdown";
+        break;
+}
 
 process.stdout.write("Building esdown...");
 

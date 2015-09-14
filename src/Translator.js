@@ -45,20 +45,16 @@ function sanitize(text) {
 
 function wrapRuntime() {
 
-    let text = replaceText(Runtime.API, { module: true }).output;
-
     // Wrap runtime library in an IIFE, exporting into the _esdown variable
-    return "var _esdown = {}; (function(exports) {\n\n" + text + "\n\n})(_esdown);";
+    return "var _esdown = {}; (function(exports) {\n\n" + Runtime.API + "\n\n})(_esdown);";
 }
 
 function wrapPolyfills() {
 
     return Object.keys(Runtime).filter(key => key !== "API").map(key => {
 
-        let text = replaceText(Runtime[key]).output;
-
         // Wrap each polyfill module in an IIFE
-        return "(function() {\n\n" + text + "\n\n})();\n\n";
+        return "(function() {\n\n" + Runtime[key] + "\n\n})();\n\n";
 
     }).join("");
 }

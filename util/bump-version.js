@@ -1,6 +1,13 @@
 var FS = require("fs"),
     Path = require("path");
 
+function packageVersionReplace(text, version) {
+
+    return text.replace(
+        /(\n\s*"version"\s*:\s*)"(\d+(?:\.\d+)*)"/,
+        '$1"' + version + '"');
+}
+
 var replacers = [
 
     {
@@ -23,27 +30,20 @@ var replacers = [
                 '$1"' + version + '"');
         }
     },
-    
+
     {
         path: "../package.json",
-
-        replace: function(text, version) {
-
-            return text.replace(
-                /(\n\s*"version"\s*:\s*)"(\d+(?:\.\d+)*)"/,
-                '$1"' + version + '"');
-        }
+        replace: packageVersionReplace
     },
 
     {
         path: "../esdown-runtime/package.json",
+        replace: packageVersionReplace
+    },
 
-        replace: function(text, version) {
-
-            return text.replace(
-                /(\n\s*"version"\s*:\s*)"(\d+(?:\.\d+)*)"/,
-                '$1"' + version + '"');
-        }
+    {
+        path: "../esdown-polyfill/package.json",
+        replace: packageVersionReplace
     },
 
 ];

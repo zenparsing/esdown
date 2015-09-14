@@ -12,10 +12,8 @@ var outPath = Path.resolve(__dirname, "../src/Runtime.js");
 
 var files = {
 
-    "API": "../esdown-runtime/default.js",
-    "Polyfill": "../polyfill/Polyfill.js",
-    "MapSet": "../polyfill/MapSet.js",
-    "Promise": "../polyfill/Promise.js",
+    API: "../esdown-runtime/index.js",
+    Polyfill: "../esdown-polyfill/index.js",
 };
 
 function run() {

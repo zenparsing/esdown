@@ -1,16 +1,16 @@
-let global = _esdown.global,
-    ORIGIN = {},
-    REMOVED = {};
+import { addProperties } from "./Core.js";
 
-class MapNode {
+const ORIGIN = {}, REMOVED = {};
 
-    constructor(key, val) {
+function MapNode(key, val) {
 
-        this.key = key;
-        this.value = val;
-        this.prev = this;
-        this.next = this;
-    }
+    this.key = key;
+    this.value = val;
+    this.prev = this;
+    this.next = this;
+}
+
+addProperties(MapNode.prototype, {
 
     insert(next) {
 
@@ -18,24 +18,24 @@ class MapNode {
         this.prev = next.prev;
         this.prev.next = this;
         this.next.prev = this;
-    }
+    },
 
     remove() {
 
         this.prev.next = this.next;
         this.next.prev = this.prev;
         this.key = REMOVED;
-    }
+    },
 
+});
+
+function MapIterator(node, kind) {
+
+    this.current = node;
+    this.kind = kind;
 }
 
-class MapIterator {
-
-    constructor(node, kind) {
-
-        this.current = node;
-        this.kind = kind;
-    }
+addProperties(MapIterator.prototype = {}, {
 
     next() {
 
@@ -60,10 +60,11 @@ class MapIterator {
             default:
                 return { value: node.key, done: false };
         }
-    }
+    },
 
-    [Symbol.iterator]() { return this }
-}
+    "@@iterator"() { return this },
+
+});
 
 function hashKey(key) {
 
@@ -76,16 +77,16 @@ function hashKey(key) {
     throw new TypeError("Map and Set keys must be strings or numbers in esdown");
 }
 
-class Map {
+function Map() {
 
-    constructor() {
+    if (arguments.length > 0)
+        throw new Error("Arguments to Map constructor are not supported in esdown");
 
-        if (arguments.length > 0)
-            throw new Error("Arguments to Map constructor are not supported in esdown");
+    this._index = {};
+    this._origin = new MapNode(ORIGIN);
+}
 
-        this._index = {};
-        this._origin = new MapNode(ORIGIN);
-    }
+addProperties(Map.prototype, {
 
     clear() {
 
@@ -94,7 +95,7 @@ class Map {
 
         this._index = {};
         this._origin = new MapNode(ORIGIN);
-    }
+    },
 
     delete(key) {
 
@@ -109,7 +110,7 @@ class Map {
         }
 
         return false;
-    }
+    },
 
     forEach(fn) {
 
@@ -121,7 +122,7 @@ class Map {
         for (let node = this._origin.next; node.key !== ORIGIN; node = node.next)
             if (node.key !== REMOVED)
                 fn.call(thisArg, node.value, node.key, this);
-    }
+    },
 
     get(key) {
 
@@ -129,12 +130,12 @@ class Map {
             node = this._index[h];
 
         return node ? node.value : void 0;
-    }
+    },
 
     has(key) {
 
         return hashKey(key) in this._index;
-    }
+    },
 
     set(key, val) {
 
@@ -151,39 +152,38 @@ class Map {
 
         this._index[h] = node;
         node.insert(this._origin);
-    }
+    },
 
     get size() {
 
         return Object.keys(this._index).length;
-    }
+    },
 
-    keys() { return new MapIterator(this._origin.next, "keys") }
-    values() { return new MapIterator(this._origin.next, "values") }
-    entries() { return new MapIterator(this._origin.next, "entries") }
+    keys() { return new MapIterator(this._origin.next, "keys") },
+    values() { return new MapIterator(this._origin.next, "values") },
+    entries() { return new MapIterator(this._origin.next, "entries") },
 
-    [Symbol.iterator]() { return new MapIterator(this._origin.next, "entries") }
+    "@@iterator"() { return new MapIterator(this._origin.next, "entries") },
 
+});
+
+const mapSet = Map.prototype.set;
+
+function Set() {
+
+    if (arguments.length > 0)
+        throw new Error("Arguments to Set constructor are not supported in esdown");
+
+    this._index = {};
+    this._origin = new MapNode(ORIGIN);
 }
 
-let mapSet = Map.prototype.set;
+addProperties(Set.prototype, {
 
-class Set {
+    add(key) { return mapSet.call(this, key, key) },
+    "@@iterator"() { return new MapIterator(this._origin.next, "entries") },
 
-    constructor() {
-
-        if (arguments.length > 0)
-            throw new Error("Arguments to Set constructor are not supported in esdown");
-
-        this._index = {};
-        this._origin = new MapNode(ORIGIN);
-    }
-
-    add(key) { return mapSet.call(this, key, key) }
-
-    [Symbol.iterator]() { return new MapIterator(this._origin.next, "entries") }
-
-}
+});
 
 // Copy shared prototype members to Set
 ["clear", "delete", "forEach", "has", "size", "keys", "values", "entries"].forEach(k => {
@@ -192,8 +192,11 @@ class Set {
     Object.defineProperty(Set.prototype, k, d);
 });
 
-if (!global.Map || !global.Map.prototype.entries) {
+export function polyfill(global) {
 
-    global.Map = Map;
-    global.Set = Set;
+    if (!global.Map || !global.Map.prototype.entries) {
+
+        global.Map = Map;
+        global.Set = Set;
+    }
 }
