@@ -9,7 +9,7 @@ switch (process.argv.slice(-1)[0]) {
         break;
 
     case "polyfill":
-        args = "- ../esdown-polyfill/default.js ../esdown-polyfill/index.js -b";
+        args = "- ../esdown-polyfill/default.js ../esdown-polyfill/esdown-polyfill.js -b -g *";
         break;
 
     default:

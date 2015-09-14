@@ -1,6 +1,6 @@
 {
     "name": "esdown-polyfill",
-    "version": "0.1.1",
+    "version": "0.2.0",
     "description": "Polyfill library for the esdown compiler",
     "homepage": "https://github.com/zenparsing/esdown"
 }

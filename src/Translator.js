@@ -12,12 +12,11 @@ const WRAP_CALLEE = "(function(fn, name) { " +
 
     // DOM global module:
     "else if (typeof self !== 'undefined') " +
-        "fn(function() { return {} }, name === '*' ? self : (self[name] = {}), {}); " +
+        "fn(null, name === '*' ? self : (name ? self[name] = {} : {})); " +
 
 "})";
 
-const MODULE_IMPORT_RUNTIME =
-"function __load(p, l) { " +
+const MODULE_IMPORT_RUNTIME = "function __load(p, l) { " +
     "module.__es6 = !l; " +
     "var e = require(p); " +
     "if (e && e.constructor !== Object) " +
@@ -25,8 +24,7 @@ const MODULE_IMPORT_RUNTIME =
     "return e; " +
 "} ";
 
-const MODULE_IMPORT =
-"function __import(e) { " +
+const MODULE_IMPORT = "function __import(e) { " +
     "return !e || e.constructor === Object ? e : " +
         "Object.create(e, { 'default': { value: e } }); " +
 "} ";
@@ -51,12 +49,7 @@ function wrapRuntime() {
 
 function wrapPolyfills() {
 
-    return Object.keys(Runtime).filter(key => key !== "API").map(key => {
-
-        // Wrap each polyfill module in an IIFE
-        return "(function() {\n\n" + Runtime[key] + "\n\n})();\n\n";
-
-    }).join("");
+    return "(function() { var exports = {};\n\n" + Runtime.Polyfill + "\n\n})();";
 }
 
 export function translate(input, options = {}) {

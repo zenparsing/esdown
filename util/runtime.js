@@ -13,7 +13,7 @@ var outPath = Path.resolve(__dirname, "../src/Runtime.js");
 var files = {
 
     API: "../esdown-runtime/index.js",
-    Polyfill: "../esdown-polyfill/index.js",
+    Polyfill: "../esdown-polyfill/esdown-polyfill.js",
 };
 
 function run() {
