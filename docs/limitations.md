@@ -18,7 +18,7 @@ In order to set the prototype chain correctly, an ES6 engine will send a hidden 
 called `new.target` to the superclass constructor.  Unfortunately, we can't simulate
 `new.target` for arbitrary superclasses.
 
-The typical method of subclassing the "super call" is to simply call the superclass's
+The typical method of simulating `super(...args)` is to simply call the superclass's
 constructor as a regular function, similar to how programmers have implemented "subsclassing"
 in ES5.  However, this method will result in code that may break when the superclass is an
 actual ES6 class, because ES6 classes will throw an error when called as a function.
