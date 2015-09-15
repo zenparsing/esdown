@@ -15,7 +15,7 @@ For more information:
 **esdown**.
 - The [Module Guide](docs/modules.md) describes the ES6 module system implemented in
 **esdown**.
-- [Limitations](docs/limitation.md) describes some limitations and caveats regarding code
+- [Limitations](docs/limitations.md) describes some limitations and caveats regarding code
 produced by **esdown**.
 
 ## Instructions ##
