@@ -151,7 +151,7 @@ export function bundle(rootPath, options = {}) {
     return allFetched.then($=> {
 
         let nodes = builder.sort(),
-            needsRuntime = options.polyfill,
+            needsRuntime = false,
             imports = [],
             varList = [],
             output = "";
@@ -177,7 +177,7 @@ export function bundle(rootPath, options = {}) {
         });
 
         output = wrapModule(output, imports, {
-            
+
             global: options.global,
             runtime: needsRuntime,
             polyfill: options.polyfill,
