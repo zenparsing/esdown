@@ -124,6 +124,8 @@ function collapseScopes(parseResult) {
         function (not a nested closure) before the binding is initialized.  This won't
         catch all potential TDZ issues but will help stop some obvious bugs.
 
+        TODO:  Throw a compile-time error if a const-binding is assigned to.
+
         */
 
         let varParent = node.parent.type === "var";

@@ -200,4 +200,4 @@ export function main() {
 ```
 
 If the **main** function returns a Promise which eventually rejects, it will report
-the corresponding error and stack track to the console.
+the corresponding error and stack trace to the console.

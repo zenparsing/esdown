@@ -9,6 +9,12 @@ The following ES6 language features are supported by **esdown**:
 Modules allow you to structure your code in separate files.  Read the
 [Module Guide](modules.md) for more information.
 
+### Block-Scoped Variables ###
+
+Instead of using `var` to declare variables, you can now use `let` and `const`.  Unlike
+`var`, block-scoped varaibles do not "hoist" to the top of the function body.  They
+are only visible within the block in which they are defined.
+
 ### Arrow Functions ###
 
 [Arrow functions](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/arrow_functions)
@@ -40,15 +46,6 @@ class C {
     // "static" methods are attached to the constructor function
     static foo() {
         return "foo";
-    }
-}
-
-// Inheritance is supported via standard Javascript prototype chains
-class D extends C {
-
-    constructor() {
-        super();
-        this.bearsOnPlane = 2;
     }
 }
 ```
@@ -271,8 +268,6 @@ for (var item of c)
 **[Set](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Set)**
 are new built-in standard library collection classes.
 
-*Limitation: esdown only supports strings and numbers as keys within Map and Set.*
-
 ### Promise ###
 
 A **[Promise](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)** represents the result of an asynchronous action.
@@ -310,8 +305,9 @@ A **[Promise](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/
 The following ES6 features are not translated by **esdown**.  You can still use these
 features if your JS engine supports them.
 
-- Block-scoped variables (let and const)
-- Generators
+- Generators (To translate generator functions, you can use
+  [regenerator](https://github.com/facebook/regenerator) on code that has been processed by
+  **esdown**.)
 - Math extras
 - Proxies
 - Reflect namespace
