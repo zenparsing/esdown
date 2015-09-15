@@ -1,4 +1,4 @@
-/*=esdown=*/(function(fn, name) { if (typeof exports !== 'undefined') fn(require, exports, module); else if (typeof self !== 'undefined') fn(null, name === '*' ? self : (name ? self[name] = {} : {})); })(function(require, exports, module) { 'use strict'; var _M3 = {},_M4 = {},_M5 = {},_M6 = {},_M7 = {},_M8 = {},_M9 = {},_M10 = {},_M2 = {},_M1 = exports;
+/*=esdown=*/(function(fn, name) { if (typeof exports !== 'undefined') fn(require, exports, module); else if (typeof self !== 'undefined') fn(null, name === '*' ? self : (name ? self[name] = {} : {})); })(function(require, exports, module) { 'use strict'; var _M3 = {}, _M4 = {}, _M5 = {}, _M6 = {}, _M7 = {}, _M8 = {}, _M9 = {}, _M10 = {}, _M2 = {}, _M1 = exports;
 
 (function(exports) {
 
@@ -1254,4 +1254,4 @@ polyfill();
 })(_M1);
 
 
-}, "*");
+}, "");

@@ -168,7 +168,7 @@ export function bundle(rootPath, options = {}) {
         });
 
         if (varList.length > 0)
-            output += "var " + varList.join(",") + ";\n";
+            output += "var " + varList.join(", ") + ";\n";
 
         nodes.filter(n => n.output !== null).forEach(node => {
 

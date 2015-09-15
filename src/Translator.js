@@ -131,9 +131,17 @@ export function wrapModule(text, imports = [], options = {}) {
     if (!options.global)
         return SIGNATURE + header + text;
 
+    if (typeof options.global !== "string")
+        return SIGNATURE + header + text;
+
+    let name = options.global;
+
+    if (name === ".")
+        name = "";
+
     return SIGNATURE + WRAP_CALLEE + "(" +
         "function(require, exports, module) { " + header + text + "\n\n}, " +
-        JSON.stringify(options.global) +
+        JSON.stringify(name) +
     ");";
 }
 
