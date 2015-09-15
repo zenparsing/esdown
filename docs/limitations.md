@@ -1,9 +1,33 @@
-# Transation Limitations #
+# Limitations #
 
 The goal of **esdown** is to provide fast and inconspicuous compilation of ES6+ code to
 efficient ES5 code.  There are some aspects of ES6 which are difficult to translate while
 maintaining these priorities.  Keep these limitations in mind when coding with ES6 and
 **esdown**.
+
+## Runtime Library ##
+
+In order to keep the translated code clean and similar in appearance to the original
+source code, **esdown** uses a small (9K unminified) runtime library to support certain
+features.  The features which require runtime support are:
+
+- Classes
+- Computed property names
+- Destructuring
+- Spread
+- Async functions
+- Async generator functions
+
+There are a couple of options for managing this depedency:
+
+1. Embed the runtime library in the output code using the `--runtime` flag.
+1. Install the **esdown-runtime** NPM package into your project as a dependency.
+
+## For-Of Statements ##
+
+For-of statements requires the presence of `Symbol.iterator`.  In environments which do not
+provide `Symbol.iterator` an ES6 polyfill library can be used.  The polyfill library used
+by **esdown** is called **esdown-polyfill** and can be installed with NPM.
 
 ## Map and Set Polyfills ##
 

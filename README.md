@@ -66,8 +66,7 @@ Translates ES6+ code to ES5.  The following options are defined:
   as a script.  The default is `false`.
 - **runtime**:  (Boolean) If `true`, include the **esdown** runtime library in the output.
   The default is `false`.
-- **polyfill**:  (Boolean) If `true`, include the **esdown** ES6 polyfills in the output.  Only
-  valid when *runtime* is `true`.
+- **polyfill**:  (Boolean) If `true`, include the **esdown** ES6 polyfills in the output.
 - **wrap**:  (Boolean) If `true`, wrap the output in boilerplate which will ensure compatibility
   with Node and AMD modules.  The default is `false`.
 - **global**:  (String) If specified, the name of the global variable which will be used to
