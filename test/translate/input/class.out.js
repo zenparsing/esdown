@@ -1,4 +1,4 @@
-var A = _esdown.class(function(__) { var A;
+var A = _esdown.class(function(__, __static) { var A;
 
     __({ constructor: A = function() {
 
@@ -9,17 +9,17 @@ var A = _esdown.class(function(__) { var A;
 
     get b() {}});
 
-    __.static({ S: function() {},
+    __static({ S: function() {}});
 
-    get T() {},
+    __static({ get T() {}});
 
-    "U": function() {},
+    __static({ "U": function() {}});
 
-    "Hello World": function() {}});
+    __static({ "Hello World": function() {}});
 
     __({ foo: function() {}});
  });
 
 ((function() { var C = _esdown.class(function(__) { var C; __({ constructor: C = function() {} }); }); return C; }()));
 
-new (_esdown.class(function(__) { var __ctor; __({ constructor: __ctor = function() {} }); }));
+new (_esdown.class(function(__) { __({ constructor: function() {} }); }));

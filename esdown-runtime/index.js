@@ -1,4 +1,4 @@
-/*=esdown=*/'use strict'; var VERSION = "0.9.14";
+/*=esdown=*/'use strict'; var VERSION = "0.9.15";
 
 var GLOBAL = (function() {
 
@@ -7,9 +7,14 @@ var GLOBAL = (function() {
     return null;
 })();
 
+var ownNames = Object.getOwnPropertyNames,
+      ownSymbols = Object.getOwnPropertySymbols,
+      getDesc = Object.getOwnPropertyDescriptor,
+      defineProp = Object.defineProperty;
+
 function toObject(val) {
 
-    if (val == null)
+    if (val == null) // null or undefined
         throw new TypeError(val + " is not an object");
 
     return Object(val);
@@ -18,26 +23,12 @@ function toObject(val) {
 // Iterates over the descriptors for each own property of an object
 function forEachDesc(obj, fn) {
 
-    var names = Object.getOwnPropertyNames(obj);
-
-    for (var i$0 = 0; i$0 < names.length; ++i$0)
-        fn(names[i$0], Object.getOwnPropertyDescriptor(obj, names[i$0]));
-
-    var getSymbols = Object.getOwnPropertySymbols;
-
-    if (getSymbols) {
-
-        names = getSymbols(obj);
-
-        for (var i$1 = 0; i$1 < names.length; ++i$1)
-            fn(names[i$1], Object.getOwnPropertyDescriptor(obj, names[i$1]));
-    }
-
-    return obj;
+    ownNames(obj).forEach(function(name) { return fn(name, getDesc(obj, name)); });
+    if (ownSymbols) ownSymbols(obj).forEach(function(name) { return fn(name, getDesc(obj, name)); });
 }
 
 // Installs a property into an object, merging "get" and "set" functions
-function mergeProperty(target, name, desc, enumerable) {
+function mergeProp(target, name, desc, enumerable) {
 
     if (desc.get || desc.set) {
 
@@ -48,73 +39,30 @@ function mergeProperty(target, name, desc, enumerable) {
     }
 
     desc.enumerable = enumerable;
-    Object.defineProperty(target, name, desc);
+    defineProp(target, name, desc);
 }
 
 // Installs properties on an object, merging "get" and "set" functions
-function mergeProperties(target, source, enumerable) {
+function mergeProps(target, source, enumerable) {
 
-    forEachDesc(source, function(name, desc) { return mergeProperty(target, name, desc, enumerable); });
+    forEachDesc(source, function(name, desc) { return mergeProp(target, name, desc, enumerable); });
 }
 
 // Builds a class
-function makeClass(base, def) {
+function makeClass(def) {
 
-    var parent;
-
-    if (def === void 0) {
-
-        // If no base class is specified, then Object.prototype
-        // is the parent prototype
-        def = base;
-        base = null;
-        parent = Object.prototype;
-
-    } else if (base === null) {
-
-        // If the base is null, then then then the parent prototype is null
-        parent = null;
-
-    } else if (typeof base === "function") {
-
-        parent = base.prototype;
-
-        // Prototype must be null or an object
-        if (parent !== null && Object(parent) !== parent)
-            parent = void 0;
-    }
-
-    if (parent === void 0)
-        throw new TypeError;
-
-    // Create the prototype object
-    var proto = Object.create(parent),
+    var parent = Object.prototype,
+        proto = Object.create(parent),
         statics = {};
 
-    function __(target, obj) {
-
-        if (!obj) mergeProperties(proto, target, false);
-        else mergeProperties(target, obj, false);
-    }
-
-    __.static = function(obj) { return mergeProperties(statics, obj, false); };
-    __.super = parent;
-    __.csuper = base || Function.prototype;
-
-    // Generate method collections, closing over super bindings
-    def(__);
+    def(function(obj) { return mergeProps(proto, obj, false); },
+        function(obj) { return mergeProps(statics, obj, false); });
 
     var ctor = proto.constructor;
-
-    // Set constructor's prototype
     ctor.prototype = proto;
 
     // Set class "static" methods
-    forEachDesc(statics, function(name, desc) { return Object.defineProperty(ctor, name, desc); });
-
-    // Inherit from base constructor
-    if (base && ctor.__proto__)
-        Object.setPrototypeOf(ctor, base);
+    forEachDesc(statics, function(name, desc) { return defineProp(ctor, name, desc); });
 
     return ctor;
 }
@@ -122,13 +70,13 @@ function makeClass(base, def) {
 // Support for computed property names
 function computed(target) {
 
-    for (var i$2 = 1; i$2 < arguments.length; i$2 += 3) {
+    for (var i$0 = 1; i$0 < arguments.length; i$0 += 3) {
 
-        var desc$0 = Object.getOwnPropertyDescriptor(arguments[i$2 + 1], "_");
-        mergeProperty(target, arguments[i$2], desc$0, true);
+        var desc$0 = getDesc(arguments[i$0 + 1], "_");
+        mergeProp(target, arguments[i$0], desc$0, true);
 
-        if (i$2 + 2 < arguments.length)
-            mergeProperties(target, arguments[i$2 + 2], true);
+        if (i$0 + 2 < arguments.length)
+            mergeProps(target, arguments[i$0 + 2], true);
     }
 
     return target;
@@ -286,8 +234,8 @@ function spread(initial) {
         // Add items
         s: function() {
 
-            for (var i$3 = 0; i$3 < arguments.length; ++i$3)
-                this.a.push(arguments[i$3]);
+            for (var i$1 = 0; i$1 < arguments.length; ++i$1)
+                this.a.push(arguments[i$1]);
 
             return this;
         },
@@ -306,7 +254,7 @@ function spread(initial) {
             }
 
             return this;
-        }
+        },
 
     };
 }
@@ -325,7 +273,7 @@ function arrayd(obj) {
         return {
 
             at: function(skip, pos) { return obj[pos] },
-            rest: function(skip, pos) { return obj.slice(pos) }
+            rest: function(skip, pos) { return obj.slice(pos) },
         };
     }
 
@@ -354,7 +302,7 @@ function arrayd(obj) {
                 a.push(r.value);
 
             return a;
-        }
+        },
     };
 }
 

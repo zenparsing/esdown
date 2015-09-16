@@ -15,7 +15,7 @@ Object.keys(_M0).forEach(function(k) { exports[k] = _M0[k]; });
 function F() {}
 var G = _esdown.class(function(__) { var G; __({ constructor: G = function() {} }); });
 exports["default"] = function() {};
-exports["default"] = (_esdown.class(function(__) { var __ctor; __({ constructor: __ctor = function() {} }); }));
+exports["default"] = (_esdown.class(function(__) { __({ constructor: function() {} }); }));
 exports["default"] = 1 + 1;
 
 

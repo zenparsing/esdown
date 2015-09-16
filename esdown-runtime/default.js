@@ -1,4 +1,4 @@
-const VERSION = "0.9.14";
+const VERSION = "0.9.15";
 
 const GLOBAL = (function() {
 
@@ -7,9 +7,14 @@ const GLOBAL = (function() {
     return null;
 })();
 
+const ownNames = Object.getOwnPropertyNames,
+      ownSymbols = Object.getOwnPropertySymbols,
+      getDesc = Object.getOwnPropertyDescriptor,
+      defineProp = Object.defineProperty;
+
 function toObject(val) {
 
-    if (val == null)
+    if (val == null) // null or undefined
         throw new TypeError(val + " is not an object");
 
     return Object(val);
@@ -18,26 +23,12 @@ function toObject(val) {
 // Iterates over the descriptors for each own property of an object
 function forEachDesc(obj, fn) {
 
-    let names = Object.getOwnPropertyNames(obj);
-
-    for (let i = 0; i < names.length; ++i)
-        fn(names[i], Object.getOwnPropertyDescriptor(obj, names[i]));
-
-    let getSymbols = Object.getOwnPropertySymbols;
-
-    if (getSymbols) {
-
-        names = getSymbols(obj);
-
-        for (let i = 0; i < names.length; ++i)
-            fn(names[i], Object.getOwnPropertyDescriptor(obj, names[i]));
-    }
-
-    return obj;
+    ownNames(obj).forEach(name => fn(name, getDesc(obj, name)));
+    if (ownSymbols) ownSymbols(obj).forEach(name => fn(name, getDesc(obj, name)));
 }
 
 // Installs a property into an object, merging "get" and "set" functions
-function mergeProperty(target, name, desc, enumerable) {
+function mergeProp(target, name, desc, enumerable) {
 
     if (desc.get || desc.set) {
 
@@ -48,73 +39,30 @@ function mergeProperty(target, name, desc, enumerable) {
     }
 
     desc.enumerable = enumerable;
-    Object.defineProperty(target, name, desc);
+    defineProp(target, name, desc);
 }
 
 // Installs properties on an object, merging "get" and "set" functions
-function mergeProperties(target, source, enumerable) {
+function mergeProps(target, source, enumerable) {
 
-    forEachDesc(source, (name, desc) => mergeProperty(target, name, desc, enumerable));
+    forEachDesc(source, (name, desc) => mergeProp(target, name, desc, enumerable));
 }
 
 // Builds a class
-export function makeClass(base, def) {
+export function makeClass(def) {
 
-    let parent;
-
-    if (def === void 0) {
-
-        // If no base class is specified, then Object.prototype
-        // is the parent prototype
-        def = base;
-        base = null;
-        parent = Object.prototype;
-
-    } else if (base === null) {
-
-        // If the base is null, then then then the parent prototype is null
-        parent = null;
-
-    } else if (typeof base === "function") {
-
-        parent = base.prototype;
-
-        // Prototype must be null or an object
-        if (parent !== null && Object(parent) !== parent)
-            parent = void 0;
-    }
-
-    if (parent === void 0)
-        throw new TypeError;
-
-    // Create the prototype object
-    let proto = Object.create(parent),
+    let parent = Object.prototype,
+        proto = Object.create(parent),
         statics = {};
 
-    function __(target, obj) {
-
-        if (!obj) mergeProperties(proto, target, false);
-        else mergeProperties(target, obj, false);
-    }
-
-    __.static = obj => mergeProperties(statics, obj, false);
-    __.super = parent;
-    __.csuper = base || Function.prototype;
-
-    // Generate method collections, closing over super bindings
-    def(__);
+    def(obj => mergeProps(proto, obj, false),
+        obj => mergeProps(statics, obj, false));
 
     let ctor = proto.constructor;
-
-    // Set constructor's prototype
     ctor.prototype = proto;
 
     // Set class "static" methods
-    forEachDesc(statics, (name, desc) => Object.defineProperty(ctor, name, desc));
-
-    // Inherit from base constructor
-    if (base && ctor.__proto__)
-        Object.setPrototypeOf(ctor, base);
+    forEachDesc(statics, (name, desc) => defineProp(ctor, name, desc));
 
     return ctor;
 }
@@ -124,11 +72,11 @@ export function computed(target) {
 
     for (let i = 1; i < arguments.length; i += 3) {
 
-        let desc = Object.getOwnPropertyDescriptor(arguments[i + 1], "_");
-        mergeProperty(target, arguments[i], desc, true);
+        let desc = getDesc(arguments[i + 1], "_");
+        mergeProp(target, arguments[i], desc, true);
 
         if (i + 2 < arguments.length)
-            mergeProperties(target, arguments[i + 2], true);
+            mergeProps(target, arguments[i + 2], true);
     }
 
     return target;
@@ -306,7 +254,7 @@ export function spread(initial) {
             }
 
             return this;
-        }
+        },
 
     };
 }
@@ -325,7 +273,7 @@ export function arrayd(obj) {
         return {
 
             at(skip, pos) { return obj[pos] },
-            rest(skip, pos) { return obj.slice(pos) }
+            rest(skip, pos) { return obj.slice(pos) },
         };
     }
 
@@ -354,7 +302,7 @@ export function arrayd(obj) {
                 a.push(r.value);
 
             return a;
-        }
+        },
     };
 }
 

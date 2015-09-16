@@ -1,3 +1,3 @@
-import { polyfill } from "./Filler.js";
+import { polyfill } from "./Polyfill.js";
 
 polyfill();

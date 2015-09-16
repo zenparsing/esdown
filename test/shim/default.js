@@ -2,7 +2,7 @@
 
 import { runTests } from "moon-unit";
 
-import { polyfill, global } from "../../esdown-polyfill/Filler.js";
+import { polyfill, global } from "../../esdown-polyfill/Polyfill.js";
 
 import { tests as stringTests } from "./string.js";
 import { tests as objectTests } from "./object.js";

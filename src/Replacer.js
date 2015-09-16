@@ -821,8 +821,7 @@ class Replacer {
         this.markRuntime("classes");
 
         return "var " + node.identifier.text + " = _esdown.class(" +
-            (node.base ? (node.base.text + ", ") : "") +
-            "function(__) {" +
+            "function(__" + (node.hasStatic ? ", __static" : "") + ") {" +
                 this.strictDirective() +
                 this.removeBraces(node.body.text) + " });";
     }
@@ -845,8 +844,7 @@ class Replacer {
 
         return "(" + before +
             "_esdown.class(" +
-            (node.base ? (node.base.text + ", ") : "") +
-            "function(__) {" +
+            "function(__" + (node.hasStatic ? ", __static" : "") + ") {" +
                 this.strictDirective() +
                 this.removeBraces(node.body.text) + " })" +
             after + ")";
@@ -855,10 +853,10 @@ class Replacer {
     ClassBody(node) {
 
         let classIdent = node.parent.identifier,
-            hasBase = !!node.parent.base,
             elems = node.elements,
             hasCtor = false,
-            ctorName = classIdent ? classIdent.value : "__ctor",
+            ctorName = classIdent ? classIdent.value : "",
+            ctorHead = (ctorName ? ctorName + " = " : "") + "function",
             header = [],
             footer = [];
 
@@ -868,14 +866,14 @@ class Replacer {
                 return "";
 
             let text = e.text,
-                fn = "__",
-                target = "";
+                fn = "__";
 
-            if (e.static)
-                fn += ".static";
+            if (e.static) {
 
-            if (e.static)
+                node.parent.hasStatic = true;
+                fn = "__static";
                 text = text.replace(/^static\s*/, "");
+            }
 
             if (e.kind === "constructor") {
 
@@ -883,10 +881,10 @@ class Replacer {
 
                 // Give the constructor function a name so that the class function's
                 // name property will be correct and capture the constructor.
-                text = text.replace(/:\s*function/, ": " + ctorName + " = function");
+                text = text.replace(/:\s*function/, ": " + ctorHead);
             }
 
-            let prefix = fn + "(" + (target ? target + ", " : "");
+            let prefix = fn + "(";
 
             if (e.name.type === "ComputedPropertyName") {
 
@@ -906,27 +904,16 @@ class Replacer {
                 e.text = prefix + "{ " + text + "});";
             }
 
-            return prefix;
+            return e.static ? "" : prefix;
 
         }, "");
 
-        header.push("var " + ctorName + ";");
+        if (ctorName)
+            header.push("var " + ctorName + ";");
 
         // Add a default constructor if none was provided
-        if (!hasCtor) {
-
-            let ctorBody = "";
-
-            if (hasBase)
-                ctorBody = "__.csuper.apply(this, arguments);";
-
-            if (ctorBody)
-                ctorBody = " " + ctorBody + " ";
-
-            let ctor = ctorName + " = function() {" + ctorBody + "}";
-
-            header.push("__({ constructor: " + ctor + " });");
-        }
+        if (!hasCtor)
+            header.push("__({ constructor: " + ctorHead + "() {} });");
 
         let text = this.stringify(node);
 
