@@ -118,16 +118,6 @@ function collapseScopes(parseResult) {
 
     function rename(node) {
 
-        /*
-
-        TODO:  Throw a compile-time error if a lexical name is referenced in the same
-        function (not a nested closure) before the binding is initialized.  This won't
-        catch all potential TDZ issues but will help stop some obvious bugs.
-
-        TODO:  Throw a compile-time error if a const-binding is assigned to.
-
-        */
-
         let varParent = node.parent.type === "var";
 
         Object.keys(node.names).forEach(name => {
@@ -140,8 +130,35 @@ function collapseScopes(parseResult) {
 
             record.declarations.forEach(decl => decl.suffix = suffix);
             record.references.forEach(ref => ref.suffix = suffix);
+
+            if (record.const)
+                record.references.forEach(checkConstRef);
         });
     }
+
+    function checkConstRef(ref) {
+
+        let node = ref;
+
+        while (node.parent.type === "ParenExpression")
+            node = node.parent;
+
+        let target;
+
+        switch (ref.parent.type) {
+            case "UpdateExpression":
+                target = ref.parent.expression;
+                break;
+
+            case "AssignmentExpression":
+                target = ref.parent.left;
+                break;
+        }
+
+        if (node === target)
+            fail("Invalid assignment to constant variable", ref);
+    }
+
 }
 
 export function replaceText(input, options) {
