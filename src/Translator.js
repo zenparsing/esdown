@@ -16,14 +16,6 @@ const WRAP_CALLEE = "(function(fn, name) { " +
 
 "})";
 
-const MODULE_IMPORT_RUNTIME = "function __load(p, l) { " +
-    "module.__es6 = !l; " +
-    "var e = require(p); " +
-    "if (e && e.constructor !== Object) " +
-        "e = Object.create(e, { 'default': { value: e } }); " +
-    "return e; " +
-"} ";
-
 const MODULE_IMPORT = "function __import(e) { " +
     "return !e || e.constructor === Object ? e : " +
         "Object.create(e, { 'default': { value: e } }); " +
@@ -99,7 +91,7 @@ export function wrapModule(text, imports = [], options = {}) {
     let header = "'use strict'; ";
 
     if (imports.length > 0)
-        header += options.runtimeImports ? MODULE_IMPORT_RUNTIME : MODULE_IMPORT;
+        header += MODULE_IMPORT;
 
     let requires = imports.map(dep => {
 
@@ -110,11 +102,8 @@ export function wrapModule(text, imports = [], options = {}) {
         if (legacy)
             url = removeScheme(url);
 
-        if (options.runtimeImports) {
-
-            let flag = legacy ? "1" : "0";
-            return `${ ident } = __load(${ JSON.stringify(url) }, ${ flag })`;
-        }
+        if (options.runtimeImports && !legacy)
+            url += "##ES6";
 
         return `${ ident } = __import(require(${ JSON.stringify(url) }))`;
     });

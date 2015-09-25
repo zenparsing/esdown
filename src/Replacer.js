@@ -172,6 +172,7 @@ class Replacer {
 
         this.options = {
             identifyModule: _=> "_M" + (this.uid++),
+            replaceRequire: _=> null,
             module: false,
         };
 
@@ -198,6 +199,7 @@ class Replacer {
         });
 
         let root = this.parseResult.ast;
+        root.start = 0;
 
         this.input = input;
         this.exports = {};
@@ -212,10 +214,6 @@ class Replacer {
         let visit = node => {
 
             node.text = null;
-
-            // Call pre-order traversal method
-            if (this[node.type + "Begin"])
-                this[node.type + "Begin"](node);
 
             let strict = this.isStrict;
 
@@ -404,7 +402,6 @@ class Replacer {
 
         return "";
     }
-
 
     ComputedPropertyName(node) {
 
@@ -647,6 +644,14 @@ class Replacer {
         if (callee.type === "SuperKeyword")
             throw new Error("Super call not supported");
 
+        if (callee.text === "require" && args.length > 0 && args[0].type === "StringLiteral") {
+
+            let ident = this.options.replaceRequire(args[0].value);
+
+            if (ident)
+                return ident;
+        }
+
         if (node.hasSpread)
             spread = this.spreadList(args);
 
@@ -738,6 +743,7 @@ class Replacer {
         }
     }
 
+    // Experimental
     PipeExpression(node) {
 
         let left = node.left.text,

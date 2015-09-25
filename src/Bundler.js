@@ -2,18 +2,54 @@ import * as Path from "node:path";
 import { readFile, writeFile } from "./AsyncFS.js";
 import { isPackageSpecifier, locateModule } from "./Locator.js";
 import { translate, wrapModule } from "./Translator.js";
-import { isLegacyScheme, removeScheme, hasScheme } from "./Schema.js";
+import { isLegacyScheme, addLegacyScheme, removeScheme, hasScheme } from "./Schema.js";
 
+const NODE_INTERNAL_MODULE = new RegExp("^(?:" + [
+
+    "assert", "buffer", "child_process", "cluster", "console", "constants", "crypto",
+    "dgram", "dns", "domain", "events", "freelist", "fs", "http", "https", "module",
+    "net", "os", "path", "process", "punycode", "querystring", "readline", "repl",
+    "smalloc", "stream", "string_decoder", "sys", "timers", "tls", "tty", "url", "util",
+    "v8", "vm", "zlib",
+
+].join("|") + ")$");
+
+const BUNDLE_INIT =
+"var _M; " +
+"(function(a) { " +
+    "var list = Array(a.length / 2); " +
+
+    "_M = function require(i) { " +
+        "var m = list[i], f, e; " +
+        "if (typeof m !== 'function') return m.exports; " +
+        "f = m; " +
+        "m = !i ? module : { exports: {} }; " +
+        "e = m.exports; " +
+        "f(list[i] = m, e); " +
+        "if (m.exports !== e && !('default' in m.exports)) " +
+            "m.exports['default'] = m.exports; " +
+        "return m.exports; " +
+    "}; " +
+
+    "for (var i = 0; i < a.length; i += 2) { " +
+        "var j = Math.abs(a[i]); " +
+        "list[j] = a[i + 1]; " +
+        "if (a[i] >= 0) _M(j); " +
+    "} " +
+"})";
 
 class Node {
 
-    constructor(path, name) {
+    constructor(path, id) {
 
         this.path = path;
-        this.name = name;
-        this.edges = new Set;
+        this.id = id;
+        this.edges = new Map;
         this.output = null;
         this.runtime = false;
+        this.legacy = false;
+        this.importCount = 0;
+        this.ignore = false;
     }
 }
 
@@ -22,7 +58,7 @@ class GraphBuilder {
     constructor(root) {
 
         this.nodes = new Map;
-        this.nextID = 1;
+        this.nextID = 0;
         this.root = this.add(root);
     }
 
@@ -31,14 +67,17 @@ class GraphBuilder {
         return this.nodes.has(key);
     }
 
+    get(key) {
+
+        return this.nodes.get(key);
+    }
+
     add(key) {
 
         if (this.nodes.has(key))
             return this.nodes.get(key);
 
-        let name = "_M" + (this.nextID++),
-            node = new Node(key, name);
-
+        let node = new Node(key, this.nextID++);
         this.nodes.set(key, node);
         return node;
     }
@@ -55,7 +94,7 @@ class GraphBuilder {
 
             visited.add(key);
             let node = this.nodes.get(key);
-            node.edges.forEach(visit);
+            node.edges.forEach((node, key) => visit(key));
             list.push(node);
         };
 
@@ -64,35 +103,82 @@ class GraphBuilder {
         return list;
     }
 
-    process(key, input) {
+    addEdge(node, spec, fromRequire) {
 
-        if (!this.nodes.has(key))
-            throw new Error("Node not found");
+        let key = spec,
+            legacy = false,
+            ignore = false;
 
-        let node = this.nodes.get(key);
+        if (fromRequire) {
+
+            legacy = true;
+
+        } else if (isLegacyScheme(spec)) {
+
+            legacy = true;
+            key = removeScheme(spec);
+        }
+
+        if (legacy && NODE_INTERNAL_MODULE.test(key))
+            ignore = true;
+
+        if (ignore && fromRequire)
+            return null;
+
+        if (!ignore) {
+
+            let pathInfo = locateModule(key, node.base, legacy);
+            key = pathInfo.path;
+            legacy = pathInfo.legacy;
+        }
+
+        let target = this.nodes.get(key);
+
+        if (target) {
+
+            if (target.legacy !== legacy)
+                throw new Error(`Module '${ key }' referenced as both legacy and non-legacy`);
+
+        } else {
+
+            target = this.add(key);
+            target.legacy = legacy;
+            target.ignore = ignore;
+        }
+
+        if (!fromRequire)
+            target.importCount++;
+
+        node.edges.set(key, target);
+        return target;
+    }
+
+    process(node, input) {
 
         if (node.output !== null)
             throw new Error("Node already processed");
 
-        let dir = Path.dirname(node.path),
-            result = {};
+        let result = {};
 
-        let identifyModule = path => {
-
-            path = locateModule(path, dir).path;
-            node.edges.add(path);
-            return this.add(path).name;
-        };
+        node.base = Path.dirname(node.path);
 
         node.output = translate(input, {
-            identifyModule,
-            module: true,
-            result
+
+            identifyModule: path => `_M(${ this.addEdge(node, path, false).id })`,
+
+            replaceRequire: path => {
+
+                let n = this.addEdge(node, path, true);
+                return n ? `_M(${ n.id })` : null;
+            },
+
+            module: !node.legacy,
+
+            result,
+
         });
 
         node.runtime = result.runtime.length > 0;
-
-        return node;
     }
 
 }
@@ -109,10 +195,12 @@ export function bundle(rootPath, options = {}) {
 
     allFetched = new Promise((resolve, reject) => resolver = { resolve, reject });
 
-    function visit(path) {
+    function visit(node) {
 
-        // Exit if module has already been processed
-        if (visited.has(path))
+        let path = node.path;
+
+        // Exit if module has already been processed or should be ignored
+        if (node.ignore || visited.has(path))
             return;
 
         visited.add(path);
@@ -120,17 +208,8 @@ export function bundle(rootPath, options = {}) {
 
         readFile(path, { encoding: "utf8" }).then(code => {
 
-            let node = builder.process(path, code);
-
-            node.edges.forEach(path => {
-
-                // If we want to optionally limit the scope of the bundle, we
-                // will need to apply some kind of filter here.
-
-                // Do not bundle any files that start with a scheme prefix
-                if (!hasScheme(path))
-                    visit(path);
-            });
+            builder.process(node, code);
+            node.edges.forEach(visit);
 
             pending -= 1;
 
@@ -146,37 +225,33 @@ export function bundle(rootPath, options = {}) {
         });
     }
 
-    visit(rootPath);
+    visit(builder.root);
 
-    return allFetched.then($=> {
+    return allFetched.then(_=> {
 
-        let nodes = builder.sort(),
-            needsRuntime = false,
-            imports = [],
-            varList = [],
-            output = "";
+        let needsRuntime = false;
 
-        nodes.forEach(node => {
-
-            if (node.output === null)
-                imports.push({ url: node.path, identifier: node.name });
-            else
-                varList.push(`${ node.name } = ${ node.path === rootPath ? "exports" : "{}" }`);
+        let output = builder.sort().map(node => {
 
             if (node.runtime)
                 needsRuntime = true;
-        });
 
-        if (varList.length > 0)
-            output += "var " + varList.join(", ") + ";\n";
+            let id = node.id;
 
-        nodes.filter(n => n.output !== null).forEach(node => {
+            if (node.importCount === 0)
+                id = -id;
 
-            output += "\n(function(exports) {\n\n" + node.output +
-                "\n\n})(" + node.name + ");\n";
-        });
+            let init = node.output === null ?
+                `function(m) { m.exports = require(${ JSON.stringify(node.path) }) }` :
+                `function(module, exports) {\n\n${ node.output }\n\n}`;
 
-        output = wrapModule(output, imports, {
+            return `${ id }, ${ init }`;
+
+        }).join(",\n");
+
+        output = BUNDLE_INIT + `([\n${ output }]);`;
+
+        output = wrapModule(output, [], {
 
             global: options.global,
             runtime: needsRuntime,

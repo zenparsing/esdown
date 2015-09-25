@@ -8,8 +8,6 @@ let FS = require("fs"),
 
 let failFile = __dirname + "/_test-fail.js";
 
-console.log(typeof Path);
-
 function statPath(path) {
 
     try { return FS.statSync(path); } catch (ex) {}

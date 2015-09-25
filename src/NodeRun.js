@@ -9,7 +9,7 @@ import { parse } from "esparse";
 import { translate } from "./Translator.js";
 import { isPackageSpecifier, locateModule } from "./Locator.js";
 
-let Module = module.constructor;
+let Module = require.main.constructor;
 
 export function formatSyntaxError(e, filename) {
 
@@ -46,15 +46,10 @@ function addExtension() {
 
     Module.prototype.importSync = function(path) {
 
-        if (/^node:/.test(path)) {
-
+        if (/^node:/.test(path))
             path = path.slice(5);
-            this.__es6 = false;
-
-        } else {
-
-            this.__es6 = true;
-        }
+        else
+            path += "##ES6";
 
         let e = this.require(path);
         if (e && e.constructor !== Object) e.default = e;
@@ -63,14 +58,12 @@ function addExtension() {
 
     Module._load = (request, parent, isMain) => {
 
-        if (parent.__es6) {
+        if (request.endsWith("##ES6")) {
 
-            let loc = locateModule(request, Path.dirname(parent.filename));
-
+            let loc = locateModule(request.slice(0, -5), Path.dirname(parent.filename));
             request = loc.path;
 
-            if (loc.legacy)
-                parent.__es6 = false;
+            parent.__es6 = !loc.legacy;
         }
 
         let m = moduleLoad(request, parent, isMain);
@@ -87,9 +80,7 @@ function addExtension() {
 
             text = source = FS.readFileSync(filename, "utf8");
 
-            // Only translate as a module if the source module is requesting
-            // via import syntax
-            let m = !!module.parent.__es6;
+            let m = Boolean(module.parent.__es6);
 
             text = translate(text, {
                 wrap: m,
@@ -119,7 +110,9 @@ export function runModule(path) {
 
     let loc = locateModule(path, process.cwd());
 
-    module.__es6 = true;
+    if (!loc.legacy)
+        loc.path += "##ES6";
+
     let m = require(loc.path);
 
     if (m && m.constructor !== Object)

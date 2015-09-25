@@ -15,3 +15,8 @@ export function hasScheme(uri) {
 
     return URI_SCHEME.test(uri);
 }
+
+export function addLegacyScheme(uri) {
+
+    return "node:" + uri;
+}
