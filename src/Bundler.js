@@ -15,11 +15,11 @@ const NODE_INTERNAL_MODULE = new RegExp("^(?:" + [
 ].join("|") + ")$");
 
 const BUNDLE_INIT =
-"var _M; " +
+"var __M; " +
 "(function(a) { " +
     "var list = Array(a.length / 2); " +
 
-    "_M = function require(i) { " +
+    "__M = function require(i) { " +
         "var m = list[i], f, e; " +
         "if (typeof m !== 'function') return m.exports; " +
         "f = m; " +
@@ -34,7 +34,7 @@ const BUNDLE_INIT =
     "for (var i = 0; i < a.length; i += 2) { " +
         "var j = Math.abs(a[i]); " +
         "list[j] = a[i + 1]; " +
-        "if (a[i] >= 0) _M(j); " +
+        "if (a[i] >= 0) __M(j); " +
     "} " +
 "})";
 
@@ -164,12 +164,12 @@ class GraphBuilder {
 
         node.output = translate(input, {
 
-            identifyModule: path => `_M(${ this.addEdge(node, path, false).id })`,
+            identifyModule: path => `__M(${ this.addEdge(node, path, false).id })`,
 
             replaceRequire: path => {
 
                 let n = this.addEdge(node, path, true);
-                return n ? `_M(${ n.id })` : null;
+                return n ? `__M(${ n.id })` : null;
             },
 
             module: !node.legacy,
@@ -249,7 +249,7 @@ export function bundle(rootPath, options = {}) {
 
         }).join(",\n");
 
-        output = BUNDLE_INIT + `([\n${ output }]);`;
+        output = BUNDLE_INIT + `([\n${ output }]);\n`;
 
         output = wrapModule(output, [], {
 
