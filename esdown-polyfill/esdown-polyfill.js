@@ -1,6 +1,5 @@
-/*=esdown=*/(function(fn, name) { if (typeof exports !== 'undefined') fn(require, exports, module); else if (typeof self !== 'undefined') fn(null, name === '*' ? self : (name ? self[name] = {} : {})); })(function(require, exports, module) { 'use strict'; var _M3 = {}, _M4 = {}, _M5 = {}, _M6 = {}, _M7 = {}, _M8 = {}, _M9 = {}, _M10 = {}, _M2 = {}, _M1 = exports;
-
-(function(exports) {
+/*=esdown=*/(function(fn, name) { if (typeof exports !== 'undefined') fn(require, exports, module); else if (typeof self !== 'undefined') fn(void 0, name === '*' ? self : (name ? self[name] = {} : {})); })(function(require, exports, module) { 'use strict'; var __M; (function(a) { var list = Array(a.length / 2); __M = function require(i) { var m = list[i], f, e; if (typeof m !== 'function') return m.exports; f = m; m = { exports: i ? {} : exports }; f(list[i] = m, e = m.exports); if (m.exports !== e && !('default' in m.exports)) m.exports['default'] = m.exports; return m.exports; }; for (var i = 0; i < a.length; i += 2) { var j = Math.abs(a[i]); list[j] = a[i + 1]; if (a[i] >= 0) __M(j); } })([
+2, function(module, exports) {
 
 var Global = (function() {
 
@@ -97,11 +96,10 @@ exports.toObject = toObject;
 exports.assertThis = assertThis;
 
 
-})(_M3);
+},
+3, function(module, exports) {
 
-(function(exports) {
-
-var addProperties = _M3.addProperties;
+var addProperties = __M(2).addProperties;
 
 var symbolCounter = 0;
 
@@ -131,11 +129,10 @@ function polyfill(global) {
 exports.polyfill = polyfill;
 
 
-})(_M4);
+},
+4, function(module, exports) {
 
-(function(exports) {
-
-var addProperties = _M3.addProperties, toObject = _M3.toObject, toLength = _M3.toLength, toInteger = _M3.toInteger;
+var addProperties = __M(2).addProperties, toObject = __M(2).toObject, toLength = __M(2).toLength, toInteger = __M(2).toInteger;
 
 function arrayFind(obj, pred, thisArg, type) {
 
@@ -342,11 +339,10 @@ function polyfill() {
 exports.polyfill = polyfill;
 
 
-})(_M5);
+},
+5, function(module, exports) {
 
-(function(exports) {
-
-var addProperties = _M3.addProperties;
+var addProperties = __M(2).addProperties;
 
 var ORIGIN = {}, REMOVED = {};
 
@@ -552,11 +548,10 @@ function polyfill(global) {
 exports.polyfill = polyfill;
 
 
-})(_M6);
+},
+6, function(module, exports) {
 
-(function(exports) {
-
-var toInteger = _M3.toInteger, addProperties = _M3.addProperties;
+var toInteger = __M(2).toInteger, addProperties = __M(2).addProperties;
 
 function isInteger(val) {
 
@@ -597,11 +592,10 @@ function polyfill() {
 exports.polyfill = polyfill;
 
 
-})(_M7);
+},
+7, function(module, exports) {
 
-(function(exports) {
-
-var addProperties = _M3.addProperties, toObject = _M3.toObject, sameValue = _M3.sameValue;
+var addProperties = __M(2).addProperties, toObject = __M(2).toObject, sameValue = __M(2).sameValue;
 
 function polyfill() {
 
@@ -642,11 +636,10 @@ function polyfill() {
 exports.polyfill = polyfill;
 
 
-})(_M8);
+},
+8, function(module, exports) {
 
-(function(exports) {
-
-var addProperties = _M3.addProperties, global = _M3.global;
+var addProperties = __M(2).addProperties, global = __M(2).global;
 
 var runLater = (function(_) {
 
@@ -1001,16 +994,15 @@ function polyfill() {
 exports.polyfill = polyfill;
 
 
-})(_M9);
+},
+9, function(module, exports) {
 
-(function(exports) {
-
-var addProperties = _M3.addProperties,
-    toLength = _M3.toLength,
-    toInteger = _M3.toInteger,
-    sameValue = _M3.sameValue,
-    assertThis = _M3.assertThis,
-    isRegExp = _M3.isRegExp;
+var addProperties = __M(2).addProperties,
+    toLength = __M(2).toLength,
+    toInteger = __M(2).toInteger,
+    sameValue = __M(2).sameValue,
+    assertThis = __M(2).assertThis,
+    isRegExp = __M(2).isRegExp;
 
 
 
@@ -1167,9 +1159,9 @@ function polyfill() {
             return string.slice(end - search.length, end) === search;
         },
 
-        contains: function(search) {
+        includes: function(search) {
 
-            assertThis(this, "String.prototype.contains");
+            assertThis(this, "String.prototype.includes");
 
             var string = String(this),
                 pos = arguments.length > 1 ? arguments[1] : undefined;
@@ -1216,19 +1208,18 @@ function polyfill() {
 exports.polyfill = polyfill;
 
 
-})(_M10);
+},
+1, function(module, exports) {
 
-(function(exports) {
+var global = __M(2).global;
 
-var global = _M3.global;
-
-var symbols = _M4;
-var array = _M5;
-var mapset = _M6;
-var number = _M7;
-var object = _M8;
-var promise = _M9;
-var string = _M10;
+var symbols = __M(3);
+var array = __M(4);
+var mapset = __M(5);
+var number = __M(6);
+var object = __M(7);
+var promise = __M(8);
+var string = __M(9);
 
 
 
@@ -1242,16 +1233,15 @@ exports.global = global;
 exports.polyfill = polyfill;
 
 
-})(_M2);
+},
+0, function(module, exports) {
 
-(function(exports) {
-
-var polyfill = _M2.polyfill;
+var polyfill = __M(1).polyfill;
 
 polyfill();
 
 
-})(_M1);
+}]);
 
 
 }, "");

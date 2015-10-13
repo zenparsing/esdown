@@ -160,9 +160,9 @@ export function polyfill() {
             return string.slice(end - search.length, end) === search;
         },
 
-        contains(search) {
+        includes(search) {
 
-            assertThis(this, "String.prototype.contains");
+            assertThis(this, "String.prototype.includes");
 
             let string = String(this),
                 pos = arguments.length > 1 ? arguments[1] : undefined;
