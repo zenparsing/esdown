@@ -12,7 +12,7 @@ const WRAP_CALLEE = "(function(fn, name) { " +
 
     // DOM global module:
     "else if (typeof self !== 'undefined') " +
-        "fn(null, name === '*' ? self : (name ? self[name] = {} : {})); " +
+        "fn(void 0, name === '*' ? self : (name ? self[name] = {} : {})); " +
 
 "})";
 
@@ -36,7 +36,7 @@ function sanitize(text) {
 function wrapRuntime() {
 
     // Wrap runtime library in an IIFE, exporting into the _esdown variable
-    return "var _esdown = {}; (function(exports) {\n\n" + Runtime.API + "\n\n})(_esdown);";
+    return "var _esdown = {}; (function() { var exports = _esdown;\n\n" + Runtime.API + "\n\n})();";
 }
 
 function wrapPolyfills() {

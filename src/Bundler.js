@@ -23,9 +23,8 @@ const BUNDLE_INIT =
         "var m = list[i], f, e; " +
         "if (typeof m !== 'function') return m.exports; " +
         "f = m; " +
-        "m = !i ? module : { exports: {} }; " +
-        "e = m.exports; " +
-        "f(list[i] = m, e); " +
+        "m = { exports: i ? {} : exports }; " +
+        "f(list[i] = m, e = m.exports); " +
         "if (m.exports !== e && !('default' in m.exports)) " +
             "m.exports['default'] = m.exports; " +
         "return m.exports; " +

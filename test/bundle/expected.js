@@ -1,4 +1,4 @@
-/*=esdown=*/'use strict'; var __M; (function(a) { var list = Array(a.length / 2); __M = function require(i) { var m = list[i], f, e; if (typeof m !== 'function') return m.exports; f = m; m = !i ? module : { exports: {} }; e = m.exports; f(list[i] = m, e); if (m.exports !== e && !('default' in m.exports)) m.exports['default'] = m.exports; return m.exports; }; for (var i = 0; i < a.length; i += 2) { var j = Math.abs(a[i]); list[j] = a[i + 1]; if (a[i] >= 0) __M(j); } })([
+/*=esdown=*/'use strict'; var __M; (function(a) { var list = Array(a.length / 2); __M = function require(i) { var m = list[i], f, e; if (typeof m !== 'function') return m.exports; f = m; m = i || !module ? { exports: {} } : module; f(list[i] = m, e = m.exports); if (m.exports !== e && !('default' in m.exports)) m.exports['default'] = m.exports; return m.exports; }; for (var i = 0; i < a.length; i += 2) { var j = Math.abs(a[i]); list[j] = a[i + 1]; if (a[i] >= 0) __M(j); } })([
 1, function(m) { m.exports = require("fs") },
 2, function(module, exports) {
 
