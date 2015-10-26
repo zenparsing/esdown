@@ -9,6 +9,9 @@
 ({ a: [b, c] }) = foo;
 ({ "a": a, 0: b }) = foo;
 
+var {} = foo;
+var { x: {} } = foo;
+
 var [a, b] = foo,
     { c, c: d } = foo;
 

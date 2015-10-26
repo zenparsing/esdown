@@ -1018,7 +1018,7 @@ class Replacer {
 
         let list = this.translatePattern(node.pattern, node.initializer.text);
 
-        return list.join(", ");
+        return list.join(", ") || "__$_";
     }
 
     AssignmentExpression(node) {
