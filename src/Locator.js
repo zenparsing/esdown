@@ -1,11 +1,19 @@
 import * as Path from "node:path";
 import * as FS from "node:fs";
 
-const NODE_PATH = typeof process !== "undefined" && process.env["NODE_PATH"] || "",
-      NOT_PACKAGE = /^(?:\.{0,2}\/|[a-z]+:)/i,
-      isWindows = process.platform === "win32";
 
-const globalModulePaths = (_=> {
+let NOT_PACKAGE = /^(?:\.{0,2}\/|[a-z]+:)/i,
+    NODE_PATH = "",
+    globalModulePaths = [],
+    isWindows = false;
+
+(_=> {
+
+    if (typeof process === "undefined")
+        return;
+
+    isWindows = process.platform === "win32";
+    NODE_PATH = process.env["NODE_PATH"] || "";
 
     let home = isWindows ? process.env.USERPROFILE : process.env.HOME,
         paths = [Path.resolve(process.execPath, "..", "..", "lib", "node")];
@@ -21,7 +29,7 @@ const globalModulePaths = (_=> {
     if (nodePath)
         paths = nodePath.split(Path.delimiter).filter(Boolean).concat(paths);
 
-    return paths;
+    globalModulePaths = paths;
 
 })();
 

@@ -12,7 +12,7 @@ const WRAP_CALLEE = "(function(fn, name) { " +
 
     // DOM global module:
     "else if (typeof self !== 'undefined') " +
-        "fn(void 0, name === '*' ? self : (name ? self[name] = {} : {})); " +
+        "fn(function() { return {} }, name === '*' ? self : (name ? self[name] = {} : {})); " +
 
 "})";
 
