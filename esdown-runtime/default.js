@@ -1,4 +1,4 @@
-const VERSION = "1.0.2";
+const VERSION = "1.0.3";
 
 const GLOBAL = (function() {
 
@@ -109,6 +109,13 @@ export function asyncFunction(iter) {
             } catch (x) { reject(x) }
         }
     });
+}
+
+// Support for for-await
+export function asyncIterator(obj) {
+
+    let method = obj[Symbol.asyncIterator] || obj[Symbol.iterator];
+    return method.call(obj);
 }
 
 // Support for async generators
@@ -312,4 +319,5 @@ export {
     GLOBAL as global,
     asyncFunction as async,
     asyncGenerator as asyncGen,
+    asyncIterator as asyncIter,
 };

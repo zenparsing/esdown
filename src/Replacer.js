@@ -281,7 +281,7 @@ class Replacer {
 
         if (node.async) {
 
-            head = `for (var ${ iter } = (${ node.right.text })[Symbol.asyncIterator](), ${ iterResult }; `;
+            head = `for (var ${ iter } = _esdown.asyncIter(${ node.right.text }), ${ iterResult }; `;
             head += `${ iterResult } = ${ this.awaitYield(context, iter + ".next()") }, `;
 
         } else {

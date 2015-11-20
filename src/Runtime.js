@@ -2,7 +2,7 @@ export let Runtime = {};
 
 Runtime.API = 
 
-`var VERSION = "1.0.2";
+`var VERSION = "1.0.3";
 
 var GLOBAL = (function() {
 
@@ -113,6 +113,13 @@ function asyncFunction(iter) {
             } catch (x) { reject(x) }
         }
     });
+}
+
+// Support for for-await
+function asyncIterator(obj) {
+
+    var method = obj[Symbol.asyncIterator] || obj[Symbol.iterator];
+    return method.call(obj);
 }
 
 // Support for async generators
@@ -318,9 +325,11 @@ function arrayd(obj) {
 
 
 
+
 exports.makeClass = makeClass;
 exports.computed = computed;
 exports.asyncFunction = asyncFunction;
+exports.asyncIterator = asyncIterator;
 exports.asyncGenerator = asyncGenerator;
 exports.spread = spread;
 exports.objd = objd;
@@ -330,6 +339,7 @@ exports.version = VERSION;
 exports.global = GLOBAL;
 exports.async = asyncFunction;
 exports.asyncGen = asyncGenerator;
+exports.asyncIter = asyncIterator;
 `;
 
 Runtime.Polyfill = 
