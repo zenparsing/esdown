@@ -86,7 +86,6 @@ function addExtension() {
             let m = Boolean(module.parent.__es6);
 
             text = translate(text, {
-                wrap: m,
                 module: m,
                 functionContext: !m,
                 runtimeImports: true,
@@ -262,7 +261,7 @@ export function startREPL() {
 
         try {
 
-            text = translate(input, { wrap: false, module: true });
+            text = translate(input, { module: true, noWrap: true });
 
         } catch (x) {
 

@@ -65,14 +65,8 @@ export function translate(input, options = {}) {
     if (!options.runtimeImports && result.runtime.length > 0)
         imports.push({ url: "esdown-runtime", identifier: "_esdown" });
 
-    if (options.wrap) {
-
-        // It doesn't make sense to create a module wrapper for a non-module
-        if (!options.module)
-            throw new Error("Cannot wrap a non-module");
-
+    if (options.module && !options.noWrap)
         output = wrapModule(output, imports, options);
-    }
 
     if (options.result) {
 

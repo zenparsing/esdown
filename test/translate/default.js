@@ -52,7 +52,7 @@ export function main(args) {
                 inputFiles.forEach(path => {
 
                     let input = FS.readFileSync(path, "utf8"),
-                        output = translate(input, { wrap: false, module: true }),
+                        output = translate(input, { noWrap: true, module: true }),
                         expected = FS.readFileSync(path.replace(/\.js$/, ".out.js"), "utf8"),
                         ok = output === expected;
 

@@ -67,8 +67,6 @@ Translates ES6+ code to ES5.  The following options are defined:
 - **runtime**:  (Boolean) If `true`, include the **esdown** runtime library in the output.
   The default is `false`.
 - **polyfill**:  (Boolean) If `true`, include the **esdown** ES6 polyfills in the output.
-- **wrap**:  (Boolean) If `true`, wrap the output in boilerplate which will ensure compatibility
-  with Node and AMD modules.  The default is `false`.
 - **global**:  (String) If specified, the name of the global variable which will be used to
   expose the module if it is loaded as a plain script in the browser.
 
@@ -78,7 +76,6 @@ Example:
 var esdown = require("esdown");
 
 var output = esdown.translate("class C { foo() {} }", {
-    module: true,
-    wrap: true
+    module: true
 });
 ```

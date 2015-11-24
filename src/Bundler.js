@@ -174,6 +174,8 @@ class GraphBuilder {
 
             module: !node.legacy,
 
+            noWrap: true,
+
             result,
 
         });
