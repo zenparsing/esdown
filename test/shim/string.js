@@ -6,10 +6,10 @@ function testObjectCoercible(test, fn) {
         return;
 
     test
-    .throws($=> fn.call(void 0), TypeError)
-    .throws($=> fn.call(null), TypeError)
-    .throws($=> fn.apply(void 0), TypeError)
-    .throws($=> fn.apply(null), TypeError);
+    .throws(_=> fn.call(void 0), TypeError)
+    .throws(_=> fn.call(null), TypeError)
+    .throws(_=> fn.apply(void 0), TypeError)
+    .throws(_=> fn.apply(null), TypeError);
 }
 
 export var tests = {
@@ -49,8 +49,8 @@ export var tests = {
         testObjectCoercible(test, repeat);
 
         test._("throws a RangeError when negative or infinite")
-        .throws($=> "test".repeat(-1), RangeError)
-        .throws($=> "test".repeat(Infinity), RangeError)
+        .throws(_=> "test".repeat(-1), RangeError)
+        .throws(_=> "test".repeat(Infinity), RangeError)
         ;
 
         test._("coerces to an integer")
@@ -153,8 +153,8 @@ export var tests = {
         ;
 
         test._("regex argument not allowed")
-        .throws($=> "abc".startsWith(/a/), TypeError)
-        .throws($=> "abc".startsWith(new RegExp("a")), TypeError)
+        .throws(_=> "abc".startsWith(/a/), TypeError)
+        .throws(_=> "abc".startsWith(new RegExp("a")), TypeError)
         ;
     },
 
@@ -196,8 +196,8 @@ export var tests = {
         if (hasStrict) {
 
             test._("throws when called with null or undefined")
-            .throws($=> "".endsWith.call(null, "ull"), TypeError)
-            .throws($=> "".endsWith.call(void 0, "ned"), TypeError)
+            .throws(_=> "".endsWith.call(null, "ull"), TypeError)
+            .throws(_=> "".endsWith.call(void 0, "ned"), TypeError)
             ;
         }
 
@@ -215,7 +215,7 @@ export var tests = {
 
         var gotPos = false, gotStr = false;
 
-        obj.toString = $=> {
+        obj.toString = _=> {
 
             test.assert(!gotPos);
             gotStr = true;
@@ -242,8 +242,8 @@ export var tests = {
         .assert(!"abcd".endsWith({ toString() { return "foo" } }))
 
         ._("regex argument not allowed")
-        .throws($=> "abcd".endsWith(/abc/), TypeError)
-        .throws($=> "abcd".endsWith(new RegExp("abc")), TypeError)
+        .throws(_=> "abcd".endsWith(/abc/), TypeError)
+        .throws(_=> "abcd".endsWith(new RegExp("abc")), TypeError)
 
         ._("handles negative and zero positions correctly")
         .assert(!"abcd".endsWith("bcd", 0))
@@ -305,7 +305,7 @@ export var tests = {
 
         var gotPos = false, gotStr = false;
 
-        obj.toString = $=> {
+        obj.toString = _=> {
 
             test.assert(!gotPos);
             gotStr = true;
@@ -359,7 +359,7 @@ export var tests = {
         test._("throws RangeError for invalid cod points");
 
         ["abc", {}, -1, 0x10FFFF + 1]
-        .forEach(val => test.throws($=> String.fromCodePont(val)), RangeError);
+        .forEach(val => test.throws(_=> String.fromCodePont(val)), RangeError);
 
         test
 
@@ -373,7 +373,7 @@ export var tests = {
 
         test._("returns the correct string for valid code points");
 
-        ($=> {
+        (_=> {
 
             var chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789…?!",
                 list = [];

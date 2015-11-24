@@ -1,6 +1,6 @@
 function delayed(value, ms) {
 
-    return new Promise(resolve => setTimeout($=> resolve(value), ms));
+    return new Promise(resolve => setTimeout(_=> resolve(value), ms));
 }
 
 function either(p) {
@@ -72,8 +72,8 @@ export var tests = {
             var iterable = [];
             var settled = false;
 
-            either(Promise.race(iterable)).then($=> settled = true);
-            return delayed(null, 300).then($=> test.assert(!settled));
+            either(Promise.race(iterable)).then(_=> settled = true);
+            return delayed(null, 300).then(_=> test.assert(!settled));
         },
 
         "rejects with a TypeError if given a non-iterable" (test) {
@@ -81,7 +81,7 @@ export var tests = {
             var notIterable = {};
 
             return Promise.race(notIterable).then(
-                $=> test.assert(false),
+                _=> test.assert(false),
                 reason => test.assert(reason instanceof TypeError)
             );
         },

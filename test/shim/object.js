@@ -35,7 +35,7 @@ export var tests = {
         .equals(Object.assign({ a: 1 }, new Foo), { baz: true, a: 1 })
 
         ._("throws when target is not an object")
-        .throws($=> Object.assign(null), TypeError)
+        .throws(_=> Object.assign(null), TypeError)
 
         ._("skips null and undefined sources")
         .equals(Object.assign({ a: 1 }, null, void 0), { a: 1 })

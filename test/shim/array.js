@@ -47,13 +47,13 @@ export var tests = {
         .equals(Array.from([1, 2, 3], x => x * 2), [2, 4, 6])
 
         ._("throws when second parameter is not a function")
-        .throws($=> Array.from([], false), TypeError)
-        .throws($=> Array.from([], true), TypeError)
-        .throws($=> Array.from([], /a/g), TypeError)
-        .throws($=> Array.from([], {}), TypeError)
-        .throws($=> Array.from([], []), TypeError)
-        .throws($=> Array.from([], ""), TypeError)
-        .throws($=> Array.from([], 3), TypeError)
+        .throws(_=> Array.from([], false), TypeError)
+        .throws(_=> Array.from([], true), TypeError)
+        .throws(_=> Array.from([], /a/g), TypeError)
+        .throws(_=> Array.from([], {}), TypeError)
+        .throws(_=> Array.from([], []), TypeError)
+        .throws(_=> Array.from([], ""), TypeError)
+        .throws(_=> Array.from([], 3), TypeError)
 
         ._("supports a this argument")
         .equals(Array.from([1, 2, 3], function(x) {
@@ -64,9 +64,9 @@ export var tests = {
         }, thisArg), [2, 4, 6])
 
         ._("throws when first parameter is null or undefined")
-        .throws($=> Array.from(), TypeError)
-        .throws($=> Array.from(void 0), TypeError)
-        .throws($=> Array.from(null), TypeError)
+        .throws(_=> Array.from(), TypeError)
+        .throws(_=> Array.from(void 0), TypeError)
+        .throws(_=> Array.from(null), TypeError)
 
         ._("returns an empty array when given a non-iterable, non-array-like")
         .equals(Array.from(3), [])
@@ -160,10 +160,10 @@ export var tests = {
         .equals(list.find(x => x === "a"), void 0)
 
         ._("throws TypeError when a function predicate is not supplied")
-        .throws($=> list.find(), TypeError)
-        .throws($=> list.find(null), TypeError)
-        .throws($=> list.find(12), TypeError)
-        .throws($=> list.find("abc"), TypeError)
+        .throws(_=> list.find(), TypeError)
+        .throws(_=> list.find(null), TypeError)
+        .throws(_=> list.find(12), TypeError)
+        .throws(_=> list.find("abc"), TypeError)
 
         ._("predicate is called with 3 arguments")
         .equals(list.find((val, pos, array) => {
@@ -183,7 +183,7 @@ export var tests = {
         .equals(Array.prototype.find.call(args(1, 2, 3), x => x === 2), 2)
 
         ._("works with array-likes with a negative length")
-        .equals(Array.prototype.find.call({ length: -1 }, $=> true), void 0)
+        .equals(Array.prototype.find.call({ length: -1 }, _=> true), void 0)
 
         ._("holes are not skipped")
         .equals([1, , void 0].find((val, pos) => {
@@ -221,10 +221,10 @@ export var tests = {
         .equals(list.findIndex(x => x === "a"), -1)
 
         ._("throws TypeError when a function predicate is not supplied")
-        .throws($=> list.findIndex(), TypeError)
-        .throws($=> list.findIndex(null), TypeError)
-        .throws($=> list.findIndex(12), TypeError)
-        .throws($=> list.findIndex("abc"), TypeError)
+        .throws(_=> list.findIndex(), TypeError)
+        .throws(_=> list.findIndex(null), TypeError)
+        .throws(_=> list.findIndex(12), TypeError)
+        .throws(_=> list.findIndex("abc"), TypeError)
 
         ._("predicate is called with 3 arguments")
         .equals(list.findIndex((val, pos, array) => {
@@ -244,7 +244,7 @@ export var tests = {
         .equals(Array.prototype.findIndex.call(args(1, 2, 3), x => x === 2), 1)
 
         ._("works with array-likes with a negative length")
-        .equals(Array.prototype.findIndex.call({ length: -1 }, $=> true), -1)
+        .equals(Array.prototype.findIndex.call({ length: -1 }, _=> true), -1)
 
         ._("holes are not skipped")
         .equals([1, , void 0].findIndex((val, pos) => {

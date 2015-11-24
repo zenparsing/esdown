@@ -159,7 +159,7 @@ export function main(args) {
                     return;
                 }
 
-                setTimeout($=> { throw x }, 0);
+                setTimeout(_=> { throw x }, 0);
             });
         }
 

@@ -124,7 +124,7 @@ export function runModule(path) {
     if (m && typeof m.main === "function") {
 
         let result = m.main();
-        Promise.resolve(result).then(null, x => setTimeout($=> { throw x }, 0));
+        Promise.resolve(result).then(null, x => setTimeout(_=> { throw x }, 0));
     }
 }
 
@@ -202,7 +202,7 @@ export function startREPL() {
                 Promise.race([
 
                     result,
-                    new Promise(a => setTimeout($=> a(token), 3000)),
+                    new Promise(a => setTimeout(_=> a(token), 3000)),
                 ])
                 .then(x => {
 
@@ -213,7 +213,7 @@ export function startREPL() {
                     cb(null, x);
                 })
                 .catch(err => cb(err, null))
-                .then($=> this.displayPrompt());
+                .then(_=> this.displayPrompt());
 
             } else {
 
