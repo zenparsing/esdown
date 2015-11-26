@@ -8,11 +8,11 @@ const WRAP_CALLEE = "(function(fn, name) { " +
 
     // CommonJS:
     "if (typeof exports !== 'undefined') " +
-        "fn(require, exports, module); " +
+        "fn(exports, module); " +
 
     // DOM global module:
     "else if (typeof self !== 'undefined') " +
-        "fn(function() { return {} }, name === '*' ? self : (name ? self[name] = {} : {})); " +
+        "fn(name === '*' ? self : (name ? self[name] = {} : {})); " +
 
 "})";
 
@@ -123,7 +123,7 @@ export function wrapModule(text, imports = [], options = {}) {
         name = "";
 
     return SIGNATURE + WRAP_CALLEE + "(" +
-        "function(require, exports, module) { " + header + text + "\n\n}, " +
+        "function(exports, module) { " + header + text + "\n\n}, " +
         JSON.stringify(name) +
     ");";
 }

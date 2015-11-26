@@ -1,6 +1,6 @@
 {
     "name": "esdown",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "description": "ES6+ to ES5 compiler",
     "homepage": "https://github.com/zenparsing/esdown",
     "bin": {
