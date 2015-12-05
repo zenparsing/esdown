@@ -111,10 +111,7 @@ export function wrapModule(text, imports = [], options = {}) {
     if (options.polyfill)
         header += wrapPolyfills() + "\n\n";
 
-    if (!options.global)
-        return SIGNATURE + header + text;
-
-    if (typeof options.global !== "string")
+    if (!options.global || typeof options.global !== "string")
         return SIGNATURE + header + text;
 
     let name = options.global;
