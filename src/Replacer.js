@@ -743,26 +743,6 @@ class Replacer {
         }
     }
 
-    // Experimental
-    PipeExpression(node) {
-
-        let left = node.left.text,
-            temp = this.addTempVar(node),
-            callee = `(${ temp } = ${ left }, ${ node.right.text })`,
-            args = temp;
-
-        if (node.hasSpread) {
-
-            args = this.spreadList(node.arguments, "[" + args + "]");
-            return `${ callee }.apply(void 0, ${ args })`;
-        }
-
-        if (node.arguments.length > 0)
-            args += ", " + this.joinList(node.arguments);
-
-        return `${ callee }(${ args })`;
-    }
-
     ArrowFunction(node) {
 
         let body = node.body.text;
