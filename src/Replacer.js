@@ -743,6 +743,32 @@ class Replacer {
         }
     }
 
+    BindExpression(node) {
+
+        let left = node.left ? node.left.text : null,
+            temp = this.addTempVar(node),
+            bindee;
+
+        if (!left) {
+
+            let right = this.unwrapParens(node.right);
+            bindee = `((${ temp } = ${ right.object.text }).${ right.property.text })`;
+
+        } else {
+
+            bindee = `(${ temp } = ${ left }, ${ node.right.text })`;
+        }
+
+        if (node.parent.type === "CallExpression" &&
+            node.parent.callee === node) {
+
+            node.parent.injectThisArg = temp;
+            return bindee;
+        }
+
+        return `${ bindee }.bind(${ temp })`;
+    }
+
     ArrowFunction(node) {
 
         let body = node.body.text;
