@@ -743,6 +743,17 @@ class Replacer {
         }
     }
 
+    BindNewExpression(node) {
+
+        return "(function(C) { " +
+            "return function() { " +
+                "var args = [null]; " +
+                "for (var i = 0; i < arguments.length; ++i) args.push(arguments[i]); " +
+                "return new (C.bind.apply(C, args)); " +
+            "}; " +
+        "}(" + node.expression.text + "))";
+    }
+
     BindExpression(node) {
 
         let left = node.left ? node.left.text : null,
