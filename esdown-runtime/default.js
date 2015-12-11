@@ -121,7 +121,7 @@ export function asyncIterator(obj) {
 // Support for async generators
 export function asyncGenerator(iter) {
 
-    let front = null, back = null;
+    let current = null;
 
     let aIter = {
 
@@ -137,19 +137,11 @@ export function asyncGenerator(iter) {
 
         return new Promise((resolve, reject) => {
 
-            let x = { type, value, resolve, reject, next: null };
+            if (current)
+                throw new Error("Async generator in progress");
 
-            if (back) {
-
-                // If list is not empty, then push onto the end
-                back = back.next = x;
-
-            } else {
-
-                // Create new list and resume generator
-                front = back = x;
-                resume(type, value);
-            }
+            current = { resolve, reject };
+            resume(type, value);
         });
     }
 
@@ -158,37 +150,19 @@ export function asyncGenerator(iter) {
         switch (type) {
 
             case "return":
-                front.resolve({ value, done: true });
+                current.resolve({ value, done: true });
                 break;
 
             case "throw":
-                front.reject(value);
+                current.reject(value);
                 break;
 
             default:
-                front.resolve({ value, done: false });
+                current.resolve({ value, done: false });
                 break;
         }
 
-        front = front.next;
-
-        if (front) resume(front.type, front.value);
-        else back = null;
-    }
-
-    function awaitValue(result) {
-
-        let value = result.value;
-
-        if (typeof value === "object" && "_esdown_await" in value) {
-
-            if (result.done)
-                throw new Error("Invalid async generator return");
-
-            return value._esdown_await;
-        }
-
-        return null;
+        current = null;
     }
 
     function resume(type, value) {
@@ -204,18 +178,21 @@ export function asyncGenerator(iter) {
 
         try {
 
-            let result = iter[type](value),
-                awaited = awaitValue(result);
+            let result = iter[type](value);
+            value = result.value;
 
-            if (awaited) {
+            if (value && typeof value === "object" && "_esdown_await" in value) {
 
-                Promise.resolve(awaited).then(
+                if (result.done)
+                    throw new Error("Invalid async generator return");
+
+                Promise.resolve(value._esdown_await).then(
                     x => resume("next", x),
                     x => resume("throw", x));
 
             } else {
 
-                Promise.resolve(result.value).then(
+                Promise.resolve(value).then(
                     x => fulfill(result.done ? "return" : "normal", x),
                     x => fulfill("throw", x));
             }

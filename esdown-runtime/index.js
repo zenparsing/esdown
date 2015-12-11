@@ -121,7 +121,7 @@ function asyncIterator(obj) {
 // Support for async generators
 function asyncGenerator(iter) {
 
-    var front = null, back = null;
+    var current = null;
 
     var aIter = {
 
@@ -137,19 +137,11 @@ function asyncGenerator(iter) {
 
         return new Promise(function(resolve, reject) {
 
-            var x = { type: type, value: value, resolve: resolve, reject: reject, next: null };
+            if (current)
+                throw new Error("Async generator in progress");
 
-            if (back) {
-
-                // If list is not empty, then push onto the end
-                back = back.next = x;
-
-            } else {
-
-                // Create new list and resume generator
-                front = back = x;
-                resume(type, value);
-            }
+            current = { resolve: resolve, reject: reject };
+            resume(type, value);
         });
     }
 
@@ -158,37 +150,19 @@ function asyncGenerator(iter) {
         switch (type) {
 
             case "return":
-                front.resolve({ value: value, done: true });
+                current.resolve({ value: value, done: true });
                 break;
 
             case "throw":
-                front.reject(value);
+                current.reject(value);
                 break;
 
             default:
-                front.resolve({ value: value, done: false });
+                current.resolve({ value: value, done: false });
                 break;
         }
 
-        front = front.next;
-
-        if (front) resume(front.type, front.value);
-        else back = null;
-    }
-
-    function awaitValue(result) {
-
-        var value = result.value;
-
-        if (typeof value === "object" && "_esdown_await" in value) {
-
-            if (result.done)
-                throw new Error("Invalid async generator return");
-
-            return value._esdown_await;
-        }
-
-        return null;
+        current = null;
     }
 
     function resume(type, value) {
@@ -204,18 +178,21 @@ function asyncGenerator(iter) {
 
         try {
 
-            var result$1 = iter[type](value),
-                awaited$0 = awaitValue(result$1);
+            var result$1 = iter[type](value);
+            value = result$1.value;
 
-            if (awaited$0) {
+            if (value && typeof value === "object" && "_esdown_await" in value) {
 
-                Promise.resolve(awaited$0).then(
+                if (result$1.done)
+                    throw new Error("Invalid async generator return");
+
+                Promise.resolve(value._esdown_await).then(
                     function(x) { return resume("next", x); },
                     function(x) { return resume("throw", x); });
 
             } else {
 
-                Promise.resolve(result$1.value).then(
+                Promise.resolve(value).then(
                     function(x) { return fulfill(result$1.done ? "return" : "normal", x); },
                     function(x) { return fulfill("throw", x); });
             }
