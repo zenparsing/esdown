@@ -1,4 +1,4 @@
-const VERSION = "1.0.7";
+const VERSION = "1.0.8";
 
 const GLOBAL = (function() {
 
@@ -121,7 +121,7 @@ function asyncIterator(obj) {
 // Support for async generators
 function asyncGenerator(iter) {
 
-    let current = null;
+    let front = null, back = null;
 
     let aIter = {
 
@@ -137,11 +137,19 @@ function asyncGenerator(iter) {
 
         return new Promise((resolve, reject) => {
 
-            if (current)
-                throw new Error("Async generator in progress");
+            let x = { type, value, resolve, reject, next: null };
 
-            current = { resolve, reject };
-            resume(type, value);
+            if (back) {
+
+                // If list is not empty, then push onto the end
+                back = back.next = x;
+
+            } else {
+
+                // Create new list and resume generator
+                front = back = x;
+                resume(type, value);
+            }
         });
     }
 
@@ -150,19 +158,22 @@ function asyncGenerator(iter) {
         switch (type) {
 
             case "return":
-                current.resolve({ value, done: true });
+                front.resolve({ value, done: true });
                 break;
 
             case "throw":
-                current.reject(value);
+                front.reject(value);
                 break;
 
             default:
-                current.resolve({ value, done: false });
+                front.resolve({ value, done: false });
                 break;
         }
 
-        current = null;
+        front = front.next;
+
+        if (front) resume(front.type, front.value);
+        else back = null;
     }
 
     function resume(type, value) {
