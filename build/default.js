@@ -1,27 +1,84 @@
 import { spawn } from "node:child_process";
+import * as FS from "node:fs";
+import * as Path from "node:path";
 
-let ts = +new Date, args;
+function buildRuntimeModule() {
 
-switch (process.argv.slice(-1)[0]) {
+    var outPath = Path.resolve(__dirname, "../src/Runtime.js");
 
-    case "runtime":
-        args = "- ../esdown-runtime/default.js ../esdown-runtime/index.js";
-        break;
+    var files = {
 
-    case "polyfill":
-        args = "- ../esdown-polyfill/default.js ../esdown-polyfill/esdown-polyfill.js -b -g .";
-        break;
+        API: "./esdown-runtime.js",
+        Polyfill: "../esdown-polyfill/esdown-polyfill.js",
+    };
 
-    default:
-        args = "- ../src/default.js ../build/esdown.js -b -R -g esdown";
-        break;
+    var output = "export let Runtime = {};\n\n";
+
+    Object.keys(files).forEach(function(key) {
+
+        var source = FS.readFileSync(
+            Path.resolve(__dirname, files[key]),
+            { encoding: "utf8" });
+
+        // Remove signature and strict directive
+        source = source.replace(/^\/\*=esdown=\*\/('use strict'; )?/, "");
+
+        output += "Runtime." + key + " = \n\n`" + source + "`;\n\n";
+    });
+
+    FS.writeFileSync(outPath, output);
 }
 
-process.stdout.write("Building esdown...");
+function runDown(args) {
 
-let child = spawn(
-    "esdown",
-    args.split(/ /g),
-    { stdio: "inherit", env: process.env, cwd: __dirname });
+    return new Promise(resolve => {
 
-child.on("close", _=> process.stdout.write(`finished in ${ ((+new Date) - ts) / 1000 }s.\n`));
+        let ts = +new Date;
+        args = "- " + args;
+        process.stdout.write(`Running esdown...`);
+
+        let opts = { stdio: "inherit", env: process.env, cwd: __dirname },
+            child = spawn("esdown", args.split(/ /g), opts);
+
+        child.on("close", _=> {
+
+            resolve();
+            process.stdout.write(`finished in ${ ((+new Date) - ts) / 1000 }s.\n`);
+
+        });
+    });
+}
+
+export async function main() {
+
+    let args = process.argv.slice(2);
+
+    if (args.length === 0)
+        args.push("esdown");
+
+    switch (args[0]) {
+
+        case "runtime":
+            await runDown("../esdown-runtime/default.js ../esdown-runtime/esdown-runtime.js -b");
+            await runDown("../esdown-runtime/runtime.js ./esdown-runtime.js");
+            buildRuntimeModule();
+            break;
+
+        case "polyfill":
+            await runDown("../esdown-polyfill/default.js ../esdown-polyfill/esdown-polyfill.js -b");
+            buildRuntimeModule();
+            break;
+
+        case "minimal":
+            await runDown("../src/minimal.js ../build/esdown-minimal.js -b -R -g esdown");
+            break;
+
+        case "esdown":
+            await runDown("../src/default.js ../build/esdown.js -b -R");
+            break;
+
+        default:
+            console.log(`Unknown command '${ args[0] }'`);
+            return;
+    }
+}

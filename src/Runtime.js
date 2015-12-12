@@ -303,11 +303,7 @@ function arrayd(obj) {
 
 
 
-exports.makeClass = makeClass;
 exports.computed = computed;
-exports.asyncFunction = asyncFunction;
-exports.asyncIterator = asyncIterator;
-exports.asyncGenerator = asyncGenerator;
 exports.spread = spread;
 exports.objd = objd;
 exports.arrayd = arrayd;
@@ -321,7 +317,7 @@ exports.asyncIter = asyncIterator;
 
 Runtime.Polyfill = 
 
-`(function(fn, name) { if (typeof exports !== 'undefined') fn(require, exports, module); else if (typeof self !== 'undefined') fn(void 0, name === '*' ? self : (name ? self[name] = {} : {})); })(function(require, exports, module) { 'use strict'; var __M; (function(a) { var list = Array(a.length / 2); __M = function require(i) { var m = list[i], f, e; if (typeof m !== 'function') return m.exports; f = m; m = { exports: i ? {} : exports }; f(list[i] = m, e = m.exports); if (m.exports !== e && !('default' in m.exports)) m.exports['default'] = m.exports; return m.exports; }; for (var i = 0; i < a.length; i += 2) { var j = Math.abs(a[i]); list[j] = a[i + 1]; if (a[i] >= 0) __M(j); } })([
+`var __M; (function(a) { var list = Array(a.length / 2); __M = function(i) { var m = list[i], f, e, ee; if (typeof m !== 'function') return m.exports; f = m; m = { exports: i ? {} : exports }; f(list[i] = m, e = m.exports); ee = m.exports; if (ee && ee !== e && !('default' in ee)) ee['default'] = ee; return ee; }; for (var i = 0; i < a.length; i += 2) { var j = Math.abs(a[i]); list[j] = a[i + 1]; if (a[i] >= 0) __M(j); } })([
 2, function(module, exports) {
 
 var Global = (function() {
@@ -1565,7 +1561,5 @@ polyfill();
 
 
 }]);
-
-
-}, "");`;
+`;
 

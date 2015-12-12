@@ -1,7 +1,8 @@
 .DS_Store
 _*
 node_modules
-build/esdown.js
-build/esdown-runtime.js
+build/esdown*
+esdown-polyfill/esdown-polyfill.js
+esdown-runtime/esdown-runtime.js
 bin/esdown
 !test/**/node_modules
