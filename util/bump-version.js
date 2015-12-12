@@ -11,7 +11,7 @@ function packageVersionReplace(text, version) {
 var replacers = [
 
     {
-        path: "../esdown-runtime/default.js",
+        path: "../esdown-runtime/runtime.js",
 
         findVersion: function(text) {
 
