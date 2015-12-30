@@ -283,6 +283,8 @@ class Replacer {
 
             head = `for (var ${ iter } = _esdown.asyncIter(${ node.right.text }), ${ iterResult }; `;
             head += `${ iterResult } = ${ this.awaitYield(context, iter + ".next()") }, `;
+            head += `${ iterResult }.value && typeof ${ iterResult }.value.then === "function" `;
+            head += `&& (${ iterResult }.value = ${ this.awaitYield(context, iterResult + ".value") }), `;
 
         } else {
 
