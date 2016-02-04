@@ -428,6 +428,7 @@ class Replacer {
 
             let computed = false;
 
+            // TODO: This is generating unwanted trailing commas
             node.properties.forEach((c, index) => {
 
                 if (computed)
@@ -1127,6 +1128,9 @@ class Replacer {
 
         function propGet(name) {
 
+            if (name.charAt(0) === "[")
+                return name;
+
             return /^[\.\d'"]/.test(name) ? "[" + name + "]" : "." + name;
         }
 
@@ -1236,7 +1240,13 @@ class Replacer {
                 ast.properties.forEach(p => {
 
                     let node = p.name,
-                        name = node.type === 'Identifier' ? node.value : node.text;
+                        name;
+
+                    switch (node.type) {
+                        case "Identifier": name = node.value; break;
+                        case "ComputedPropertyName": name = this.stringify(node); break;
+                        default: name = node.text; break;
+                    }
 
                     init = p.initializer ? p.initializer.text : "";
                     child = new PatternTreeNode(name, init);

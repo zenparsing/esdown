@@ -1,13 +1,15 @@
 [a, b] = foo;
 [a] = foo;
-([a]) = foo;
+([a] = foo);
 [a,,b] = foo;
 [a,...b] = foo;
 [, a] = foo;
 
-({ a, b: c }) = foo;
-({ a: [b, c] }) = foo;
-({ "a": a, 0: b }) = foo;
+({ a, b: c } = foo);
+({ a: [b, c] } = foo);
+({ "a": a, 0: b } = foo);
+
+({ [x]: y = 1 } = foo);
 
 var {} = foo;
 var { x: {} } = foo;
