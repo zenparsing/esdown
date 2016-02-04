@@ -157,7 +157,7 @@ function asyncGenerator(iter) {
         });
     }
 
-    function fulfill(type, value) {
+    function settle(type, value) {
 
         switch (type) {
 
@@ -207,18 +207,16 @@ function asyncGenerator(iter) {
 
             } else {
 
-                Promise.resolve(value).then(
-                    function(x) { return fulfill(result$1.done ? "return" : "normal", x); },
-                    function(x) { return fulfill("throw", x); });
+                settle(result$1.done ? "return" : "normal", result$1.value);
             }
 
         } catch (x) {
 
             // HACK: Return-as-throw
             if (x && x.__return === true)
-                return fulfill("return", x.value);
+                return settle("return", x.value);
 
-            fulfill("throw", x);
+            settle("throw", x);
         }
     }
 }
