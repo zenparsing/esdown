@@ -116,38 +116,6 @@ import { x } from "./some-directory";
 
 These rules are meant to work well across server and browser environments.
 
-### Loading Old-Style Modules ###
-
-You can import from old-style Node modules (including Node's built-in modules) using the
-**node** URL scheme.
-
-```js
-// Import from Node's built-in modules
-import { readFile } from "node:fs";
-
-// Import from an old-style Node module using a package path
-import { groupBy } from "node:underscore";
-
-// Import from an old-style Node module using a relative path
-import { breakdance } from "node:./old-school";
-```
-
-For URLs using the **node** scheme, the path is interpreted exactly like `require`.
-
-If you are importing from an old-style module that overwrites the export object using
-the `module.exports = function() {}` pattern, it will be available as the **default**
-export.
-
-```js
-import mkdirp from "node:mkdirp";
-```
-
-The **node** scheme is not required for old-style packages or folders which do not have
-a **default.js** entry point.
-
-```js
-import mkdirp from "mkdirp";
-```
 
 ### Loading New-Style Modules From Old-Style Modules ###
 
