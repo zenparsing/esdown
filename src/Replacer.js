@@ -93,6 +93,11 @@ function collapseScopes(parseResult) {
                 forScope = scope;
                 break;
 
+            case "catch":
+                if (scope.node.param.type !== "Identifier")
+                    rename(scope);
+                break;
+
             case "function":
 
                 if (forScope) {
@@ -1028,7 +1033,7 @@ class Replacer {
             assign = this.translatePattern(node.param, temp).join(", "),
             body = this.removeBraces(node.body.text);
 
-        return `catch (${ temp }) { let ${ assign }; ${ body } }`;
+        return `catch (${ temp }) { var ${ assign }; ${ body } }`;
     }
 
     VariableDeclarator(node) {
