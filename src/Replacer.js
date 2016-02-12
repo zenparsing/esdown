@@ -709,9 +709,6 @@ class Replacer {
 
     SuperKeyword(node) {
 
-        if (this.skip("classes"))
-            return;
-
         let proto = "__.super",
             p = node.parent,
             elem = p;
