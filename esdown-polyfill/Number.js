@@ -1,24 +1,24 @@
 import { toInteger, addProperties } from "./Core.js";
 
-function isInteger(val) {
-
-    return typeof val === "number" && isFinite(val) && toInteger(val) === val;
-}
-
-function epsilon() {
-
-    // Calculate the difference between 1 and the smallest value greater than 1 that
-    // is representable as a Number value
-
-    let result;
-
-    for (let next = 1; 1 + next !== 1; next = next / 2)
-        result = next;
-
-    return result;
-}
-
 export function polyfill() {
+
+    function isInteger(val) {
+
+        return typeof val === "number" && isFinite(val) && toInteger(val) === val;
+    }
+
+    function epsilon() {
+
+        // Calculate the difference between 1 and the smallest value greater than 1 that
+        // is representable as a Number value
+
+        let result;
+
+        for (let next = 1; 1 + next !== 1; next = next / 2)
+            result = next;
+
+        return result;
+    }
 
     addProperties(Number, {
 

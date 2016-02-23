@@ -1,64 +1,64 @@
 import { addProperties, toObject, toLength, toInteger } from "./Core.js";
 
-function arrayFind(obj, pred, thisArg, type) {
+export function polyfill() {
 
-    let len = toLength(obj.length),
-        val;
+    function arrayFind(obj, pred, thisArg, type) {
 
-    if (typeof pred !== "function")
-        throw new TypeError(pred + " is not a function");
+        let len = toLength(obj.length),
+            val;
 
-    for (let i = 0; i < len; ++i) {
+        if (typeof pred !== "function")
+            throw new TypeError(pred + " is not a function");
 
-        val = obj[i];
+        for (let i = 0; i < len; ++i) {
 
-        if (pred.call(thisArg, val, i, obj))
-            return type === "value" ? val : i;
+            val = obj[i];
+
+            if (pred.call(thisArg, val, i, obj))
+                return type === "value" ? val : i;
+        }
+
+        return type === "value" ? void 0 : -1;
     }
 
-    return type === "value" ? void 0 : -1;
-}
+    function ArrayIterator(array, kind) {
 
-function ArrayIterator(array, kind) {
+        this.array = array;
+        this.current = 0;
+        this.kind = kind;
+    }
 
-    this.array = array;
-    this.current = 0;
-    this.kind = kind;
-}
+    addProperties(ArrayIterator.prototype = {}, {
 
-addProperties(ArrayIterator.prototype = {}, {
+        next() {
 
-    next() {
+            let length = toLength(this.array.length),
+                index = this.current;
 
-        let length = toLength(this.array.length),
-            index = this.current;
+            if (index >= length) {
 
-        if (index >= length) {
+                this.current = Infinity;
+                return { value: void 0, done: true };
+            }
 
-            this.current = Infinity;
-            return { value: void 0, done: true };
-        }
+            this.current += 1;
 
-        this.current += 1;
+            switch (this.kind) {
 
-        switch (this.kind) {
+                case "values":
+                    return { value: this.array[index], done: false };
 
-            case "values":
-                return { value: this.array[index], done: false };
+                case "entries":
+                    return { value: [ index, this.array[index] ], done: false };
 
-            case "entries":
-                return { value: [ index, this.array[index] ], done: false };
+                default:
+                    return { value: index, done: false };
+            }
+        },
 
-            default:
-                return { value: index, done: false };
-        }
-    },
+        "@@iterator"() { return this },
 
-    "@@iterator"() { return this },
-    
-});
-
-export function polyfill() {
+    });
 
     addProperties(Array, {
 

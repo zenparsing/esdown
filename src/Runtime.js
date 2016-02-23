@@ -2,7 +2,7 @@ export let Runtime = {};
 
 Runtime.API = 
 
-`var VERSION = "1.0.9";
+`var VERSION = "1.0.10";
 
 var GLOBAL = (function() {
 
@@ -429,14 +429,15 @@ exports.assertThis = assertThis;
 
 var addProperties = __M(2).addProperties;
 
-var symbolCounter = 0;
-
-function fakeSymbol() {
-
-    return "__$" + Math.floor(Math.random() * 1e9) + "$" + (++symbolCounter) + "$__";
-}
 
 function polyfill(global) {
+
+    var symbolCounter = 0;
+
+    function fakeSymbol() {
+
+        return "__$" + Math.floor(Math.random() * 1e9) + "$" + (++symbolCounter) + "$__";
+    }
 
     if (!global.Symbol)
         global.Symbol = fakeSymbol;
@@ -462,65 +463,65 @@ exports.polyfill = polyfill;
 
 var addProperties = __M(2).addProperties, toObject = __M(2).toObject, toLength = __M(2).toLength, toInteger = __M(2).toInteger;
 
-function arrayFind(obj, pred, thisArg, type) {
+function polyfill() {
 
-    var len = toLength(obj.length),
-        val;
+    function arrayFind(obj, pred, thisArg, type) {
 
-    if (typeof pred !== "function")
-        throw new TypeError(pred + " is not a function");
+        var len = toLength(obj.length),
+            val;
 
-    for (var i$0 = 0; i$0 < len; ++i$0) {
+        if (typeof pred !== "function")
+            throw new TypeError(pred + " is not a function");
 
-        val = obj[i$0];
+        for (var i$0 = 0; i$0 < len; ++i$0) {
 
-        if (pred.call(thisArg, val, i$0, obj))
-            return type === "value" ? val : i$0;
+            val = obj[i$0];
+
+            if (pred.call(thisArg, val, i$0, obj))
+                return type === "value" ? val : i$0;
+        }
+
+        return type === "value" ? void 0 : -1;
     }
 
-    return type === "value" ? void 0 : -1;
-}
+    function ArrayIterator(array, kind) {
 
-function ArrayIterator(array, kind) {
+        this.array = array;
+        this.current = 0;
+        this.kind = kind;
+    }
 
-    this.array = array;
-    this.current = 0;
-    this.kind = kind;
-}
+    addProperties(ArrayIterator.prototype = {}, {
 
-addProperties(ArrayIterator.prototype = {}, {
+        next: function() {
 
-    next: function() {
+            var length = toLength(this.array.length),
+                index = this.current;
 
-        var length = toLength(this.array.length),
-            index = this.current;
+            if (index >= length) {
 
-        if (index >= length) {
+                this.current = Infinity;
+                return { value: void 0, done: true };
+            }
 
-            this.current = Infinity;
-            return { value: void 0, done: true };
-        }
+            this.current += 1;
 
-        this.current += 1;
+            switch (this.kind) {
 
-        switch (this.kind) {
+                case "values":
+                    return { value: this.array[index], done: false };
 
-            case "values":
-                return { value: this.array[index], done: false };
+                case "entries":
+                    return { value: [ index, this.array[index] ], done: false };
 
-            case "entries":
-                return { value: [ index, this.array[index] ], done: false };
+                default:
+                    return { value: index, done: false };
+            }
+        },
 
-            default:
-                return { value: index, done: false };
-        }
-    },
+        "@@iterator": function() { return this },
 
-    "@@iterator": function() { return this },
-    
-});
-
-function polyfill() {
+    });
 
     addProperties(Array, {
 
@@ -672,199 +673,200 @@ exports.polyfill = polyfill;
 
 var addProperties = __M(2).addProperties;
 
-var ORIGIN = {}, REMOVED = {};
 
-function MapNode(key, val) {
+function polyfill(global) {
 
-    this.key = key;
-    this.value = val;
-    this.prev = this;
-    this.next = this;
-}
+    var ORIGIN = {}, REMOVED = {};
 
-addProperties(MapNode.prototype, {
+    function MapNode(key, val) {
 
-    insert: function(next) {
-
-        this.next = next;
-        this.prev = next.prev;
-        this.prev.next = this;
-        this.next.prev = this;
-    },
-
-    remove: function() {
-
-        this.prev.next = this.next;
-        this.next.prev = this.prev;
-        this.key = REMOVED;
-    },
-
-});
-
-function MapIterator(node, kind) {
-
-    this.current = node;
-    this.kind = kind;
-}
-
-addProperties(MapIterator.prototype = {}, {
-
-    next: function() {
-
-        var node = this.current;
-
-        while (node.key === REMOVED)
-            node = this.current = this.current.next;
-
-        if (node.key === ORIGIN)
-            return { value: void 0, done: true };
-
-        this.current = this.current.next;
-
-        switch (this.kind) {
-
-            case "values":
-                return { value: node.value, done: false };
-
-            case "entries":
-                return { value: [ node.key, node.value ], done: false };
-
-            default:
-                return { value: node.key, done: false };
-        }
-    },
-
-    "@@iterator": function() { return this },
-
-});
-
-function hashKey(key) {
-
-    switch (typeof key) {
-
-        case "string": return "$" + key;
-        case "number": return String(key);
+        this.key = key;
+        this.value = val;
+        this.prev = this;
+        this.next = this;
     }
 
-    throw new TypeError("Map and Set keys must be strings or numbers in esdown");
-}
+    addProperties(MapNode.prototype, {
 
-function Map() {
+        insert: function(next) {
 
-    if (arguments.length > 0)
-        throw new Error("Arguments to Map constructor are not supported in esdown");
+            this.next = next;
+            this.prev = next.prev;
+            this.prev.next = this;
+            this.next.prev = this;
+        },
 
-    this._index = {};
-    this._origin = new MapNode(ORIGIN);
-}
+        remove: function() {
 
-addProperties(Map.prototype, {
+            this.prev.next = this.next;
+            this.next.prev = this.prev;
+            this.key = REMOVED;
+        },
 
-    clear: function() {
+    });
 
-        for (var node$0 = this._origin.next; node$0 !== this._origin; node$0 = node$0.next)
-            node$0.key = REMOVED;
+    function MapIterator(node, kind) {
+
+        this.current = node;
+        this.kind = kind;
+    }
+
+    addProperties(MapIterator.prototype = {}, {
+
+        next: function() {
+
+            var node = this.current;
+
+            while (node.key === REMOVED)
+                node = this.current = this.current.next;
+
+            if (node.key === ORIGIN)
+                return { value: void 0, done: true };
+
+            this.current = this.current.next;
+
+            switch (this.kind) {
+
+                case "values":
+                    return { value: node.value, done: false };
+
+                case "entries":
+                    return { value: [ node.key, node.value ], done: false };
+
+                default:
+                    return { value: node.key, done: false };
+            }
+        },
+
+        "@@iterator": function() { return this },
+
+    });
+
+    function hashKey(key) {
+
+        switch (typeof key) {
+
+            case "string": return "$" + key;
+            case "number": return String(key);
+        }
+
+        throw new TypeError("Map and Set keys must be strings or numbers in esdown");
+    }
+
+    function Map() {
+
+        if (arguments.length > 0)
+            throw new Error("Arguments to Map constructor are not supported in esdown");
 
         this._index = {};
         this._origin = new MapNode(ORIGIN);
-    },
+    }
 
-    delete: function(key) {
+    addProperties(Map.prototype, {
 
-        var h = hashKey(key),
-            node = this._index[h];
+        clear: function() {
 
-        if (node) {
+            for (var node$0 = this._origin.next; node$0 !== this._origin; node$0 = node$0.next)
+                node$0.key = REMOVED;
 
-            node.remove();
-            delete this._index[h];
-            return true;
-        }
+            this._index = {};
+            this._origin = new MapNode(ORIGIN);
+        },
 
-        return false;
-    },
+        delete: function(key) {
 
-    forEach: function(fn) {
+            var h = hashKey(key),
+                node = this._index[h];
 
-        var thisArg = arguments[1];
+            if (node) {
 
-        if (typeof fn !== "function")
-            throw new TypeError(fn + " is not a function");
+                node.remove();
+                delete this._index[h];
+                return true;
+            }
 
-        for (var node$1 = this._origin.next; node$1.key !== ORIGIN; node$1 = node$1.next)
-            if (node$1.key !== REMOVED)
-                fn.call(thisArg, node$1.value, node$1.key, this);
-    },
+            return false;
+        },
 
-    get: function(key) {
+        forEach: function(fn) {
 
-        var h = hashKey(key),
-            node = this._index[h];
+            var thisArg = arguments[1];
 
-        return node ? node.value : void 0;
-    },
+            if (typeof fn !== "function")
+                throw new TypeError(fn + " is not a function");
 
-    has: function(key) {
+            for (var node$1 = this._origin.next; node$1.key !== ORIGIN; node$1 = node$1.next)
+                if (node$1.key !== REMOVED)
+                    fn.call(thisArg, node$1.value, node$1.key, this);
+        },
 
-        return hashKey(key) in this._index;
-    },
+        get: function(key) {
 
-    set: function(key, val) {
+            var h = hashKey(key),
+                node = this._index[h];
 
-        var h = hashKey(key),
-            node = this._index[h];
+            return node ? node.value : void 0;
+        },
 
-        if (node) {
+        has: function(key) {
 
-            node.value = val;
-            return;
-        }
+            return hashKey(key) in this._index;
+        },
 
-        node = new MapNode(key, val);
+        set: function(key, val) {
 
-        this._index[h] = node;
-        node.insert(this._origin);
-    },
+            var h = hashKey(key),
+                node = this._index[h];
 
-    get size() {
+            if (node) {
 
-        return Object.keys(this._index).length;
-    },
+                node.value = val;
+                return;
+            }
 
-    keys: function() { return new MapIterator(this._origin.next, "keys") },
-    values: function() { return new MapIterator(this._origin.next, "values") },
-    entries: function() { return new MapIterator(this._origin.next, "entries") },
+            node = new MapNode(key, val);
 
-    "@@iterator": function() { return new MapIterator(this._origin.next, "entries") },
+            this._index[h] = node;
+            node.insert(this._origin);
+        },
 
-});
+        get size() {
 
-var mapSet = Map.prototype.set;
+            return Object.keys(this._index).length;
+        },
 
-function Set() {
+        keys: function() { return new MapIterator(this._origin.next, "keys") },
+        values: function() { return new MapIterator(this._origin.next, "values") },
+        entries: function() { return new MapIterator(this._origin.next, "entries") },
 
-    if (arguments.length > 0)
-        throw new Error("Arguments to Set constructor are not supported in esdown");
+        "@@iterator": function() { return new MapIterator(this._origin.next, "entries") },
 
-    this._index = {};
-    this._origin = new MapNode(ORIGIN);
-}
+    });
 
-addProperties(Set.prototype, {
+    var mapSet = Map.prototype.set;
 
-    add: function(key) { return mapSet.call(this, key, key) },
-    "@@iterator": function() { return new MapIterator(this._origin.next, "entries") },
+    function Set() {
 
-});
+        if (arguments.length > 0)
+            throw new Error("Arguments to Set constructor are not supported in esdown");
 
-// Copy shared prototype members to Set
-["clear", "delete", "forEach", "has", "size", "keys", "values", "entries"].forEach(function(k) {
+        this._index = {};
+        this._origin = new MapNode(ORIGIN);
+    }
 
-    var d = Object.getOwnPropertyDescriptor(Map.prototype, k);
-    Object.defineProperty(Set.prototype, k, d);
-});
+    addProperties(Set.prototype, {
 
-function polyfill(global) {
+        add: function(key) { return mapSet.call(this, key, key) },
+        "@@iterator": function() { return new MapIterator(this._origin.next, "entries") },
+
+    });
+
+    // Copy shared prototype members to Set
+    ["clear", "delete", "forEach", "has", "size", "keys", "values", "entries"].forEach(function(k) {
+
+        var d = Object.getOwnPropertyDescriptor(Map.prototype, k);
+        Object.defineProperty(Set.prototype, k, d);
+    });
 
     if (!global.Map || !global.Map.prototype.entries) {
 
@@ -881,25 +883,25 @@ exports.polyfill = polyfill;
 
 var toInteger = __M(2).toInteger, addProperties = __M(2).addProperties;
 
-function isInteger(val) {
-
-    return typeof val === "number" && isFinite(val) && toInteger(val) === val;
-}
-
-function epsilon() {
-
-    // Calculate the difference between 1 and the smallest value greater than 1 that
-    // is representable as a Number value
-
-    var result;
-
-    for (var next$0 = 1; 1 + next$0 !== 1; next$0 = next$0 / 2)
-        result = next$0;
-
-    return result;
-}
-
 function polyfill() {
+
+    function isInteger(val) {
+
+        return typeof val === "number" && isFinite(val) && toInteger(val) === val;
+    }
+
+    function epsilon() {
+
+        // Calculate the difference between 1 and the smallest value greater than 1 that
+        // is representable as a Number value
+
+        var result;
+
+        for (var next$0 = 1; 1 + next$0 !== 1; next$0 = next$0 / 2)
+            result = next$0;
+
+        return result;
+    }
 
     addProperties(Number, {
 
@@ -1031,289 +1033,289 @@ function enqueueMicrotask(fn) {
     taskQueue.push(fn);
 }
 
-var OPTIMIZED = {};
-var PENDING = 0;
-var RESOLVED = +1;
-var REJECTED = -1;
+function polyfill() {
 
-function idResolveHandler(x) { return x }
-function idRejectHandler(r) { throw r }
-function noopResolver() { }
+    var OPTIMIZED = {};
+    var PENDING = 0;
+    var RESOLVED = +1;
+    var REJECTED = -1;
 
-function Promise(resolver) { var __this = this; 
+    function idResolveHandler(x) { return x }
+    function idRejectHandler(r) { throw r }
+    function noopResolver() { }
 
-    this._status = PENDING;
+    function Promise(resolver) { var __this = this; 
 
-    // Optimized case to avoid creating an uneccessary closure.  Creator assumes
-    // responsibility for setting initial state.
-    if (resolver === OPTIMIZED)
-        return;
+        this._status = PENDING;
 
-    if (typeof resolver !== "function")
-        throw new TypeError("Resolver is not a function");
+        // Optimized case to avoid creating an uneccessary closure.  Creator assumes
+        // responsibility for setting initial state.
+        if (resolver === OPTIMIZED)
+            return;
 
-    this._onResolve = [];
-    this._onReject = [];
+        if (typeof resolver !== "function")
+            throw new TypeError("Resolver is not a function");
 
-    try { resolver(function(x) { resolvePromise(__this, x) }, function(r) { rejectPromise(__this, r) }) }
-    catch (e) { rejectPromise(this, e) }
-}
+        this._onResolve = [];
+        this._onReject = [];
 
-function chain(promise, onResolve, onReject) { if (onResolve === void 0) onResolve = idResolveHandler; if (onReject === void 0) onReject = idRejectHandler; 
-
-    var deferred = makeDeferred(promise.constructor);
-
-    switch (promise._status) {
-
-        case PENDING:
-            promise._onResolve.push(onResolve, deferred);
-            promise._onReject.push(onReject, deferred);
-            break;
-
-        case RESOLVED:
-            enqueueHandlers(promise._value, [onResolve, deferred], RESOLVED);
-            break;
-
-        case REJECTED:
-            enqueueHandlers(promise._value, [onReject, deferred], REJECTED);
-            break;
+        try { resolver(function(x) { resolvePromise(__this, x) }, function(r) { rejectPromise(__this, r) }) }
+        catch (e) { rejectPromise(this, e) }
     }
 
-    return deferred.promise;
-}
+    function chain(promise, onResolve, onReject) { if (onResolve === void 0) onResolve = idResolveHandler; if (onReject === void 0) onReject = idRejectHandler; 
 
-function resolvePromise(promise, x) {
+        var deferred = makeDeferred(promise.constructor);
 
-    completePromise(promise, RESOLVED, x, promise._onResolve);
-}
+        switch (promise._status) {
 
-function rejectPromise(promise, r) {
+            case PENDING:
+                promise._onResolve.push(onResolve, deferred);
+                promise._onReject.push(onReject, deferred);
+                break;
 
-    completePromise(promise, REJECTED, r, promise._onReject);
-}
+            case RESOLVED:
+                enqueueHandlers(promise._value, [onResolve, deferred], RESOLVED);
+                break;
 
-function completePromise(promise, status, value, queue) {
+            case REJECTED:
+                enqueueHandlers(promise._value, [onReject, deferred], REJECTED);
+                break;
+        }
 
-    if (promise._status === PENDING) {
-
-        promise._status = status;
-        promise._value = value;
-
-        enqueueHandlers(value, queue, status);
+        return deferred.promise;
     }
-}
 
-function coerce(constructor, x) {
+    function resolvePromise(promise, x) {
 
-    if (!isPromise(x) && Object(x) === x) {
+        completePromise(promise, RESOLVED, x, promise._onResolve);
+    }
 
-        var then$0;
+    function rejectPromise(promise, r) {
 
-        try { then$0 = x.then }
-        catch(r) { return makeRejected(constructor, r) }
+        completePromise(promise, REJECTED, r, promise._onReject);
+    }
 
-        if (typeof then$0 === "function") {
+    function completePromise(promise, status, value, queue) {
 
-            var deferred$0 = makeDeferred(constructor);
+        if (promise._status === PENDING) {
 
-            try { then$0.call(x, deferred$0.resolve, deferred$0.reject) }
-            catch(r) { deferred$0.reject(r) }
+            promise._status = status;
+            promise._value = value;
 
-            return deferred$0.promise;
+            enqueueHandlers(value, queue, status);
         }
     }
 
-    return x;
-}
+    function coerce(constructor, x) {
 
-function enqueueHandlers(value, tasks, status) {
+        if (!isPromise(x) && Object(x) === x) {
 
-    enqueueMicrotask(function(_) {
+            var then$0;
 
-        for (var i$1 = 0; i$1 < tasks.length; i$1 += 2)
-            runHandler(value, tasks[i$1], tasks[i$1 + 1]);
-    });
-}
+            try { then$0 = x.then }
+            catch(r) { return makeRejected(constructor, r) }
 
-function runHandler(value, handler, deferred) {
+            if (typeof then$0 === "function") {
 
-    try {
+                var deferred$0 = makeDeferred(constructor);
 
-        var result$0 = handler(value);
+                try { then$0.call(x, deferred$0.resolve, deferred$0.reject) }
+                catch(r) { deferred$0.reject(r) }
 
-        if (result$0 === deferred.promise)
-            throw new TypeError("Promise cycle");
-        else if (isPromise(result$0))
-            chain(result$0, deferred.resolve, deferred.reject);
-        else
-            deferred.resolve(result$0);
+                return deferred$0.promise;
+            }
+        }
 
-    } catch (e) {
-
-        try { deferred.reject(e) }
-        catch (e) { }
+        return x;
     }
-}
 
-function isPromise(x) {
+    function enqueueHandlers(value, tasks, status) {
 
-    try { return x._status !== void 0 }
-    catch (e) { return false }
-}
+        enqueueMicrotask(function(_) {
 
-function makeDeferred(constructor) {
-
-    if (constructor === Promise) {
-
-        var promise$0 = new Promise(OPTIMIZED);
-
-        promise$0._onResolve = [];
-        promise$0._onReject = [];
-
-        return {
-
-            promise: promise$0,
-            resolve: function(x) { resolvePromise(promise$0, x) },
-            reject: function(r) { rejectPromise(promise$0, r) },
-        };
-
-    } else {
-
-        var result$1 = {};
-
-        result$1.promise = new constructor(function(resolve, reject) {
-
-            result$1.resolve = resolve;
-            result$1.reject = reject;
+            for (var i$1 = 0; i$1 < tasks.length; i$1 += 2)
+                runHandler(value, tasks[i$1], tasks[i$1 + 1]);
         });
-
-        return result$1;
-    }
-}
-
-function makeRejected(constructor, r) {
-
-    if (constructor === Promise) {
-
-        var promise$1 = new Promise(OPTIMIZED);
-        promise$1._status = REJECTED;
-        promise$1._value = r;
-        return promise$1;
     }
 
-    return new constructor(function(resolve, reject) { return reject(r); });
-}
-
-function iterate(values, fn) {
-
-    if (typeof Symbol !== "function" || !Symbol.iterator) {
-
-        if (!Array.isArray(values))
-            throw new TypeError("Invalid argument");
-
-        values.forEach(fn);
-    }
-
-    var i = 0;
-
-    for (var __$0 = (values)[Symbol.iterator](), __$1; __$1 = __$0.next(), !__$1.done;)
-        { var x$0 = __$1.value; fn(x$0, i++); }
-}
-
-addProperties(Promise.prototype, {
-
-    then: function(onResolve, onReject) { var __this = this; 
-
-        onResolve = typeof onResolve === "function" ? onResolve : idResolveHandler;
-        onReject = typeof onReject === "function" ? onReject : idRejectHandler;
-
-        var constructor = this.constructor;
-
-        return chain(this, function(x) {
-
-            x = coerce(constructor, x);
-
-            return x === __this ? onReject(new TypeError("Promise cycle")) :
-                isPromise(x) ? x.then(onResolve, onReject) :
-                onResolve(x);
-
-        }, onReject);
-    },
-
-    catch: function(onReject) {
-
-        return this.then(void 0, onReject);
-    },
-
-});
-
-addProperties(Promise, {
-
-    reject: function(e) {
-
-        return makeRejected(this, e);
-    },
-
-    resolve: function(x) {
-
-        return isPromise(x) ? x : new this(function(resolve) { return resolve(x); });
-    },
-
-    all: function(values) { var __this = this; 
-
-        var deferred = makeDeferred(this),
-            resolutions = [],
-            count = 0;
+    function runHandler(value, handler, deferred) {
 
         try {
 
-            iterate(values, function(x, i) {
+            var result$0 = handler(value);
 
-                count++;
+            if (result$0 === deferred.promise)
+                throw new TypeError("Promise cycle");
+            else if (isPromise(result$0))
+                chain(result$0, deferred.resolve, deferred.reject);
+            else
+                deferred.resolve(result$0);
 
-                __this.resolve(x).then(function(value) {
+        } catch (e) {
 
-                    resolutions[i] = value;
+            try { deferred.reject(e) }
+            catch (e) { }
+        }
+    }
 
-                    if (--count === 0)
-                        deferred.resolve(resolutions);
+    function isPromise(x) {
 
-                }, deferred.reject);
+        try { return x._status !== void 0 }
+        catch (e) { return false }
+    }
 
+    function makeDeferred(constructor) {
+
+        if (constructor === Promise) {
+
+            var promise$0 = new Promise(OPTIMIZED);
+
+            promise$0._onResolve = [];
+            promise$0._onReject = [];
+
+            return {
+
+                promise: promise$0,
+                resolve: function(x) { resolvePromise(promise$0, x) },
+                reject: function(r) { rejectPromise(promise$0, r) },
+            };
+
+        } else {
+
+            var result$1 = {};
+
+            result$1.promise = new constructor(function(resolve, reject) {
+
+                result$1.resolve = resolve;
+                result$1.reject = reject;
             });
 
-            if (count === 0)
-                deferred.resolve(resolutions);
+            return result$1;
+        }
+    }
 
-        } catch (e) {
+    function makeRejected(constructor, r) {
 
-            deferred.reject(e);
+        if (constructor === Promise) {
+
+            var promise$1 = new Promise(OPTIMIZED);
+            promise$1._status = REJECTED;
+            promise$1._value = r;
+            return promise$1;
         }
 
-        return deferred.promise;
-    },
+        return new constructor(function(resolve, reject) { return reject(r); });
+    }
 
-    race: function(values) { var __this = this; 
+    function iterate(values, fn) {
 
-        var deferred = makeDeferred(this);
+        if (typeof Symbol !== "function" || !Symbol.iterator) {
 
-        try {
+            if (!Array.isArray(values))
+                throw new TypeError("Invalid argument");
 
-            iterate(values, function(x) { return __this.resolve(x).then(
-                deferred.resolve,
-                deferred.reject); });
-
-        } catch (e) {
-
-            deferred.reject(e);
+            values.forEach(fn);
         }
 
-        return deferred.promise;
-    },
+        var i = 0;
 
-});
+        for (var __$0 = (values)[Symbol.iterator](), __$1; __$1 = __$0.next(), !__$1.done;)
+            { var x$0 = __$1.value; fn(x$0, i++); }
+    }
 
-function polyfill() {
+    addProperties(Promise.prototype, {
+
+        then: function(onResolve, onReject) { var __this = this; 
+
+            onResolve = typeof onResolve === "function" ? onResolve : idResolveHandler;
+            onReject = typeof onReject === "function" ? onReject : idRejectHandler;
+
+            var constructor = this.constructor;
+
+            return chain(this, function(x) {
+
+                x = coerce(constructor, x);
+
+                return x === __this ? onReject(new TypeError("Promise cycle")) :
+                    isPromise(x) ? x.then(onResolve, onReject) :
+                    onResolve(x);
+
+            }, onReject);
+        },
+
+        catch: function(onReject) {
+
+            return this.then(void 0, onReject);
+        },
+
+    });
+
+    addProperties(Promise, {
+
+        reject: function(e) {
+
+            return makeRejected(this, e);
+        },
+
+        resolve: function(x) {
+
+            return isPromise(x) ? x : new this(function(resolve) { return resolve(x); });
+        },
+
+        all: function(values) { var __this = this; 
+
+            var deferred = makeDeferred(this),
+                resolutions = [],
+                count = 0;
+
+            try {
+
+                iterate(values, function(x, i) {
+
+                    count++;
+
+                    __this.resolve(x).then(function(value) {
+
+                        resolutions[i] = value;
+
+                        if (--count === 0)
+                            deferred.resolve(resolutions);
+
+                    }, deferred.reject);
+
+                });
+
+                if (count === 0)
+                    deferred.resolve(resolutions);
+
+            } catch (e) {
+
+                deferred.reject(e);
+            }
+
+            return deferred.promise;
+        },
+
+        race: function(values) { var __this = this; 
+
+            var deferred = makeDeferred(this);
+
+            try {
+
+                iterate(values, function(x) { return __this.resolve(x).then(
+                    deferred.resolve,
+                    deferred.reject); });
+
+            } catch (e) {
+
+                deferred.reject(e);
+            }
+
+            return deferred.promise;
+        },
+
+    });
 
     if (!global.Promise)
         global.Promise = Promise;
@@ -1336,54 +1338,55 @@ var addProperties = __M(2).addProperties,
 
 
 
-// Repeat a string by "squaring"
-function repeat(s, n) {
-
-    if (n < 1) return "";
-    if (n % 2) return repeat(s, n - 1) + s;
-    var half = repeat(s, n / 2);
-    return half + half;
-}
-
-function StringIterator(string) {
-
-    this.string = string;
-    this.current = 0;
-}
-
-addProperties(StringIterator.prototype = {}, {
-
-    next: function() {
-
-        var s = this.string,
-            i = this.current,
-            len = s.length;
-
-        if (i >= len) {
-
-            this.current = Infinity;
-            return { value: void 0, done: true };
-        }
-
-        var c = s.charCodeAt(i),
-            chars = 1;
-
-        if (c >= 0xD800 && c <= 0xDBFF && i + 1 < s.length) {
-
-            c = s.charCodeAt(i + 1);
-            chars = (c < 0xDC00 || c > 0xDFFF) ? 1 : 2;
-        }
-
-        this.current += chars;
-
-        return { value: s.slice(i, this.current), done: false };
-    },
-
-    "@@iterator": function() { return this },
-
-});
 
 function polyfill() {
+
+    // Repeat a string by "squaring"
+    function repeat(s, n) {
+
+        if (n < 1) return "";
+        if (n % 2) return repeat(s, n - 1) + s;
+        var half = repeat(s, n / 2);
+        return half + half;
+    }
+
+    function StringIterator(string) {
+
+        this.string = string;
+        this.current = 0;
+    }
+
+    addProperties(StringIterator.prototype = {}, {
+
+        next: function() {
+
+            var s = this.string,
+                i = this.current,
+                len = s.length;
+
+            if (i >= len) {
+
+                this.current = Infinity;
+                return { value: void 0, done: true };
+            }
+
+            var c = s.charCodeAt(i),
+                chars = 1;
+
+            if (c >= 0xD800 && c <= 0xDBFF && i + 1 < s.length) {
+
+                c = s.charCodeAt(i + 1);
+                chars = (c < 0xDC00 || c > 0xDFFF) ? 1 : 2;
+            }
+
+            this.current += chars;
+
+            return { value: s.slice(i, this.current), done: false };
+        },
+
+        "@@iterator": function() { return this },
+
+    });
 
     addProperties(String, {
 

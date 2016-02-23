@@ -1,6 +1,6 @@
 {
     "name": "esdown-runtime",
-    "version": "1.0.9",
+    "version": "1.0.10",
     "description": "Runtime library for the esdown compiler",
     "homepage": "https://github.com/zenparsing/esdown"
 }

@@ -9,54 +9,55 @@ import {
 
 } from "./Core.js";
 
-// Repeat a string by "squaring"
-function repeat(s, n) {
-
-    if (n < 1) return "";
-    if (n % 2) return repeat(s, n - 1) + s;
-    let half = repeat(s, n / 2);
-    return half + half;
-}
-
-function StringIterator(string) {
-
-    this.string = string;
-    this.current = 0;
-}
-
-addProperties(StringIterator.prototype = {}, {
-
-    next() {
-
-        let s = this.string,
-            i = this.current,
-            len = s.length;
-
-        if (i >= len) {
-
-            this.current = Infinity;
-            return { value: void 0, done: true };
-        }
-
-        let c = s.charCodeAt(i),
-            chars = 1;
-
-        if (c >= 0xD800 && c <= 0xDBFF && i + 1 < s.length) {
-
-            c = s.charCodeAt(i + 1);
-            chars = (c < 0xDC00 || c > 0xDFFF) ? 1 : 2;
-        }
-
-        this.current += chars;
-
-        return { value: s.slice(i, this.current), done: false };
-    },
-
-    "@@iterator"() { return this },
-
-});
 
 export function polyfill() {
+
+    // Repeat a string by "squaring"
+    function repeat(s, n) {
+
+        if (n < 1) return "";
+        if (n % 2) return repeat(s, n - 1) + s;
+        let half = repeat(s, n / 2);
+        return half + half;
+    }
+
+    function StringIterator(string) {
+
+        this.string = string;
+        this.current = 0;
+    }
+
+    addProperties(StringIterator.prototype = {}, {
+
+        next() {
+
+            let s = this.string,
+                i = this.current,
+                len = s.length;
+
+            if (i >= len) {
+
+                this.current = Infinity;
+                return { value: void 0, done: true };
+            }
+
+            let c = s.charCodeAt(i),
+                chars = 1;
+
+            if (c >= 0xD800 && c <= 0xDBFF && i + 1 < s.length) {
+
+                c = s.charCodeAt(i + 1);
+                chars = (c < 0xDC00 || c > 0xDFFF) ? 1 : 2;
+            }
+
+            this.current += chars;
+
+            return { value: s.slice(i, this.current), done: false };
+        },
+
+        "@@iterator"() { return this },
+
+    });
 
     addProperties(String, {
 

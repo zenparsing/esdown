@@ -1,198 +1,199 @@
 import { addProperties } from "./Core.js";
 
-const ORIGIN = {}, REMOVED = {};
 
-function MapNode(key, val) {
+export function polyfill(global) {
 
-    this.key = key;
-    this.value = val;
-    this.prev = this;
-    this.next = this;
-}
+    const ORIGIN = {}, REMOVED = {};
 
-addProperties(MapNode.prototype, {
+    function MapNode(key, val) {
 
-    insert(next) {
-
-        this.next = next;
-        this.prev = next.prev;
-        this.prev.next = this;
-        this.next.prev = this;
-    },
-
-    remove() {
-
-        this.prev.next = this.next;
-        this.next.prev = this.prev;
-        this.key = REMOVED;
-    },
-
-});
-
-function MapIterator(node, kind) {
-
-    this.current = node;
-    this.kind = kind;
-}
-
-addProperties(MapIterator.prototype = {}, {
-
-    next() {
-
-        let node = this.current;
-
-        while (node.key === REMOVED)
-            node = this.current = this.current.next;
-
-        if (node.key === ORIGIN)
-            return { value: void 0, done: true };
-
-        this.current = this.current.next;
-
-        switch (this.kind) {
-
-            case "values":
-                return { value: node.value, done: false };
-
-            case "entries":
-                return { value: [ node.key, node.value ], done: false };
-
-            default:
-                return { value: node.key, done: false };
-        }
-    },
-
-    "@@iterator"() { return this },
-
-});
-
-function hashKey(key) {
-
-    switch (typeof key) {
-
-        case "string": return "$" + key;
-        case "number": return String(key);
+        this.key = key;
+        this.value = val;
+        this.prev = this;
+        this.next = this;
     }
 
-    throw new TypeError("Map and Set keys must be strings or numbers in esdown");
-}
+    addProperties(MapNode.prototype, {
 
-function Map() {
+        insert(next) {
 
-    if (arguments.length > 0)
-        throw new Error("Arguments to Map constructor are not supported in esdown");
+            this.next = next;
+            this.prev = next.prev;
+            this.prev.next = this;
+            this.next.prev = this;
+        },
 
-    this._index = {};
-    this._origin = new MapNode(ORIGIN);
-}
+        remove() {
 
-addProperties(Map.prototype, {
+            this.prev.next = this.next;
+            this.next.prev = this.prev;
+            this.key = REMOVED;
+        },
 
-    clear() {
+    });
 
-        for (let node = this._origin.next; node !== this._origin; node = node.next)
-            node.key = REMOVED;
+    function MapIterator(node, kind) {
+
+        this.current = node;
+        this.kind = kind;
+    }
+
+    addProperties(MapIterator.prototype = {}, {
+
+        next() {
+
+            let node = this.current;
+
+            while (node.key === REMOVED)
+                node = this.current = this.current.next;
+
+            if (node.key === ORIGIN)
+                return { value: void 0, done: true };
+
+            this.current = this.current.next;
+
+            switch (this.kind) {
+
+                case "values":
+                    return { value: node.value, done: false };
+
+                case "entries":
+                    return { value: [ node.key, node.value ], done: false };
+
+                default:
+                    return { value: node.key, done: false };
+            }
+        },
+
+        "@@iterator"() { return this },
+
+    });
+
+    function hashKey(key) {
+
+        switch (typeof key) {
+
+            case "string": return "$" + key;
+            case "number": return String(key);
+        }
+
+        throw new TypeError("Map and Set keys must be strings or numbers in esdown");
+    }
+
+    function Map() {
+
+        if (arguments.length > 0)
+            throw new Error("Arguments to Map constructor are not supported in esdown");
 
         this._index = {};
         this._origin = new MapNode(ORIGIN);
-    },
+    }
 
-    delete(key) {
+    addProperties(Map.prototype, {
 
-        let h = hashKey(key),
-            node = this._index[h];
+        clear() {
 
-        if (node) {
+            for (let node = this._origin.next; node !== this._origin; node = node.next)
+                node.key = REMOVED;
 
-            node.remove();
-            delete this._index[h];
-            return true;
-        }
+            this._index = {};
+            this._origin = new MapNode(ORIGIN);
+        },
 
-        return false;
-    },
+        delete(key) {
 
-    forEach(fn) {
+            let h = hashKey(key),
+                node = this._index[h];
 
-        let thisArg = arguments[1];
+            if (node) {
 
-        if (typeof fn !== "function")
-            throw new TypeError(fn + " is not a function");
+                node.remove();
+                delete this._index[h];
+                return true;
+            }
 
-        for (let node = this._origin.next; node.key !== ORIGIN; node = node.next)
-            if (node.key !== REMOVED)
-                fn.call(thisArg, node.value, node.key, this);
-    },
+            return false;
+        },
 
-    get(key) {
+        forEach(fn) {
 
-        let h = hashKey(key),
-            node = this._index[h];
+            let thisArg = arguments[1];
 
-        return node ? node.value : void 0;
-    },
+            if (typeof fn !== "function")
+                throw new TypeError(fn + " is not a function");
 
-    has(key) {
+            for (let node = this._origin.next; node.key !== ORIGIN; node = node.next)
+                if (node.key !== REMOVED)
+                    fn.call(thisArg, node.value, node.key, this);
+        },
 
-        return hashKey(key) in this._index;
-    },
+        get(key) {
 
-    set(key, val) {
+            let h = hashKey(key),
+                node = this._index[h];
 
-        let h = hashKey(key),
-            node = this._index[h];
+            return node ? node.value : void 0;
+        },
 
-        if (node) {
+        has(key) {
 
-            node.value = val;
-            return;
-        }
+            return hashKey(key) in this._index;
+        },
 
-        node = new MapNode(key, val);
+        set(key, val) {
 
-        this._index[h] = node;
-        node.insert(this._origin);
-    },
+            let h = hashKey(key),
+                node = this._index[h];
 
-    get size() {
+            if (node) {
 
-        return Object.keys(this._index).length;
-    },
+                node.value = val;
+                return;
+            }
 
-    keys() { return new MapIterator(this._origin.next, "keys") },
-    values() { return new MapIterator(this._origin.next, "values") },
-    entries() { return new MapIterator(this._origin.next, "entries") },
+            node = new MapNode(key, val);
 
-    "@@iterator"() { return new MapIterator(this._origin.next, "entries") },
+            this._index[h] = node;
+            node.insert(this._origin);
+        },
 
-});
+        get size() {
 
-const mapSet = Map.prototype.set;
+            return Object.keys(this._index).length;
+        },
 
-function Set() {
+        keys() { return new MapIterator(this._origin.next, "keys") },
+        values() { return new MapIterator(this._origin.next, "values") },
+        entries() { return new MapIterator(this._origin.next, "entries") },
 
-    if (arguments.length > 0)
-        throw new Error("Arguments to Set constructor are not supported in esdown");
+        "@@iterator"() { return new MapIterator(this._origin.next, "entries") },
 
-    this._index = {};
-    this._origin = new MapNode(ORIGIN);
-}
+    });
 
-addProperties(Set.prototype, {
+    const mapSet = Map.prototype.set;
 
-    add(key) { return mapSet.call(this, key, key) },
-    "@@iterator"() { return new MapIterator(this._origin.next, "entries") },
+    function Set() {
 
-});
+        if (arguments.length > 0)
+            throw new Error("Arguments to Set constructor are not supported in esdown");
 
-// Copy shared prototype members to Set
-["clear", "delete", "forEach", "has", "size", "keys", "values", "entries"].forEach(k => {
+        this._index = {};
+        this._origin = new MapNode(ORIGIN);
+    }
 
-    let d = Object.getOwnPropertyDescriptor(Map.prototype, k);
-    Object.defineProperty(Set.prototype, k, d);
-});
+    addProperties(Set.prototype, {
 
-export function polyfill(global) {
+        add(key) { return mapSet.call(this, key, key) },
+        "@@iterator"() { return new MapIterator(this._origin.next, "entries") },
+
+    });
+
+    // Copy shared prototype members to Set
+    ["clear", "delete", "forEach", "has", "size", "keys", "values", "entries"].forEach(k => {
+
+        let d = Object.getOwnPropertyDescriptor(Map.prototype, k);
+        Object.defineProperty(Set.prototype, k, d);
+    });
 
     if (!global.Map || !global.Map.prototype.entries) {
 

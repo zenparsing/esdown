@@ -62,289 +62,289 @@ function enqueueMicrotask(fn) {
     taskQueue.push(fn);
 }
 
-const OPTIMIZED = {};
-const PENDING = 0;
-const RESOLVED = +1;
-const REJECTED = -1;
+export function polyfill() {
 
-function idResolveHandler(x) { return x }
-function idRejectHandler(r) { throw r }
-function noopResolver() { }
+    const OPTIMIZED = {};
+    const PENDING = 0;
+    const RESOLVED = +1;
+    const REJECTED = -1;
 
-function Promise(resolver) {
+    function idResolveHandler(x) { return x }
+    function idRejectHandler(r) { throw r }
+    function noopResolver() { }
 
-    this._status = PENDING;
+    function Promise(resolver) {
 
-    // Optimized case to avoid creating an uneccessary closure.  Creator assumes
-    // responsibility for setting initial state.
-    if (resolver === OPTIMIZED)
-        return;
+        this._status = PENDING;
 
-    if (typeof resolver !== "function")
-        throw new TypeError("Resolver is not a function");
+        // Optimized case to avoid creating an uneccessary closure.  Creator assumes
+        // responsibility for setting initial state.
+        if (resolver === OPTIMIZED)
+            return;
 
-    this._onResolve = [];
-    this._onReject = [];
+        if (typeof resolver !== "function")
+            throw new TypeError("Resolver is not a function");
 
-    try { resolver(x => { resolvePromise(this, x) }, r => { rejectPromise(this, r) }) }
-    catch (e) { rejectPromise(this, e) }
-}
+        this._onResolve = [];
+        this._onReject = [];
 
-function chain(promise, onResolve = idResolveHandler, onReject = idRejectHandler) {
-
-    let deferred = makeDeferred(promise.constructor);
-
-    switch (promise._status) {
-
-        case PENDING:
-            promise._onResolve.push(onResolve, deferred);
-            promise._onReject.push(onReject, deferred);
-            break;
-
-        case RESOLVED:
-            enqueueHandlers(promise._value, [onResolve, deferred], RESOLVED);
-            break;
-
-        case REJECTED:
-            enqueueHandlers(promise._value, [onReject, deferred], REJECTED);
-            break;
+        try { resolver(x => { resolvePromise(this, x) }, r => { rejectPromise(this, r) }) }
+        catch (e) { rejectPromise(this, e) }
     }
 
-    return deferred.promise;
-}
+    function chain(promise, onResolve = idResolveHandler, onReject = idRejectHandler) {
 
-function resolvePromise(promise, x) {
+        let deferred = makeDeferred(promise.constructor);
 
-    completePromise(promise, RESOLVED, x, promise._onResolve);
-}
+        switch (promise._status) {
 
-function rejectPromise(promise, r) {
+            case PENDING:
+                promise._onResolve.push(onResolve, deferred);
+                promise._onReject.push(onReject, deferred);
+                break;
 
-    completePromise(promise, REJECTED, r, promise._onReject);
-}
+            case RESOLVED:
+                enqueueHandlers(promise._value, [onResolve, deferred], RESOLVED);
+                break;
 
-function completePromise(promise, status, value, queue) {
+            case REJECTED:
+                enqueueHandlers(promise._value, [onReject, deferred], REJECTED);
+                break;
+        }
 
-    if (promise._status === PENDING) {
-
-        promise._status = status;
-        promise._value = value;
-
-        enqueueHandlers(value, queue, status);
+        return deferred.promise;
     }
-}
 
-function coerce(constructor, x) {
+    function resolvePromise(promise, x) {
 
-    if (!isPromise(x) && Object(x) === x) {
+        completePromise(promise, RESOLVED, x, promise._onResolve);
+    }
 
-        let then;
+    function rejectPromise(promise, r) {
 
-        try { then = x.then }
-        catch(r) { return makeRejected(constructor, r) }
+        completePromise(promise, REJECTED, r, promise._onReject);
+    }
 
-        if (typeof then === "function") {
+    function completePromise(promise, status, value, queue) {
 
-            let deferred = makeDeferred(constructor);
+        if (promise._status === PENDING) {
 
-            try { then.call(x, deferred.resolve, deferred.reject) }
-            catch(r) { deferred.reject(r) }
+            promise._status = status;
+            promise._value = value;
 
-            return deferred.promise;
+            enqueueHandlers(value, queue, status);
         }
     }
 
-    return x;
-}
+    function coerce(constructor, x) {
 
-function enqueueHandlers(value, tasks, status) {
+        if (!isPromise(x) && Object(x) === x) {
 
-    enqueueMicrotask(_=> {
+            let then;
 
-        for (let i = 0; i < tasks.length; i += 2)
-            runHandler(value, tasks[i], tasks[i + 1]);
-    });
-}
+            try { then = x.then }
+            catch(r) { return makeRejected(constructor, r) }
 
-function runHandler(value, handler, deferred) {
+            if (typeof then === "function") {
 
-    try {
+                let deferred = makeDeferred(constructor);
 
-        let result = handler(value);
+                try { then.call(x, deferred.resolve, deferred.reject) }
+                catch(r) { deferred.reject(r) }
 
-        if (result === deferred.promise)
-            throw new TypeError("Promise cycle");
-        else if (isPromise(result))
-            chain(result, deferred.resolve, deferred.reject);
-        else
-            deferred.resolve(result);
+                return deferred.promise;
+            }
+        }
 
-    } catch (e) {
-
-        try { deferred.reject(e) }
-        catch (e) { }
+        return x;
     }
-}
 
-function isPromise(x) {
+    function enqueueHandlers(value, tasks, status) {
 
-    try { return x._status !== void 0 }
-    catch (e) { return false }
-}
+        enqueueMicrotask(_=> {
 
-function makeDeferred(constructor) {
-
-    if (constructor === Promise) {
-
-        let promise = new Promise(OPTIMIZED);
-
-        promise._onResolve = [];
-        promise._onReject = [];
-
-        return {
-
-            promise: promise,
-            resolve: x => { resolvePromise(promise, x) },
-            reject: r => { rejectPromise(promise, r) },
-        };
-
-    } else {
-
-        let result = {};
-
-        result.promise = new constructor((resolve, reject) => {
-
-            result.resolve = resolve;
-            result.reject = reject;
+            for (let i = 0; i < tasks.length; i += 2)
+                runHandler(value, tasks[i], tasks[i + 1]);
         });
-
-        return result;
-    }
-}
-
-function makeRejected(constructor, r) {
-
-    if (constructor === Promise) {
-
-        let promise = new Promise(OPTIMIZED);
-        promise._status = REJECTED;
-        promise._value = r;
-        return promise;
     }
 
-    return new constructor((resolve, reject) => reject(r));
-}
-
-function iterate(values, fn) {
-
-    if (typeof Symbol !== "function" || !Symbol.iterator) {
-
-        if (!Array.isArray(values))
-            throw new TypeError("Invalid argument");
-
-        values.forEach(fn);
-    }
-
-    let i = 0;
-
-    for (let x of values)
-        fn(x, i++);
-}
-
-addProperties(Promise.prototype, {
-
-    then(onResolve, onReject) {
-
-        onResolve = typeof onResolve === "function" ? onResolve : idResolveHandler;
-        onReject = typeof onReject === "function" ? onReject : idRejectHandler;
-
-        let constructor = this.constructor;
-
-        return chain(this, x => {
-
-            x = coerce(constructor, x);
-
-            return x === this ? onReject(new TypeError("Promise cycle")) :
-                isPromise(x) ? x.then(onResolve, onReject) :
-                onResolve(x);
-
-        }, onReject);
-    },
-
-    catch(onReject) {
-
-        return this.then(void 0, onReject);
-    },
-
-});
-
-addProperties(Promise, {
-
-    reject(e) {
-
-        return makeRejected(this, e);
-    },
-
-    resolve(x) {
-
-        return isPromise(x) ? x : new this(resolve => resolve(x));
-    },
-
-    all(values) {
-
-        let deferred = makeDeferred(this),
-            resolutions = [],
-            count = 0;
+    function runHandler(value, handler, deferred) {
 
         try {
 
-            iterate(values, (x, i) => {
+            let result = handler(value);
 
-                count++;
+            if (result === deferred.promise)
+                throw new TypeError("Promise cycle");
+            else if (isPromise(result))
+                chain(result, deferred.resolve, deferred.reject);
+            else
+                deferred.resolve(result);
 
-                this.resolve(x).then(value => {
+        } catch (e) {
 
-                    resolutions[i] = value;
+            try { deferred.reject(e) }
+            catch (e) { }
+        }
+    }
 
-                    if (--count === 0)
-                        deferred.resolve(resolutions);
+    function isPromise(x) {
 
-                }, deferred.reject);
+        try { return x._status !== void 0 }
+        catch (e) { return false }
+    }
 
+    function makeDeferred(constructor) {
+
+        if (constructor === Promise) {
+
+            let promise = new Promise(OPTIMIZED);
+
+            promise._onResolve = [];
+            promise._onReject = [];
+
+            return {
+
+                promise: promise,
+                resolve: x => { resolvePromise(promise, x) },
+                reject: r => { rejectPromise(promise, r) },
+            };
+
+        } else {
+
+            let result = {};
+
+            result.promise = new constructor((resolve, reject) => {
+
+                result.resolve = resolve;
+                result.reject = reject;
             });
 
-            if (count === 0)
-                deferred.resolve(resolutions);
+            return result;
+        }
+    }
 
-        } catch (e) {
+    function makeRejected(constructor, r) {
 
-            deferred.reject(e);
+        if (constructor === Promise) {
+
+            let promise = new Promise(OPTIMIZED);
+            promise._status = REJECTED;
+            promise._value = r;
+            return promise;
         }
 
-        return deferred.promise;
-    },
+        return new constructor((resolve, reject) => reject(r));
+    }
 
-    race(values) {
+    function iterate(values, fn) {
 
-        let deferred = makeDeferred(this);
+        if (typeof Symbol !== "function" || !Symbol.iterator) {
 
-        try {
+            if (!Array.isArray(values))
+                throw new TypeError("Invalid argument");
 
-            iterate(values, x => this.resolve(x).then(
-                deferred.resolve,
-                deferred.reject));
-
-        } catch (e) {
-
-            deferred.reject(e);
+            values.forEach(fn);
         }
 
-        return deferred.promise;
-    },
+        let i = 0;
 
-});
+        for (let x of values)
+            fn(x, i++);
+    }
 
-export function polyfill() {
+    addProperties(Promise.prototype, {
+
+        then(onResolve, onReject) {
+
+            onResolve = typeof onResolve === "function" ? onResolve : idResolveHandler;
+            onReject = typeof onReject === "function" ? onReject : idRejectHandler;
+
+            let constructor = this.constructor;
+
+            return chain(this, x => {
+
+                x = coerce(constructor, x);
+
+                return x === this ? onReject(new TypeError("Promise cycle")) :
+                    isPromise(x) ? x.then(onResolve, onReject) :
+                    onResolve(x);
+
+            }, onReject);
+        },
+
+        catch(onReject) {
+
+            return this.then(void 0, onReject);
+        },
+
+    });
+
+    addProperties(Promise, {
+
+        reject(e) {
+
+            return makeRejected(this, e);
+        },
+
+        resolve(x) {
+
+            return isPromise(x) ? x : new this(resolve => resolve(x));
+        },
+
+        all(values) {
+
+            let deferred = makeDeferred(this),
+                resolutions = [],
+                count = 0;
+
+            try {
+
+                iterate(values, (x, i) => {
+
+                    count++;
+
+                    this.resolve(x).then(value => {
+
+                        resolutions[i] = value;
+
+                        if (--count === 0)
+                            deferred.resolve(resolutions);
+
+                    }, deferred.reject);
+
+                });
+
+                if (count === 0)
+                    deferred.resolve(resolutions);
+
+            } catch (e) {
+
+                deferred.reject(e);
+            }
+
+            return deferred.promise;
+        },
+
+        race(values) {
+
+            let deferred = makeDeferred(this);
+
+            try {
+
+                iterate(values, x => this.resolve(x).then(
+                    deferred.resolve,
+                    deferred.reject));
+
+            } catch (e) {
+
+                deferred.reject(e);
+            }
+
+            return deferred.promise;
+        },
+
+    });
 
     if (!global.Promise)
         global.Promise = Promise;
