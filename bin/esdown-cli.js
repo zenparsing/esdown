@@ -1,5 +1,4 @@
-#!/usr/bin/env node --harmony
-
+#! /usr/bin/env node
 var Path = require("path"),
     FS = require("fs"),
     dir = Path.dirname(FS.realpathSync(__filename));
