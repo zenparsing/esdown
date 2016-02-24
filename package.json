@@ -1,14 +1,9 @@
 {
     "name": "esdown",
-    "version": "1.0.10",
+    "version": "1.1.0",
     "description": "ES6+ to ES5 compiler",
     "homepage": "https://github.com/zenparsing/esdown",
-    "bin": {
-        "esdown": "./bin/esdown"
-    },
-    "scripts": {
-        "preinstall": "node util/make-cmd.js"
-    },
+    "bin": "./bin/esdown-cli.js",
     "devDependencies": {
         "esparse": "*",
         "zen-cmd": "*",
