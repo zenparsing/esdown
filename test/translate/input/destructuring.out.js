@@ -24,4 +24,4 @@ function f(__$0) { var __$1; if (__$0 === void 0) __$0 = d; var a = (__$1 = _esd
 (function(__$0) { var __$2; for (var args = [], __$1 = 1; __$1 < arguments.length; ++__$1) args.push(arguments[__$1]); var a = (__$2 = _esdown.arrayd(__$0), __$2.at(1, 0)), b = __$2.at(1, 1); return foo; });
 
 try { x() }
-catch (__$27) { let m = (__$28 = _esdown.arrayd(__$27), __$28.at(1, 0));  }
+catch (__$27) { var m$0 = (__$28 = _esdown.arrayd(__$27), __$28.at(1, 0));  }
