@@ -162,6 +162,9 @@ class GraphBuilder {
 
         node.base = Path.dirname(node.path);
 
+        if (Path.extname(node.path) === ".json")
+            input = "module.exports = " + input + ";";
+
         node.output = translate(input, {
 
             identifyModule: path => `__M(${ this.addEdge(node, path, false).id })`,

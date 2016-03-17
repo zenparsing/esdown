@@ -2,7 +2,7 @@ export let Runtime = {};
 
 Runtime.API = 
 
-`var VERSION = "1.1.6";
+`var VERSION = "1.1.7";
 
 var GLOBAL = (function() {
 
