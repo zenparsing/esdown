@@ -21,18 +21,6 @@ const MODULE_IMPORT = "function __import(e) { " +
         "Object.create(e, { 'default': { value: e } }); " +
 "} ";
 
-function sanitize(text) {
-
-    // From node/lib/module.js/Module.prototype._compile
-    text = text.replace(/^\#\!.*/, '');
-
-    // From node/lib/module.js/stripBOM
-    if (text.charCodeAt(0) === 0xFEFF)
-        text = text.slice(1);
-
-    return text;
-}
-
 function wrapRuntime() {
 
     // Wrap runtime library in an IIFE, exporting into the _esdown variable
@@ -46,7 +34,14 @@ function wrapPolyfills() {
 
 export function translate(input, options = {}) {
 
-    input = sanitize(input);
+    let shebang = "";
+
+    // From node/lib/module.js/Module.prototype._compile
+    input = input.replace(/^\#\!.*/, m => { shebang = m; return ""; });
+
+    // From node/lib/module.js/stripBOM
+    if (input.charCodeAt(0) === 0xFEFF)
+        input = input.slice(1);
 
     // Node modules are wrapped inside of a function expression, which allows
     // return statements
@@ -68,6 +63,10 @@ export function translate(input, options = {}) {
     if (options.module && !options.noWrap)
         output = wrapModule(output, imports, options);
 
+    // Preserve shebang line for executable scripts
+    if (shebang)
+        output = shebang + output;
+
     if (options.result) {
 
         let r = options.result;
@@ -81,6 +80,14 @@ export function translate(input, options = {}) {
 }
 
 export function wrapModule(text, imports = [], options = {}) {
+
+    let prefix = "";
+
+    // Leave room for shebang line if necessary
+    if (text.startsWith("\n")) {
+        prefix = "\n";
+        text = text.slice(1);
+    }
 
     let header = "'use strict'; ";
 
@@ -112,14 +119,14 @@ export function wrapModule(text, imports = [], options = {}) {
         header += wrapPolyfills() + "\n\n";
 
     if (!options.global || typeof options.global !== "string")
-        return SIGNATURE + header + text;
+        return prefix + SIGNATURE + header + text;
 
     let name = options.global;
 
     if (name === ".")
         name = "";
 
-    return SIGNATURE + WRAP_CALLEE + "(" +
+    return prefix + SIGNATURE + WRAP_CALLEE + "(" +
         "function(exports, module) { " + header + text + "\n\n}, " +
         JSON.stringify(name) +
     ");";
