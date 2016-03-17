@@ -2,8 +2,6 @@ import { Runtime } from "./Runtime.js";
 import { replaceText } from "./Replacer.js";
 import { isLegacyScheme, removeScheme } from "./Schema.js";
 
-const SIGNATURE = "/*=esdown=*/";
-
 const WRAP_CALLEE = "(function(fn, name) { " +
 
     // CommonJS:
@@ -119,20 +117,15 @@ export function wrapModule(text, imports = [], options = {}) {
         header += wrapPolyfills() + "\n\n";
 
     if (!options.global || typeof options.global !== "string")
-        return prefix + SIGNATURE + header + text;
+        return prefix + header + text;
 
     let name = options.global;
 
     if (name === ".")
         name = "";
 
-    return prefix + SIGNATURE + WRAP_CALLEE + "(" +
+    return prefix + WRAP_CALLEE + "(" +
         "function(exports, module) { " + header + text + "\n\n}, " +
         JSON.stringify(name) +
     ");";
-}
-
-export function isWrapped(text) {
-
-    return text.indexOf(SIGNATURE) === 0;
 }

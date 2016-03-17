@@ -21,7 +21,7 @@ function buildRuntimeModule() {
             { encoding: "utf8" });
 
         // Remove signature and strict directive
-        source = source.replace(/^\/\*=esdown=\*\/('use strict'; )?/, "");
+        source = source.replace(/^'use strict'; /, "");
 
         output += "Runtime." + key + " = \n\n`" + source + "`;\n\n";
     });
