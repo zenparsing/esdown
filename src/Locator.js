@@ -1,6 +1,15 @@
 import * as Path from "node:path";
 import * as FS from "node:fs";
 
+const NODE_INTERNAL_MODULE = new RegExp("^(?:" + [
+
+    "assert", "buffer", "child_process", "cluster", "console", "constants", "crypto",
+    "dgram", "dns", "domain", "events", "freelist", "fs", "http", "https", "module",
+    "net", "os", "path", "process", "punycode", "querystring", "readline", "repl",
+    "smalloc", "stream", "string_decoder", "sys", "timers", "tls", "tty", "url", "util",
+    "v8", "vm", "zlib",
+
+].join("|") + ")$");
 
 let NOT_PACKAGE = /^(?:\.{0,2}\/|[a-z]+:)/i,
     NODE_PATH = "",
@@ -162,6 +171,11 @@ export function isRelativePath(spec) {
 export function isPackageSpecifier(spec) {
 
     return !NOT_PACKAGE.test(spec);
+}
+
+export function isNodeInternalModule(specifier) {
+
+    return NODE_INTERNAL_MODULE.test(specifier);
 }
 
 export function locatePackage(name, base, legacy) {

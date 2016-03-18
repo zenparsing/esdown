@@ -1,18 +1,8 @@
 import * as Path from "node:path";
 import { readFile, writeFile } from "./AsyncFS.js";
-import { isPackageSpecifier, locateModule } from "./Locator.js";
+import { isPackageSpecifier, locateModule, isNodeInternalModule } from "./Locator.js";
 import { translate, wrapModule } from "./Translator.js";
 import { isLegacyScheme, addLegacyScheme, removeScheme, hasScheme } from "./Schema.js";
-
-const NODE_INTERNAL_MODULE = new RegExp("^(?:" + [
-
-    "assert", "buffer", "child_process", "cluster", "console", "constants", "crypto",
-    "dgram", "dns", "domain", "events", "freelist", "fs", "http", "https", "module",
-    "net", "os", "path", "process", "punycode", "querystring", "readline", "repl",
-    "smalloc", "stream", "string_decoder", "sys", "timers", "tls", "tty", "url", "util",
-    "v8", "vm", "zlib",
-
-].join("|") + ")$");
 
 const BUNDLE_INIT =
 "var __M; " +
@@ -119,7 +109,7 @@ class GraphBuilder {
             key = removeScheme(spec);
         }
 
-        if (legacy && NODE_INTERNAL_MODULE.test(key))
+        if (legacy && isNodeInternalModule(key))
             ignore = true;
 
         if (ignore && fromRequire)
