@@ -1,5 +1,6 @@
 import { Runtime } from "./Runtime.js";
 import { replaceText } from "./Replacer.js";
+import { isNodeInternalModule } from "./Locator.js";
 import { isLegacyScheme, removeScheme } from "./Schema.js";
 
 const WRAP_CALLEE = "(function(fn, name) { " +
@@ -94,12 +95,19 @@ export function wrapModule(text, imports = [], options = {}) {
 
     let requires = imports.map(dep => {
 
-        let url = dep.url,
-            legacy = isLegacyScheme(url),
-            ident = dep.identifier;
+        let ident = dep.identifier,
+            url = dep.url,
+            legacy = false;
 
-        if (legacy)
+        if (isLegacyScheme(url)) {
+
+            legacy = true;
             url = removeScheme(url);
+
+        } else if (isNodeInternalModule(url)) {
+
+            legacy = true;
+        }
 
         if (options.runtimeImports && !legacy)
             url += "##ES6";

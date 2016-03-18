@@ -109,7 +109,7 @@ class GraphBuilder {
             key = removeScheme(spec);
         }
 
-        if (legacy && isNodeInternalModule(key))
+        if (isNodeInternalModule(key))
             ignore = true;
 
         if (ignore && fromRequire)
