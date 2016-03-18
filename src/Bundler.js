@@ -1,6 +1,6 @@
 import * as Path from "node:path";
 import { readFile, writeFile } from "./AsyncFS.js";
-import { isPackageSpecifier, locateModule, isNodeInternalModule } from "./Locator.js";
+import { isPackageSpecifier, isNodeModule, locateModule } from "./Locator.js";
 import { translate, wrapModule } from "./Translator.js";
 import { isLegacyScheme, addLegacyScheme, removeScheme, hasScheme } from "./Schema.js";
 
@@ -109,7 +109,7 @@ class GraphBuilder {
             key = removeScheme(spec);
         }
 
-        if (isNodeInternalModule(key))
+        if (isNodeModule(key))
             ignore = true;
 
         if (ignore && fromRequire)

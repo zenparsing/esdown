@@ -173,7 +173,7 @@ export function isPackageSpecifier(spec) {
     return !NOT_PACKAGE.test(spec);
 }
 
-export function isNodeInternalModule(specifier) {
+export function isNodeModule(specifier) {
 
     return NODE_INTERNAL_MODULE.test(specifier);
 }

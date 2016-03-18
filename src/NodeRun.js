@@ -7,7 +7,7 @@ import * as Util from "node:util";
 import { ConsoleStyle as Style } from "zen-cmd";
 import { parse } from "esparse";
 import { translate } from "./Translator.js";
-import { isPackageSpecifier, isNodeInternalModule, locateModule } from "./Locator.js";
+import { isPackageSpecifier, isNodeModule, locateModule } from "./Locator.js";
 
 let Module = null;
 
@@ -51,7 +51,7 @@ function addExtension() {
 
         if (/^node:/.test(path))
             path = path.slice(5);
-        else if (!isNodeInternalModule(path))
+        else if (!isNodeModule(path))
             path += "##ES6";
 
         let e = this.require(path);
