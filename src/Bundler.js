@@ -6,19 +6,20 @@ import { isLegacyScheme, addLegacyScheme, removeScheme, hasScheme } from "./Sche
 
 const BUNDLE_INIT =
 "var __M; " +
+"function __import(i) { " +
+    "var e = __M(i); " +
+    "return !e || e.constructor === Object ? e : Object.create(e, { 'default': { value: e } }); " +
+"} " +
 "(function(a) { " +
     "var list = Array(a.length / 2); " +
 
     "__M = function(i) { " +
-        "var m = list[i], f, e, ee; " +
+        "var m = list[i], f, e; " +
         "if (typeof m !== 'function') return m.exports; " +
         "f = m; " +
         "m = { exports: i ? {} : exports }; " +
         "f(list[i] = m, e = m.exports); " +
-        "ee = m.exports; " +
-        "if (ee && ee !== e && !('default' in ee)) " +
-            "ee['default'] = ee; " +
-        "return ee; " +
+        "return m.exports; " +
     "}; " +
 
     "for (var i = 0; i < a.length; i += 2) { " +
@@ -157,7 +158,7 @@ class GraphBuilder {
 
         node.output = translate(input, {
 
-            identifyModule: path => `__M(${ this.addEdge(node, path, false).id })`,
+            identifyModule: path => `__import(${ this.addEdge(node, path, false).id })`,
 
             replaceRequire: path => {
 
@@ -171,6 +172,9 @@ class GraphBuilder {
             result,
 
         });
+
+        if (!node.legacy)
+            node.output = "'use strict'; " + node.output;
 
         node.runtime = result.runtime.length > 0;
     }

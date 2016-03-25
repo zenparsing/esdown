@@ -60,7 +60,7 @@ export function translate(input, options = {}) {
         imports.push({ url: "esdown-runtime", identifier: "_esdown" });
 
     if (options.module && !options.noWrap)
-        output = wrapModule(output, imports, options);
+        output = "'use strict'; " + wrapModule(output, imports, options);
 
     // Preserve shebang line for executable scripts
     if (shebang)
@@ -88,7 +88,7 @@ export function wrapModule(text, imports = [], options = {}) {
         text = text.slice(1);
     }
 
-    let header = "'use strict'; ";
+    let header = "";
 
     if (imports.length > 0)
         header += MODULE_IMPORT;
