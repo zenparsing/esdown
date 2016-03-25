@@ -1,6 +1,6 @@
 'use strict'; var __M; (function(a) { var list = Array(a.length / 2); __M = function(i) { var m = list[i], f, e, ee; if (typeof m !== 'function') return m.exports; f = m; m = { exports: i ? {} : exports }; f(list[i] = m, e = m.exports); ee = m.exports; if (ee && ee !== e && !('default' in ee)) ee['default'] = ee; return ee; }; for (var i = 0; i < a.length; i += 2) { var j = Math.abs(a[i]); list[j] = a[i + 1]; if (a[i] >= 0) __M(j); } })([
 1, function(m) { m.exports = require("fs") },
--5, function(module, exports) {
+-6, function(module, exports) {
 
 module.exports = {
     "value": 1
@@ -11,11 +11,11 @@ module.exports = {
 2, function(module, exports) {
 
 // pkg2/main.js
-exports.data = __M(5);
+exports.data = __M(6);
 
 
 },
--6, function(module, exports) {
+-7, function(module, exports) {
 
 // b.js
 module.exports = { b: "b" };
@@ -26,7 +26,7 @@ module.exports = { b: "b" };
 
 // a.js (legacy)
 console.log("before b");
-var b = __M(6);
+var b = __M(7);
 exports.a = "a";
 console.log(b.b);
 
@@ -35,6 +35,12 @@ console.log(b.b);
 -4, function(module, exports) {
 
 // pkg1/index.js
+
+
+},
+-5, function(module, exports) {
+
+// deep.js
 
 
 },
@@ -52,6 +58,7 @@ console.log(a.a);
 
 require("fs");
 __M(4);
+__M(5);
 
 
 }]);

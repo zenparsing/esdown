@@ -151,11 +151,13 @@ export function locateModule(path, base, legacy) {
     if (legacy) {
 
         // If we are performing legacy lookup and the path is not found, then
-        // attempt to find the file by appending a ".js" file extension.
-        // We currently don't look for ".json" files.
+        // attempt to find the file by appending a ".js" or ".json" file extension.
         if (!path.endsWith("/") && !isFile(path)) {
 
             if (isFile(path + ".js"))
+                return { path: path + ".js", legacy: true };
+
+            if (isFile(path + ".json"))
                 return { path: path + ".js", legacy: true };
         }
     }
@@ -185,8 +187,19 @@ export function locatePackage(name, base, legacy) {
 
     let pathInfo;
 
-    getPackagePaths(base).some(root =>
-        pathInfo = getFolderEntryPoint(Path.resolve(root, name), legacy));
+    getPackagePaths(base).some(path => {
+
+        path = Path.resolve(path, name);
+        pathInfo = getFolderEntryPoint(path, legacy);
+
+        if (!pathInfo && legacy) {
+
+            if (isFile(path + ".js"))
+                pathInfo = { path: path + ".js", legacy };
+        }
+
+        return Boolean(pathInfo);
+    });
 
     if (!pathInfo)
         throw new Error(`Package ${ name } could not be found.`);

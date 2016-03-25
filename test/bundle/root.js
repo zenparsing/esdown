@@ -10,3 +10,4 @@ console.log(a.a);
 
 require("fs");
 require("pkg1");
+require("pkg1/deep");
