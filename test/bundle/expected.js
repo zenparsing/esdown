@@ -41,6 +41,7 @@ console.log(b.b);
 -5, function(module, exports) {
 
 // deep.js
+return;
 
 
 },

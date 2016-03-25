@@ -166,9 +166,8 @@ class GraphBuilder {
             },
 
             module: !node.legacy,
-
+            functionContext: node.legacy,
             noWrap: true,
-
             result,
 
         });
