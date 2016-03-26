@@ -6,20 +6,19 @@ import { isLegacyScheme, addLegacyScheme, removeScheme, hasScheme } from "./Sche
 
 const BUNDLE_INIT =
 "var __M; " +
-"function __import(i) { " +
-    "var e = __M(i); " +
-    "return !e || e.constructor === Object ? e : Object.create(e, { 'default': { value: e } }); " +
-"} " +
 "(function(a) { " +
     "var list = Array(a.length / 2); " +
 
-    "__M = function(i) { " +
+    "__M = function(i, es) { " +
         "var m = list[i], f, e; " +
-        "if (typeof m !== 'function') return m.exports; " +
-        "f = m; " +
-        "m = { exports: i ? {} : exports }; " +
-        "f(list[i] = m, e = m.exports); " +
-        "return m.exports; " +
+        "if (typeof m === 'function') { " +
+            "f = m; " +
+            "m = { exports: i ? {} : exports }; " +
+            "f(list[i] = m, m.exports); " +
+            "e = m.exports; " +
+            "m.es = !e || e.constructor === Object ? e : Object.create(e, { 'default': { value: e } }); " +
+        "} " +
+        "return es ? m.es : m.exports; " +
     "}; " +
 
     "for (var i = 0; i < a.length; i += 2) { " +
@@ -158,12 +157,12 @@ class GraphBuilder {
 
         node.output = translate(input, {
 
-            identifyModule: path => `__import(${ this.addEdge(node, path, false).id })`,
+            identifyModule: path => `__M(${ this.addEdge(node, path, false).id }, 1)`,
 
             replaceRequire: path => {
 
                 let n = this.addEdge(node, path, true);
-                return n ? `__M(${ n.id })` : null;
+                return n ? `__M(${ n.id }, 0)` : null;
             },
 
             module: !node.legacy,

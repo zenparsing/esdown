@@ -148,21 +148,21 @@ export function locateModule(path, base, legacy) {
             return pathInfo;
     }
 
-    if (legacy) {
+    if (isFile(path))
+        return { path, legacy };
 
-        // If we are performing legacy lookup and the path is not found, then
-        // attempt to find the file by appending a ".js" or ".json" file extension.
-        if (!path.endsWith("/") && !isFile(path)) {
+    // If we are performing legacy lookup and the path is not found, then
+    // attempt to find the file by appending a ".js" or ".json" file extension.
+    if (legacy && !path.endsWith("/")) {
 
-            if (isFile(path + ".js"))
-                return { path: path + ".js", legacy: true };
+        if (isFile(path + ".js"))
+            return { path: path + ".js", legacy };
 
-            if (isFile(path + ".json"))
-                return { path: path + ".js", legacy: true };
-        }
+        if (isFile(path + ".json"))
+            return { path: path + ".json", legacy };
     }
 
-    return { path, legacy };
+    throw new Error(`Module ${ path } could not be found`);
 }
 
 export function isRelativePath(spec) {
@@ -202,7 +202,7 @@ export function locatePackage(name, base, legacy) {
     });
 
     if (!pathInfo)
-        throw new Error(`Package ${ name } could not be found.`);
+        throw new Error(`Package ${ name } could not be found`);
 
     return pathInfo;
 }
