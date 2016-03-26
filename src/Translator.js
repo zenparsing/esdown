@@ -45,7 +45,7 @@ export function translate(input, options = {}) {
     // Node modules are wrapped inside of a function expression, which allows
     // return statements
     if (options.functionContext)
-        input = "(function(){" + input + "})";
+        input = "(function(){" + input + "\n})";
 
     let result = replaceText(input, options),
         output = result.output,
@@ -53,7 +53,7 @@ export function translate(input, options = {}) {
 
     // Remove function expression wrapper for node-modules
     if (options.functionContext)
-        output = output.slice(12, -2);
+        output = output.slice(12, -3);
 
     // Add esdown-runtime dependency if runtime features are used
     if (!options.runtimeImports && result.runtime.length > 0)
