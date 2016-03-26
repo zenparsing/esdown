@@ -28,6 +28,8 @@ const BUNDLE_INIT =
     "} " +
 "})";
 
+const BROKEN_LINK = "##broken_link##";
+
 class Node {
 
     constructor(path, id) {
@@ -45,10 +47,11 @@ class Node {
 
 class GraphBuilder {
 
-    constructor(root) {
+    constructor(root, allowBrokenLinks) {
 
         this.nodes = new Map;
         this.nextID = 0;
+        this.allowBrokenLinks = Boolean(allowBrokenLinks);
         this.root = this.add(root);
     }
 
@@ -117,9 +120,20 @@ class GraphBuilder {
 
         if (!ignore) {
 
-            let pathInfo = locateModule(key, node.base, legacy);
-            key = pathInfo.path;
-            legacy = pathInfo.legacy;
+            try {
+
+                let pathInfo = locateModule(key, node.base, legacy);
+                key = pathInfo.path;
+                legacy = pathInfo.legacy;
+
+            } catch (x) {
+
+                if (!this.allowBrokenLinks)
+                    throw x;
+
+                key = BROKEN_LINK;
+                legacy = false;
+            }
         }
 
         let target = this.nodes.get(key);
@@ -184,7 +198,7 @@ export function bundle(rootPath, options = {}) {
 
     rootPath = Path.resolve(rootPath);
 
-    let builder = new GraphBuilder(rootPath),
+    let builder = new GraphBuilder(rootPath, options.allowBrokenLinks),
         visited = new Set,
         pending = 0,
         resolver,
@@ -203,7 +217,9 @@ export function bundle(rootPath, options = {}) {
         visited.add(path);
         pending += 1;
 
-        readFile(path, { encoding: "utf8" }).then(code => {
+        let content = path === BROKEN_LINK ? "" : readFile(path, { encoding: "utf8" });
+
+        Promise.resolve(content).then(code => {
 
             builder.process(node, code);
             node.edges.forEach(visit);

@@ -1,4 +1,4 @@
-var __M; function __import(i) { var e = __M(i); return !e || e.constructor === Object ? e : Object.create(e, { 'default': { value: e } }); } (function(a) { var list = Array(a.length / 2); __M = function(i) { var m = list[i], f, e; if (typeof m !== 'function') return m.exports; f = m; m = { exports: i ? {} : exports }; f(list[i] = m, e = m.exports); return m.exports; }; for (var i = 0; i < a.length; i += 2) { var j = Math.abs(a[i]); list[j] = a[i + 1]; if (a[i] >= 0) __M(j); } })([
+var __M; (function(a) { var list = Array(a.length / 2); __M = function(i, es) { var m = list[i], f, e; if (typeof m === 'function') { f = m; m = { exports: i ? {} : exports }; f(list[i] = m, m.exports); e = m.exports; m.es = !e || e.constructor === Object ? e : Object.create(e, { 'default': { value: e } }); } return es ? m.es : m.exports; }; for (var i = 0; i < a.length; i += 2) { var j = Math.abs(a[i]); list[j] = a[i + 1]; if (a[i] >= 0) __M(j); } })([
 1, function(m) { m.exports = require("fs") },
 -6, function(module, exports) {
 
@@ -11,7 +11,7 @@ module.exports = {
 2, function(module, exports) {
 
 // pkg2/main.js
-exports.data = __M(6);
+exports.data = __M(6, 0);
 
 
 },
@@ -26,7 +26,7 @@ module.exports = { b: "b" };
 
 // a.js (legacy)
 console.log("before b");
-var b = __M(7);
+var b = __M(7, 0);
 exports.a = "a";
 console.log(b.b);
 
@@ -48,18 +48,18 @@ return;
 0, function(module, exports) {
 
 'use strict'; // root.js
-var FS = __import(1);
-var pkg2 = __import(2);
+var FS = __M(1, 1);
+var pkg2 = __M(2, 1);
 
 console.log(pkg2.data);
 
 console.log("before a");
-var a = __M(3);
+var a = __M(3, 0);
 console.log(a.a);
 
 require("fs");
-__M(4);
-__M(5);
+__M(4, 0);
+__M(5, 0);
 
 
 }]);

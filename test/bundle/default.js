@@ -29,6 +29,24 @@ runTests({
             }
 
         });
-    }
+    },
+
+    "Broken links reject if allowBrokenLinks is false" (test) {
+
+        test._("Broken links result in a rejected promise");
+        return bundle(resolve("./broken.js")).then(_=> test.assert(false), _=> test.assert(true));
+    },
+
+    "Broken links result in empty modules when allowBrokenLinks is true" (test) {
+
+        test._("Broken links result in an empty module");
+        return bundle(resolve("./broken.js"), { allowBrokenLinks: true }).then(output => {
+            let factory = new Function("exports", output),
+                exports = {};
+
+            factory(exports);
+            test.equals(Object.keys(exports.empty), []);
+        });
+    },
 
 });

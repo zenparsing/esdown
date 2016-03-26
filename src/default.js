@@ -101,6 +101,8 @@ export function main(args) {
             "polyfill": { short: "p", flag: true },
 
             "nowrap": { flag: true },
+
+            "allow-broken-links": { flag: true },
         },
 
         execute(params) {
@@ -113,6 +115,7 @@ export function main(args) {
 
                     global: params.global,
                     polyfill: params.fullRuntime || params.polyfill,
+                    allowBrokenLinks: params["allow-broken-links"],
                 });
 
             } else {
