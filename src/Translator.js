@@ -16,7 +16,7 @@ const WRAP_CALLEE = "(function(fn, name) { " +
 "})";
 
 const MODULE_IMPORT = "function __import(e) { " +
-    "return !e || e.constructor === Object ? e : " +
+    "return Object(e) !== e || e.constructor === Object ? e : " +
         "Object.create(e, { 'default': { value: e } }); " +
 "} ";
 
@@ -63,7 +63,7 @@ export function translate(input, options = {}) {
         output = "'use strict'; " + wrapModule(output, imports, options);
 
     // Preserve shebang line for executable scripts
-    if (shebang)
+    if (shebang && !options.noShebang)
         output = shebang + output;
 
     if (options.result) {

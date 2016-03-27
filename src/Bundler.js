@@ -16,7 +16,7 @@ const BUNDLE_INIT =
             "m = { exports: i ? {} : exports }; " +
             "f(list[i] = m, m.exports); " +
             "e = m.exports; " +
-            "m.es = !e || e.constructor === Object ? e : Object.create(e, { 'default': { value: e } }); " +
+            "m.es = Object(e) !== e || e.constructor === Object ? e : Object.create(e, { 'default': { value: e } }); " +
         "} " +
         "return es ? m.es : m.exports; " +
     "}; " +
@@ -182,6 +182,7 @@ class GraphBuilder {
             module: !node.legacy,
             functionContext: node.legacy,
             noWrap: true,
+            noShebang: true,
             result,
 
         });
