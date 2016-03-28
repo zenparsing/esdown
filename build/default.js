@@ -59,7 +59,7 @@ export async function main() {
     switch (args[0]) {
 
         case "runtime":
-            await runDown("../esdown-runtime/runtime.js ../esdown-runtime/esdown-runtime.js");
+            await runDown("../esdown-runtime/runtime.js ../esdown-runtime/esdown-runtime.js -g _esdown");
             await runDown("../esdown-runtime/runtime.js ./esdown-runtime.js");
             buildRuntimeModule();
             break;
