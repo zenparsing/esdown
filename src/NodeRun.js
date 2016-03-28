@@ -7,7 +7,8 @@ import * as Util from "node:util";
 import { ConsoleStyle as Style } from "zen-cmd";
 import { parse } from "esparse";
 import { translate } from "./Translator.js";
-import { isPackageSpecifier, isNodeModule, locateModule } from "./Locator.js";
+import { locateModule } from "./Locator.js";
+import { isPackageSpecifier, isNodeModule } from "./Specifier.js";
 
 let Module = null;
 

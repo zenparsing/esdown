@@ -1,18 +1,8 @@
 import * as Path from "node:path";
 import * as FS from "node:fs";
+import { isPackageSpecifier, isRelativePath } from "./Specifier.js";
 
-const NODE_INTERNAL_MODULE = new RegExp("^(?:" + [
-
-    "assert", "buffer", "child_process", "cluster", "console", "constants", "crypto",
-    "dgram", "dns", "domain", "events", "freelist", "fs", "http", "https", "module",
-    "net", "os", "path", "process", "punycode", "querystring", "readline", "repl",
-    "smalloc", "stream", "string_decoder", "sys", "timers", "tls", "tty", "url", "util",
-    "v8", "vm", "zlib",
-
-].join("|") + ")$");
-
-let NOT_PACKAGE = /^(?:\.{0,2}\/|[a-z]+:)/i,
-    NODE_PATH = "",
+let NODE_PATH = "",
     globalModulePaths = [],
     isWindows = false;
 
@@ -165,25 +155,7 @@ export function locateModule(path, base, legacy) {
     throw new Error(`Module ${ path } could not be found`);
 }
 
-export function isRelativePath(spec) {
-
-    return spec.startsWith(".") || spec.startsWith("/");
-}
-
-export function isPackageSpecifier(spec) {
-
-    return !NOT_PACKAGE.test(spec);
-}
-
-export function isNodeModule(specifier) {
-
-    return NODE_INTERNAL_MODULE.test(specifier);
-}
-
-export function locatePackage(name, base, legacy) {
-
-    if (NOT_PACKAGE.test(name))
-        throw new Error("Not a package specifier");
+function locatePackage(name, base, legacy) {
 
     let pathInfo;
 

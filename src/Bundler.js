@@ -1,8 +1,16 @@
 import * as Path from "node:path";
 import { readFile, writeFile } from "./AsyncFS.js";
-import { isPackageSpecifier, isNodeModule, locateModule } from "./Locator.js";
+import { locateModule } from "./Locator.js";
 import { translate, wrapModule } from "./Translator.js";
-import { isLegacyScheme, addLegacyScheme, removeScheme, hasScheme } from "./Schema.js";
+
+import {
+    isLegacyScheme,
+    addLegacyScheme,
+    removeScheme,
+    hasScheme,
+    isNodeModule,
+    isPackageSpecifier,
+} from "./Specifier.js";
 
 const BUNDLE_INIT =
 "var __M; " +

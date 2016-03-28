@@ -1,7 +1,6 @@
 import { Runtime } from "./Runtime.js";
 import { replaceText } from "./Replacer.js";
-import { isNodeModule } from "./Locator.js";
-import { isLegacyScheme, removeScheme } from "./Schema.js";
+import { isNodeModule, isLegacyScheme, removeScheme } from "./Specifier.js";
 
 const WRAP_CALLEE = "(function(fn, name) { " +
 
