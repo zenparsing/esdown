@@ -21,12 +21,13 @@ const BUNDLE_INIT =
         "var m = list[i], f, e; " +
         "if (typeof m === 'function') { " +
             "f = m; " +
-            "m = { exports: i ? {} : exports }; " +
+            "m = i ? { exports: {} } : module; " +
             "f(list[i] = m, m.exports); " +
             "e = m.exports; " +
-            "m.es = Object(e) !== e || e.constructor === Object ? e : Object.create(e, { 'default': { value: e } }); " +
+            "m.__es = Object(e) !== e || e.constructor === Object ? e : " +
+                "Object.create(e, { 'default': { value: e } }); " +
         "} " +
-        "return es ? m.es : m.exports; " +
+        "return es ? m.__es : m.exports; " +
     "}; " +
 
     "for (var i = 0; i < a.length; i += 2) { " +

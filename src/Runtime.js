@@ -2,7 +2,7 @@ export let Runtime = {};
 
 Runtime.API = 
 
-`var VERSION = "1.1.16";
+`var VERSION = "1.1.17";
 
 var GLOBAL = (function() {
 
@@ -326,10 +326,10 @@ exports.asyncIter = asyncIterator;
 
 Runtime.Polyfill = 
 
-`/*=esdown=*/'use strict'; var __M; (function(a) { var list = Array(a.length / 2); __M = function(i) { var m = list[i], f, e, ee; if (typeof m !== 'function') return m.exports; f = m; m = { exports: i ? {} : exports }; f(list[i] = m, e = m.exports); ee = m.exports; if (ee && ee !== e && !('default' in ee)) ee['default'] = ee; return ee; }; for (var i = 0; i < a.length; i += 2) { var j = Math.abs(a[i]); list[j] = a[i + 1]; if (a[i] >= 0) __M(j); } })([
+`var __M; (function(a) { var list = Array(a.length / 2); __M = function(i, es) { var m = list[i], f, e; if (typeof m === 'function') { f = m; m = i ? { exports: {} } : module; f(list[i] = m, m.exports); e = m.exports; m.__es = Object(e) !== e || e.constructor === Object ? e : Object.create(e, { 'default': { value: e } }); } return es ? m.__es : m.exports; }; for (var i = 0; i < a.length; i += 2) { var j = Math.abs(a[i]); list[j] = a[i + 1]; if (a[i] >= 0) __M(j); } })([
 2, function(module, exports) {
 
-var Global = (function() {
+'use strict'; var Global = (function() {
 
     try { return global.global } catch (x) {}
     try { return self.self } catch (x) {}
@@ -427,7 +427,7 @@ exports.assertThis = assertThis;
 },
 3, function(module, exports) {
 
-var addProperties = __M(2).addProperties;
+'use strict'; var addProperties = __M(2, 1).addProperties;
 
 
 function polyfill(global) {
@@ -461,7 +461,7 @@ exports.polyfill = polyfill;
 },
 4, function(module, exports) {
 
-var addProperties = __M(2).addProperties, toObject = __M(2).toObject, toLength = __M(2).toLength, toInteger = __M(2).toInteger;
+'use strict'; var addProperties = __M(2, 1).addProperties, toObject = __M(2, 1).toObject, toLength = __M(2, 1).toLength, toInteger = __M(2, 1).toInteger;
 
 function polyfill() {
 
@@ -671,7 +671,7 @@ exports.polyfill = polyfill;
 },
 5, function(module, exports) {
 
-var addProperties = __M(2).addProperties;
+'use strict'; var addProperties = __M(2, 1).addProperties;
 
 
 function polyfill(global) {
@@ -881,7 +881,7 @@ exports.polyfill = polyfill;
 },
 6, function(module, exports) {
 
-var toInteger = __M(2).toInteger, addProperties = __M(2).addProperties;
+'use strict'; var toInteger = __M(2, 1).toInteger, addProperties = __M(2, 1).addProperties;
 
 function polyfill() {
 
@@ -925,7 +925,7 @@ exports.polyfill = polyfill;
 },
 7, function(module, exports) {
 
-var addProperties = __M(2).addProperties, toObject = __M(2).toObject, sameValue = __M(2).sameValue;
+'use strict'; var addProperties = __M(2, 1).addProperties, toObject = __M(2, 1).toObject, sameValue = __M(2, 1).sameValue;
 
 function polyfill() {
 
@@ -969,7 +969,7 @@ exports.polyfill = polyfill;
 },
 8, function(module, exports) {
 
-var addProperties = __M(2).addProperties, global = __M(2).global;
+'use strict'; var addProperties = __M(2, 1).addProperties, global = __M(2, 1).global;
 
 var runLater = (function(_) {
 
@@ -1327,12 +1327,12 @@ exports.polyfill = polyfill;
 },
 9, function(module, exports) {
 
-var addProperties = __M(2).addProperties,
-    toLength = __M(2).toLength,
-    toInteger = __M(2).toInteger,
-    sameValue = __M(2).sameValue,
-    assertThis = __M(2).assertThis,
-    isRegExp = __M(2).isRegExp;
+'use strict'; var addProperties = __M(2, 1).addProperties,
+    toLength = __M(2, 1).toLength,
+    toInteger = __M(2, 1).toInteger,
+    sameValue = __M(2, 1).sameValue,
+    assertThis = __M(2, 1).assertThis,
+    isRegExp = __M(2, 1).isRegExp;
 
 
 
@@ -1542,15 +1542,15 @@ exports.polyfill = polyfill;
 },
 1, function(module, exports) {
 
-var global = __M(2).global;
+'use strict'; var global = __M(2, 1).global;
 
-var symbols = __M(3);
-var array = __M(4);
-var mapset = __M(5);
-var number = __M(6);
-var object = __M(7);
-var promise = __M(8);
-var string = __M(9);
+var symbols = __M(3, 1);
+var array = __M(4, 1);
+var mapset = __M(5, 1);
+var number = __M(6, 1);
+var object = __M(7, 1);
+var promise = __M(8, 1);
+var string = __M(9, 1);
 
 
 
@@ -1567,7 +1567,7 @@ exports.polyfill = polyfill;
 },
 0, function(module, exports) {
 
-var polyfill = __M(1).polyfill;
+'use strict'; var polyfill = __M(1, 1).polyfill;
 
 polyfill();
 

@@ -34,11 +34,11 @@ function runDown(args) {
     return new Promise(resolve => {
 
         let ts = +new Date;
-        args = "- " + args;
+        args = "../bin/esdown-cli.js - " + args;
         process.stdout.write(`Running esdown...`);
 
         let opts = { stdio: "inherit", env: process.env, cwd: __dirname },
-            child = spawn("esdown", args.split(/ /g), opts);
+            child = spawn("node", args.split(/ /g), opts);
 
         child.on("close", _=> {
 

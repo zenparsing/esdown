@@ -41,10 +41,10 @@ runTests({
 
         test._("Broken links result in an empty module");
         return bundle(resolve("./broken.js"), { allowBrokenLinks: true }).then(output => {
-            let factory = new Function("exports", output),
+            let factory = new Function("module", "exports", output),
                 exports = {};
 
-            factory(exports);
+            factory({ exports }, exports);
             test.equals(Object.keys(exports.empty), []);
         });
     },
