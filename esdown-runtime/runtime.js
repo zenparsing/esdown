@@ -1,4 +1,4 @@
-const VERSION = "1.1.17";
+const VERSION = "1.1.18";
 
 const GLOBAL = (function() {
 

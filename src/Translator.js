@@ -5,12 +5,14 @@ import { isNodeModule, isLegacyScheme, removeScheme } from "./Specifier.js";
 const WRAP_CALLEE = "(function(fn, name) { " +
 
     // CommonJS:
-    "if (typeof exports !== 'undefined') " +
+    "if (typeof exports !== 'undefined') { " +
         "fn(exports, module); " +
 
     // DOM global module:
-    "else if (typeof self !== 'undefined') " +
-        "fn(name === '*' ? self : (name ? self[name] = {} : {})); " +
+    "} else if (typeof self !== 'undefined') { " +
+        "var e = name === '*' ? self : (name ? self[name] = {} : {}); " +
+        "fn(e, { exports: e }); " +
+    "} " +
 
 "})";
 
