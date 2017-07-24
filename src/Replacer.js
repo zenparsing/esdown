@@ -428,31 +428,24 @@ class Replacer {
     }
 
     ObjectLiteral(node) {
-
         if (node.hasComputed) {
-
             let computed = false;
-
-            // TODO: This is generating unwanted trailing commas
             node.properties.forEach((c, index) => {
-
-                if (computed)
-                    c.text = " }, { " + c.text;
-
-                computed = c.name.type === "ComputedPropertyName";
-
-                if (computed)
+                if (c.name.type === "ComputedPropertyName") {
                     c.text = `}, ${ c.name.expression.text }, { ${ c.text }`;
+                    if (computed) c.text = `}, {${ c.text }`;
+                    computed = true;
+                } else {
+                    if (computed) c.text = `}, { ${ c.text }`;
+                    computed = false;
+                }
             });
-
             this.markRuntime("computed");
-
-            return "_esdown.computed(" + this.stringify(node) + ")";
+            return `_esdown.computed(${ this.stringify(node) })`;
         }
     }
 
     ArrayLiteral(node) {
-
         if (node.hasSpread)
             return this.spreadList(node.elements);
     }
