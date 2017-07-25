@@ -2,7 +2,6 @@ var FS = require("fs"),
     Path = require("path");
 
 function packageVersionReplace(text, version) {
-
     return text.replace(
         /(\n\s*"version"\s*:\s*)"(\d+(?:\.\d+)*)"/,
         '$1"' + version + '"');
@@ -14,7 +13,6 @@ var replacers = [
         path: "../esdown-runtime/runtime.js",
 
         findVersion: function(text) {
-
             var m = /((?:^|\n)const VERSION = )"(\d+(?:\.\d+)*)"/.exec(text);
 
             if (m && m[2])
@@ -24,7 +22,6 @@ var replacers = [
         },
 
         replace: function(text, version) {
-
             return text.replace(
                 /((?:^|\n)const VERSION = )"(\d+(?:\.\d+)*)"/,
                 '$1"' + version + '"');
@@ -49,12 +46,10 @@ if (process.argv.length > 2)
     newVersion = process.argv[2];
 
 replacers.forEach(function(replacer) {
-
     var path = Path.resolve(__dirname, replacer.path),
         text = FS.readFileSync(path, { encoding: "utf8" });
 
     if (!newVersion) {
-
         newVersion = replacer.findVersion(text);
 
         if (!newVersion)

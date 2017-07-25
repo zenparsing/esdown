@@ -12,7 +12,6 @@ var FS = require("fs"),
 copy();
 
 function copy() {
-
     var source = Path.resolve(__dirname, "../build/esdown.js"),
         target = targetName();
 
@@ -22,7 +21,6 @@ function copy() {
 }
 
 function targetName() {
-
     var dir = Path.resolve(__dirname, "../_archive");
 
     if (!FS.existsSync(dir))
@@ -44,7 +42,6 @@ function targetName() {
 }
 
 function pad2(n) {
-
     n = String(n);
 
     while (n.length < 2)

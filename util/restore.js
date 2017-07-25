@@ -10,7 +10,6 @@ var FS = require("fs"),
 restore();
 
 function restore() {
-
     var target = Path.resolve(__dirname, "../build/esdown.js"),
         source = sourceName();
 
@@ -20,7 +19,6 @@ function restore() {
 }
 
 function sourceName() {
-
     var dir = Path.resolve(__dirname, "../_archive");
 
     // Create the archive directory if it doesn't already exist

@@ -42,7 +42,6 @@ const BROKEN_LINK = "##broken_link##";
 class Node {
 
     constructor(path, id) {
-
         this.path = path;
         this.id = id;
         this.edges = new Map;
@@ -57,7 +56,6 @@ class Node {
 class GraphBuilder {
 
     constructor(root, allowBrokenLinks) {
-
         this.nodes = new Map;
         this.nextID = 0;
         this.allowBrokenLinks = Boolean(allowBrokenLinks);
@@ -65,17 +63,14 @@ class GraphBuilder {
     }
 
     has(key) {
-
         return this.nodes.has(key);
     }
 
     get(key) {
-
         return this.nodes.get(key);
     }
 
     add(key) {
-
         if (this.nodes.has(key))
             return this.nodes.get(key);
 
@@ -85,12 +80,10 @@ class GraphBuilder {
     }
 
     sort(key = this.root.path) {
-
-        let visited = new Set,
-            list = [];
+        let visited = new Set;
+        let list = [];
 
         let visit = key => {
-
             if (visited.has(key))
                 return;
 
@@ -101,22 +94,17 @@ class GraphBuilder {
         };
 
         visit(key);
-
         return list;
     }
 
     addEdge(node, spec, fromRequire) {
-
-        let key = spec,
-            legacy = false,
-            ignore = false;
+        let key = spec;
+        let legacy = false;
+        let ignore = false;
 
         if (fromRequire) {
-
             legacy = true;
-
         } else if (isLegacyScheme(spec)) {
-
             legacy = true;
             key = removeScheme(spec);
         }
@@ -128,15 +116,11 @@ class GraphBuilder {
             return null;
 
         if (!ignore) {
-
             try {
-
                 let pathInfo = locateModule(key, node.base, legacy);
                 key = pathInfo.path;
                 legacy = pathInfo.legacy;
-
             } catch (x) {
-
                 if (!this.allowBrokenLinks)
                     throw x;
 
@@ -148,12 +132,9 @@ class GraphBuilder {
         let target = this.nodes.get(key);
 
         if (target) {
-
             if (target.legacy !== legacy)
                 throw new Error(`Module '${ key }' referenced as both legacy and non-legacy`);
-
         } else {
-
             target = this.add(key);
             target.legacy = legacy;
             target.ignore = ignore;
@@ -167,7 +148,6 @@ class GraphBuilder {
     }
 
     process(node, input) {
-
         if (node.output !== null)
             throw new Error("Node already processed");
 
@@ -179,21 +159,18 @@ class GraphBuilder {
             input = "module.exports = " + input + ";";
 
         node.output = translate(input, {
-
-            identifyModule: path => `__M(${ this.addEdge(node, path, false).id }, 1)`,
-
+            identifyModule: path => {
+                return `__M(${ this.addEdge(node, path, false).id }, 1)`;
+            },
             replaceRequire: path => {
-
                 let n = this.addEdge(node, path, true);
                 return n ? `__M(${ n.id }, 0)` : null;
             },
-
             module: !node.legacy,
             functionContext: node.legacy,
             noWrap: true,
             noShebang: true,
             result,
-
         });
 
         if (!node.legacy)
@@ -205,19 +182,17 @@ class GraphBuilder {
 }
 
 export function bundle(rootPath, options = {}) {
-
     rootPath = Path.resolve(rootPath);
 
-    let builder = new GraphBuilder(rootPath, options.allowBrokenLinks),
-        visited = new Set,
-        pending = 0,
-        resolver,
-        allFetched;
+    let builder = new GraphBuilder(rootPath, options.allowBrokenLinks);
+    let visited = new Set;
+    let pending = 0;
+    let resolver;
+    let allFetched;
 
     allFetched = new Promise((resolve, reject) => resolver = { resolve, reject });
 
     function visit(node) {
-
         let path = node.path;
 
         // Exit if module has already been processed or should be ignored
@@ -230,17 +205,12 @@ export function bundle(rootPath, options = {}) {
         let content = path === BROKEN_LINK ? "" : readFile(path, { encoding: "utf8" });
 
         Promise.resolve(content).then(code => {
-
             builder.process(node, code);
             node.edges.forEach(visit);
-
             pending -= 1;
-
             if (pending === 0)
                 resolver.resolve(null);
-
         }).then(null, err => {
-
             if (err instanceof SyntaxError && "sourceText" in err)
                 err.filename = path;
 
@@ -251,16 +221,12 @@ export function bundle(rootPath, options = {}) {
     visit(builder.root);
 
     return allFetched.then(_=> {
-
         let needsRuntime = false;
-
         let output = builder.sort().map(node => {
-
             if (node.runtime)
                 needsRuntime = true;
 
             let id = node.id;
-
             if (node.importCount === 0)
                 id = -id;
 
@@ -269,20 +235,17 @@ export function bundle(rootPath, options = {}) {
                 `function(module, exports) {\n\n${ node.output }\n\n}`;
 
             return `${ id }, ${ init }`;
-
         }).join(",\n");
 
         output = BUNDLE_INIT + `([\n${ output }]);\n`;
-
         output = wrapModule(output, [], {
-
             global: options.global,
             runtime: needsRuntime,
             polyfill: options.polyfill,
         });
 
         if (options.output)
-            return writeFile(Path.resolve(options.output), output, "utf8").then(_=> "");
+            return writeFile(Path.resolve(options.output), output, "utf8").then(() => "");
 
         return output;
     });

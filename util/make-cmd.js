@@ -1,6 +1,6 @@
 /*
 
-Creates the "esdown" command target dynamically when the package is installed.  This 
+Creates the "esdown" command target dynamically when the package is installed.  This
 (hack) was necessary for the following reasons:
 
 1. For now, we always want esdown to run node with the "--harmony" flag.
@@ -21,31 +21,25 @@ var Path = require("path");
 var FS = require("fs");
 
 function makeCmd() {
-
     var platform = process.platform,
         dir = Path.resolve(__dirname, "..", "bin"),
         target = Path.join(dir, "esdown"),
         source = "esdown.sh";
-    
+
     if (platform === "win32") {
-    
         copy(Path.join(dir, "esdown-cli.js"));
-        
     } else {
-    
         copy(Path.join(dir, "esdown.sh"), function(text) {
-     
             return text.replace(/\$ESDOWN_BIN_DIR/g, Path.dirname(target));
         });
     }
-    
-    function copy(from, transform) {
 
+    function copy(from, transform) {
         var text = FS.readFileSync(from, { encoding: "utf-8" });
-    
+
         if (transform)
             text = transform(text);
-    
+
         FS.writeFileSync(target,  text, { encoding: "utf-8" });
         FS.chmodSync(target, "755");
     }

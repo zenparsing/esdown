@@ -6,10 +6,10 @@ const GLOBAL = (function() {
     return null;
 })();
 
-const ownNames = Object.getOwnPropertyNames,
-      ownSymbols = Object.getOwnPropertySymbols,
-      getDesc = Object.getOwnPropertyDescriptor,
-      defineProp = Object.defineProperty;
+const ownNames = Object.getOwnPropertyNames;
+const ownSymbols = Object.getOwnPropertySymbols;
+const getDesc = Object.getOwnPropertyDescriptor;
+const defineProp = Object.defineProperty;
 
 function toObject(val) {
     if (val == null) // null or undefined

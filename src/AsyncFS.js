@@ -3,26 +3,19 @@ import * as FS from "node:fs";
 // Wraps a standard Node async function with a promise
 // generating function
 function wrap(fn) {
-
 	return function(...args) {
-
 		return new Promise((resolve, reject) => {
-
             args.push((err, data) => {
-
                 if (err) reject(err);
                 else resolve(data);
             });
-
             fn.apply(null, args);
         });
 	};
 }
 
 export function exists(path) {
-
     return new Promise(resolve => {
-
         FS.exists(path, result => resolve(result));
     });
 }
@@ -57,5 +50,4 @@ export let
     futimes = wrap(FS.futimes),
     writeFile = wrap(FS.writeFile),
     appendFile = wrap(FS.appendFile),
-    realpath = wrap(FS.realpath)
-;
+    realpath = wrap(FS.realpath);

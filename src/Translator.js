@@ -3,17 +3,14 @@ import { replaceText } from "./Replacer.js";
 import { isNodeModule, isLegacyScheme, removeScheme } from "./Specifier.js";
 
 const WRAP_CALLEE = "(function(fn, name) { " +
-
     // CommonJS:
     "if (typeof exports !== 'undefined') { " +
         "fn(exports, module); " +
-
     // DOM global module:
     "} else if (typeof self !== 'undefined') { " +
         "var e = name === '*' ? self : (name ? self[name] = {} : {}); " +
         "fn(e, { exports: e }); " +
     "} " +
-
 "})";
 
 const MODULE_IMPORT = "function __import(e) { " +
@@ -22,18 +19,15 @@ const MODULE_IMPORT = "function __import(e) { " +
 "} ";
 
 function wrapRuntime() {
-
     // Wrap runtime library in an IIFE, exporting into the _esdown variable
     return "var _esdown = {}; (function() { var exports = _esdown;\n\n" + Runtime.API + "\n\n})();";
 }
 
 function wrapPolyfills() {
-
     return "(function() { var exports = {};\n\n" + Runtime.Polyfill + "\n\n})();";
 }
 
 export function translate(input, options = {}) {
-
     let shebang = "";
 
     // From node/lib/module.js/Module.prototype._compile
@@ -48,9 +42,9 @@ export function translate(input, options = {}) {
     if (options.functionContext)
         input = "(function(){" + input + "\n})";
 
-    let result = replaceText(input, options),
-        output = result.output,
-        imports = result.imports;
+    let result = replaceText(input, options);
+    let output = result.output;
+    let imports = result.imports;
 
     // Remove function expression wrapper for node-modules
     if (options.functionContext)
@@ -68,7 +62,6 @@ export function translate(input, options = {}) {
         output = shebang + output;
 
     if (options.result) {
-
         let r = options.result;
         r.input = input;
         r.output = output;
@@ -80,7 +73,6 @@ export function translate(input, options = {}) {
 }
 
 export function wrapModule(text, imports = [], options = {}) {
-
     let prefix = "";
 
     // Leave room for shebang line if necessary
@@ -95,18 +87,14 @@ export function wrapModule(text, imports = [], options = {}) {
         header += MODULE_IMPORT;
 
     let requires = imports.map(dep => {
-
-        let ident = dep.identifier,
-            url = dep.url,
-            legacy = false;
+        let ident = dep.identifier;
+        let url = dep.url;
+        let legacy = false;
 
         if (isLegacyScheme(url)) {
-
             legacy = true;
             url = removeScheme(url);
-
         } else if (isNodeModule(url)) {
-
             legacy = true;
         }
 
@@ -129,7 +117,6 @@ export function wrapModule(text, imports = [], options = {}) {
         return prefix + header + text;
 
     let name = options.global;
-
     if (name === ".")
         name = "";
 

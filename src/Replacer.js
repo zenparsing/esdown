@@ -9,13 +9,11 @@ const RESERVED_WORD = new RegExp("^(?:" +
 ")$");
 
 function countNewlines(text) {
-
     let m = text.match(/\r\n?|\n/g);
     return m ? m.length : 0;
 }
 
 function preserveNewlines(text, height) {
-
     let n = countNewlines(text);
 
     if (height > 0 && n < height)
@@ -25,19 +23,15 @@ function preserveNewlines(text, height) {
 }
 
 function isAsyncType(type) {
-
     return type === "async" || type === "async-generator";
 }
 
 function isGeneratorType(type) {
-
     return type === "generator" || type === "async-generator";
 }
 
 class PatternTreeNode {
-
     constructor(name, init, skip) {
-
         this.name = name;
         this.initializer = init;
         this.children = [];
@@ -49,9 +43,7 @@ class PatternTreeNode {
 }
 
 class RootNode {
-
     constructor(root, end) {
-
         this.type = "Root";
         this.start = 0;
         this.end = end;
@@ -63,58 +55,43 @@ RootNode.prototype = AST.Node.prototype;
 
 
 function collapseScopes(parseResult) {
-
     let names = Object.create(null);
 
     visit(parseResult.scopeTree, null);
 
     function makeSuffix(name) {
-
         let count = names[name] | 0;
         names[name] = count + 1;
         return "$" + count;
     }
 
     function fail(msg, node) {
-
         throw parseResult.createSyntaxError("[esdown] " + msg, node);
     }
 
     function visit(scope, forScope) {
-
         switch (scope.type) {
-
             case "block":
                 rename(scope);
                 break;
-
             case "for":
                 rename(scope);
                 forScope = scope;
                 break;
-
             case "catch":
                 if (scope.node.param.type !== "Identifier")
                     rename(scope);
                 break;
-
             case "function":
-
                 if (forScope) {
-
                     let set = Object.create(null);
-
                     forScope.free.forEach(r => set[r.value] = 1);
-
                     scope.free.forEach(r => {
-
                         if (set[r.value] !== 1)
                             fail("Closure capturing per-iteration bindings", r);
                     });
-
                     forScope = null;
                 }
-
                 break;
         }
 
@@ -122,13 +99,11 @@ function collapseScopes(parseResult) {
     }
 
     function rename(node) {
-
         let varParent = node.parent.type === "var";
 
         Object.keys(node.names).forEach(name => {
-
-            let record = node.names[name],
-                suffix = "";
+            let record = node.names[name];
+            let suffix = "";
 
             if (!varParent)
                 suffix = makeSuffix(name);
@@ -142,7 +117,6 @@ function collapseScopes(parseResult) {
     }
 
     function checkConstRef(ref) {
-
         let node = ref;
 
         while (node.parent.type === "ParenExpression")
@@ -154,7 +128,6 @@ function collapseScopes(parseResult) {
             case "UpdateExpression":
                 target = ref.parent.expression;
                 break;
-
             case "AssignmentExpression":
                 target = ref.parent.left;
                 break;
@@ -167,14 +140,12 @@ function collapseScopes(parseResult) {
 }
 
 export function replaceText(input, options) {
-
     return new Replacer(options).replace(input);
 }
 
 class Replacer {
 
     constructor(options = {}) {
-
         this.options = {
             identifyModule: _=> "_M" + (this.uid++),
             replaceRequire: _=> null,
@@ -185,17 +156,13 @@ class Replacer {
     }
 
     replace(input) {
-
         this.asi = {};
 
         this.parseResult = parse(input, {
-
             module: this.options.module,
             addParentLinks: true,
             resolveScopes: true,
-
             onASI: token => {
-
                 if (token.type !== "}" && token.type !== "EOF")
                     this.asi[token.start] = true;
 
@@ -217,14 +184,12 @@ class Replacer {
         collapseScopes(this.parseResult);
 
         let visit = node => {
-
             node.text = null;
 
             let strict = this.isStrict;
 
             // Set the strictness for implicitly strict nodes
             switch (node.type) {
-
                 case "Module":
                 case "ClassDeclaration":
                 case "ClassExpresion":
@@ -249,11 +214,10 @@ class Replacer {
             return node.text = this.syncNewlines(node.start, node.end, text);
         };
 
-        let output = visit(new RootNode(root, input.length)),
-            exports = Object.keys(this.exports);
+        let output = visit(new RootNode(root, input.length));
+        let exports = Object.keys(this.exports);
 
         if (exports.length > 0) {
-
             output += "\n";
             output += exports.map(k => `exports.${ k } = ${ this.exports[k] };`).join("\n");
             output += "\n";
@@ -268,31 +232,25 @@ class Replacer {
     }
 
     DoWhileStatement(node) {
-
         let text = this.stringify(node);
-
         if (text.slice(-1) !== ";")
             return text + ";";
     }
 
     ForOfStatement(node) {
-
-        let iter = this.addTempVar(node, null, true),
-            iterResult = this.addTempVar(node, null, true),
-            context = this.parentFunction(node),
-            decl = "",
-            binding,
-            head;
+        let iter = this.addTempVar(node, null, true);
+        let iterResult = this.addTempVar(node, null, true);
+        let context = this.parentFunction(node);
+        let decl = "";
+        let binding;
+        let head;
 
         if (node.async) {
-
             head = `for (var ${ iter } = _esdown.asyncIter(${ node.right.text }), ${ iterResult }; `;
             head += `${ iterResult } = ${ this.awaitYield(context, iter + ".next()") }, `;
             head += `${ iterResult }.value && typeof ${ iterResult }.value.then === "function" `;
             head += `&& (${ iterResult }.value = ${ this.awaitYield(context, iterResult + ".value") }), `;
-
         } else {
-
             head = `for (var ${ iter } = (${ node.right.text })[Symbol.iterator](), ${ iterResult }; `;
             head += `${ iterResult } = ${ iter }.next(), `;
         }
@@ -302,12 +260,9 @@ class Replacer {
         head += this.input.slice(node.right.end, node.body.start);
 
         if (node.left.type === "VariableDeclaration") {
-
             decl = "var ";
             binding = node.left.declarations[0].pattern;
-
         } else {
-
             binding = this.unwrapParens(node.left);
         }
 
@@ -340,29 +295,22 @@ class Replacer {
     }
 
     ExpressionStatement(node) {
-
         if (this.asi[node.start]) {
-
             let text = this.stringify(node);
-
             switch (text.charAt(0)) {
-
                 case "(":
                 case "[":
                     text = ";" + text;
                     break;
             }
-
             return text;
         }
     }
 
     Module(node) {
-
         // Strict directive is included with module wrapper
-
-        let inserted = [],
-            temps = this.tempVars(node);
+        let inserted = [];
+        let temps = this.tempVars(node);
 
         if (node.lexicalVars)
             inserted.push(this.lexicalVarNames(node));
@@ -375,20 +323,16 @@ class Replacer {
     }
 
     Script(node) {
-
         return this.Module(node);
     }
 
     FunctionBody(node) {
-
         let insert = this.functionInsert(node.parent);
-
         if (insert)
             return "{ " + insert + " " + this.removeBraces(this.stringify(node)) + "}";
     }
 
     FormalParameter(node) {
-
         if (this.isPattern(node.pattern))
             return this.addTempVar(node, null, true);
 
@@ -396,13 +340,10 @@ class Replacer {
     }
 
     RestParameter(node) {
-
         node.parent.createRestBinding = true;
 
         let p = node.parent.params;
-
         if (p.length > 1) {
-
             let prev = p[p.length - 2];
             node.start = prev.end;
         }
@@ -411,12 +352,9 @@ class Replacer {
     }
 
     ComputedPropertyName(node) {
-
         search:
         for (let p = node.parent; p; p = p.parent) {
-
             switch (p.type) {
-
                 case "ClassBody":
                 case "ObjectLiteral":
                     p.hasComputed = true;
@@ -451,34 +389,24 @@ class Replacer {
     }
 
     MethodDefinition(node) {
-
         let text;
 
         switch (node.kind) {
-
             case "":
             case "constructor":
-
                 text = "function(" +
                     this.joinList(node.params) + ") " +
                     node.body.text;
-
                 break;
-
             case "async":
             case "async-generator":
-
                 text = this.asyncFunction(node);
                 break;
-
             case "generator":
-
                 text = "function*(" +
                     this.joinList(node.params) + ") " +
                     node.body.text;
-
                 break;
-
         }
 
         if (text !== void 0)
@@ -486,24 +414,20 @@ class Replacer {
     }
 
     PropertyDefinition(node) {
-
         if (node.expression === null) {
-
             let rawName = this.input.slice(node.name.start, node.name.end);
             return rawName + ": " + node.name.text;
         }
     }
 
     VariableDeclaration(node) {
-
         return this.stringify(node).replace(/^(let|const)/, "var");
     }
 
     ImportDeclaration(node) {
-
-        let moduleSpec = this.modulePath(node.from),
-            imports = node.imports,
-            out = this.importVars(imports, moduleSpec);
+        let moduleSpec = this.modulePath(node.from);
+        let imports = node.imports;
+        let out = this.importVars(imports, moduleSpec);
 
         if (imports && imports.type === "DefaultImport" && imports.imports)
             out += " " + this.importVars(imports.imports, moduleSpec);
@@ -512,15 +436,12 @@ class Replacer {
     }
 
     importVars(imports, moduleSpec) {
-
         if (!imports)
             return "";
 
         switch (imports.type) {
-
             case "NamespaceImport":
                 return "var " + imports.identifier.text + " = " + moduleSpec + ";";
-
             case "DefaultImport":
                 return "var " + imports.identifier.text + " = " + moduleSpec + "['default'];";
         }
@@ -528,16 +449,14 @@ class Replacer {
         let list = [];
 
         if (imports.specifiers) {
-
             imports.specifiers.forEach(spec => {
-
-                let imported = spec.imported,
-                    local = spec.local || imported;
+                let imported = spec.imported;
+                let local = spec.local || imported;
 
                 list.push({
                     start: spec.start,
                     end: spec.end,
-                    text: local.text + " = " + moduleSpec + "." + imported.text
+                    text: local.text + " = " + moduleSpec + "." + imported.text,
                 });
             });
         }
@@ -549,29 +468,20 @@ class Replacer {
     }
 
     ExportDeclaration(node) {
-
-        let target = node.declaration,
-            exports = this.exports,
-            ident;
+        let target = node.declaration;
+        let exports = this.exports;
+        let ident;
 
         if (target.type === "VariableDeclaration") {
-
             target.declarations.forEach(decl => {
-
                 if (this.isPattern(decl.pattern)) {
-
                     decl.pattern.patternTargets.forEach(x => exports[x] = x);
-
                 } else {
-
                     ident = decl.pattern.text;
-
                     exports[ident] = ident;
                 }
             });
-
         } else {
-
             ident = target.identifier.text;
             exports[ident] = ident;
         }
@@ -580,14 +490,12 @@ class Replacer {
     }
 
     ExportNameList(node) {
-
-        let from = node.from,
-            fromPath = from ? this.modulePath(from) : "";
+        let from = node.from;
+        let fromPath = from ? this.modulePath(from) : "";
 
         node.specifiers.forEach(spec => {
-
-            let local = spec.local.text,
-                exported = spec.exported ? spec.exported.text : local;
+            let local = spec.local.text;
+            let exported = spec.exported ? spec.exported.text : local;
 
             this.exports[exported] = from ?
                 fromPath + "." + local :
@@ -598,9 +506,8 @@ class Replacer {
     }
 
     ExportDefaultFrom(node) {
-
-        let from = node.from,
-            fromPath = from ? this.modulePath(from) : "";
+        let from = node.from;
+        let fromPath = from ? this.modulePath(from) : "";
 
         this.exports[node.identifier.text] = fromPath + "['default']";
 
@@ -608,23 +515,21 @@ class Replacer {
     }
 
     ExportNamespace(node) {
-
-        let from = node.from,
-            fromPath = from ? this.modulePath(from) : "";
+        let from = node.from;
+        let fromPath = from ? this.modulePath(from) : "";
 
         if (from && node.identifier) {
-
             this.exports[node.identifier.text] = fromPath;
             return "";
         }
 
-        return "Object.keys(" + fromPath + ").forEach(function(k) { exports[k] = " + fromPath + "[k]; });";
+        return "Object.keys(" + fromPath + ").forEach(function(k) { " +
+            "exports[k] = " + fromPath + "[k]; " +
+        "});";
     }
 
     ExportDefault(node) {
-
         switch (node.binding.type) {
-
             case "ClassDeclaration":
             case "FunctionDeclaration":
                 this.exports["default"] = node.binding.identifier.text;
@@ -635,20 +540,17 @@ class Replacer {
     }
 
     CallExpression(node) {
-
-        let callee = node.callee,
-            args = node.arguments,
-            spread = null,
-            calleeText,
-            argText;
+        let callee = node.callee;
+        let args = node.arguments;
+        let spread = null;
+        let calleeText;
+        let argText;
 
         if (callee.type === "SuperKeyword")
             throw new Error("Super call not supported");
 
         if (callee.text === "require" && args.length > 0 && args[0].type === "StringLiteral") {
-
             let ident = this.options.replaceRequire(args[0].value);
-
             if (ident)
                 return ident;
         }
@@ -657,7 +559,6 @@ class Replacer {
             spread = this.spreadList(args);
 
         if (node.injectThisArg) {
-
             argText = node.injectThisArg;
 
             if (spread)
@@ -669,13 +570,10 @@ class Replacer {
         }
 
         if (spread) {
-
             argText = "void 0";
 
             if (callee.type === "MemberExpression") {
-
                 argText = this.addTempVar(node);
-
                 callee.object.text = `(${ argText } = ${ callee.object.text })`;
                 callee.text = this.MemberExpression(callee) || this.stringify(callee);
             }
@@ -685,26 +583,22 @@ class Replacer {
     }
 
     NewExpression(node) {
-
         if (node.hasSpread) {
-
-            let temp = this.addTempVar(node),
-                spread = this.spreadList(node.arguments, "[null]");
+            let temp = this.addTempVar(node);
+            let spread = this.spreadList(node.arguments, "[null]");
 
             return `new (${ temp } = ${ node.callee.text }, ${ temp }.bind.apply(${ temp }, ${ spread }))`;
         }
     }
 
     SpreadExpression(node) {
-
         node.parent.hasSpread = true;
     }
 
     SuperKeyword(node) {
-
-        let proto = "__.super",
-            p = node.parent,
-            elem = p;
+        let proto = "__.super";
+        let p = node.parent;
+        let elem = p;
 
         while (elem && elem.type !== "MethodDefinition")
             elem = elem.parent;
@@ -713,7 +607,6 @@ class Replacer {
             proto = "__.csuper";
 
         if (p.type !== "CallExpression") {
-
             // super.foo...
             p.isSuperLookup = true;
 
@@ -728,9 +621,7 @@ class Replacer {
     }
 
     MemberExpression(node) {
-
         if (node.isSuperLookup) {
-
             let prop = node.property.text;
 
             prop = node.computed ?
@@ -742,7 +633,6 @@ class Replacer {
     }
 
     BindNewExpression(node) {
-
         return "(function(C) { " +
             "return function() { " +
                 "var args = [null]; " +
@@ -753,24 +643,18 @@ class Replacer {
     }
 
     BindExpression(node) {
-
-        let left = node.left ? node.left.text : null,
-            temp = this.addTempVar(node),
-            bindee;
+        let left = node.left ? node.left.text : null;
+        let temp = this.addTempVar(node);
+        let bindee;
 
         if (!left) {
-
             let right = this.unwrapParens(node.right);
             bindee = `((${ temp } = ${ right.object.text }).${ right.property.text })`;
-
         } else {
-
             bindee = `(${ temp } = ${ left }, ${ node.right.text })`;
         }
 
-        if (node.parent.type === "CallExpression" &&
-            node.parent.callee === node) {
-
+        if (node.parent.type === "CallExpression" && node.parent.callee === node) {
             node.parent.injectThisArg = temp;
             return bindee;
         }
@@ -779,13 +663,10 @@ class Replacer {
     }
 
     ArrowFunction(node) {
-
         let body = node.body.text;
 
         if (node.body.type !== "FunctionBody") {
-
             let insert = this.functionInsert(node);
-
             if (insert)
                 insert += " ";
 
@@ -800,12 +681,10 @@ class Replacer {
     }
 
     ThisExpression(node) {
-
         return this.renameLexicalVar(node, "this");
     }
 
     Identifier(node) {
-
         if (node.value === "arguments" && node.context === "variable")
             return this.renameLexicalVar(node, "arguments");
 
@@ -814,7 +693,6 @@ class Replacer {
     }
 
     UnaryExpression(node) {
-
         if (node.operator === "delete" && node.overrideDelete)
             return "!void " + node.expression.text;
 
@@ -823,36 +701,25 @@ class Replacer {
     }
 
     YieldExpression(node) {
-
-        // TODO:  Can we drop these?
-
-        // V8 circa Node 0.11.x does not support yield without expression
-        if (!node.expression)
-            return "yield void 0";
-
         // V8 circa Node 0.11.x does not access Symbol.iterator correctly
         if (node.delegate) {
-
-            let fn = this.parentFunction(node),
-                symbol = isAsyncType(fn.kind) ? "asyncIterator" : "iterator";
+            let fn = this.parentFunction(node);
+            let symbol = isAsyncType(fn.kind) ? "asyncIterator" : "iterator";
 
             node.expression.text = `(${ node.expression.text })[Symbol.${ symbol }]()`;
         }
     }
 
     FunctionDeclaration(node) {
-
         if (isAsyncType(node.kind))
             return this.asyncFunction(node);
     }
 
     FunctionExpression(node) {
-
         return this.FunctionDeclaration(node);
     }
 
     ClassDeclaration(node) {
-
         if (node.base)
             this.fail("Subclassing not supported", node.base);
 
@@ -865,15 +732,13 @@ class Replacer {
     }
 
     ClassExpression(node) {
-
-        let before = "",
-            after = "";
+        let before = "";
+        let after = "";
 
         if (node.base)
             this.fail("Subclassing not supported", node.base);
 
         if (node.identifier) {
-
             before = "function() { var " + node.identifier.text + " = ";
             after = "; return " + node.identifier.text + "; }()";
         }
@@ -889,32 +754,28 @@ class Replacer {
     }
 
     ClassBody(node) {
-
-        let classIdent = node.parent.identifier,
-            elems = node.elements,
-            hasCtor = false,
-            ctorName = classIdent ? classIdent.value : "",
-            ctorHead = (ctorName ? ctorName + " = " : "") + "function",
-            header = [],
-            footer = [];
+        let classIdent = node.parent.identifier;
+        let elems = node.elements;
+        let hasCtor = false;
+        let ctorName = classIdent ? classIdent.value : "";
+        let ctorHead = (ctorName ? ctorName + " = " : "") + "function";
+        let header = [];
+        let footer = [];
 
         elems.reduce((prev, e, index) => {
-
             if (e.type !== "MethodDefinition")
                 return "";
 
-            let text = e.text,
-                fn = "__";
+            let text = e.text;
+            let fn = "__";
 
             if (e.static) {
-
                 node.parent.hasStatic = true;
                 fn = "__static";
                 text = text.replace(/^static\s*/, "");
             }
 
             if (e.kind === "constructor") {
-
                 hasCtor = true;
 
                 // Give the constructor function a name so that the class function's
@@ -925,25 +786,19 @@ class Replacer {
             let prefix = fn + "(";
 
             if (e.name.type === "ComputedPropertyName") {
-
                 this.markRuntime("computed");
-
                 e.text = prefix + "_esdown.computed({}, " + e.name.expression.text + ", { " + text + " }));";
                 prefix = "";
 
             } else if (prefix === prev) {
-
                 let p = elems[index - 1];
                 p.text = p.text.replace(/\}\);$/, ",");
                 e.text = text + "});"
-
             } else {
-
                 e.text = prefix + "{ " + text + "});";
             }
 
             return e.static ? "" : prefix;
-
         }, "");
 
         if (ctorName)
@@ -965,28 +820,23 @@ class Replacer {
     }
 
     TaggedTemplateExpression(node) {
-
         return "(" + this.stringify(node) + ")";
     }
 
     TemplateExpression(node) {
-
-        let lit = node.literals,
-            sub = node.substitutions,
-            out = "";
+        let lit = node.literals;
+        let sub = node.substitutions;
+        let out = "";
 
         if (node.parent.type === "TaggedTemplateExpression") {
-
             this.markRuntime("templates");
 
-            let temp = this.addTempVar(node),
-                raw = temp;
+            let temp = this.addTempVar(node);
+            let raw = temp;
 
             // Only output the raw array if it is different from the cooked array
             for (let i = 0; i < lit.length; ++i) {
-
                 if (lit[i].raw !== lit[i].value) {
-
                     raw = `[${ lit.map(x => JSON.stringify(x.raw)).join(", ") }]`;
                     break;
                 }
@@ -999,11 +849,8 @@ class Replacer {
                 out += ", " + sub.map(x => x.text).join(", ");
 
             out += ")";
-
         } else {
-
             for (let i = 0; i < lit.length; ++i) {
-
                 if (i > 0)
                     out += " + (" + sub[i - 1].text + ") + ";
 
@@ -1015,29 +862,25 @@ class Replacer {
     }
 
     CatchClause(node) {
-
         if (!this.isPattern(node.param))
             return;
 
-        let temp = this.addTempVar(node, null, true),
-            assign = this.translatePattern(node.param, temp).join(", "),
-            body = this.removeBraces(node.body.text);
+        let temp = this.addTempVar(node, null, true);
+        let assign = this.translatePattern(node.param, temp).join(", ");
+        let body = this.removeBraces(node.body.text);
 
         return `catch (${ temp }) { var ${ assign }; ${ body } }`;
     }
 
     VariableDeclarator(node) {
-
         if (!node.initializer || !this.isPattern(node.pattern))
             return;
 
         let list = this.translatePattern(node.pattern, node.initializer.text);
-
         return list.join(", ") || "__$_";
     }
 
     AssignmentExpression(node) {
-
         if (node.assignWrap)
             return node.assignWrap[0] + node.right.text + node.assignWrap[1];
 
@@ -1046,8 +889,8 @@ class Replacer {
         if (!this.isPattern(left))
             return;
 
-        let temp = this.addTempVar(node),
-            list = this.translatePattern(left, temp);
+        let temp = this.addTempVar(node);
+        let list = this.translatePattern(left, temp);
 
         list.unshift(temp + " = " + node.right.text);
         list.push(temp);
@@ -1056,19 +899,15 @@ class Replacer {
     }
 
     isPattern(node) {
-
         switch (node.type) {
-
             case "ArrayPattern":
             case "ObjectPattern":
                 return true;
         }
-
         return false;
     }
 
     parenParent(node) {
-
         let parent;
 
         for (; parent = node.parent; node = parent)
@@ -1079,7 +918,6 @@ class Replacer {
     }
 
     unwrapParens(node) {
-
         while (node && node.type === "ParenExpression")
             node = node.expression;
 
@@ -1087,14 +925,11 @@ class Replacer {
     }
 
     spreadList(elems, initial) {
-
-        let list = [],
-            last = -1;
+        let list = [];
+        let last = -1;
 
         for (let i = 0; i < elems.length; ++i) {
-
             if (elems[i].type === "SpreadExpression") {
-
                 if (last < i - 1)
                     list.push({ type: "s", args: this.joinList(elems.slice(last + 1, i)) });
 
@@ -1120,29 +955,26 @@ class Replacer {
     }
 
     translatePattern(node, base) {
-
         function propGet(name) {
-
             if (name.charAt(0) === "[")
                 return name;
 
             return /^[\.\d'"]/.test(name) ? "[" + name + "]" : "." + name;
         }
 
-        let outer = [],
-            inner = [],
-            targets = [];
+        let outer = [];
+        let inner = [];
+        let targets = [];
 
         node.patternTargets = targets;
 
         this.markRuntime("destructuring");
 
         let visit = (tree, base) => {
-
-            let target = tree.target,
-                dType = tree.array ? "arrayd" : "objd",
-                str = "",
-                temp;
+            let target = tree.target;
+            let dType = tree.array ? "arrayd" : "objd";
+            let str = "";
+            let temp;
 
             let access =
                 tree.rest ? `${ base }.rest(${ tree.skip }, ${ tree.name })` :
@@ -1151,7 +983,6 @@ class Replacer {
                 base;
 
             if (tree.initializer) {
-
                 temp = this.addTempVar(node);
                 inner.push(`${ temp } = ${ access }`);
 
@@ -1161,19 +992,14 @@ class Replacer {
                     str = `${ temp } = _esdown.${ dType }(${ str })`;
 
                 inner.push(str);
-
             } else if (tree.target) {
-
                 inner.push(`${ access }`);
-
             } else {
-
                 temp = this.addTempVar(node);
                 inner.push(`${ temp } = _esdown.${ dType }(${ access })`);
             }
 
             if (tree.target) {
-
                 targets.push(target);
 
                 outer.push(inner.length === 1 ?
@@ -1195,28 +1021,23 @@ class Replacer {
     }
 
     createPatternTree(ast, parent) {
-
         if (!parent)
             parent = new PatternTreeNode("", null);
 
-        let child, init, skip = 1;
+        let child;
+        let init;
+        let skip = 1;
 
         switch (ast.type) {
-
             case "ArrayPattern":
-
                 parent.array = true;
-
                 ast.elements.forEach((e, i) => {
-
                     if (!e) {
-
                         ++skip;
                         return;
                     }
 
                     init = e.initializer ? e.initializer.text : "";
-
                     child = new PatternTreeNode(String(i), init, skip);
 
                     if (e.type === "PatternRestElement")
@@ -1229,13 +1050,10 @@ class Replacer {
                 });
 
                 break;
-
             case "ObjectPattern":
-
                 ast.properties.forEach(p => {
-
-                    let node = p.name,
-                        name;
+                    let node = p.name;
+                    let name;
 
                     switch (node.type) {
                         case "Identifier": name = node.value; break;
@@ -1249,11 +1067,9 @@ class Replacer {
                     parent.children.push(child);
                     this.createPatternTree(p.pattern || p.name, child);
                 });
-
                 break;
 
             default:
-
                 parent.target = ast.text;
                 break;
         }
@@ -1262,17 +1078,14 @@ class Replacer {
     }
 
     asyncFunction(node, body) {
-
         let head = "function";
 
         if (node.identifier)
             head += " " + node.identifier.text;
 
         let outerParams = node.params.map((x, i) => {
-
             let p = x.pattern || x.identifier;
             return p.type === "Identifier" ? p.value : "__$" + i;
-
         }).join(", ");
 
         let wrapper = node.kind === "async-generator" ? "asyncGen" : "async";
@@ -1288,22 +1101,17 @@ class Replacer {
     }
 
     markRuntime(name) {
-
         this.runtime[name] = true;
     }
 
     rawToString(raw) {
-
         raw = raw.replace(/([^\n])?\n/g, (m, m1) => m1 === "\\" ? m : (m1 || "") + "\\n\\\n");
         raw = raw.replace(/([^"])?"/g, (m, m1) => m1 === "\\" ? m : (m1 || "") + '\\"');
-
         return '"' + raw + '"';
     }
 
     isVarScope(node) {
-
         switch (node.type) {
-
             case "ArrowFunction":
             case "FunctionDeclaration":
             case "FunctionExpression":
@@ -1317,7 +1125,6 @@ class Replacer {
     }
 
     parentFunction(node) {
-
         for (let p = node.parent; p; p = p.parent)
             if (this.isVarScope(p))
                 return p;
@@ -1326,16 +1133,12 @@ class Replacer {
     }
 
     renameLexicalVar(node, name) {
-
-        let fn = this.parentFunction(node),
-            varName = name;
+        let fn = this.parentFunction(node);
+        let varName = name;
 
         if (fn.type === "ArrowFunction") {
-
             while (fn = this.parentFunction(fn)) {
-
                 if (fn.type !== "ArrowFunction") {
-
                     if (!fn.lexicalVars)
                         fn.lexicalVars = {};
 
@@ -1349,31 +1152,25 @@ class Replacer {
     }
 
     lexicalVarNames(node) {
-
         let names = node.lexicalVars;
-
         if (!names)
             return "";
 
         return "var " + Object.keys(names).map(key => {
-
             return names[key] + " = " + key;
-
         }).join(", ") + ";";
     }
 
     modulePath(node) {
-
         if (node.type !== "StringLiteral")
             return this.stringify(node);
 
-        let url = node.value,
-            legacy = false;
+        let url = node.value;
+        let legacy = false;
 
         url = url.trim();
 
         if (typeof this.moduleNames[url] !== "string") {
-
             let identifier = this.options.identifyModule(url);
             this.moduleNames[url] = identifier;
             this.dependencies.push({ url, identifier });
@@ -1383,14 +1180,12 @@ class Replacer {
     }
 
     stringify(node) {
-
-        let offset = node.start,
-            input = this.input,
-            text = "";
+        let offset = node.start;
+        let input = this.input;
+        let text = "";
 
         // Build text from child nodes
         node.children().forEach(child => {
-
             if (offset < child.start)
                 text += input.slice(offset, child.start);
 
@@ -1405,10 +1200,9 @@ class Replacer {
     }
 
     restParamVar(node) {
-
-        let name = node.params[node.params.length - 1].identifier.value,
-            pos = node.params.length - 1,
-            temp = this.addTempVar(node, null, true);
+        let name = node.params[node.params.length - 1].identifier.value;
+        let pos = node.params.length - 1;
+        let temp = this.addTempVar(node, null, true);
 
         return `for (var ${ name } = [], ${ temp } = ${ pos }; ` +
             `${ temp } < arguments.length; ` +
@@ -1416,7 +1210,6 @@ class Replacer {
     }
 
     functionInsert(node) {
-
         let inserted = [];
 
         if (node.hasYieldInput)
@@ -1429,7 +1222,6 @@ class Replacer {
             inserted.push(this.restParamVar(node));
 
         node.params.forEach(param => {
-
             if (!param.pattern)
                 return;
 
@@ -1452,59 +1244,46 @@ class Replacer {
     }
 
     addTempVar(node, value, noDeclare) {
-
         let p = this.isVarScope(node) ? node : this.parentFunction(node);
 
         if (!p.tempVars)
             p.tempVars = [];
 
         let name = "__$" + p.tempVars.length;
-
         p.tempVars.push({ name, value, noDeclare });
-
         return name;
     }
 
     tempVars(node) {
-
         if (!node.tempVars)
             return "";
 
         let list = node.tempVars.filter(item => !item.noDeclare);
-
         if (list.length === 0)
             return "";
 
         return "var " + list.map(item => {
-
             let out = item.name;
-
             if (typeof item.value === "string")
                 out += " = " + item.value;
-
             return out;
-
         }).join(", ") + ";";
     }
 
     strictDirective() {
-
         return this.isStrict ? "" : ' "use strict";';
     }
 
     lineNumber(offset) {
-
         return this.parseResult.locate(offset).line;
     }
 
     syncNewlines(start, end, text) {
-
         let height = this.lineNumber(end - 1) - this.lineNumber(start);
         return preserveNewlines(text, height);
     }
 
     awaitYield(context, text) {
-
         if (context.kind === "async-generator")
             text = `{ _esdown_await: (${ text }) }`;
 
@@ -1512,17 +1291,13 @@ class Replacer {
     }
 
     wrapFunctionExpression(text, node) {
-
         for (let p = node.parent; p; p = p.parent) {
-
             if (this.isVarScope(p))
                 break;
 
             if (p.type === "ExpressionStatement") {
-
                 if (p.start === node.start)
                     return "(" + text + ")";
-
                 break;
             }
         }
@@ -1531,18 +1306,15 @@ class Replacer {
     }
 
     removeBraces(text) {
-
         return text.replace(/^\s*\{|\}\s*$/g, "");
     }
 
     joinList(list) {
-
-        let input = this.input,
-            offset = -1,
-            text = "";
+        let input = this.input;
+        let offset = -1;
+        let text = "";
 
         list.forEach(child => {
-
             if (offset >= 0 && offset < child.start)
                 text += input.slice(offset, child.start);
 
@@ -1554,7 +1326,6 @@ class Replacer {
     }
 
     fail(msg, node) {
-
         throw this.parseResult.createSyntaxError("[esdown] " + msg, node);
     }
 

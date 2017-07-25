@@ -1,12 +1,11 @@
 import { addProperties } from "./Core.js";
 
-
 export function polyfill(global) {
 
-    const ORIGIN = {}, REMOVED = {};
+    const ORIGIN = {};
+    const REMOVED = {};
 
     function MapNode(key, val) {
-
         this.key = key;
         this.value = val;
         this.prev = this;
@@ -16,7 +15,6 @@ export function polyfill(global) {
     addProperties(MapNode.prototype, {
 
         insert(next) {
-
             this.next = next;
             this.prev = next.prev;
             this.prev.next = this;
@@ -24,7 +22,6 @@ export function polyfill(global) {
         },
 
         remove() {
-
             this.prev.next = this.next;
             this.next.prev = this.prev;
             this.key = REMOVED;
@@ -33,7 +30,6 @@ export function polyfill(global) {
     });
 
     function MapIterator(node, kind) {
-
         this.current = node;
         this.kind = kind;
     }
@@ -41,7 +37,6 @@ export function polyfill(global) {
     addProperties(MapIterator.prototype = {}, {
 
         next() {
-
             let node = this.current;
 
             while (node.key === REMOVED)
@@ -53,13 +48,10 @@ export function polyfill(global) {
             this.current = this.current.next;
 
             switch (this.kind) {
-
                 case "values":
                     return { value: node.value, done: false };
-
                 case "entries":
                     return { value: [ node.key, node.value ], done: false };
-
                 default:
                     return { value: node.key, done: false };
             }
@@ -70,9 +62,7 @@ export function polyfill(global) {
     });
 
     function hashKey(key) {
-
         switch (typeof key) {
-
             case "string": return "$" + key;
             case "number": return String(key);
         }
@@ -81,7 +71,6 @@ export function polyfill(global) {
     }
 
     function Map() {
-
         if (arguments.length > 0)
             throw new Error("Arguments to Map constructor are not supported in esdown");
 
@@ -92,7 +81,6 @@ export function polyfill(global) {
     addProperties(Map.prototype, {
 
         clear() {
-
             for (let node = this._origin.next; node !== this._origin; node = node.next)
                 node.key = REMOVED;
 
@@ -101,12 +89,10 @@ export function polyfill(global) {
         },
 
         delete(key) {
-
-            let h = hashKey(key),
-                node = this._index[h];
+            let h = hashKey(key);
+            let node = this._index[h];
 
             if (node) {
-
                 node.remove();
                 delete this._index[h];
                 return true;
@@ -116,7 +102,6 @@ export function polyfill(global) {
         },
 
         forEach(fn) {
-
             let thisArg = arguments[1];
 
             if (typeof fn !== "function")
@@ -128,25 +113,21 @@ export function polyfill(global) {
         },
 
         get(key) {
-
-            let h = hashKey(key),
-                node = this._index[h];
+            let h = hashKey(key);
+            let node = this._index[h];
 
             return node ? node.value : void 0;
         },
 
         has(key) {
-
             return hashKey(key) in this._index;
         },
 
         set(key, val) {
-
-            let h = hashKey(key),
-                node = this._index[h];
+            let h = hashKey(key);
+            let node = this._index[h];
 
             if (node) {
-
                 node.value = val;
                 return;
             }
@@ -158,7 +139,6 @@ export function polyfill(global) {
         },
 
         get size() {
-
             return Object.keys(this._index).length;
         },
 
@@ -173,7 +153,6 @@ export function polyfill(global) {
     const mapSet = Map.prototype.set;
 
     function Set() {
-
         if (arguments.length > 0)
             throw new Error("Arguments to Set constructor are not supported in esdown");
 
@@ -182,21 +161,17 @@ export function polyfill(global) {
     }
 
     addProperties(Set.prototype, {
-
         add(key) { return mapSet.call(this, key, key) },
         "@@iterator"() { return new MapIterator(this._origin.next, "entries") },
-
     });
 
     // Copy shared prototype members to Set
     ["clear", "delete", "forEach", "has", "size", "keys", "values", "entries"].forEach(k => {
-
         let d = Object.getOwnPropertyDescriptor(Map.prototype, k);
         Object.defineProperty(Set.prototype, k, d);
     });
 
     if (!global.Map || !global.Map.prototype.entries) {
-
         global.Map = Map;
         global.Set = Set;
     }

@@ -11,7 +11,6 @@ import * as string from "./String.js";
 export { global };
 
 export function polyfill() {
-
     [symbols, array, mapset, number, object, promise, string]
         .forEach(m => m.polyfill(global));
 }

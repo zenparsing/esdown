@@ -2,11 +2,11 @@ import * as Path from "node:path";
 import * as FS from "node:fs";
 import { isPackageSpecifier, isRelativePath } from "./Specifier.js";
 
-let NODE_PATH = "",
-    globalModulePaths = [],
-    isWindows = false;
+let NODE_PATH = "";
+let globalModulePaths = [];
+let isWindows = false;
 
-(_=> {
+(() => {
 
     if (typeof process === "undefined")
         return;
@@ -14,11 +14,10 @@ let NODE_PATH = "",
     isWindows = process.platform === "win32";
     NODE_PATH = process.env["NODE_PATH"] || "";
 
-    let home = isWindows ? process.env.USERPROFILE : process.env.HOME,
-        paths = [Path.resolve(process.execPath, "..", "..", "lib", "node")];
+    let home = isWindows ? process.env.USERPROFILE : process.env.HOME;
+    let paths = [Path.resolve(process.execPath, "..", "..", "lib", "node")];
 
     if (home) {
-
         paths.unshift(Path.resolve(home, ".node_libraries"));
         paths.unshift(Path.resolve(home, ".node_modules"));
     }
@@ -33,7 +32,6 @@ let NODE_PATH = "",
 })();
 
 function isFile(path) {
-
     let stat;
 
     try { stat = FS.statSync(path) }
@@ -43,7 +41,6 @@ function isFile(path) {
 }
 
 function isDirectory(path) {
-
     let stat;
 
     try { stat = FS.statSync(path) }
@@ -53,14 +50,11 @@ function isDirectory(path) {
 }
 
 function getFolderEntryPoint(dir, legacy) {
-
     const join = Path.join;
 
     // Look for an ES entry point first (default.js)
     if (!legacy) {
-
         let path = join(dir, "default.js");
-
         if (isFile(path))
             return { path, legacy: false };
     }
@@ -74,7 +68,6 @@ function getFolderEntryPoint(dir, legacy) {
 
     // If we have a manifest with a "main" path...
     if (typeof main === "string") {
-
         if (!main.endsWith("/"))
             tryPaths.push(join(dir, main), join(dir, main + ".js"));
 
@@ -85,9 +78,7 @@ function getFolderEntryPoint(dir, legacy) {
     tryPaths.push(join(dir, "index.js"));
 
     for (let i = 0; i < tryPaths.length; ++i) {
-
         let path = tryPaths[i];
-
         if (isFile(path))
             return { path, legacy: true };
     }
@@ -96,27 +87,21 @@ function getFolderEntryPoint(dir, legacy) {
 }
 
 function readPackageManifest(path) {
-
     path = Path.join(path, "package.json");
-
     if (!isFile(path))
         return null;
 
     let text = FS.readFileSync(path, "utf8");
 
     try {
-
         return JSON.parse(text);
-
     } catch (e) {
-
         e.message = "Error parsing " + path + ": " + e.message;
         throw e;
     }
 }
 
 export function locateModule(path, base, legacy) {
-
     if (isPackageSpecifier(path))
         return locatePackage(path, base, legacy);
 
@@ -129,7 +114,6 @@ export function locateModule(path, base, legacy) {
     path = Path.resolve(base, path);
 
     if (isDirectory(path)) {
-
         // If the path is a directory, then attempt to find the entry point
         // using folder lookup rules
         let pathInfo = getFolderEntryPoint(path, legacy);
@@ -144,7 +128,6 @@ export function locateModule(path, base, legacy) {
     // If we are performing legacy lookup and the path is not found, then
     // attempt to find the file by appending a ".js" or ".json" file extension.
     if (legacy && !path.endsWith("/")) {
-
         if (isFile(path + ".js"))
             return { path: path + ".js", legacy };
 
@@ -156,19 +139,14 @@ export function locateModule(path, base, legacy) {
 }
 
 function locatePackage(name, base, legacy) {
-
     let pathInfo;
 
     getPackagePaths(base).some(path => {
-
         path = Path.resolve(path, name);
         pathInfo = getFolderEntryPoint(path, legacy);
 
-        if (!pathInfo && legacy) {
-
-            if (isFile(path + ".js"))
-                pathInfo = { path: path + ".js", legacy };
-        }
+        if (!pathInfo && legacy && isFile(path + ".js"))
+            pathInfo = { path: path + ".js", legacy };
 
         return Boolean(pathInfo);
     });
@@ -180,21 +158,18 @@ function locatePackage(name, base, legacy) {
 }
 
 function getPackagePaths(dir) {
-
     return nodeModulePaths(dir).concat(globalModulePaths);
 }
 
 function nodeModulePaths(path) {
-
     path = Path.resolve(path);
 
-    let parts = path.split(isWindows ? /[\/\\]/ : /\//),
-        paths = [];
+    let parts = path.split(isWindows ? /[\/\\]/ : /\//);
+    let paths = [];
 
     // Build a list of "node_modules" folder paths, starting from
     // the current directory and then under each parent directory
     for (let i = parts.length - 1; i >= 0; --i) {
-
         // If this folder is already a node_modules folder, then
         // skip it (we want to avoid "node_modules/node_modules")
         if (parts[i] === "node_modules")

@@ -40,7 +40,6 @@ Translate a module by using a hyphen:
 `;
 
 function getOutPath(inPath, outPath) {
-
     let stat;
 
     outPath = Path.resolve(process.cwd(), outPath);
@@ -58,7 +57,6 @@ export function main(args) {
     new ConsoleCommand({
 
         execute(input) {
-
             process.argv.splice(1, 1);
 
             if (input) runModule(input);
@@ -68,7 +66,6 @@ export function main(args) {
     }).add("?", {
 
         execute() {
-
             console.log(HELP);
         }
 
@@ -77,14 +74,12 @@ export function main(args) {
         params: {
 
             "input": {
-
                 short: "i",
                 positional: true,
                 required: true
             },
 
             "output": {
-
                 short: "o",
                 positional: true,
                 required: false
@@ -106,28 +101,21 @@ export function main(args) {
         },
 
         execute(params) {
-
             let promise = null;
 
             if (params.bundle) {
-
                 promise = bundle(params.input, {
-
                     global: params.global,
                     polyfill: params.fullRuntime || params.polyfill,
                     allowBrokenLinks: params["allow-broken-links"],
                 });
-
             } else {
-
                 promise = params.input ?
                     readFile(params.input, { encoding: "utf8" }) :
                     Promise.resolve("");
 
                 promise = promise.then(text => {
-
                     return translate(text, {
-
                         global: params.global,
                         runtime: params.fullRuntime || params.runtime,
                         polyfill: params.fullRuntime || params.polyfill,
@@ -138,23 +126,15 @@ export function main(args) {
             }
 
             promise.then(text => {
-
                 if (params.output) {
-
                     let outPath = getOutPath(params.input, params.output);
                     return writeFile(outPath, text, "utf8");
-
                 } else {
-
                     process.stdout.write(text + "\n");
                 }
-
             }).then(null, x => {
-
                 if (x instanceof SyntaxError) {
-
                     let filename;
-
                     if (!params.bundle)
                         filename = Path.resolve(params.input);
 

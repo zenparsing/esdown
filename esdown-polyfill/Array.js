@@ -3,17 +3,14 @@ import { addProperties, toObject, toLength, toInteger } from "./Core.js";
 export function polyfill() {
 
     function arrayFind(obj, pred, thisArg, type) {
-
-        let len = toLength(obj.length),
-            val;
+        let len = toLength(obj.length);
+        let val;
 
         if (typeof pred !== "function")
             throw new TypeError(pred + " is not a function");
 
         for (let i = 0; i < len; ++i) {
-
             val = obj[i];
-
             if (pred.call(thisArg, val, i, obj))
                 return type === "value" ? val : i;
         }
@@ -22,7 +19,6 @@ export function polyfill() {
     }
 
     function ArrayIterator(array, kind) {
-
         this.array = array;
         this.current = 0;
         this.kind = kind;
@@ -31,12 +27,10 @@ export function polyfill() {
     addProperties(ArrayIterator.prototype = {}, {
 
         next() {
-
-            let length = toLength(this.array.length),
-                index = this.current;
+            let length = toLength(this.array.length);
+            let index = this.current;
 
             if (index >= length) {
-
                 this.current = Infinity;
                 return { value: void 0, done: true };
             }
@@ -44,13 +38,10 @@ export function polyfill() {
             this.current += 1;
 
             switch (this.kind) {
-
                 case "values":
                     return { value: this.array[index], done: false };
-
                 case "entries":
                     return { value: [ index, this.array[index] ], done: false };
-
                 default:
                     return { value: index, done: false };
             }
@@ -63,35 +54,30 @@ export function polyfill() {
     addProperties(Array, {
 
         from(list) {
-
             list = toObject(list);
 
-            let ctor = typeof this === "function" ? this : Array, // TODO: Always use "this"?
-                map = arguments[1],
-                thisArg = arguments[2],
-                i = 0,
-                out;
+            let ctor = typeof this === "function" ? this : Array;
+            let map = arguments[1];
+            let thisArg = arguments[2];
+            let i = 0;
+            let out;
 
             if (map !== void 0 && typeof map !== "function")
                 throw new TypeError(map + " is not a function");
 
-            var getIter = list[Symbol.iterator];
+            let getIter = list[Symbol.iterator];
 
             if (getIter) {
-
-                let iter = getIter.call(list),
-                    result;
+                let iter = getIter.call(list);
+                let result;
 
                 out = new ctor;
 
                 while (result = iter.next(), !result.done) {
-
                     out[i++] = map ? map.call(thisArg, result.value, i) : result.value;
                     out.length = i;
                 }
-
             } else {
-
                 let len = toLength(list.length);
 
                 out = new ctor(len);
@@ -106,54 +92,48 @@ export function polyfill() {
         },
 
         of(...items) {
-
             let ctor = typeof this === "function" ? this : Array;
-
             if (ctor === Array)
                 return items;
 
-            let len = items.length,
-                out = new ctor(len);
+            let len = items.length;
+            let out = new ctor(len);
 
             for (let i = 0; i < len; ++i)
                 out[i] = items[i];
 
             out.length = len;
-
             return out;
-        }
+        },
 
     });
 
     addProperties(Array.prototype, {
 
         copyWithin(target, start) {
-
-            let obj = toObject(this),
-                len = toLength(obj.length),
-                end = arguments[2];
+            let obj = toObject(this);
+            let len = toLength(obj.length);
+            let end = arguments[2];
 
             target = toInteger(target);
             start = toInteger(start);
 
-            let to = target < 0 ? Math.max(len + target, 0) : Math.min(target, len),
-                from = start < 0 ? Math.max(len + start, 0) : Math.min(start, len);
+            let to = target < 0 ? Math.max(len + target, 0) : Math.min(target, len);
+            let from = start < 0 ? Math.max(len + start, 0) : Math.min(start, len);
 
             end = end !== void 0 ? toInteger(end) : len;
             end = end < 0 ? Math.max(len + end, 0) : Math.min(end, len);
 
-            let count = Math.min(end - from, len - to),
-                dir = 1;
+            let count = Math.min(end - from, len - to);
+            let dir = 1;
 
             if (from < to && to < from + count) {
-
                 dir = -1;
                 from += count - 1;
                 to += count - 1;
             }
 
             for (; count > 0; --count) {
-
                 if (from in obj) obj[to] = obj[from];
                 else delete obj[to];
 
@@ -165,12 +145,11 @@ export function polyfill() {
         },
 
         fill(value) {
-
-            let obj = toObject(this),
-                len = toLength(obj.length),
-                start = toInteger(arguments[1]),
-                pos = start < 0 ? Math.max(len + start, 0) : Math.min(start, len),
-                end = arguments.length > 2 ? toInteger(arguments[2]) : len;
+            let obj = toObject(this);
+            let len = toLength(obj.length);
+            let start = toInteger(arguments[1]);
+            let pos = start < 0 ? Math.max(len + start, 0) : Math.min(start, len);
+            let end = arguments.length > 2 ? toInteger(arguments[2]) : len;
 
             end = end < 0 ? Math.max(len + end, 0) : Math.min(end, len);
 
@@ -181,12 +160,10 @@ export function polyfill() {
         },
 
         find(pred) {
-
             return arrayFind(toObject(this), pred, arguments[1], "value");
         },
 
         findIndex(pred) {
-
             return arrayFind(toObject(this), pred, arguments[1], "index");
         },
 
