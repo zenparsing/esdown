@@ -1,4 +1,4 @@
-const VERSION = '1.1.21';
+const VERSION = '1.2.0';
 
 const GLOBAL = (function() {
   try { return global.global; } catch (x) {}
