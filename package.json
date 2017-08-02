@@ -5,8 +5,8 @@
   "homepage": "https://github.com/zenparsing/esdown",
   "bin": "./bin/esdown-cli.js",
   "devDependencies": {
-    "esparse": "*",
-    "zen-cmd": "*",
-    "moon-unit": "*"
+    "esparse": "^0.2.2",
+    "moon-unit": "*",
+    "zen-cmd": "*"
   }
 }

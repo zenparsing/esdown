@@ -62,15 +62,24 @@ function makeClass(def) {
   return ctor;
 }
 
-// Support for computed property names
-export function computed(target) {
-  for (let i = 1; i < arguments.length; i += 3) {
-    let desc = getDesc(arguments[i + 1], '_');
-    mergeProp(target, arguments[i], desc, true);
-    if (i + 2 < arguments.length)
-      mergeProps(target, arguments[i + 2], true);
-  }
-  return target;
+// Support for computed property names and spread properties
+export function obj(target) {
+  return {
+    obj: target,
+    p(props) {
+      mergeProps(target, props, true);
+      return this;
+    },
+    c(name, props) {
+      let desc = getDesc(props, '_');
+      mergeProp(target, name, getDesc(props, '_'), true);
+      return this;
+    },
+    s(props) {
+      Object.assign(target, props);
+      return this;
+    },
+  };
 }
 
 // Support for async functions

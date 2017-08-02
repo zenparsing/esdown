@@ -7,7 +7,6 @@ function buildRuntimeModule() {
 
   let files = {
     API: './esdown-runtime.js',
-    Polyfill: './esdown-polyfill.js',
   };
 
   let output = 'export let Runtime = {};\n\n';
@@ -58,14 +57,6 @@ export async function main() {
       await runDown('../esdown-runtime/runtime.js ../esdown-runtime/esdown-runtime.js -g _esdown');
       await runDown('../esdown-runtime/runtime.js ./esdown-runtime.js');
       buildRuntimeModule();
-      break;
-    case 'polyfill':
-      await runDown('../esdown-polyfill/default.js ../esdown-polyfill/esdown-polyfill.js -b -g .');
-      await runDown('../esdown-polyfill/default.js ./esdown-polyfill.js -b');
-      buildRuntimeModule();
-      break;
-    case 'minimal':
-      await runDown('../src/minimal.js ../build/esdown-minimal.js -b -R -g esdown');
       break;
     case 'esdown':
       await runDown('../src/default.js ../build/esdown.js -b -R');

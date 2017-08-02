@@ -23,10 +23,6 @@ function wrapRuntime() {
   return 'var _esdown = {}; (function() { var exports = _esdown;\n\n' + Runtime.API + '\n\n})();';
 }
 
-function wrapPolyfills() {
-  return '(function() { var exports = {};\n\n' + Runtime.Polyfill + '\n\n})();';
-}
-
 export function translate(input, options = {}) {
   let shebang = '';
 
@@ -109,9 +105,6 @@ export function wrapModule(text, imports = [], options = {}) {
 
   if (options.runtime)
     header += wrapRuntime() + '\n\n';
-
-  if (options.polyfill)
-    header += wrapPolyfills() + '\n\n';
 
   if (!options.global || typeof options.global !== 'string')
     return prefix + header + text;

@@ -29,11 +29,6 @@ Translate a module by using a hyphen:
                         together in the output.
     --runtime, -r       If present, the esdown runtime code will be bundled
                         with the output.
-    --polyfill, -p      If present, ES6 polyfills will be bundled with the
-                        output.
-    -R                  If present, the esdown runtime and ES6 polyfills will
-                        be bundled with the output.  Equivalent to including
-                        both the -p and -r options.
     --global, -g        If specified, the name of the global variable to
                         dump this module's exports into, if the resulting
                         script is not executed within any module system.
@@ -107,11 +102,6 @@ export function main(args) {
         flag: true,
       },
 
-      'polyfill': {
-        short: 'p',
-        flag: true,
-      },
-
       'nowrap': {
         flag: true,
       },
@@ -127,7 +117,6 @@ export function main(args) {
       if (params.bundle) {
         promise = bundle(params.input, {
           global: params.global,
-          polyfill: params.fullRuntime || params.polyfill,
           allowBrokenLinks: params['allow-broken-links'],
         });
       } else {
@@ -139,7 +128,6 @@ export function main(args) {
           return translate(text, {
             global: params.global,
             runtime: params.fullRuntime || params.runtime,
-            polyfill: params.fullRuntime || params.polyfill,
             wrap: !params.nowrap,
             module: true,
           });

@@ -362,16 +362,15 @@ class Replacer {
       let computed = false;
       node.properties.forEach(c => {
         if (c.name.type === 'ComputedPropertyName') {
-          c.text = `}, ${ c.name.expression.text }, { ${ c.text }`;
-          if (computed) c.text = `}, {${ c.text }`;
+          c.text = `}).c(${ c.name.expression.text }, { ${ c.text }`;
           computed = true;
         } else {
-          if (computed) c.text = `}, { ${ c.text }`;
+          if (computed) c.text = `}).p({ ${ c.text }`;
           computed = false;
         }
       });
       this.markRuntime('computed');
-      return `_esdown.computed(${ this.stringify(node) })`;
+      return `_esdown.obj(${ this.stringify(node) })`;
     }
   }
 
@@ -540,8 +539,7 @@ class Replacer {
 
     if (callee.text === 'require' && args.length > 0 && args[0].type === 'StringLiteral') {
       let ident = this.options.replaceRequire(args[0].value);
-      if (ident)
-        return ident;
+      if (ident) return ident;
     }
 
     if (node.hasSpread)
@@ -569,6 +567,9 @@ class Replacer {
 
       return callee.text + '.apply(' + argText + ', ' + spread + ')';
     }
+
+    if (node.trailingComma)
+      return callee.text + '(' + this.joinList(args) + ')';
   }
 
   NewExpression(node) {
@@ -578,6 +579,9 @@ class Replacer {
       return `new (${ temp } = ${ node.callee.text }, ` +
         `${ temp }.bind.apply(${ temp }, ${ spread }))`;
     }
+
+    if (node.trailingComma)
+      return `new ${ node.callee.text }(${ this.joinList(node.arguments) })`;
   }
 
   SpreadExpression(node) {
@@ -742,10 +746,7 @@ class Replacer {
       if (e.name.type === 'ComputedPropertyName') {
 
         this.markRuntime('computed');
-
-        e.text = prefix + '_esdown.computed({}, ' + e.name.expression.text +
-          ', { ' + text + ' }));';
-
+        e.text = `${ prefix }_esdown.obj({}).c(${ e.name.expression.text }, { ${ text } });`;
         prefix = '';
 
       } else if (prefix === prev) {
@@ -1025,6 +1026,9 @@ class Replacer {
 
           init = p.initializer ? p.initializer.text : '';
           child = new PatternTreeNode(name, init);
+
+          if (p.type === 'PatternRestElement')
+            child.rest = true;
 
           parent.children.push(child);
           this.createPatternTree(p.pattern || p.name, child);

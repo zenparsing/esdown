@@ -233,7 +233,6 @@ export function bundle(rootPath, options = {}) {
     output = wrapModule(output, [], {
       global: options.global,
       runtime: needsRuntime,
-      polyfill: options.polyfill,
     });
 
     if (options.output)
