@@ -1,180 +1,192 @@
-import { addProperties, toObject, toLength, toInteger } from "./Core.js";
+import { addProperties, toObject, toLength, toInteger } from './Core.js';
 
 export function polyfill() {
 
-    function arrayFind(obj, pred, thisArg, type) {
-        let len = toLength(obj.length);
-        let val;
+  function arrayFind(obj, pred, thisArg, type) {
+    let len = toLength(obj.length);
+    let val;
 
-        if (typeof pred !== "function")
-            throw new TypeError(pred + " is not a function");
+    if (typeof pred !== 'function')
+      throw new TypeError(pred + ' is not a function');
 
-        for (let i = 0; i < len; ++i) {
-            val = obj[i];
-            if (pred.call(thisArg, val, i, obj))
-                return type === "value" ? val : i;
+    for (let i = 0; i < len; ++i) {
+      val = obj[i];
+      if (pred.call(thisArg, val, i, obj))
+        return type === 'value' ? val : i;
+    }
+
+    return type === 'value' ? undefined : -1;
+  }
+
+  function ArrayIterator(array, kind) {
+    this.array = array;
+    this.current = 0;
+    this.kind = kind;
+  }
+
+  addProperties(ArrayIterator.prototype = {}, {
+
+    next() {
+      let length = toLength(this.array.length);
+      let index = this.current;
+
+      if (index >= length) {
+        this.current = Infinity;
+        return { value: undefined, done: true };
+      }
+
+      this.current += 1;
+
+      switch (this.kind) {
+        case 'values':
+          return { value: this.array[index], done: false };
+        case 'entries':
+          return { value: [index, this.array[index]], done: false };
+        default:
+          return { value: index, done: false };
+      }
+    },
+
+    '@@iterator'() {
+      return this;
+    },
+
+  });
+
+  addProperties(Array, {
+
+    from(list) {
+      list = toObject(list);
+
+      let ctor = typeof this === 'function' ? this : Array;
+      let map = arguments[1];
+      let thisArg = arguments[2];
+      let i = 0;
+      let out;
+
+      if (map !== undefined && typeof map !== 'function')
+        throw new TypeError(map + ' is not a function');
+
+      let getIter = list[Symbol.iterator];
+
+      if (getIter) {
+        let iter = getIter.call(list);
+        let result;
+
+        out = new ctor;
+
+        while (result = iter.next(), !result.done) {
+          out[i++] = map ? map.call(thisArg, result.value, i) : result.value;
+          out.length = i;
         }
+      } else {
+        let len = toLength(list.length);
 
-        return type === "value" ? void 0 : -1;
-    }
+        out = new ctor(len);
 
-    function ArrayIterator(array, kind) {
-        this.array = array;
-        this.current = 0;
-        this.kind = kind;
-    }
+        for (; i < len; ++i)
+          out[i] = map ? map.call(thisArg, list[i], i) : list[i];
 
-    addProperties(ArrayIterator.prototype = {}, {
+        out.length = len;
+      }
 
-        next() {
-            let length = toLength(this.array.length);
-            let index = this.current;
+      return out;
+    },
 
-            if (index >= length) {
-                this.current = Infinity;
-                return { value: void 0, done: true };
-            }
+    of(...items) {
+      let ctor = typeof this === 'function' ? this : Array;
+      if (ctor === Array)
+        return items;
 
-            this.current += 1;
+      let len = items.length;
+      let out = new ctor(len);
 
-            switch (this.kind) {
-                case "values":
-                    return { value: this.array[index], done: false };
-                case "entries":
-                    return { value: [ index, this.array[index] ], done: false };
-                default:
-                    return { value: index, done: false };
-            }
-        },
+      for (let i = 0; i < len; ++i)
+        out[i] = items[i];
 
-        "@@iterator"() { return this },
+      out.length = len;
+      return out;
+    },
 
-    });
+  });
 
-    addProperties(Array, {
+  addProperties(Array.prototype, {
 
-        from(list) {
-            list = toObject(list);
+    copyWithin(target, start) {
+      let obj = toObject(this);
+      let len = toLength(obj.length);
+      let end = arguments[2];
 
-            let ctor = typeof this === "function" ? this : Array;
-            let map = arguments[1];
-            let thisArg = arguments[2];
-            let i = 0;
-            let out;
+      target = toInteger(target);
+      start = toInteger(start);
 
-            if (map !== void 0 && typeof map !== "function")
-                throw new TypeError(map + " is not a function");
+      let to = target < 0 ? Math.max(len + target, 0) : Math.min(target, len);
+      let from = start < 0 ? Math.max(len + start, 0) : Math.min(start, len);
 
-            let getIter = list[Symbol.iterator];
+      end = end !== undefined ? toInteger(end) : len;
+      end = end < 0 ? Math.max(len + end, 0) : Math.min(end, len);
 
-            if (getIter) {
-                let iter = getIter.call(list);
-                let result;
+      let count = Math.min(end - from, len - to);
+      let dir = 1;
 
-                out = new ctor;
+      if (from < to && to < from + count) {
+        dir = -1;
+        from += count - 1;
+        to += count - 1;
+      }
 
-                while (result = iter.next(), !result.done) {
-                    out[i++] = map ? map.call(thisArg, result.value, i) : result.value;
-                    out.length = i;
-                }
-            } else {
-                let len = toLength(list.length);
+      for (; count > 0; --count) {
+        if (from in obj)
+          obj[to] = obj[from];
+        else
+          delete obj[to];
 
-                out = new ctor(len);
+        from += dir;
+        to += dir;
+      }
 
-                for (; i < len; ++i)
-                    out[i] = map ? map.call(thisArg, list[i], i) : list[i];
+      return obj;
+    },
 
-                out.length = len;
-            }
+    fill(value) {
+      let obj = toObject(this);
+      let len = toLength(obj.length);
+      let start = toInteger(arguments[1]);
+      let pos = start < 0 ? Math.max(len + start, 0) : Math.min(start, len);
+      let end = arguments.length > 2 ? toInteger(arguments[2]) : len;
 
-            return out;
-        },
+      end = end < 0 ? Math.max(len + end, 0) : Math.min(end, len);
 
-        of(...items) {
-            let ctor = typeof this === "function" ? this : Array;
-            if (ctor === Array)
-                return items;
+      for (; pos < end; ++pos)
+        obj[pos] = value;
 
-            let len = items.length;
-            let out = new ctor(len);
+      return obj;
+    },
 
-            for (let i = 0; i < len; ++i)
-                out[i] = items[i];
+    find(pred) {
+      return arrayFind(toObject(this), pred, arguments[1], 'value');
+    },
 
-            out.length = len;
-            return out;
-        },
+    findIndex(pred) {
+      return arrayFind(toObject(this), pred, arguments[1], 'index');
+    },
 
-    });
+    values() {
+      return new ArrayIterator(this, 'values');
+    },
 
-    addProperties(Array.prototype, {
+    entries() {
+      return new ArrayIterator(this, 'entries');
+    },
 
-        copyWithin(target, start) {
-            let obj = toObject(this);
-            let len = toLength(obj.length);
-            let end = arguments[2];
+    keys() {
+      return new ArrayIterator(this, 'keys');
+    },
 
-            target = toInteger(target);
-            start = toInteger(start);
+    '@@iterator'() {
+      return this.values();
+    },
 
-            let to = target < 0 ? Math.max(len + target, 0) : Math.min(target, len);
-            let from = start < 0 ? Math.max(len + start, 0) : Math.min(start, len);
-
-            end = end !== void 0 ? toInteger(end) : len;
-            end = end < 0 ? Math.max(len + end, 0) : Math.min(end, len);
-
-            let count = Math.min(end - from, len - to);
-            let dir = 1;
-
-            if (from < to && to < from + count) {
-                dir = -1;
-                from += count - 1;
-                to += count - 1;
-            }
-
-            for (; count > 0; --count) {
-                if (from in obj) obj[to] = obj[from];
-                else delete obj[to];
-
-                from += dir;
-                to += dir;
-            }
-
-            return obj;
-        },
-
-        fill(value) {
-            let obj = toObject(this);
-            let len = toLength(obj.length);
-            let start = toInteger(arguments[1]);
-            let pos = start < 0 ? Math.max(len + start, 0) : Math.min(start, len);
-            let end = arguments.length > 2 ? toInteger(arguments[2]) : len;
-
-            end = end < 0 ? Math.max(len + end, 0) : Math.min(end, len);
-
-            for (; pos < end; ++pos)
-                obj[pos] = value;
-
-            return obj;
-        },
-
-        find(pred) {
-            return arrayFind(toObject(this), pred, arguments[1], "value");
-        },
-
-        findIndex(pred) {
-            return arrayFind(toObject(this), pred, arguments[1], "index");
-        },
-
-        values()  { return new ArrayIterator(this, "values") },
-
-        entries() { return new ArrayIterator(this, "entries") },
-
-        keys()    { return new ArrayIterator(this, "keys") },
-
-        "@@iterator"() { return this.values() },
-
-    });
+  });
 
 }

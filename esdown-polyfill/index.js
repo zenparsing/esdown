@@ -1,1 +1,1 @@
-require("./esdown-polyfill.js");
+require('./esdown-polyfill.js');

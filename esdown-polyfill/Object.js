@@ -1,30 +1,30 @@
-import { addProperties, toObject, sameValue } from "./Core.js";
+import { addProperties, toObject, sameValue } from './Core.js';
 
 export function polyfill() {
-    addProperties(Object, {
+  addProperties(Object, {
 
-        is: sameValue,
+    is: sameValue,
 
-        assign(target, source) {
-            target = toObject(target);
+    assign(target, source) {
+      target = toObject(target);
 
-            for (let i = 1; i < arguments.length; ++i) {
-                source = arguments[i];
-                if (source != null) // null or undefined
-                    Object.keys(source).forEach(key => target[key] = source[key]);
-            }
+      for (let i = 1; i < arguments.length; ++i) {
+        source = arguments[i];
+        if (source != null) // null or undefined
+          Object.keys(source).forEach(key => target[key] = source[key]);
+      }
 
-            return target;
-        },
+      return target;
+    },
 
-        setPrototypeOf(object, proto) {
-            // Least effort attempt
-            object.__proto__ = proto;
-        },
+    setPrototypeOf(object, proto) {
+      // Least effort attempt
+      object.__proto__ = proto;
+    },
 
-        getOwnPropertySymbols() {
-            return [];
-        },
+    getOwnPropertySymbols() {
+      return [];
+    },
 
-    });
+  });
 }

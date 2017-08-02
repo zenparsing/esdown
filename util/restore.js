@@ -1,37 +1,38 @@
+'use strict';
 /*
 
-Restores esdown.js from the most recent copy in "_prev" created with "archive.js".
+Restores esdown.js from the most recent copy in '_prev' created with 'archive.js'.
 
 */
 
-var FS = require("fs"),
-    Path = require("path");
+const FS = require('fs');
+const Path = require('path');
 
 restore();
 
 function restore() {
-    var target = Path.resolve(__dirname, "../build/esdown.js"),
-        source = sourceName();
+  let target = Path.resolve(__dirname, '../build/esdown.js');
+  let source = sourceName();
 
-    console.log("Restoring from [" + source + "]...");
-    FS.writeFileSync(target, FS.readFileSync(source, { encoding: "utf8" }));
-    console.log("Done.");
+  console.log('Restoring from [' + source + ']...');
+  FS.writeFileSync(target, FS.readFileSync(source, { encoding: 'utf8' }));
+  console.log('Done.');
 }
 
 function sourceName() {
-    var dir = Path.resolve(__dirname, "../_archive");
+  let dir = Path.resolve(__dirname, '../_archive');
 
-    // Create the archive directory if it doesn't already exist
-    if (!FS.existsSync(dir))
-        FS.mkdirSync(dir);
+  // Create the archive directory if it doesn't already exist
+  if (!FS.existsSync(dir))
+    FS.mkdirSync(dir);
 
-    var files = FS.readdirSync(dir);
+  let files = FS.readdirSync(dir);
 
-    files = files.filter(function(name) { return name.indexOf("esdown-") === 0; });
-    files = files.sort();
+  files = files.filter(name => name.startsWith('esdown-'));
+  files = files.sort();
 
-    if (files.length === 0)
-        throw new Error("No archived files were found.");
+  if (files.length === 0)
+    throw new Error('No archived files were found.');
 
-    return Path.resolve(dir, files[files.length - 1]);
+  return Path.resolve(dir, files[files.length - 1]);
 }

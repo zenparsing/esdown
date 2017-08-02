@@ -1,1 +1,1 @@
-module.exports = require("./build/esdown.js")
+module.exports = require('./build/esdown.js')

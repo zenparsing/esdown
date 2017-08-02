@@ -1,2 +1,2 @@
-export { translate } from "./Translator.js";
-export { parse } from "esparse";
+export { translate } from './Translator.js';
+export { parse } from 'esparse';
