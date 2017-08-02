@@ -1,4 +1,4 @@
-const VERSION = '1.2.0';
+const VERSION = '1.2.1';
 
 const GLOBAL = (function() {
   try { return global.global; } catch (x) {}
@@ -7,6 +7,7 @@ const GLOBAL = (function() {
 })();
 
 const ownNames = Object.getOwnPropertyNames;
+const hasOwn = Object.prototype.hasOwnProperty;
 const ownSymbols = Object.getOwnPropertySymbols;
 const getDesc = Object.getOwnPropertyDescriptor;
 const defineProp = Object.defineProperty;
@@ -76,7 +77,14 @@ export function obj(target) {
       return this;
     },
     s(props) {
-      Object.assign(target, props);
+      for (let name in props._) {
+        hasOwn.call(props._, name) && defineProp(target, name, {
+          enumerable: true,
+          configurable: true,
+          writable: true,
+          value: props._[name],
+        });
+      }
       return this;
     },
   };

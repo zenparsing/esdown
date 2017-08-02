@@ -1,6 +1,5 @@
 export default function F() {
-
-    return "default-export";
+  return 'default-export';
 }
 
-export var isHoisted = (F() === "default-export");
+export const isHoisted = (F() === 'default-export');

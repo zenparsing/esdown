@@ -1,52 +1,42 @@
-import def from "./import-export-default.js";
-import { isHoisted } from "./import-export-default.js";
-import { a, b, c, C, F } from "./import-export-from.js";
-import { legacyRelative } from "node:./import-export-legacy.js";
-import legacyPackage from "pkg";
+import def from './import-export-default.js';
+import { isHoisted } from './import-export-default.js';
+import { a, b, c, C, F } from './import-export-from.js';
+import { legacyRelative } from 'node:./import-export-legacy.js';
+import legacyPackage from 'pkg';
 
-export var tests = {
+export const tests = {
 
-    "imports and exports" (test) {
+  'imports and exports' (test) {
+      test
+      ._('exported variables')
+      .equals(a, 'export-a')
+      .equals(b, 'export-b')
+      .equals(c, 'export-c')
 
-        test
+      ._('functions')
+      .equals(F(), 'export-F')
 
-        ._("exported variables")
-        .equals(a, "export-a")
-        .equals(b, "export-b")
-        .equals(c, "export-c")
+      ._('classes')
+      .equals(C.x(), 'export-C')
+      ;
+  },
 
-        ._("functions")
-        .equals(F(), "export-F")
+  'legacy import' (test) {
+      test
+      ._('relative import')
+      .equals(legacyRelative, 'legacy-relative')
+      ._('package import with default')
+      .equals(legacyPackage(), 'legacy-package')
+      ;
+  },
 
-        ._("classes")
-        .equals(C.x(), "export-C")
-
-        ;
-    },
-
-    "legacy import" (test) {
-
-        test
-
-        ._("relative import")
-        .equals(legacyRelative, "legacy-relative")
-
-        ._("package import with default")
-        .equals(legacyPackage(), "legacy-package")
-
-        ;
-    },
-
-    "default export" (test) {
-
-        test
-
-        ._("default function")
-        .equals(def(), "default-export")
-        ._("default declarations are hoisted")
-        .equals(isHoisted, true)
-
-        ;
-    }
+  'default export' (test) {
+      test
+      ._('default function')
+      .equals(def(), 'default-export')
+      ._('default declarations are hoisted')
+      .equals(isHoisted, true)
+      ;
+  }
 
 };

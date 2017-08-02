@@ -358,19 +358,22 @@ class Replacer {
   }
 
   ObjectLiteral(node) {
-    if (node.hasComputed) {
-      let computed = false;
+    if (node.hasComputed || node.hasSpread) {
+      let close = false;
       node.properties.forEach(c => {
-        if (c.name.type === 'ComputedPropertyName') {
+        if (c.type === 'SpreadExpression') {
+          c.text = `}).s({ _: ${ c.expression.text }`;
+          close = true;
+        } else if (c.name.type === 'ComputedPropertyName') {
           c.text = `}).c(${ c.name.expression.text }, { ${ c.text }`;
-          computed = true;
-        } else {
-          if (computed) c.text = `}).p({ ${ c.text }`;
-          computed = false;
+          close = true;
+        } else if (close) {
+          c.text = `}).p({ ${ c.text }`;
+          close = false;
         }
       });
       this.markRuntime('computed');
-      return `_esdown.obj(${ this.stringify(node) })`;
+      return `_esdown.obj(${ this.stringify(node) }).obj`;
     }
   }
 
@@ -746,7 +749,7 @@ class Replacer {
       if (e.name.type === 'ComputedPropertyName') {
 
         this.markRuntime('computed');
-        e.text = `${ prefix }_esdown.obj({}).c(${ e.name.expression.text }, { ${ text } });`;
+        e.text = `${ prefix }_esdown.obj({}).c(${ e.name.expression.text }, { ${ text } }).obj);`;
         prefix = '';
 
       } else if (prefix === prev) {

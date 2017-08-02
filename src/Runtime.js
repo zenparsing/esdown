@@ -11,6 +11,7 @@ var GLOBAL = (function() {
 })();
 
 var ownNames = Object.getOwnPropertyNames;
+var hasOwn = Object.prototype.hasOwnProperty;
 var ownSymbols = Object.getOwnPropertySymbols;
 var getDesc = Object.getOwnPropertyDescriptor;
 var defineProp = Object.defineProperty;
@@ -80,7 +81,14 @@ function obj(target) {
       return this;
     },
     s: function(props) {
-      Object.assign(target, props);
+      for (var name$0 in props._) {
+        hasOwn.call(props._, name$0) && defineProp(target, name$0, {
+          enumerable: true,
+          configurable: true,
+          writable: true,
+          value: props._[name$0],
+        });
+      }
       return this;
     },
   };
