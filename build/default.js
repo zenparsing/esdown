@@ -59,7 +59,7 @@ export async function main() {
       buildRuntimeModule();
       break;
     case 'esdown':
-      await runDown('../src/default.js ../build/esdown.js -b -R');
+      await runDown('../src/default.js ../build/esdown.js -b -R --deep');
       break;
     default:
       console.log(`Unknown command '${ args[0]}'`);

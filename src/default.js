@@ -109,6 +109,10 @@ export function main(args) {
       'allow-broken-links': {
         flag: true,
       },
+
+      'deep': {
+        flag: true,
+      },
     },
 
     execute(params) {
@@ -117,6 +121,7 @@ export function main(args) {
       if (params.bundle) {
         promise = bundle(params.input, {
           global: params.global,
+          deep: params.deep,
           allowBrokenLinks: params['allow-broken-links'],
         });
       } else {

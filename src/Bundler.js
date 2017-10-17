@@ -2,7 +2,7 @@ import * as Path from 'path';
 import { readFile, writeFile } from './AsyncFS.js';
 import { locateModule } from './Locator.js';
 import { translate, wrapModule } from './Translator.js';
-import { isLegacyScheme, removeScheme, isNodeModule } from './Specifier.js';
+import { isLegacyScheme, removeScheme, isNodeModule, isPackageSpecifier } from './Specifier.js';
 
 const BUNDLE_INIT =
   'var __M; ' +
@@ -46,10 +46,11 @@ class Node {
 
 class GraphBuilder {
 
-  constructor(root, allowBrokenLinks) {
+  constructor(root, options = {}) {
     this.nodes = new Map();
     this.nextID = 0;
-    this.allowBrokenLinks = Boolean(allowBrokenLinks);
+    this.allowBrokenLinks = Boolean(options.allowBrokenLinks);
+    this.deep = Boolean(options.deep);
     this.root = this.add(root);
   }
 
@@ -100,7 +101,7 @@ class GraphBuilder {
       key = removeScheme(spec);
     }
 
-    if (isNodeModule(key))
+    if (isNodeModule(key) || (!this.deep && isPackageSpecifier(key)))
       ignore = true;
 
     if (ignore && fromRequire)
@@ -173,7 +174,7 @@ class GraphBuilder {
 export function bundle(rootPath, options = {}) {
   rootPath = Path.resolve(rootPath);
 
-  let builder = new GraphBuilder(rootPath, options.allowBrokenLinks);
+  let builder = new GraphBuilder(rootPath, options);
   let visited = new Set;
   let pending = 0;
   let resolver;

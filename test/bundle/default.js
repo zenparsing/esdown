@@ -11,7 +11,7 @@ runTests({
 
     "Bundling" (test) {
 
-        return bundle(resolve("./root.js")).then(output => {
+        return bundle(resolve("./root.js"), { deep: true }).then(output => {
 
             let expected = FS.readFileSync(resolve("./expected.js"), { encoding: "utf8" }),
                 ok = expected === output;
