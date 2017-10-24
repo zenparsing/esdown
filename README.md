@@ -41,13 +41,6 @@ Translate a module by using a hyphen:
                         will be written to the console.
     --bundle, -b        If present, module dependencies will be bundled
                         together in the output.
-    --runtime, -r       If present, the esdown runtime code will be bundled
-                        with the output.
-    --polyfill, -p      If present, ES6 polyfills will be bundled with the
-                        output.
-    -R                  If present, the esdown runtime and ES6 polyfills will
-                        be bundled with the output.  Equivalent to including
-                        both the -p and -r options.
     --global, -g        If specified, the name of the global variable to
                         dump this module's exports into, if the resulting
                         script is not executed within any module system.
@@ -64,9 +57,6 @@ Translates ES6+ code to ES5.  The following options are defined:
 
 - **module**: (Boolean) If `true`, parse the input as a module.  Otherwise, parse the input
   as a script.  The default is `false`.
-- **runtime**:  (Boolean) If `true`, include the **esdown** runtime library in the output.
-  The default is `false`.
-- **polyfill**:  (Boolean) If `true`, include the **esdown** ES6 polyfills in the output.
 - **global**:  (String) If specified, the name of the global variable which will be used to
   expose the module if it is loaded as a plain script in the browser.
 

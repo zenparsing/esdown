@@ -1062,7 +1062,7 @@ class Replacer {
     if (body === undefined)
       body = node.body.text;
 
-    this.markRuntime(wrapper === 'asyncGen' ? 'async-generators' : 'async-functions');
+    this.markRuntime('async');
 
     return `${ head }(${ outerParams }) { ` +
       `return _esdown.${ wrapper }(function*(${ this.joinList(node.params) }) ` +

@@ -18,9 +18,17 @@ const MODULE_IMPORT = 'function __import(e) { ' +
     'Object.create(e, { "default": { value: e } }); ' +
 '} ';
 
-function wrapRuntime() {
+function wrapRuntime(featureSet) {
+  if (!featureSet || featureSet.size === 0) {
+    return '';
+  }
+  // Remove unnecessary features
+  let matcher = /(?:^|\n)\/\/\/\/\s(\w+)[\s\S]*?(?=\n\/\/\/\/|$)/g;
+  let text = Runtime.API.replace(matcher, (m, m1) => featureSet.has(m1) ? m : '');
   // Wrap runtime library in an IIFE, exporting into the _esdown variable
-  return 'var _esdown = {}; (function() { var exports = _esdown;\n\n' + Runtime.API + '\n\n})();';
+  return 'var _esdown = {}; (function() { var exports = _esdown;\n\n' +
+    text +
+  '\n\n})();\n\n';
 }
 
 export function translate(input, options = {}) {
@@ -103,8 +111,7 @@ export function wrapModule(text, imports = [], options = {}) {
   if (requires.length > 0)
     header += 'var ' + requires.join(', ') + '; ';
 
-  if (options.runtime)
-    header += wrapRuntime() + '\n\n';
+  header += wrapRuntime(options.runtime);
 
   if (!options.global || typeof options.global !== 'string')
     return prefix + header + text;

@@ -37,7 +37,7 @@ class Node {
     this.id = id;
     this.edges = new Map;
     this.output = null;
-    this.runtime = false;
+    this.runtime = [];
     this.legacy = false;
     this.importCount = 0;
     this.ignore = false;
@@ -166,7 +166,7 @@ class GraphBuilder {
     if (!node.legacy)
       node.output = "'use strict'; " + node.output;
 
-    node.runtime = result.runtime.length > 0;
+    node.runtime = result.runtime;
   }
 
 }
@@ -211,11 +211,10 @@ export function bundle(rootPath, options = {}) {
   visit(builder.root);
 
   return allFetched.then(() => {
-    let needsRuntime = false;
+    let runtime = new Set();
 
     let output = builder.sort().map(node => {
-      if (node.runtime)
-        needsRuntime = true;
+      node.runtime.forEach(name => runtime.add(name));
 
       let id = node.id;
 
@@ -233,7 +232,7 @@ export function bundle(rootPath, options = {}) {
 
     output = wrapModule(output, [], {
       global: options.global,
-      runtime: needsRuntime,
+      runtime,
     });
 
     if (options.output)

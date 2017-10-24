@@ -132,7 +132,6 @@ export function main(args) {
         promise = promise.then(text => {
           return translate(text, {
             global: params.global,
-            runtime: params.fullRuntime || params.runtime,
             wrap: !params.nowrap,
             module: true,
           });

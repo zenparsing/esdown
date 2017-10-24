@@ -1,10 +1,13 @@
-const VERSION = '1.2.3';
+const VERSION = '1.2.4';
 
 const GLOBAL = (function() {
   try { return global.global; } catch (x) {}
   try { return self.self; } catch (x) {}
   return null;
 })();
+
+exports.version = VERSION;
+exports.global = GLOBAL;
 
 const ownNames = Object.getOwnPropertyNames;
 const hasOwn = Object.prototype.hasOwnProperty;
@@ -19,13 +22,11 @@ function toObject(val) {
   return Object(val);
 }
 
-// Iterates over the descriptors for each own property of an object
 function forEachDesc(obj, fn) {
   ownNames(obj).forEach(name => fn(name, getDesc(obj, name)));
   if (ownSymbols) ownSymbols(obj).forEach(name => fn(name, getDesc(obj, name)));
 }
 
-// Installs a property into an object, merging 'get' and 'set' functions
 function mergeProp(target, name, desc, enumerable) {
   if (desc.get || desc.set) {
     let d = { configurable: true };
@@ -38,13 +39,11 @@ function mergeProp(target, name, desc, enumerable) {
   defineProp(target, name, desc);
 }
 
-// Installs properties on an object, merging 'get' and 'set' functions
 function mergeProps(target, source, enumerable) {
   forEachDesc(source, (name, desc) => mergeProp(target, name, desc, enumerable));
 }
 
-// Builds a class
-function makeClass(def) {
+exports.class = function makeClass(def) {
   let parent = Object.prototype;
   let proto = Object.create(parent);
   let statics = {};
@@ -56,15 +55,61 @@ function makeClass(def) {
 
   let ctor = proto.constructor;
   ctor.prototype = proto;
-
-  // Set class 'static' methods
   forEachDesc(statics, (name, desc) => defineProp(ctor, name, desc));
-
   return ctor;
-}
+};
 
-// Support for computed property names and spread properties
-export function obj(target) {
+exports.spread = function spread(initial) {
+  return {
+    a: initial || [],
+    s() {
+      for (let i = 0; i < arguments.length; ++i)
+        this.a.push(arguments[i]);
+      return this;
+    },
+    i(list) {
+      if (Array.isArray(list)) {
+        this.a.push.apply(this.a, list);
+      } else {
+        for (let item of list)
+          this.a.push(item);
+      }
+      return this;
+    },
+  };
+};
+
+exports.objd = function objd(obj) {
+  return toObject(obj);
+};
+
+exports.arrayd = function arrayd(obj) {
+  if (Array.isArray(obj)) {
+    return {
+      at(skip, pos) { return obj[pos]; },
+      rest(skip, pos) { return obj.slice(pos); },
+    };
+  }
+
+  let iter = toObject(obj)[Symbol.iterator]();
+
+  return {
+    at(skip) {
+      let r;
+      while (skip--) r = iter.next();
+      return r.value;
+    },
+    rest(skip) {
+      let a = [];
+      let r;
+      while (--skip) r = iter.next();
+      while (r = iter.next(), !r.done) a.push(r.value);
+      return a;
+    },
+  };
+};
+
+exports.obj = function obj(target) {
   return {
     obj: target,
     p(props) {
@@ -88,10 +133,11 @@ export function obj(target) {
       return this;
     },
   };
-}
+};
 
-// Support for async functions
-function asyncFunction(iter) {
+//// async
+
+exports.async = function asyncFunction(iter) {
   return new Promise((resolve, reject) => {
     resume('next', undefined);
     function resume(type, value) {
@@ -109,16 +155,14 @@ function asyncFunction(iter) {
       }
     }
   });
-}
+};
 
-// Support for for-await
-function asyncIterator(obj) {
+exports.asyncIter = function asyncIter(obj) {
   let method = obj[Symbol.asyncIterator] || obj[Symbol.iterator];
   return method.call(obj);
-}
+};
 
-// Support for async generators
-function asyncGenerator(iter) {
+exports.asyncGen = function asyncGen(iter) {
   let front = null;
   let back = null;
 
@@ -184,68 +228,6 @@ function asyncGenerator(iter) {
       settle('throw', x);
     }
   }
-}
-
-// Support for spread operations
-export function spread(initial) {
-  return {
-    a: initial || [],
-    // Add items
-    s() {
-      for (let i = 0; i < arguments.length; ++i)
-        this.a.push(arguments[i]);
-      return this;
-    },
-    // Add the contents of iterables
-    i(list) {
-      if (Array.isArray(list)) {
-        this.a.push.apply(this.a, list);
-      } else {
-        for (let item of list)
-          this.a.push(item);
-      }
-      return this;
-    },
-  };
-}
-
-// Support for object destructuring
-export function objd(obj) {
-  return toObject(obj);
-}
-
-// Support for array destructuring
-export function arrayd(obj) {
-  if (Array.isArray(obj)) {
-    return {
-      at(skip, pos) { return obj[pos]; },
-      rest(skip, pos) { return obj.slice(pos); },
-    };
-  }
-
-  let iter = toObject(obj)[Symbol.iterator]();
-
-  return {
-    at(skip) {
-      let r;
-      while (skip--) r = iter.next();
-      return r.value;
-    },
-    rest(skip) {
-      let a = [];
-      let r;
-      while (--skip) r = iter.next();
-      while (r = iter.next(), !r.done) a.push(r.value);
-      return a;
-    },
-  };
-}
-
-export {
-  makeClass as class,
-  VERSION as version,
-  GLOBAL as global,
-  asyncFunction as async,
-  asyncGenerator as asyncGen,
-  asyncIterator as asyncIter,
 };
+
+////
