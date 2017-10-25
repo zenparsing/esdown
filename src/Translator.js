@@ -24,7 +24,9 @@ function wrapRuntime(featureSet) {
   }
   // Remove unnecessary features
   let matcher = /(?:^|\n)\/\/\/\/\s(\w+)[\s\S]*?(?=\n\/\/\/\/|$)/g;
-  let text = Runtime.API.replace(matcher, (m, m1) => featureSet.has(m1) ? m : '');
+  let text = Runtime.API.replace(matcher, (m, m1) => {
+    return featureSet === true || featureSet.has(m1) ? m : '';
+  });
   // Wrap runtime library in an IIFE, exporting into the _esdown variable
   return 'var _esdown = {}; (function() { var exports = _esdown;\n\n' +
     text +

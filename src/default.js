@@ -27,8 +27,6 @@ Translate a module by using a hyphen:
                         will be written to the console.
     --bundle, -b        If present, module dependencies will be bundled
                         together in the output.
-    --runtime, -r       If present, the esdown runtime code will be bundled
-                        with the output.
     --global, -g        If specified, the name of the global variable to
                         dump this module's exports into, if the resulting
                         script is not executed within any module system.
@@ -92,11 +90,6 @@ export function main(args) {
         flag: true,
       },
 
-      'runtime': {
-        short: 'r',
-        flag: true,
-      },
-
       'fullRuntime': {
         short: 'R',
         flag: true,
@@ -122,6 +115,7 @@ export function main(args) {
         promise = bundle(params.input, {
           global: params.global,
           deep: params.deep,
+          fullRuntime: params.fullRuntime,
           allowBrokenLinks: params['allow-broken-links'],
         });
       } else {

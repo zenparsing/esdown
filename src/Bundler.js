@@ -211,10 +211,10 @@ export function bundle(rootPath, options = {}) {
   visit(builder.root);
 
   return allFetched.then(() => {
-    let runtime = new Set();
+    let runtimeSet = new Set();
 
     let output = builder.sort().map(node => {
-      node.runtime.forEach(name => runtime.add(name));
+      node.runtime.forEach(name => runtimeSet.add(name));
 
       let id = node.id;
 
@@ -232,7 +232,7 @@ export function bundle(rootPath, options = {}) {
 
     output = wrapModule(output, [], {
       global: options.global,
-      runtime,
+      runtime: options.fullRuntime ? true : runtimeSet,
     });
 
     if (options.output)
