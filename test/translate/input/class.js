@@ -1,23 +1,34 @@
 class A {
 
-    constructor() {
+  constructor() {
+    this.x = 1;
+  }
 
-        this.x = 1;
-    }
+  set a(value) {}
 
-    set a(value) {}
+  get b() {}
 
-    get b() {}
+  static S() {}
 
-    static S() {}
+  static get T() {}
 
-    static get T() {}
+  static "U"() {}
 
-    static "U"() {}
+  static "Hello World"() {}
 
-    static "Hello World"() {}
+  foo() {}
+}
 
-    foo() {}
+class B extends A {
+  constructor() {
+    super(1);
+    super.foo();
+  }
+
+  static x() {
+    super.x();
+    super.y;
+  }
 }
 
 (class C {});

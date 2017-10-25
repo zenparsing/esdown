@@ -43,19 +43,29 @@ function mergeProps(target, source, enumerable) {
   forEachDesc(source, (name, desc) => mergeProp(target, name, desc, enumerable));
 }
 
-exports.class = function makeClass(def) {
-  let parent = Object.prototype;
-  let proto = Object.create(parent);
+exports.class = function makeClass(base, def) {
+  if (!def) {
+    def = base;
+    base = Object;
+  }
+
+  let proto = Object.create(base && base.prototype);
   let statics = {};
 
   def(
     obj => mergeProps(proto, obj, false),
-    obj => mergeProps(statics, obj, false)
+    obj => mergeProps(statics, obj, false),
+    proto,
+    base
   );
 
   let ctor = proto.constructor;
   ctor.prototype = proto;
   forEachDesc(statics, (name, desc) => defineProp(ctor, name, desc));
+  if (base) {
+    Object.setPrototypeOf ? Object.setPrototypeOf(ctor, base) : ctor.__proto__ = base;
+  }
+
   return ctor;
 };
 

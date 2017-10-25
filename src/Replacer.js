@@ -537,9 +537,6 @@ class Replacer {
     let spread = null;
     let argText;
 
-    if (callee.type === 'SuperKeyword')
-      throw new Error('Super call not supported');
-
     if (callee.text === 'require' && args.length > 0 && args[0].type === 'StringLiteral') {
       let ident = this.options.replaceRequire(args[0].value);
       if (ident) return ident;
@@ -592,7 +589,7 @@ class Replacer {
   }
 
   SuperKeyword(node) {
-    let proto = '__.super';
+    let proto = '__super';
     let p = node.parent;
     let elem = p;
 
@@ -600,15 +597,19 @@ class Replacer {
       elem = elem.parent;
 
     if (elem && elem.static)
-      proto = '__.csuper';
+      proto = '__base';
 
-    if (p.type !== 'CallExpression') {
-      // super.foo...
+    if (p.type === 'CallExpression') {
+      // super(args)
+      proto = '__base';
+      p.injectThisArg = 'this';
+    } else {
+      // super.foo
       p.isSuperLookup = true;
 
       let pp = this.parenParent(p);
 
-      // super.foo(args);
+      // super.foo(args)
       if (pp[0].type === 'CallExpression' && pp[0].callee === pp[1])
         pp[0].injectThisArg = 'this';
     }
@@ -682,13 +683,14 @@ class Replacer {
   }
 
   ClassDeclaration(node) {
-    if (node.base)
-      this.fail('Subclassing not supported', node.base);
-
     this.markRuntime('classes');
 
     return 'var ' + node.identifier.text + ' = _esdown.class(' +
-      'function(__' + (node.hasStatic ? ', __static' : '') + ') {' +
+      (node.base ? node.base.text + ', ' : '') +
+      'function(__' +
+        (node.hasStatic || node.base ? ', __static' : '') +
+        (node.base ? ', __super, __base' : '') +
+      ') {' +
       this.strictDirective() +
       this.removeBraces(node.body.text) + ' });';
   }

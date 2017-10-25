@@ -47,19 +47,29 @@ function mergeProps(target, source, enumerable) {
   forEachDesc(source, function(name, desc) { return mergeProp(target, name, desc, enumerable); });
 }
 
-exports.class = function makeClass(def) {
-  var parent = Object.prototype;
-  var proto = Object.create(parent);
+exports.class = function makeClass(base, def) {
+  if (!def) {
+    def = base;
+    base = Object;
+  }
+
+  var proto = Object.create(base && base.prototype);
   var statics = {};
 
   def(
     function(obj) { return mergeProps(proto, obj, false); },
-    function(obj) { return mergeProps(statics, obj, false); }
+    function(obj) { return mergeProps(statics, obj, false); },
+    proto,
+    base
   );
 
   var ctor = proto.constructor;
   ctor.prototype = proto;
   forEachDesc(statics, function(name, desc) { return defineProp(ctor, name, desc); });
+  if (base) {
+    Object.setPrototypeOf ? Object.setPrototypeOf(ctor, base) : ctor.__proto__ = base;
+  }
+
   return ctor;
 };
 
