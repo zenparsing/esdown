@@ -114,15 +114,7 @@ export function runModule(path) {
 }
 
 export function startREPL() {
-  // Node 0.10.x pessimistically wraps all input in parens and then
-  // re-evaluates function expressions as function declarations.  Since
-  // Node is unaware of class declarations, this causes classes to
-  // always be interpreted as expressions in the REPL.
-  let removeParens = process.version.startsWith('v0.10.');
-
   addExtension();
-
-  process.stdout.write(`esdown ${ _esdown.version } (Node ${ process.version })\n`);
 
   let prompt = '>>> ';
   let contPrompt = '... ';

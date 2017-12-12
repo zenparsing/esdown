@@ -2,29 +2,13 @@ export let Runtime = {};
 
 Runtime.API = 
 
-`var VERSION = '1.2.5';
-
-var GLOBAL = (function() {
-  try { return global.global; } catch (x) {}
-  try { return self.self; } catch (x) {}
-  return null;
-})();
-
-exports.version = VERSION;
-exports.global = GLOBAL;
+`//// classes,computed
 
 var ownNames = Object.getOwnPropertyNames;
 var hasOwn = Object.prototype.hasOwnProperty;
 var ownSymbols = Object.getOwnPropertySymbols;
 var getDesc = Object.getOwnPropertyDescriptor;
 var defineProp = Object.defineProperty;
-
-function toObject(val) {
-  if (val == null) // null or undefined
-    throw new TypeError(val + ' is not an object');
-
-  return Object(val);
-}
 
 function forEachDesc(obj, fn) {
   ownNames(obj).forEach(function(name) { return fn(name, getDesc(obj, name)); });
@@ -46,6 +30,8 @@ function mergeProp(target, name, desc, enumerable) {
 function mergeProps(target, source, enumerable) {
   forEachDesc(source, function(name, desc) { return mergeProp(target, name, desc, enumerable); });
 }
+
+//// classes
 
 exports.class = function makeClass(base, def) {
   if (!def) {
@@ -73,6 +59,8 @@ exports.class = function makeClass(base, def) {
   return ctor;
 };
 
+//// spread
+
 exports.spread = function spread(initial) {
   return {
     a: initial || [],
@@ -92,6 +80,15 @@ exports.spread = function spread(initial) {
     },
   };
 };
+
+//// destructuring
+
+function toObject(val) {
+  if (val == null) // null or undefined
+    throw new TypeError(val + ' is not an object');
+
+  return Object(val);
+}
 
 exports.objd = function objd(obj) {
   return toObject(obj);
@@ -122,6 +119,8 @@ exports.arrayd = function arrayd(obj) {
     },
   };
 };
+
+//// computed
 
 exports.obj = function obj(target) {
   return {

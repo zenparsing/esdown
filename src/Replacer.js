@@ -796,7 +796,6 @@ class Replacer {
     let out = '';
 
     if (node.parent.type === 'TaggedTemplateExpression') {
-      this.markRuntime('templates');
 
       let temp = this.addTempVar(node);
       let raw = temp;
