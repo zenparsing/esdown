@@ -163,6 +163,7 @@ class Replacer {
     let root = this.parseResult.ast;
     root.start = 0;
 
+    this.root = root;
     this.input = input;
     this.exports = {};
     this.moduleNames = {};
@@ -797,8 +798,11 @@ class Replacer {
 
     if (node.parent.type === 'TaggedTemplateExpression') {
 
-      let temp = this.addTempVar(node);
-      let raw = temp;
+      let temp = this.addTempVar(this.root,
+        `[${ lit.map(x => this.rawToString(x.raw)).join(', ') }]`
+      );
+
+      let raw = `${ temp }.slice(0)`;
 
       // Only output the raw array if it is different from the cooked array
       for (let i = 0; i < lit.length; ++i) {
@@ -808,12 +812,10 @@ class Replacer {
         }
       }
 
-      out = `((${ temp } = [${ lit.map(x => this.rawToString(x.raw)).join(', ') }]`;
-      out += `, ${ temp }.raw = ${ raw }, ${ temp })`;
+      this.addTempVar(this.root, `(${temp}.raw = ${raw})`);
 
-      if (sub.length > 0)
-        out += ', ' + sub.map(x => x.text).join(', ');
-
+      out = `(${ temp }`;
+      if (sub.length > 0) out += ', ' + sub.map(x => x.text).join(', ');
       out += ')';
 
     } else {

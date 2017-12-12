@@ -131,10 +131,6 @@ export function startREPL() {
       let script;
       let displayErrors = false;
 
-      // Remove wrapping parens for function and class declaration forms
-      if (removeParens && /^\((class|function\*?)\s[\s\S]*?\n\)$/.test(input))
-        input = input.slice(1, -1);
-
       try {
         text = translate(input, { module: false });
       } catch (x) {
